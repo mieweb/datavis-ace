@@ -1,0 +1,116 @@
+// Introduction {{{1
+
+// This library contains functions for customizing, running, and displaying the
+// results of system reports. This includes several major capabilities:
+//
+//   - presenting a UI for customizing what columns are in a report
+//   - presenting a UI for setting report filters
+//   - retrieving report filters from an existing HTML form
+//   - submitting customized report specification to the server to run
+//   - fetching system report results and caching them for reuse
+//   - displaying report results an tables of various forms
+//   - displaying report results in graphs of various forms
+//
+// Each of those, of course, consists of several minor capabilities and
+// variants. Essential to the design of this library is that as little code as
+// possible should have to be written by the user. Throughout, we speak of a
+// "graph definition" that encompasses all configuration required. For more
+// details, see the documentation in .../webchart/doc/org/wcgraph.org.
+//
+// -------------------------------------------------------------------------------------------------
+//  CALLBACKS
+// -------------------------------------------------------------------------------------------------
+//
+// This code uses callbacks EXTENSIVELY, which can make the code confusing and difficult to
+// understand.  However, this approach is necessary for two reasons: (1) because we are doing
+// asynchronous operations [fetching data, for example; some other operations are asynchronous to
+// enable UI responsiveness], and (2) to promote flexibility in the API.  Most callbacks are
+// continuations: they are fired after some processing is completed, where their only task is to
+// continue the work.  To help aid any browser which may do tail call optimization, we make sure
+// that these continuation callbacks are in TAIL POSITION, which means doing this:
+//
+//   return callback(a, b, c);
+//
+// We're not interested in the return value of callback(), because most likely it does not even
+// produce one... but this does make it obvious to the browser that the current call stack frame can
+// be replaced with the one for the callback, and no additional frames will be consumed.
+//
+// -------------------------------------------------------------------------------------------------
+//  CLASSES
+// -------------------------------------------------------------------------------------------------
+//
+// I follow Mozilla's recommendations for how to build your own classes.  Basically, it boils down
+// to this:
+//
+//   function <CLASS>() {
+//     ...
+//   }
+//
+//   <CLASS>.prototype = Object.create(<SUPER>.prototype);
+//   <CLASS>.prototype.constructor = <CLASS>;
+//
+// When making a new subclass of Error, it's important to set the properties "name", "message", and
+// "stack" as in the following:
+//
+//   function <NEW-ERROR>() {
+//     this.name = '<NEW-ERROR>';
+//     this.stack = (new Error()).stack;
+//     this.message = '...';
+//   }
+//
+//   <NEW-ERROR>.prototype = Object.create(Error.prototype);
+//   <NEW-ERROR>.prototype.constructor = <NEW-ERROR>;
+//
+
+// Toplevel {{{1
+
+/* globals WC_PrefGet, wcLogError, mietrans */
+
+/**
+ * This namespace is for things which are either accessible or exposed to developers using the
+ * wcgraph library, or to users.
+ *
+ * @namespace wcgraph
+ */
+
+/**
+ * This namespace is for things which are used internally by the wcgraph library.  They are not
+ * accessible or exposed to developers using this library, or to users.  There are a lot of utility
+ * classes and functions which are used internally.  Pretty much any of these are candidates for
+ * being broken out into other libraries.
+ *
+ * @namespace wcgraph_int
+ */
+
+/**
+ * @typedef TypeInfo
+ * @type object
+ *
+ * @property {object} byName Type information indexed by name.
+ * @property {array} byIndex Type information indexed by column number.
+ */
+
+/**
+ * @typedef UniqElt
+ * @type object
+ *
+ * @property {number} count How many unique values there are.
+ * @property {Array<string>} values All the different unique values.
+ */
+
+(function ($) {
+	// Turn debug messages --- sent via debug.info() et al. --- on/off.
+	var DEBUGGING = window.GRID_DEBUGGING;
+
+	// Contains information on all the filters that the user has access to.
+	var filters = [];
+	var gensymSeed = 0;
+
+	$INCLUDE('src/util.js');
+	$INCLUDE('src/datasource.js');
+	$INCLUDE('src/graph.js');
+	$INCLUDE('src/grid.js');
+
+})(jQuery);
+
+// vim:set ft=javascript:
