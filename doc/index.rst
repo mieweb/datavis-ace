@@ -15,6 +15,7 @@ data produced by a source, which is manipulated by a view, to be shown by an out
    :caption: Contents:
 
    getting_started
+   examples
    class_overview
    data_source
    filters

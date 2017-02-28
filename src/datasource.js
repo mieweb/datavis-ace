@@ -868,6 +868,57 @@ LocalDataSource.prototype.getTypeInfo = function (cont) {
 	return cont(self.cache.typeInfo);
 };
 
+// HttpDataSource {{{1
+
+var HttpDataSource = function (spec) {
+	var self = this;
+
+	self.url = spec.url;
+	self.method = spec.method || 'GET';
+
+	self.cache = null;
+};
+
+// #getData {{{2
+
+HttpDataSource.prototype.getData = function (params, cont) {
+	var self = this;
+
+	if (self.cache === null) {
+		return jQuery.ajax(self.url, {
+			method: self.method,
+			error: function (jqXHR, textStatus, errorThrown) {
+				log.error('AJAX Failed: %s', textStatus);
+				log.error('AJAX Failed: %O', jqXHR);
+				log.error('AJAX Failed: %O', errorThrown);
+
+				self.cache = null;
+				return cont(null);
+			},
+			success: function (data, textStatus, jqXHR) {
+				self.cache = data;
+				return self.getData(params, cont);
+			}
+		});
+	}
+
+	return cont(self.cache.data);
+};
+
+// #getTypeInfo {{{2
+
+HttpDataSource.prototype.getTypeInfo = function (cont) {
+	var self = this;
+
+	if (self.cache === null) {
+		return self.getData(function () {
+			return self.getTypeInfo(cont);
+		});
+	}
+
+	return cont(self.cache.typeInfo);
+};
+
 // DataSource {{{1
 
 // JSDoc Typedefs {{{2
@@ -944,7 +995,8 @@ var DataSource = function (spec, params) {
  */
 
 DataSource.sources = {
-	local: LocalDataSource
+	local: LocalDataSource,
+	http: HttpDataSource
 };
 
 // .messages {{{2

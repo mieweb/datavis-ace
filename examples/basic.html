@@ -9,46 +9,22 @@
 $(document).ready(function () {
 	MIE.DEBUGGING = true;
 
-	localdata = {
-		data: [{
-			first_name: 'Donald',
-			last_name: 'Trump',
-			birth_date: '1946-06-14'
-		}, {
-			first_name: 'Hillary',
-			last_name: 'Clinton',
-			birth_date: '1947-10-26'
-		}, {
-			first_name: 'Bernie',
-			last_name: 'Sanders',
-			birth_date: '1941-09-08'
-		}],
-		typeInfo: {
-			byName: {
-				'first_name': 'string',
-				'last_name': 'string',
-				'birth_date': 'date'
-			},
-			byIndex: ['string', 'string', 'date']
-		}
-	};
-
 	var dataSource = new MIE.DataSource({
-		type: 'local',
-		varName: 'localdata',
+		type: 'http',
+		url: 'data.json'
 	});
 	var tagOpts = {
 		runImmediately: true,
-		title: 'Basic Example',
+		title: 'Basic Example'
 	};
 	var defn = {
 		id: 'example',
 		table: {
 			output: {
-				method: 'pivot',
+				method: 'pivot'
 			},
 		},
-		source: dataSource,
+		source: dataSource
 	};
 	new MIE.WCGrid('example', defn, tagOpts);
 });
@@ -58,5 +34,3 @@ $(document).ready(function () {
 		<div id="example"></div>
 	</body>
 </html>
-
-<!-- vim:set indentkeys+=<>>: -->
