@@ -1051,7 +1051,7 @@ function fontAwesome(hex, cls, title) {
 			var rest = Array.prototype.slice.call(arguments, 1);
 			var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
 
-			if (!DEBUGGING) {
+			if (!MIE.DEBUGGING) {
 				return;
 			}
 
@@ -1061,7 +1061,7 @@ function fontAwesome(hex, cls, title) {
 			var rest = Array.prototype.slice.call(arguments, 1);
 			var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
 
-			if (!DEBUGGING) {
+			if (!MIE.DEBUGGING) {
 				return;
 			}
 

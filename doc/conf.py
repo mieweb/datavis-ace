@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# wcgrid documentation build configuration file, created by
+# WC DataVis documentation build configuration file, created by
 # sphinx-quickstart on Mon Dec 19 16:36:48 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -31,7 +31,11 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.todo']
+extensions = [
+		'sphinx.ext.todo',
+		'sphinxcontrib.fulltoc',
+		'cloud_sptheme.ext.relbar_links',
+		]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -46,7 +50,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'wcgrid'
+project = 'WC DataVis'
 copyright = '2016, Taylor Venable'
 author = 'Taylor Venable'
 
@@ -109,7 +113,7 @@ html_context = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'wcgriddoc'
+htmlhelp_basename = 'wcdatavisdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -136,7 +140,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'wcgrid.tex', 'wcgrid Documentation',
+    (master_doc, 'wcdatavis.tex', 'WC DataVis Documentation',
      'Taylor Venable', 'manual'),
 ]
 
@@ -146,7 +150,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'wcgrid', 'wcgrid Documentation',
+    (master_doc, 'wcdatavis', 'WC DataVis Documentation',
      [author], 1)
 ]
 
@@ -157,10 +161,16 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'wcgrid', 'wcgrid Documentation',
-     author, 'wcgrid', 'One line description of project.',
+    (master_doc, 'wcdatavis', 'WC DataVis Documentation',
+     author, 'wcdatavis', 'One line description of project.',
      'Miscellaneous'),
 ]
 
 
+import cloud_sptheme as csp
 
+html_theme = "cloud"
+html_theme_path = [csp.get_theme_dir()]
+html_theme_options = {
+		"fontcssurl": "https://fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono",
+		}

@@ -3,14 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Webchart Grid Documentation
-===========================
+WC DataVis Documentation
+=========================
+
+WC DataVis is a library for data visualization with presentation via charts and tables (or as we
+call them, graphs and grids).  The architecture is a modular pipeline: user input can modify the
+data produced by a source, which is manipulated by a view, to be shown by an output module.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   meta_doc
+   getting_started
    class_overview
    data_source
    filters
@@ -23,6 +27,7 @@ Webchart Grid Documentation
    pivot_control
    pivot_control_field
    group_pivot
+   meta_doc
 
 Auxiliary Stuff
 ===============

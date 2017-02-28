@@ -1,144 +1,144 @@
-	// Server-Side Filter/Sort {{{1
+// Server-Side Filter/Sort {{{1
 
-	/*
-	 * Here's the list of filter conditions supported by jQWidgets:
-	 *
-	 *   - NULL
-	 *   - NOT_NULL
-	 *   - EQUAL
-	 *
-	 * These only apply to strings:
-	 *
-	 *   - EMPTY
-	 *   - NOT_EMPTY
-	 *   - CONTAINS
-	 *   - CONTAINS_CASE_SENSITIVE
-	 *   - DOES_NOT_CONTAIN
-	 *   - DOES_NOT_CONTAIN_CASE_SENSITIVE
-	 *   - STARTS_WITH
-	 *   - STARTS_WITH_CASE_SENSITIVE
-	 *   - ENDS_WITH
-	 *   - ENDS_WITH_CASE_SENSITIVE
-	 *   - EQUAL_CASE_SENSITIVE
-	 *
-	 * These only apply to numbers and dates:
-	 *
-	 *   - NOT_EQUAL
-	 *   - LESS_THAN
-	 *   - LESS_THAN_OR_EQUAL
-	 *   - GREATER_THAN
-	 *   - GREATER_THAN_OR_EQUAL
-	 *
-	 * I find it weird that strings can't be NOT_EQUAL, but I'm just going by what their documentation
-	 * says they do.
-	 */
+/*
+ * Here's the list of filter conditions supported by jQWidgets:
+ *
+ *   - NULL
+ *   - NOT_NULL
+ *   - EQUAL
+ *
+ * These only apply to strings:
+ *
+ *   - EMPTY
+ *   - NOT_EMPTY
+ *   - CONTAINS
+ *   - CONTAINS_CASE_SENSITIVE
+ *   - DOES_NOT_CONTAIN
+ *   - DOES_NOT_CONTAIN_CASE_SENSITIVE
+ *   - STARTS_WITH
+ *   - STARTS_WITH_CASE_SENSITIVE
+ *   - ENDS_WITH
+ *   - ENDS_WITH_CASE_SENSITIVE
+ *   - EQUAL_CASE_SENSITIVE
+ *
+ * These only apply to numbers and dates:
+ *
+ *   - NOT_EQUAL
+ *   - LESS_THAN
+ *   - LESS_THAN_OR_EQUAL
+ *   - GREATER_THAN
+ *   - GREATER_THAN_OR_EQUAL
+ *
+ * I find it weird that strings can't be NOT_EQUAL, but I'm just going by what their documentation
+ * says they do.
+ */
 
-	function makeJsonHaving(filters) {
-		var having = {};
-		var numClauses = 0;
-		_.each(filters, function (f) {
-			var h = having[f.datafield] = {};
-			var numItems = 0;
-			_.each(f.filter.getfilters(), function (filter) {
-				var isSupported = true;
-				switch (filter.condition) {
-					case 'EQUAL':
-					case 'EQUAL_CASE_SENSITIVE':
-						if (h['$eq']) {
-							h['$in'] = [h['$eq']];
-							delete h['$eq'];
-						}
-						if (h['$in']) {
-							h['$in'].push(filter.value);
-						}
-						else {
-							h['$eq'] = filter.value;
-						}
-						break;
-					case 'CONTAINS':
-					case 'CONTAINS_CASE_SENSITIVE':
-						h['$like'] = '%' + filter.value + '%';
-						break;
-					case 'EMPTY':
-						h['$eq'] = '';
-						break;
-					case 'NOT_EMPTY':
-						h['$ne'] = '';
-						break;
-					default:
-						log.error('Unsupported filter condition "' + filter.condition + '" for type "' + filter.type + '"');
-						isSupported = false;
-				}
-				if (isSupported) {
-					numItems += 1;
-				}
-			});
-			if (numItems > 0) {
-				numClauses += 1;
+function makeJsonHaving(filters) {
+	var having = {};
+	var numClauses = 0;
+	_.each(filters, function (f) {
+		var h = having[f.datafield] = {};
+		var numItems = 0;
+		_.each(f.filter.getfilters(), function (filter) {
+			var isSupported = true;
+			switch (filter.condition) {
+				case 'EQUAL':
+				case 'EQUAL_CASE_SENSITIVE':
+					if (h['$eq']) {
+						h['$in'] = [h['$eq']];
+						delete h['$eq'];
+					}
+					if (h['$in']) {
+						h['$in'].push(filter.value);
+					}
+					else {
+						h['$eq'] = filter.value;
+					}
+					break;
+				case 'CONTAINS':
+				case 'CONTAINS_CASE_SENSITIVE':
+					h['$like'] = '%' + filter.value + '%';
+					break;
+				case 'EMPTY':
+					h['$eq'] = '';
+					break;
+				case 'NOT_EMPTY':
+					h['$ne'] = '';
+					break;
+				default:
+					log.error('Unsupported filter condition "' + filter.condition + '" for type "' + filter.type + '"');
+					isSupported = false;
 			}
-			else {
-				delete having[f.datafield];
+			if (isSupported) {
+				numItems += 1;
 			}
 		});
-		return numClauses > 0 ? having : null;
-	}
+		if (numItems > 0) {
+			numClauses += 1;
+		}
+		else {
+			delete having[f.datafield];
+		}
+	});
+	return numClauses > 0 ? having : null;
+}
 
-	/**
-	 * Make a JSON ORDER BY object based on sort information from jQWidgets.
-	 *
-	 * @param {object} o A description of the sort from a jqxGrid.
-	 *
-	 * @return {object} A description of the sort that can be used by the system report code.
+/**
+ * Make a JSON ORDER BY object based on sort information from jQWidgets.
+ *
+ * @param {object} o A description of the sort from a jqxGrid.
+ *
+ * @return {object} A description of the sort that can be used by the system report code.
+ */
+
+function makeJsonOrderBy(o) {
+	if (o.sortcolumn === null) {
+		return null;
+	}
+	return [{
+		column: o.sortcolumn,
+		direction: o.sortdirection.ascending ? 'ASC' : 'DESC'
+	}];
+}
+
+/**
+ * Change the data in the definition without breaking any references.  This is only used by
+ * dynamic server-side filtering.
+ */
+
+function updateDefnDataInPlace(defn, srcIndex, data) {
+	var i;
+	var l;
+
+	/*
+	 * We need to change the data that the grid uses.  You would think that one would do this using
+	 * the data adapter, but there's no API to change the local data.  So instead we have to change
+	 * the object that it refers to out from underneath it.  This means that we must alter the
+	 * defn._data[srcIndex] object in place.  To clear it out, we shift() all the current rows out
+	 * of it.  Then we can push() the new rows into it.  This changes the data in the array without
+	 * breaking the reference from the data adapter.
 	 */
 
-	function makeJsonOrderBy(o) {
-		if (o.sortcolumn === null) {
-			return null;
-		}
-		return [{
-			column: o.sortcolumn,
-			direction: o.sortdirection.ascending ? 'ASC' : 'DESC'
-		}];
+	l = defn._data[srcIndex].length;
+
+	for (i = 0; i < l; i += 1) {
+		defn._data[srcIndex].shift();
 	}
 
-	/**
-	 * Change the data in the definition without breaking any references.  This is only used by
-	 * dynamic server-side filtering.
-	 */
-
-	function updateDefnDataInPlace(defn, srcIndex, data) {
-		var i;
-		var l;
-
-		/*
-		 * We need to change the data that the grid uses.  You would think that one would do this using
-		 * the data adapter, but there's no API to change the local data.  So instead we have to change
-		 * the object that it refers to out from underneath it.  This means that we must alter the
-		 * defn._data[srcIndex] object in place.  To clear it out, we shift() all the current rows out
-		 * of it.  Then we can push() the new rows into it.  This changes the data in the array without
-		 * breaking the reference from the data adapter.
-		 */
-
-		l = defn._data[srcIndex].length;
-
-		for (i = 0; i < l; i += 1) {
-			defn._data[srcIndex].shift();
-		}
-
-		for (i = 0; i < data[srcIndex].length; i += 1) {
-			defn._data[srcIndex].push(data[srcIndex][i]);
-		}
-
-		if (data[srcIndex].length > 0) {
-			_.each(data[srcIndex][0], function (value, colName) {
-				var sqlType = defn._typeInfo[srcIndex].byName[colName];
-				if (sqlType === 'string') {
-					// This will do the work necessary to create the _ORIG_ properties.
-					makeLinkConfig(data[srcIndex], colName, defn._dataFieldConfig);
-				}
-			});
-		}
+	for (i = 0; i < data[srcIndex].length; i += 1) {
+		defn._data[srcIndex].push(data[srcIndex][i]);
 	}
+
+	if (data[srcIndex].length > 0) {
+		_.each(data[srcIndex][0], function (value, colName) {
+			var sqlType = defn._typeInfo[srcIndex].byName[colName];
+			if (sqlType === 'string') {
+				// This will do the work necessary to create the _ORIG_ properties.
+				makeLinkConfig(data[srcIndex], colName, defn._dataFieldConfig);
+			}
+		});
+	}
+}
 
 // Row Reordering {{{1
 
@@ -275,8 +275,30 @@ GridError.prototype.constructor = GridError;
 
 // GridTable {{{1
 
+// Constructor {{{2
+
 /**
- * @class GridTable
+ * The GridTable is in charge of displaying the HTML table of data.
+ *
+ * @param {object} defn
+ *
+ * @param {object} features Turn features on/off.
+ *
+ * @param {object} features.rowSelection If true, a new column is added on the far left of the grid.
+ * This column contains a checkbox that "selects" the row.
+ *
+ * @param {object} features.rowReordering If true, a new column is added on the far right of the
+ * grid.  This column contains a button that the user can drag to move the entire row up and down
+ * relative to the other rows of the grid.
+ *
+ * @param {object} features.sorting If true, clicking the column heading sorts the whole grid by
+ * that column.
+ *
+ * @param {object} features.filtering If true, a button is added within each column heading.
+ * Clicking this button adds a filter on that column.  When the filter is changed, only rows which
+ * match the filter are shown.
+ *
+ * @class
  *
  * @property {object} features An object of which features are turned on in the GridTable.  In some
  * situations, a feature may be disabled but handled by a wrapper object (e.g. PivotControl handles
@@ -304,42 +326,6 @@ GridError.prototype.constructor = GridError;
  * @property {Element} container
  */
 
-// GridTableError {{{2
-
-/**
- *
- */
-
-function GridTableError() {
-}
-
-GridTableError.prototype = Object.create(Error.prototype);
-GridTableError.prototype.constructor = GridTableError;
-
-// Constructor {{{2
-
-/**
- * The GridTable is in charge of displaying the HTML table of data.
- *
- * @param {object} defn
- *
- * @param {object} features Turn features on/off.
- *
- * @param {object} features.rowSelection If true, a new column is added on the far left of the grid.
- * This column contains a checkbox that "selects" the row.
- *
- * @param {object} features.rowReordering If true, a new column is added on the far right of the
- * grid.  This column contains a button that the user can drag to move the entire row up and down
- * relative to the other rows of the grid.
- *
- * @param {object} features.sorting If true, clicking the column heading sorts the whole grid by
- * that column.
- *
- * @param {object} features.filtering If true, a button is added within each column heading.
- * Clicking this button adds a filter on that column.  When the filter is changed, only rows which
- * match the filter are shown.
- */
-
 function GridTable(defn, dataView, features) {
 	var self = this;
 
@@ -363,6 +349,10 @@ GridTable.prototype.constructor = GridTable;
 
 // #clear {{{2
 
+/**
+ * Remove the table from page.
+ */
+
 GridTable.prototype.clear = function () {
 	var self = this;
 
@@ -370,6 +360,18 @@ GridTable.prototype.clear = function () {
 };
 
 // #draw {{{2
+
+/**
+ * Render the table within the page.
+ *
+ * @param {jQuery} container An element to append the result to.
+ *
+ * @param {function} tableDone A function to call once the table has been added to the page.  Useful
+ * if you want to do something like select some rows after it has been created.
+ *
+ * @returns {undefined} Nothing.  This function is asynchronous, as rendering the table may require
+ * obtaining data from the source.
+ */
 
 GridTable.prototype.draw = function (container, tableDone) {
 	var self = this;
@@ -404,6 +406,16 @@ GridTable.prototype.draw = function (container, tableDone) {
 };
 
 // #drawPlain {{{2
+
+/**
+ * Render a plain (non-grouped, non-pivotted) table.
+ *
+ * @param {jQuery} container
+ *
+ * @param {Object} data
+ *
+ * @param {Object} typeInfo
+ */
 
 GridTable.prototype.drawPlain = function (container, data, typeInfo) {
 	var self = this
@@ -819,6 +831,16 @@ GridTable.prototype.drawPlain = function (container, data, typeInfo) {
 
 // #drawGroupPivot {{{2
 
+/**
+ * Draw a table that has been grouped or pivotted.
+ *
+ * @param {jQuery} container
+ *
+ * @param {Object} data
+ *
+ * @param {Object} typeInfo
+ */
+
 GridTable.prototype.drawGroupPivot = function (container, data, typeInfo) {
 	var self = this
 		, tr
@@ -1162,6 +1184,10 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 };
 
 // #getColConfig {{{2
+
+/**
+ *
+ */
 
 GridTable.prototype.getColConfig = function () {
 	var self = this
@@ -2006,7 +2032,7 @@ var WCGrid = function (id, defn, tagOpts, cb) {
 		}
 		gridToolBar = jQuery('<div class="gridtoolbar">').appendTo(tagContainer);
 		gridToolBarHeading = jQuery('<div class="heading">')
-			.attr('title', mietrans('SHOWHIDE'))
+			.attr('title', MIE.trans('SHOWHIDE'))
 			.on('click', function (evt) {
 				evt.stopPropagation();
 				self.toggleGrid();
@@ -2189,7 +2215,7 @@ WCGrid.prototype._addHeaderWidgets = function (header, doingServerFilter, runImm
 	self.ui.showHideButton = jQuery('<button type="button">')
 		.append(fontAwesome(runImmediately ? 'f077' : 'f078'))
 		.addClass('showhide pull-right')
-		.attr('title', mietrans('SHOWHIDEOPTS'))
+		.attr('title', MIE.trans('SHOWHIDEOPTS'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			self.toggleGrid();
@@ -2201,7 +2227,7 @@ WCGrid.prototype._addHeaderWidgets = function (header, doingServerFilter, runImm
 	jQuery('<button type="button">')
 		.append(fontAwesome('f013'))
 		.addClass('showhide pull-right')
-		.attr('title', mietrans('SHOWHIDEOPTS'))
+		.attr('title', MIE.trans('SHOWHIDEOPTS'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			jQuery(this).parents('.gridwrapper').find('.buttons').toggle();
@@ -2992,4 +3018,5 @@ PivotControlField.prototype.appendTo = function (elt) {
 
 window.MIE = window.MIE || {};
 
+window.MIE.trans = I;
 window.MIE.WCGrid = WCGrid;

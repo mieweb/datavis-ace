@@ -2,8 +2,11 @@
 Class Overview & Relationships
 ******************************
 
-This is a reference for all the main classes involved in the grid/graph library, and how they
+This is a reference for all the main classes involved in the datavis library, and how they
 relate to each other.
+
+WCGRAPH
+=======
 
 WCGRID
 ======

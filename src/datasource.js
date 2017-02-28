@@ -326,15 +326,15 @@ Filter.prototype.addJsonParam = function (obj) {
 		, operand;
 
 	if (isNothing(self.json)) {
-		throw self.error(new FilterError('Missing configuration object for JSON grid parameter.'));
+		throw new FilterError('Missing configuration object for JSON grid parameter.');
 	}
 
 	if (isNothing(self.json.name) || self.json.name === '') {
-		throw self.error(new FilterError('Missing constraint set name for JSON grid parameter.'));
+		throw new FilterError('Missing constraint set name for JSON grid parameter.');
 	}
 
 	if (isNothing(self.json.column) || self.json.column === '') {
-		throw self.error(new FilterError('Missing column name for JSON grid parameter.'));
+		throw new FilterError('Missing column name for JSON grid parameter.');
 	}
 
 	if (isNothing(self.json.operator) || self.json.operator === '') {
@@ -830,37 +830,42 @@ DataSourceError.prototype.constructor = DataSourceError;
 
 // LocalDataSource {{{1
 
-var LocalDataSource = function (varName) {
+var LocalDataSource = function (spec) {
 	var self = this;
 
-	self.varName = varName;
-	self.cache = {};
+	self.varName = spec.varName;
+	self.cache = window[self.varName];
+
+	if (isNothing(self.cache)) {
+		throw new InvalidSourceError('Local variable "' + self.varName + '" does not exist.');
+	}
+
+	if (!_.isArray(self.cache.data)) {
+		throw new InvalidSourceError(self.varName + '.data is not an array.');
+	}
+
+	if (isNothing(self.cache.typeInfo)) {
+		self.warning('No type information found in local data (' + self.varName + '.typeInfo is missing).');
+	}
+	else if (isNothing(self.cache.typeInfo.byName) || isNothing(self.cache.typeInfo.byIndex)) {
+		self.warning('Incomplete type information found in local data (either ' + self.varName + '.typeInfo.byName or ' + self.varName + '.typeInfo.byIndex is missing).');
+	}
 };
 
 // #getData {{{2
 
 LocalDataSource.prototype.getData = function (params, cont) {
-	var self = this
-	, localData;
+	var self = this;
 
-		localData = window[self.varName];
+	return cont(self.cache.data);
+};
 
-		if (isNothing(localData)) {
-	throw self.error(new InvalidSourceError('Local variable "' + self.varName + '" does not exist.'));
-		}
+// #getTypeInfo {{{2
 
-		if (!_.isArray(localData.data)) {
-	throw self.error(new InvalidSourceError(self.varName + '.data is not an array.'));
-		}
+LocalDataSource.prototype.getTypeInfo = function (cont) {
+	var self = this;
 
-		if (isNothing(localData.typeInfo)) {
-	self.warning('No type information found in local data (' + self.varName + '.typeInfo is missing).');
-		}
-		else if (isNothing(localData.typeInfo.byName) || isNothing(localData.typeInfo.byIndex)) {
-	self.warning('Incomplete type information found in local data (either ' + self.varName + '.typeInfo.byName or ' + self.varName + '.typeInfo.byIndex is missing).');
-		}
-
-	return cont(localData.data);
+	return cont(self.cache.typeInfo);
 };
 
 // DataSource {{{1

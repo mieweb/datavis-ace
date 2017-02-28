@@ -10,8 +10,36 @@ documentation.
 Using Sphinx
 ============
 
-Find the directory containing the reStructuredText documentation and run ``make html``.  That's all
-you need to do.
+1. Install the "cloud" Sphinx theme.
+
+   ::
+
+     $ cd tmp
+     $ hg clone 'https://metasyntax@bitbucket.org/metasyntax/cloud_sptheme'
+     $ cd cloud_sptheme
+     $ pip install --user .
+     $ cd ..
+     $ rm -rf tmp
+
+   The only reason you need to go this long route is because I have a bug fix that they haven't
+   merged yet.  Once they do, you'll just have to do this.
+
+   ::
+
+     $ pip install --user cloud_sptheme
+
+2. Install other needed modules.
+
+   ::
+
+     $ pip install --user sphinxcontrib-fulltoc
+
+3. Build the docs.
+
+   ::
+
+     $ cd wcdatavis/doc
+     $ make html
 
 Using jsdoc
 ===========

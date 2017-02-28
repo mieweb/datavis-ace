@@ -1,0 +1,62 @@
+<html>
+	<head>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+		<script src="wcdatavis.js"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" type="text/css"/>
+		<script>
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	localdata = {
+		data: [{
+			first_name: 'Donald',
+			last_name: 'Trump',
+			birth_date: '1946-06-14'
+		}, {
+			first_name: 'Hillary',
+			last_name: 'Clinton',
+			birth_date: '1947-10-26'
+		}, {
+			first_name: 'Bernie',
+			last_name: 'Sanders',
+			birth_date: '1941-09-08'
+		}],
+		typeInfo: {
+			byName: {
+				'first_name': 'string',
+				'last_name': 'string',
+				'birth_date': 'date'
+			},
+			byIndex: ['string', 'string', 'date']
+		}
+	};
+
+	var dataSource = new MIE.DataSource({
+		type: 'local',
+		varName: 'localdata',
+	});
+	var tagOpts = {
+		runImmediately: true,
+		title: 'Basic Example',
+	};
+	var defn = {
+		id: 'example',
+		table: {
+			output: {
+				method: 'pivot',
+			},
+		},
+		source: dataSource,
+	};
+	new MIE.WCGrid('example', defn, tagOpts);
+});
+		</script>
+	</head>
+	<body>
+		<div id="example"></div>
+	</body>
+</html>
+
+<!-- vim:set indentkeys+=<>>: -->
