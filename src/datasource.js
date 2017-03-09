@@ -1141,7 +1141,7 @@ DataSource.prototype.getData = function (cont) {
 	});
 };
 
-// #getUniqElts {{{2
+// #getUniqueVals {{{2
 
 /**
  * Provide unique element information.
@@ -1151,7 +1151,7 @@ DataSource.prototype.getData = function (cont) {
  * @param {DataSource~getUniqElts_cb} cont Continuation function.
  */
 
-DataSource.prototype.getUniqElts = function (cont) {
+DataSource.prototype.getUniqueVals = function (cont) {
 	var self = this;
 
 	if (!isNothing(self.cache.uniqElts)) {
@@ -1160,19 +1160,22 @@ DataSource.prototype.getUniqElts = function (cont) {
 
 	self.getData(function (data) {
 		var uniqElts = {};
+		var tmp = {};
 
 		_.each(data, function (row) {
-			_.each(row, function (value, col) {
-				if (uniqElts[col] === undefined) {
-					uniqElts[col] = {
+			_.each(row, function (cell, field) {
+				if (uniqElts[field] === undefined) {
+					uniqElts[field] = {
 						count: 0,
-						values: {}
+						values: []
 					};
+					tmp[field] = {};
 				}
 
-				if (uniqElts[col].values[value] === undefined) {
-					uniqElts[col].count += 1;
-					uniqElts[col].values[value] = true;
+				if (tmp[field][cell.value] === undefined) {
+					tmp[field][cell.value] = true;
+					uniqElts[field].count += 1;
+					uniqElts[field].values.push(cell.value);
 				}
 			});
 		});
@@ -1803,7 +1806,7 @@ DataView.prototype.filter = function () {
 						throw new DataViewError('Invalid filter spec, operator "$in" for column "' + field + '" requires array value');
 					}
 
-					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum) < 0) {
+					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) < 0) {
 						return false;
 					}
 					break;
@@ -1813,7 +1816,7 @@ DataView.prototype.filter = function () {
 						throw new DataViewError('Invalid filter spec, operator "$nin" for column "' + field + '" requires array value');
 					}
 
-					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum) >= 0) {
+					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) >= 0) {
 						return false;
 					}
 					break;
@@ -2213,6 +2216,14 @@ DataView.prototype.reset = function (dontNotify) {
 			rowCount: self.source.cache.data.length
 		});
 	}
+};
+
+// #getUniqueVals {{{2
+
+DataView.prototype.getUniqueVals = function (cont) {
+	var self = this;
+
+	return self.source.getUniqueVals(cont);
 };
 
 // .messages {{{2

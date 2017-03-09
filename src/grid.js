@@ -528,7 +528,7 @@ GridTable.prototype.drawPlain = function (container, data, typeInfo) {
 	// Filtering Setup {{{4
 
 	if (self.features.filtering) {
-		self.defn.gridFilterSet = new GridFilterSet(self.defn, self.ui.thead);
+		self.defn.gridFilterSet = new GridFilterSet(self.defn, self.defn.view);
 	}
 
 	// }}}4
@@ -1294,11 +1294,26 @@ GridFilterError.prototype.constructor = GridError;
  *
  * @class
  *
- * @property {number} limit If greater than zero, the maximum number of filters of this type that
- * can be created on a column at the same time.
+ * @property {string} field
  *
- * @property {boolean} applyImmediately If true, then the filter applies as soon as it is created,
- * using the default value of the widget (e.g. checkbox widgets apply immediately).
+ * @property {string} filterType
+ *
+ * @property {string} filterBtn
+ *
+ * @property {GridFilterSet} gridFilterSet
+ *
+ * @property {number} limit
+ *
+ * @property {boolean} applyImmediately
+ *
+ * @property {jQuery} div
+ *
+ * @property {jQuery} input
+ *
+ * @property {jQuery} removeBtn
+ *
+ * @property {string} id
+ *
  */
 
 var GridFilter = (function () {
@@ -1308,10 +1323,10 @@ var GridFilter = (function () {
 		return 'GridFilter_' + id++;
 	};
 
-	return function (colName, filterType, filterBtn, gridFilterSet) {
+	return function (field, filterType, filterBtn, gridFilterSet) {
 		var self = this;
 
-		self.colName = colName;
+		self.field = field;
 		self.filterType = filterType;
 		self.filterBtn = filterBtn;
 		self.gridFilterSet = gridFilterSet;
@@ -1355,7 +1370,20 @@ GridFilter.prototype.constructor = GridFilter;
  */
 
 GridFilter.prototype.getValue = function () {
-	return this.input.val();
+	var self = this;
+
+	switch (self.gridFilterSet.view.typeInfo[self.field].type) {
+	case 'date':
+	case 'time':
+	case 'datetime':
+		return moment(this.input.val());
+	case 'number':
+	case 'currency':
+		return numeral(this.input.val());
+	case 'string':
+	default:
+		return this.input.val();
+	}
 };
 
 // #getOperator {{{3
@@ -1461,8 +1489,6 @@ GridFilter.prototype.isRange = function () {
 
 var StringTextboxGridFilter = function () {
 	var self = this;
-	var row1 = jQuery('<div>');
-	var row2 = jQuery('<div>');
 
 	GridFilter.apply(self, arguments);
 
@@ -1520,6 +1546,41 @@ StringTextboxGridFilter.prototype.getOperator = function () {
  */
 
 var StringDropdownGridFilter = function () {
+	var self = this;
+
+	GridFilter.apply(self, arguments);
+
+	self.limit = 1;
+
+	self.input = jQuery('<select>').attr({
+		'multiple': true
+	});
+	self.input.on('change', function (evt) {
+		self.gridFilterSet.update();
+	});
+
+	self.div
+		.append(self.input)
+		.append(self.removeBtn);
+
+	self.afterAdd = function (target) {
+		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
+			_.each(uniqueVals[self.field].values, function (val) {
+				jQuery('<option>').attr({
+					'value': val
+				}).text(val).appendTo(self.input);
+			});
+			self.input.chosen({'width': '100%'});
+		});
+	};
+};
+
+StringDropdownGridFilter.prototype = Object.create(GridFilter.prototype);
+
+// #getOperator {{{3
+
+StringDropdownGridFilter.prototype.getOperator = function () {
+	return '$in';
 };
 
 // StringCheckedListGridFilter {{{2
@@ -1530,7 +1591,24 @@ var StringCheckedlistGridFilter = function () {
 // NumberTextboxGridFilter {{{2
 
 var NumberTextboxGridFilter = function () {
+	var self = this;
+
+	GridFilter.apply(self, arguments);
+
+	self.input = jQuery('<input type="text">');
+	self.input.on('change', function (evt) {
+		self.gridFilterSet.update();
+	});
+
+	self.operatorDrop = self.makeOperatorDrop(['$eq', '$ne', '$lt', '$lte', '$gt', '$gte']);
+
+	self.div
+		.append(self.operatorDrop)
+		.append(self.input)
+		.append(self.removeBtn);
 };
+
+NumberTextboxGridFilter.prototype = Object.create(GridFilter.prototype);
 
 // NumberCheckboxGridFilter {{{2
 
@@ -1612,6 +1690,8 @@ var DateRangeGridFilter = function () {
 
 	GridFilter.apply(self, arguments);
 
+	self.limit = 1;
+
 	self.input = jQuery('<input>').attr({
 		'type': 'text',
 		'placeholder': 'Click here; pick start/end dates.',
@@ -1681,7 +1761,7 @@ DateRangeGridFilter.prototype.isRange = function () {
 
 // BooleanCheckboxGridFilter {{{2
 
-BooleanCheckboxGridFilter = function (colName, gridFilter) {
+BooleanCheckboxGridFilter = function (field, gridFilter) {
 };
 
 BooleanCheckboxGridFilter.prototype.getValue = function () {
@@ -1709,6 +1789,9 @@ GridFilter.widgets = {
 	'number': {
 		'textbox': NumberTextboxGridFilter
 	},
+	'currency': {
+		'textbox': NumberTextboxGridFilter
+	},
 	'date': {
 		'single': DateSingleGridFilter,
 		'range': DateRangeGridFilter
@@ -1718,6 +1801,7 @@ GridFilter.widgets = {
 GridFilter.defaultWidgets = {
 	'string': 'dropdown',
 	'number': 'textbox',
+	'currency': 'textbox',
 	'date': 'range'
 };
 
@@ -1728,6 +1812,8 @@ GridFilter.defaultWidgets = {
  *
  * @class
  * @property {object} defn
+ *
+ * @property {DataView} view
  *
  * @property {Element} thead
  *
@@ -1745,7 +1831,7 @@ GridFilter.defaultWidgets = {
  * internally when loading preferences to avoid updating for every single filter.
  */
 
-var GridFilterSet = function (defn) {
+var GridFilterSet = function (defn, view) {
 	var self = this;
 
 	if (defn === undefined) {
@@ -1753,6 +1839,7 @@ var GridFilterSet = function (defn) {
 	}
 
 	self.defn = defn;
+	self.view = view;
 
 	self.filters = {
 		all: [],
@@ -1769,7 +1856,7 @@ var GridFilterSet = function (defn) {
  * Add a new filter to this set.  This creates the user interface elements and places them in the
  * appropriate place in the grid.
  *
- * @param {string} colName Name of the column to filter on.
+ * @param {string} field Name of the column to filter on.
  *
  * @param {Element} target Where to place the filter widget.
  *
@@ -1780,32 +1867,36 @@ var GridFilterSet = function (defn) {
  * it, if we've reached the maximum number of filters allowed on the column.
  */
 
-GridFilterSet.prototype.add = function (colName, target, filterType, filterBtn) {
+GridFilterSet.prototype.add = function (field, target, filterType, filterBtn) {
 	var self = this
 		, filter;
 
-	filter = self.build(colName, filterType, filterBtn);
+	filter = self.build(field, filterType, filterBtn);
 
 	// Make sure that requisite data structures are there.
 
-	if (self.filters.byCol[colName] === undefined) {
-		self.filters.byCol[colName] = [];
+	if (self.filters.byCol[field] === undefined) {
+		self.filters.byCol[field] = [];
 	}
 
 	// Add the filter to all of our data structures.
 
 	self.filters.all.push(filter);
-	self.filters.byCol[colName].push(filter);
+	self.filters.byCol[field].push(filter);
 	self.filters.byId[filter.getId()] = filter;
 
 	// Add the filter to the user interface.
 
 	target.append(filter.div);
 
+	if (typeof filter.afterAdd === 'function') {
+		filter.afterAdd(target);
+	}
+
 	// Hide the "add filter" button if we've reached the limit of the number of filters we're allowed
 	// to have for this column.
 
-	if (self.filters.byCol[colName].length === filter.limit) {
+	if (self.filters.byCol[field].length === filter.limit) {
 		filterBtn.hide();
 	}
 
@@ -1818,7 +1909,7 @@ GridFilterSet.prototype.add = function (colName, target, filterType, filterBtn) 
 
 // #build {{{2
 
-GridFilterSet.prototype.build = function (colName, filterType, filterBtn) {
+GridFilterSet.prototype.build = function (field, filterType, filterBtn) {
 	var self = this
 		, colType
 		, ctor;
@@ -1830,18 +1921,18 @@ GridFilterSet.prototype.build = function (colName, filterType, filterBtn) {
 		throw new GridFilterError('This can only be used with a DataSource');
 	}
 
-	colType = self.defn.source.cache.typeInfo[colName].type;
+	colType = self.defn.source.cache.typeInfo[field].type;
 
 	// Make sure that we are able to get the column type.
 
 	if (isNothing(colType)) {
-		throw new GridFilterError('Unable to determine type of column "' + colName + '"');
+		throw new GridFilterError('Unable to determine type of column "' + field + '"');
 	}
 
 	// Make sure that we know what kinds of filters are allowed for the column type.
 
 	if (GridFilter.widgets[colType] === undefined) {
-		throw new GridFilterError('Unknown type "' + colType + '" for column "' + colName + '"');
+		throw new GridFilterError('Unknown type "' + colType + '" for column "' + field + '"');
 	}
 
 	// When the user didn't request a filter type, just use the first one in the allowed list.
@@ -1856,12 +1947,12 @@ GridFilterSet.prototype.build = function (colName, filterType, filterBtn) {
 	}
 
 	if (ctor === undefined) {
-		throw new GridFilterError('Invalid filter type "' + filterType + '" for type "' + colType + '" of column "' + colName + '"');
+		throw new GridFilterError('Invalid filter type "' + filterType + '" for type "' + colType + '" of column "' + field + '"');
 	}
 
 	debug.info('GRID FILTER', 'Creating new widget: column type = "' + colType + '" ; filter type = "' + filterType + '"');
 
-	return new ctor(colName, filterType, filterBtn, self);
+	return new ctor(field, filterType, filterBtn, self);
 };
 
 // #remove {{{2
@@ -1879,18 +1970,18 @@ GridFilterSet.prototype.remove = function (id, filterBtn) {
 
 	var sameId = function (elt) { return elt.getId() === id };
 	var allIndex = _.findIndex(self.filters.all, sameId);
-	var colIndex = _.findIndex(self.filters.byCol[filter.colName], sameId);
+	var colIndex = _.findIndex(self.filters.byCol[filter.field], sameId);
 
 	delete self.filters.byId[id];
 	self.filters.all.splice(allIndex, 1);
-	self.filters.byCol[filter.colName].splice(colIndex, 1);
+	self.filters.byCol[filter.field].splice(colIndex, 1);
 
 	filter.remove();
 
 	// Show the "add filter" button if we're below the limit of the number of filters we're allowed to
 	// have for this column.
 
-	if (self.filters.byCol[filter.colName].length < filter.limit) {
+	if (self.filters.byCol[filter.field].length < filter.limit) {
 		filterBtn.show();
 	}
 };
@@ -1939,32 +2030,32 @@ GridFilterSet.prototype.update = function (dontSavePrefs) {
 		return;
 	}
 
-	_.each(self.filters.byCol, function (filterList, colName) {
+	_.each(self.filters.byCol, function (filterList, field) {
 		_.each(filterList, function (filter) {
 			var value = filter.getValue();
 
-			if (spec[colName] === undefined) {
-				spec[colName] = {};
+			if (spec[field] === undefined) {
+				spec[field] = {};
 			}
 
 			if (filter.isRange()) {
-				spec[colName]['$gte'] = value.start;
-				spec[colName]['$lte'] = value.end;
+				spec[field]['$gte'] = value.start;
+				spec[field]['$lte'] = value.end;
 			}
 			else {
 				var operator = filter.getOperator();
 
-				if (spec[colName][operator] === undefined) {
-					spec[colName][operator] = value;
+				if (spec[field][operator] === undefined) {
+					spec[field][operator] = value;
 				}
-				else if (_.isArray(spec[colName][operator])) {
-					spec[colName][operator].push(value);
+				else if (_.isArray(spec[field][operator])) {
+					spec[field][operator].push(value);
 				}
 				else if (['$eq', '$ne', '$contains'].indexOf(operator) >= 0) {
-					spec[colName][operator] = [spec[colName][operator], value];
+					spec[field][operator] = [spec[field][operator], value];
 				}
 				else {
-					spec[colName][operator] = value;
+					spec[field][operator] = value;
 				}
 			}
 		});
@@ -2006,7 +2097,7 @@ GridFilterSet.prototype.savePrefs = function () {
 	_.each(self.filters.all, function (filter) {
 		var filterPref = {};
 
-		filterPref.colName = filter.colName;
+		filterPref.field = filter.field;
 		filterPref.filterType = filter.filterType;
 		filterPref.operator = filter.getOperator();
 		filterPref.value = filter.getValue();
@@ -2895,7 +2986,7 @@ function PivotControl(defn, view, features) {
 		rowReordering: false
 	});
 
-	self.gridFilterSet = new GridFilterSet(self.defn);
+	self.gridFilterSet = new GridFilterSet(self.defn, self.view);
 	self.fields = [];
 	self.groupFields = [];
 	self.pivotFields = [];
