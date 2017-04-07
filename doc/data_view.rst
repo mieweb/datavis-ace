@@ -16,8 +16,11 @@ view to get data.  This is because the view handles filtering, sorting, grouping
 which the data source does not.  So how does the view return its data?  There are two formats,
 depending on whether the data is grouped or not.
 
-Grouped Format
---------------
+Internal Format
+===============
+
+``isPlain``
+  True if the data is plain (i.e. not grouped or pivotted).
 
 ``isGroup``
   True if the data is grouped.

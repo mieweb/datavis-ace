@@ -1096,12 +1096,12 @@ var DataSource = function (spec, params) {
 	self.source = new DataSource.sources[self.type](spec);
 
 	if (!isNothing(spec.conversion) && !_.isArray(spec.conversion)) {
-		throw new DataSourceError('Invalid DataSource config: <.conversion> must be an array');
+		throw new DataSourceError('Invalid DataSource config: << .conversion >> must be an array');
 	}
 
-	_.each(spec.conversion, function (f, i) {
-		if (typeof f !== 'function') {
-			throw new DataSourceError('Invalid DataSource config: <.conversion[' + i + '] must be a function');
+	_.each(spec.conversion, function (c, i) {
+		if (typeof c !== 'function' && typeof c !== 'string') {
+			throw new DataSourceError('Invalid DataSource config: << .conversion[' + i + '] >> must be a function or string');
 		}
 	});
 
@@ -1120,6 +1120,10 @@ DataSource.sources = {
 	local: LocalDataSource,
 	http: HttpDataSource
 };
+
+// .converters {{{2
+
+DataSource.converters = {};
 
 // .messages {{{2
 
@@ -1226,6 +1230,17 @@ DataSource.prototype.getTypeInfo = function (cont) {
 	}
 
 	return self.source.getTypeInfo(function (typeInfo) {
+		// When the type information for a field is just a string, then that's the same as setting it as
+		// the 'type' property of the full object.
+
+		_.each(typeInfo, function (v, k) {
+			if (_.isString(v)) {
+				typeInfo[k] = {
+					'type': v
+				};
+			}
+		});
+
 		self.cache.typeInfo = typeInfo;
 		return cont(self.cache.typeInfo);
 	});
@@ -1267,6 +1282,28 @@ DataSource.prototype.postProcess = function (data, cont) {
 	debug.info('DATA SOURCE // POST-PROCESSING', 'Beginning post-processing');
 
 	self.getTypeInfo(function (typeInfo) {
+		var convertFns = [];
+
+		_.each(self.conversion, function (c, i) {
+			if (typeof c === 'function') {
+				convertFns.push(c);
+			}
+			else if (typeof c === 'string') {
+				if (DataSource.converters[c] === undefined) {
+					throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" not registered');
+				}
+
+				if (typeof DataSource.converters[c] !== 'function') {
+					throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" is not a function');
+				}
+
+				convertFns.push(DataSource.converters[c]);
+			}
+			else {
+				throw new DataSourceError('Conversion #' + i + ': Must be a function or string');
+			}
+		});
+
 		_.each(data, function (row, rowNum) {
 			_.each(row, function (val, field) {
 				row[field] = {
@@ -1274,8 +1311,8 @@ DataSource.prototype.postProcess = function (data, cont) {
 				};
 
 				var i = 0;
-				while (i < self.conversion.length) {
-					if (self.conversion[i](row[field], field, typeInfo[field], row)) {
+				while (i < convertFns.length) {
+					if (convertFns[i](row[field], field, typeInfo[field], row, self)) {
 						break;
 					}
 					i += 1;
@@ -1412,6 +1449,14 @@ DataSource.prototype.swapRows = function (oldIndex, newIndex) {
 	//for (var i=0; i<self.cache.data.length; i++) {
 	//	self.cache.data[i].position=i;
 	//}
+};
+
+// #toString {{{2
+
+DataSource.prototype.toString = function () {
+	var self = this;
+
+	return 'DataSource <' + self.name + ', ' + self.type + '>';
 };
 
 // Data Model {{{1
@@ -1672,27 +1717,27 @@ DataView.prototype.sort = function (cont) {
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Sorting']
 		, conv = I;
 
-	var sortFn = {};
+	var cmpFn = {};
 
 	// Dates and times are stored as Moment instances, so we need to compare them accordingly.
 
-	sortFn.date = function (a, b) {
+	cmpFn.date = function (a, b) {
 		return a.isBefore(b);
 	};
-	sortFn.time = sortFn.date;
-	sortFn.datetime = sortFn.date;
+	cmpFn.time = cmpFn.date;
+	cmpFn.datetime = cmpFn.date;
 
 	// Strings, numbers, and currency are stored as JavaScript primitives, so using the builtin
 	// operators to compare them is OK.
 
-	sortFn.string = function (a, b) {
+	cmpFn.string = function (a, b) {
 		return a < b;
 	};
 
-	sortFn.number = function (a, b) {
+	cmpFn.number = function (a, b) {
 		return a._value < b._value;
 	};
-	sortFn.currency = sortFn.number;
+	cmpFn.currency = cmpFn.number;
 
 	if (self.sortSpec === undefined) {
 		return cont(self.data.data);
@@ -1705,7 +1750,33 @@ DataView.prototype.sort = function (cont) {
 		self.sortProgress.start();
 	}
 
-	var cmp = sortFn[self.typeInfo[self.sortSpec.col].type];
+	// Check to make sure we have enough information about the type of the field that the user wants
+	// us to sort by.
+
+	if (self.typeInfo[self.sortSpec.col] === undefined) {
+		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - no type information available');
+	}
+
+	if (self.typeInfo[self.sortSpec.col].type === undefined) {
+		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - type is not provided');
+	}
+
+	var fieldType = self.typeInfo[self.sortSpec.col].type;
+
+	// Check to make sure that we have a valid function registered to use for comparing values in the
+	// domain of the type of the field that the user wants us to sort by.
+
+	if (cmpFn[fieldType] === undefined) {
+		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - no function registered to compare values of type "' + fieldType + '"');
+	}
+
+	if (typeof cmpFn[fieldType] !== 'function') {
+		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - function registered to compare values of type "' + fieldType + '" is not actually a function');
+	}
+
+	var cmp = cmpFn[fieldType];
+
+	// Actually perform the sort.
 
 	mergeSort3(self.data.data,
 						 function (a, b) {
@@ -2423,12 +2494,3 @@ DataView.prototype.publish = function () {
 		f.apply(null, args);
 	});
 };
-
-// Exports {{{1
-
-window.MIE = window.MIE || {};
-
-window.MIE.ParamInput = ParamInput;
-window.MIE.ParamInputError = ParamInputError;
-window.MIE.DataSource = DataSource;
-window.MIE.DataSourceError = DataSourceError;

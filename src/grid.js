@@ -401,16 +401,6 @@ GridTable.prototype.draw = function (container, tableDone) {
 				tr: []
 			};
 
-			var check_handler = function () {
-				var tds = jQuery(jQuery(this).parents('tr').get(0)).children('td');
-				if (this.checked) {
-					tds.addClass('selected_row');
-				}
-				else {
-					tds.removeClass('selected_row');
-				}
-			};
-
 			/*
 			 * Determine what columns will be in the table.  This comes from the user, or from the data
 			 * itself.  We may then add columns for extra features (like row selection or reordering).
@@ -737,21 +727,28 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 			 */
 
 			if (self.features.filter) {
+
 				// Add a TH to the TR that will contain the filters.  Every filter will actually be a DIV
 				// inside this TH.
+				//
+				// The ID attribute here is used to provide a selector to NProgress, so the progress bar
+				// will be drawn in the header cell for the column we're filtering by.  You can't pass an
+				// element to NProgress for this, it needs to be a selector string.  Passing ('#' + id) was
+				// the easiest way to do it.
+				//
+				// Unfortunately, the ID attribute is copied when using TableTool so this might mess us up.
 
-				var filterTh = jQuery('<th>', { id: gensym() }).css(filterThCss);
+				var filterTh = jQuery('<th>', { id: gensym() }).addClass('filter_col_' + colIndex).css(filterThCss);
 				self.setCss(filterTh, field);
 				filterTr.append(filterTh);
 
-				// Create the button that will add the filter to the grid, and stick it onto the end of
-				// the column heading TH.
+				// Create the "button" (really a SPAN) that will add the filter to the grid, and stick it
+				// onto the end of the column heading TH.
 
 				jQuery(fontAwesome('F0B0', null, 'Click to add a filter on this column'))
 					.css({'cursor': 'pointer', 'margin-left': '0.5ex'})
 					.on('click', function () {
-						// TODO TableTool - need to add to the clone instead.
-						self.defn.gridFilterSet.add(field, filterTh, colConfig.filter, jQuery(this));
+						self.defn.gridFilterSet.add(field, $(this).closest('thead').find('th.filter_col_' + colIndex), colConfig.filter, jQuery(this));
 					})
 					.appendTo(headingTh);
 			}
@@ -780,6 +777,8 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 
 	}
 };
+
+// #makeRowReorderBtn {{{2
 
 GridTable.prototype.makeRowReorderBtn = function () {
 	return jQuery('<button type="button" class="drag-handle fa">')
@@ -832,6 +831,16 @@ GridTable.prototype.makeRowReorderBtn = function () {
 GridTable.prototype.draw_body_plain = function (data, typeInfo, columns) {
 	var self = this;
 
+	var check_handler = function () {
+		var tds = jQuery(jQuery(this).parents('tr').get(0)).children('td');
+		if (this.checked) {
+			tds.addClass('selected_row');
+		}
+		else {
+			tds.removeClass('selected_row');
+		}
+	};
+
 	_.each(data.data, function (row, rowNum) {
 		var tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum});
 
@@ -840,7 +849,6 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns) {
 		if (self.features.rowSelect) {
 			var checkbox = jQuery('<input>', {
 				'type': 'checkbox',
-				'data-source-num': srcNum,
 				'data-row-num': rowNum
 			})
 				.on('change', check_handler);
@@ -1040,9 +1048,6 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 	var sortSpan = jQuery('<span>').css({'font-size': '1.2em'});
 
 	var onClick = function () {
-		// TODO TableTool - We need to determine sortSpan based on 'this' so we can find the clone if
-		// we're using TableTool.
-
 		var cloneSortSpan = $(this).siblings('span.sort_indicator');
 		jQuery('span.sort_indicator').hide();
 		cloneSortSpan.show();
@@ -3194,9 +3199,3 @@ PivotControlField.prototype.appendTo = function (elt) {
 	elt.append(self.div);
 };
 
-// Exports {{{1
-
-window.MIE = window.MIE || {};
-
-window.MIE.trans = I;
-window.MIE.Grid = Grid;

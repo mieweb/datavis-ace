@@ -1,5 +1,3 @@
-// Introduction {{{1
-
 // This library contains functions for customizing, running, and displaying the
 // results of system reports. This includes several major capabilities:
 //
@@ -62,8 +60,6 @@
 //   <NEW-ERROR>.prototype.constructor = <NEW-ERROR>;
 //
 
-// Toplevel {{{1
-
 /* globals WC_PrefGet, wcLogError, mietrans */
 
 /**
@@ -99,9 +95,6 @@
  */
 
 (function ($) {
-	// Turn debug messages --- sent via debug.info() et al. --- on/off.
-	var DEBUGGING = window.GRID_DEBUGGING;
-
 	// Contains information on all the filters that the user has access to.
 	var filters = [];
 	var gensymSeed = 0;
@@ -110,6 +103,16 @@
 	$INCLUDE('src/datasource.js');
 	$INCLUDE('src/graph.js');
 	$INCLUDE('src/grid.js');
+
+	window.MIE                 = window.MIE || {};
+	window.MIE.log             = log;
+	window.MIE.debug           = debug;
+	window.MIE.ParamInput      = ParamInput;
+	window.MIE.ParamInputError = ParamInputError;
+	window.MIE.DataSource      = DataSource;
+	window.MIE.DataSourceError = DataSourceError;
+	window.MIE.trans           = I;
+	window.MIE.Grid            = Grid;
 
 })(jQuery);
 

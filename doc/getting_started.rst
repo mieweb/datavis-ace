@@ -2,8 +2,11 @@
 Getting Started
 ***************
 
-Requirements
+Dependencies
 ============
+
+Required Dependencies
+---------------------
 
 The following libraries are required to use WC DataVis:
 
@@ -20,6 +23,11 @@ The following libraries are required to use WC DataVis:
 You also need the following MIE libraries:
 
 * TableTool
+
+Optional Dependencies
+---------------------
+
+* NProgress
 
 Installation
 ============
