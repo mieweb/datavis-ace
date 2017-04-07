@@ -3,6 +3,6 @@ jsdoc
 node_modules
 doc/_build
 doc/.python-version
-dist
+dist/wcdatavis.js
 examples/wcdatavis.js
 examples/wcdatavis.css
