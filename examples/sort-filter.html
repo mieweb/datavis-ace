@@ -37,7 +37,7 @@ $(document).ready(function () {
 		return false;
 	};
 
-	var dataSource = new MIE.DataSource({
+	var source = new MIE.DataSource({
 		type: 'http',
 		url: 'data.xml',
 		conversion: [bbcode]
@@ -46,6 +46,7 @@ $(document).ready(function () {
 		runImmediately: true,
 		title: 'Basic Example'
 	};
+	var view = new MIE.DataView(source);
 	var defn = {
 		id: 'example',
 		table: {
@@ -63,9 +64,9 @@ $(document).ready(function () {
 				{ field: "date_link", displayText: "Date Link", format: "MMM Do, YYYY" }
 			]
 		},
-		source: dataSource
+		source: source
 	};
-	new MIE.Grid('example', defn, tagOpts);
+	new MIE.Grid('example', view, source, defn, tagOpts);
 });
 		</script>
 	</head>

@@ -914,13 +914,13 @@ HttpDataSource.parseData = function (data) {
 			throw new DataSourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo) elements');
 		}
 
-		result.typeInfo = {};
+		result.typeInfo = new MIE.OrdMap();
 		typeInfo.children().each(function (_fieldIndex, field) {
 			field = jQuery(field);
 			var fieldName = field.prop('tagName');
-			result.typeInfo[fieldName] = {};
+			result.typeInfo.set(fieldName, {});
 			if (field.children().length === 0) {
-				result.typeInfo[fieldName].type = field.text();
+				result.typeInfo.get(fieldName).type = field.text();
 			}
 			else {
 				var type = field.children('type');
@@ -934,7 +934,7 @@ HttpDataSource.parseData = function (data) {
 					throw new DataSourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > type) element cannot have children');
 				}
 
-				result.typeInfo[fieldName].type = type.text();
+				result.typeInfo.get(fieldName).type = type.text();
 
 				var format = field.children('format');
 				if (format.length > 1) {
@@ -944,7 +944,7 @@ HttpDataSource.parseData = function (data) {
 					if (format.children().length > 0) {
 						throw new DataSourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > format) element cannot have children');
 					}
-					result.typeInfo[fieldName].format = format.text();
+					result.typeInfo.get(fieldName).format = format.text();
 				}
 			}
 		});
@@ -1096,12 +1096,30 @@ var DataSource = function (spec, params) {
 	self.source = new DataSource.sources[self.type](spec);
 
 	if (!isNothing(spec.conversion) && !_.isArray(spec.conversion)) {
-		throw new DataSourceError('Invalid DataSource config: << .conversion >> must be an array');
+		throw new DataSourceError('Invalid DataSource config: `.conversion` must be an array');
 	}
 
+	// Check the validity of all the specified conversions.
+	//
+	//   * If identified by name:
+	//
+	//     1. The name must already be registered in `DataSource.converters`
+	//     2. The registered converter must be a function
+	//
+	//   * Otherwise it needs to be a function.
+
 	_.each(spec.conversion, function (c, i) {
-		if (typeof c !== 'function' && typeof c !== 'string') {
-			throw new DataSourceError('Invalid DataSource config: << .conversion[' + i + '] >> must be a function or string');
+		if (typeof c === 'string') {
+			if (DataSource.converters[c] === undefined) {
+				throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" not registered');
+			}
+
+			if (typeof DataSource.converters[c] !== 'function') {
+				throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" is not a function');
+			}
+		}
+		else if (typeof c !== 'function') {
+			throw new DataSourceError('Invalid DataSource config: `.conversion[' + i + ']` must be a function or string');
 		}
 	});
 
@@ -1233,11 +1251,11 @@ DataSource.prototype.getTypeInfo = function (cont) {
 		// When the type information for a field is just a string, then that's the same as setting it as
 		// the 'type' property of the full object.
 
-		_.each(typeInfo, function (v, k) {
+		typeInfo.each(function (v, k) {
 			if (_.isString(v)) {
-				typeInfo[k] = {
+				typeInfo.set(k, {
 					'type': v
-				};
+				});
 			}
 		});
 
@@ -1289,18 +1307,7 @@ DataSource.prototype.postProcess = function (data, cont) {
 				convertFns.push(c);
 			}
 			else if (typeof c === 'string') {
-				if (DataSource.converters[c] === undefined) {
-					throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" not registered');
-				}
-
-				if (typeof DataSource.converters[c] !== 'function') {
-					throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" is not a function');
-				}
-
 				convertFns.push(DataSource.converters[c]);
-			}
-			else {
-				throw new DataSourceError('Conversion #' + i + ': Must be a function or string');
 			}
 		});
 
@@ -1312,13 +1319,13 @@ DataSource.prototype.postProcess = function (data, cont) {
 
 				var i = 0;
 				while (i < convertFns.length) {
-					if (convertFns[i](row[field], field, typeInfo[field], row, self)) {
+					if (convertFns[i](row[field], field, typeInfo.get(field), row, self)) {
 						break;
 					}
 					i += 1;
 				}
 
-				switch (typeInfo[field].type) {
+				switch (typeInfo.get(field).type) {
 				case 'number':
 				case 'currency':
 					if (row[field].orig === undefined) {
@@ -1332,7 +1339,7 @@ DataSource.prototype.postProcess = function (data, cont) {
 					if (row[field].orig === undefined) {
 						row[field].orig = row[field].value;
 					}
-					row[field].value = moment(row[field].value, typeInfo[field].format);
+					row[field].value = moment(row[field].value, typeInfo.get(field).format);
 					break;
 				}
 			});
@@ -1532,8 +1539,6 @@ var DATA_VIEW_ID = 1;
  *
  * @property {DataSource} source
  *
- * @property {Object} defn
- *
  * @property {Array.<function>} subscribers
  *
  * @property {Object} sortSpec
@@ -1548,6 +1553,14 @@ var DATA_VIEW_ID = 1;
  *
  * @property {Function} groupSpec.aggregate
  *
+ * @property {Object.<string, Array.<Function>>} eventHandlers
+ *
+ * @property {Array.<Function>} eventHandlers.filter
+ *
+ * @property {Array.<Function>} eventHandlers.getTypeInfo
+ *
+ * @property {Array.<Function>} eventHandlers.sort
+ *
  * @property {number} tryLimit Maximum number of tries for calling getData(), this is a safety valve
  * which is mostly useful while developing (it prevents your computer's memory from being completely
  * eaten by an infinite recursive loop).
@@ -1557,15 +1570,19 @@ var DATA_VIEW_ID = 1;
 
 // Constructor {{{2
 
-function DataView(source, defn, wcgrid) {
+function DataView(source) {
 	var self = this;
 
 	self.source = source;
-	self.defn = defn;
-	self.wcgrid = wcgrid;
 	self.subscribers = [];
 	self.name = 'Data View #' + (DATA_VIEW_ID++);
-	self.eventHandlers = {};
+	self.eventHandlers = {
+		filter: [],
+		getTypeInfo: [],
+		sort: [],
+		workBegin: [],
+		workEnd: []
+	};
 	self.tryLimit = 5;
 	self.timing = new Timing();
 }
@@ -1629,12 +1646,16 @@ DataView.prototype.getTotalRowCount = function () {
  * depend on the event.
  */
 
-DataView.prototype.on = function (event, cb) {
-	if (this.eventHandlers[event] === undefined) {
-		this.eventHandlers[event] = [];
+DataView.prototype.on = function (evt, cb) {
+	var self = this;
+
+	if (self.eventHandlers[evt] === undefined) {
+		throw new DataSourceError('Unable to register handler for "' + event + '" event: no such event available');
 	}
 
-	this.eventHandlers[event].push(cb);
+	self.eventHandlers[evt].push(cb);
+
+	return self;
 };
 
 // #off {{{2
@@ -1649,8 +1670,27 @@ DataView.prototype.off = function () {
 	var args = Array.prototype.slice.call(arguments)
 		, self = this;
 
-	_.each(args, function (event) {
-		delete self.eventHandlers[event];
+	_.each(args, function (evt) {
+		self.eventHandlers[evt] = [];
+	});
+};
+
+// #issue {{{2
+
+/**
+ */
+
+DataView.prototype.issue = function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments)
+		, evt = args.shift();
+
+	if (self.eventHandlers[evt] === undefined) {
+		throw new Error('CALL ERROR - Invalid event: "' + evt + '"');
+	}
+
+	_.each(self.eventHandlers[evt], function (f) {
+		f.apply(undefined, args);
 	});
 };
 
@@ -1753,15 +1793,15 @@ DataView.prototype.sort = function (cont) {
 	// Check to make sure we have enough information about the type of the field that the user wants
 	// us to sort by.
 
-	if (self.typeInfo[self.sortSpec.col] === undefined) {
+	if (!self.typeInfo.isSet(self.sortSpec.col)) {
 		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - no type information available');
 	}
 
-	if (self.typeInfo[self.sortSpec.col].type === undefined) {
+	if (self.typeInfo.get(self.sortSpec.col).type === undefined) {
 		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - type is not provided');
 	}
 
-	var fieldType = self.typeInfo[self.sortSpec.col].type;
+	var fieldType = self.typeInfo.get(self.sortSpec.col).type;
 
 	// Check to make sure that we have a valid function registered to use for comparing values in the
 	// domain of the type of the field that the user wants us to sort by.
@@ -1784,15 +1824,9 @@ DataView.prototype.sort = function (cont) {
 												 ^ (self.sortSpec.dir === 'DESC'));
 						 },
 						 function (sorted) {
-							 if (self.eventHandlers.sort) {
-								 _.each(sorted, function (row, position) {
-									 _.each(self.eventHandlers.sort, function (cb) {
-										 if (typeof cb === 'function') {
-											 cb(row.rowNum, position);
-										 }
-									 });
-								 });
-							 }
+							 _.each(sorted, function (row, position) {
+								 self.issue('sort', row.rowNum, position);
+							 });
 
 							 if (self.sortProgress
 									 && typeof self.sortProgress.done === 'function') {
@@ -1907,9 +1941,9 @@ DataView.prototype.filter = function (cont) {
 			return false;
 		}
 
-		var isMoment = ['date', 'time', 'datetime'].indexOf(self.typeInfo[field].type) >= 0;
-		var isNumeral = ['number', 'currency'].indexOf(self.typeInfo[field].type) >= 0;
-		var isString = ['string'].indexOf(self.typeInfo[field].type) >= 0;
+		var isMoment = ['date', 'time', 'datetime'].indexOf(self.typeInfo.get(field).type) >= 0;
+		var isNumeral = ['number', 'currency'].indexOf(self.typeInfo.get(field).type) >= 0;
+		var isString = ['string'].indexOf(self.typeInfo.get(field).type) >= 0;
 
 		var pred = {};
 
@@ -2010,13 +2044,7 @@ DataView.prototype.filter = function (cont) {
 
 		var passes = isNothing(self.filterSpec) ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
 
-		if (self.eventHandlers.filter) {
-			_.each(self.eventHandlers.filter, function (cb) {
-				if (typeof cb === 'function') {
-					cb(row.rowNum, !passes);
-				}
-			});
-		}
+		self.issue('filter', row.rowNum, !passes);
 
 		return passes;
 	}
@@ -2353,8 +2381,7 @@ DataView.prototype.getData = function (cont, tries) {
 	}
 
 	if (self.data === undefined) {
-		self.wcgrid.setSpinner('working');
-		self.wcgrid.showSpinner();
+		self.issue('workBegin');
 
 		return self.source.getData(function (data) {
 			return self.source.getTypeInfo(function (typeInfo) {
@@ -2389,8 +2416,7 @@ DataView.prototype.getData = function (cont, tries) {
 
 	debug.info('DATA VIEW', 'Got data: %O', self.data);
 
-	self.wcgrid.hideSpinner();
-	self.wcgrid.updateRowCount(self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
+	self.issue('workEnd', self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
 
 	if (typeof cont === 'function') {
 		return cont(self.data);
@@ -2398,6 +2424,10 @@ DataView.prototype.getData = function (cont, tries) {
 };
 
 // #getTypeInfo {{{2
+
+/**
+ *
+ */
 
 DataView.prototype.getTypeInfo = function (cont) {
 	var self = this;
@@ -2408,6 +2438,8 @@ DataView.prototype.getTypeInfo = function (cont) {
 			return self.getTypeInfo(cont);
 		});
 	}
+
+	self.issue('getTypeInfo', self.typeInfo);
 
 	if (typeof cont === 'function') {
 		return cont(self.typeInfo);

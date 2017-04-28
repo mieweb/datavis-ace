@@ -45,6 +45,8 @@ The type information for each field indicates the following:
    | ``number``   | Integer of floating point number; primarily used for sorting numerically.  The |
    |              | internal value is a number.                                                    |
    +--------------+--------------------------------------------------------------------------------+
+   | ``currency`` | A string formatted as money.  The internal value is a number.                  |
+   +--------------+--------------------------------------------------------------------------------+
    | ``string``   | Catch all data type, can contain anything at all.                              |
    +--------------+--------------------------------------------------------------------------------+
    | ``date``     | A string containing a date, which can be formatted or sorted.  The default     |

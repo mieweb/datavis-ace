@@ -47,7 +47,7 @@ function determineColumns(defn, data, typeInfo) {
 		columns = _.pluck(defn.table.columns, 'field');
 	}
 	else {
-		columns = _.reject(_.keys(typeInfo), function (field) {
+		columns = _.reject(typeInfo.keys(), function (field) {
 			return field.charAt(0) === '_';
 		});
 	}
@@ -310,10 +310,10 @@ function rowSelect_checkAll(evt, elt) {
  * @property {string} message
  */
 
-var GridError = function (defn, msg) {
+var GridError = function (msg) {
 	this.name = 'GridError';
 	this.stack = (new Error()).stack;
-	this.message = 'Grid ' + defn.table.id + ': ' + msg;
+	this.message = msg;
 }
 
 GridError.prototype = Object.create(Error.prototype);
@@ -337,18 +337,18 @@ GridError.prototype.constructor = GridError;
  *
  * @property {object} defn
  *
- * @property {DataView} dataView
+ * @property {DataView} view
  *
  * @property {Element} container
  */
 
-function GridTable(defn, dataView, features) {
+var GridTable = function (defn, view, features) {
 	var self = this;
 
 	self.defn = defn;
-	self.dataView = dataView;
+	self.view = view;
 	self.features = features;
-}
+};
 
 GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
@@ -384,8 +384,8 @@ GridTable.prototype.draw = function (container, tableDone) {
 
 	self.container = container;
 
-	return self.dataView.getData(function (data) {
-		return self.dataView.getTypeInfo(function (typeInfo) {
+	return self.view.getData(function (data) {
+		return self.view.getTypeInfo(function (typeInfo) {
 			debug.info('GRIDTABLE', 'Data = %O', data);
 			debug.info('GRIDTABLE', 'TypeInfo = %O', typeInfo);
 
@@ -463,8 +463,8 @@ GridTable.prototype.draw = function (container, tableDone) {
 			if (self.features.filter) {
 				var even = false; // Rows are 1-based to match our CSS zebra-striping.
 
-				self.defn.view.off('filter');
-				self.defn.view.on('filter', function (rowNum, hide) {
+				self.view.off('filter');
+				self.view.on('filter', function (rowNum, hide) {
 					self.ui.tr[rowNum].removeClass('even odd');
 					if (hide) {
 						self.ui.tr[rowNum].hide();
@@ -486,8 +486,8 @@ GridTable.prototype.draw = function (container, tableDone) {
 			 */
 
 			if (self.features.sort) {
-				self.defn.view.off('sort');
-				self.defn.view.on('sort', function (rowNum, position) {
+				self.view.off('sort');
+				self.view.on('sort', function (rowNum, position) {
 					var elt = jQuery(document.getElementById(self.defn.table.id + '_' + rowNum));
 
 					// Add one to the position (which is 0-based) to match the 1-based row number in CSS.
@@ -698,7 +698,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 		 */
 
 		if (self.features.filter) {
-			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.defn.view);
+			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view);
 		}
 
 		/*
@@ -866,7 +866,7 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns) {
 
 			// For types that support formatting, use that instead of the value.
 
-			if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo[field].type) >= 0
+			if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo.get(field).type) >= 0
 					&& colConfig.format) {
 
 				// The value here could be either from NumeralJS or from Moment, but fortunately it doesn't
@@ -974,7 +974,7 @@ GridTable.prototype.draw_body_group = function (data, typeInfo, columns) {
 
 					// For types that support formatting, use that instead of the value.
 
-					if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo[field].type) >= 0
+					if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo.get(field).type) >= 0
 							&& colConfig.format) {
 
 						// The value here could be either from NumeralJS or from Moment, but fortunately it doesn't
@@ -1062,31 +1062,31 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 
 		cloneSortSpan.html(fontAwesome(self.defn.sortSpec.asc ? 'F0D7' : 'F0D8'));
 
-		self.defn.view.setSort(self.defn.sortSpec.col,
-													 self.defn.sortSpec.asc ? 'ASC' : 'DESC',
-													 false,
-													 {
-														 start: function () {
-															 if (window.NProgress !== undefined) {
-																 window.NProgress.configure({
-																	 parent: '#' + headingTh.attr('id'),
-																	 showSpinner: false
-																 });
-																 window.NProgress.start();
-															 }
-														 },
-														 update: function (amount, estTotal) {
-															 console.log(sprintf('Sort progress: %.0f%%', (amount / estTotal) * 100));
-															 if (window.NProgress !== undefined) {
-																 window.NProgress.set(amount / estTotal);
-															 }
-														 },
-														 done: function () {
-															 if (window.NProgress !== undefined) {
-																 window.NProgress.done();
-															 }
-														 }
-													 });
+		self.view.setSort(self.defn.sortSpec.col,
+											self.defn.sortSpec.asc ? 'ASC' : 'DESC',
+											false,
+											{
+												start: function () {
+													if (window.NProgress !== undefined) {
+														window.NProgress.configure({
+															parent: '#' + headingTh.attr('id'),
+															showSpinner: false
+														});
+														window.NProgress.start();
+													}
+												},
+												update: function (amount, estTotal) {
+													console.log(sprintf('Sort progress: %.0f%%', (amount / estTotal) * 100));
+													if (window.NProgress !== undefined) {
+														window.NProgress.set(amount / estTotal);
+													}
+												},
+												done: function () {
+													if (window.NProgress !== undefined) {
+														window.NProgress.done();
+													}
+												}
+											});
 	};
 
 	sortSpan.addClass('sort_indicator');
@@ -1333,7 +1333,7 @@ GridFilter.prototype.constructor = GridFilter;
 GridFilter.prototype.getValue = function () {
 	var self = this;
 
-	switch (self.gridFilterSet.view.typeInfo[self.field].type) {
+	switch (self.gridFilterSet.view.typeInfo.get(self.field).type) {
 	case 'date':
 	case 'time':
 	case 'datetime':
@@ -1882,7 +1882,7 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target) 
 		throw new GridFilterError('This can only be used with a DataSource');
 	}
 
-	colType = self.defn.source.cache.typeInfo[field].type;
+	colType = self.defn.source.cache.typeInfo.get(field).type;
 
 	// Make sure that we are able to get the column type.
 
@@ -1966,7 +1966,7 @@ GridFilterSet.prototype.reset = function () {
 		byCol: {}
 	};
 
-	self.defn.view.clearFilter();
+	self.view.clearFilter();
 };
 
 // #update {{{2
@@ -1987,7 +1987,7 @@ GridFilterSet.prototype.update = function (dontSavePrefs, progress) {
 	}
 
 	if (self.filters.all.length === 0) {
-		self.defn.view.setFilter(null);
+		self.view.setFilter(null);
 		return;
 	}
 
@@ -2024,7 +2024,7 @@ GridFilterSet.prototype.update = function (dontSavePrefs, progress) {
 
 	debug.info('GRID FILTER SET', 'Updating with ' + self.filters.all.length + ' filters: ', spec);
 
-	self.defn.view.setFilter(spec, false, progress);
+	self.view.setFilter(spec, false, progress);
 
 	if (getProp(self.defn, 'table', 'prefs', 'enableSaving') && !dontSavePrefs) {
 		self.savePrefs();
@@ -2169,7 +2169,7 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
 
 // Constructor {{{2
 
-var Grid = function (id, defn, tagOpts, cb) {
+var Grid = function (id, view, source, defn, tagOpts, cb) {
 	var self = this;
 
 	var tagContainer = null; // Container div for the contents of the whole tag.
@@ -2189,6 +2189,14 @@ var Grid = function (id, defn, tagOpts, cb) {
 
 	debug.info('GRID', 'Definition: %O', defn);
 
+	if (isNothing(view)) {
+		throw new GridError('The `view` argument is required');
+	}
+
+	if (!(view instanceof DataView)) {
+		throw new GridError('The `view` argument must be an instance of MIE.DataView');
+	}
+
 	if (tagOpts === undefined) {
 		tagOpts = $.extend(true, {}, {
 			runImmediately: true
@@ -2201,6 +2209,8 @@ var Grid = function (id, defn, tagOpts, cb) {
 	self.grid = null; // List of all grids generated as a result.
 	self.ui = {}; // User interface elements.
 	self.selected = {}; // Information about what rows are selected.
+	self.source = source;
+	self.view = view;
 
 	self.defn.grid = self;
 
@@ -2309,34 +2319,37 @@ var Grid = function (id, defn, tagOpts, cb) {
 		}
 	};
 
-	if (self.defn.source instanceof DataSource) {
-		if (self.defn.view === undefined) {
-			self.defn.view = new DataView(self.defn.source, defn, self);
+	self.view.on('workBegin', function () {
+		self.showSpinner();
+	});
+
+	self.view.on('workEnd', function (rowCount, totalRowCount) {
+		self.hideSpinner();
+		self.updateRowCount(rowCount, totalRowCount);
+	});
+
+	self.view.subscribe(function () {
+		var args = Array.prototype.slice.call(arguments);
+		var dv = args[0]
+			, msg = args[1]
+			, info = args[2];
+
+		debug.info('GRID', 'Received message "%s" from data view: %O', msg, info);
+	});
+
+	self.source.subscribe(function () {
+		var args = Array.prototype.slice.call(arguments);
+		var ds = args[0]
+			, msg = args[1]
+			, rest = args.slice(2);
+
+		debug.info('GRID', 'Received message "%s" from data source "%s": %O', msg, ds.name, rest);
+		switch (msg) {
+		case DataSource.messages.DATA_UPDATED:
+			self.refresh();
+			break;
 		}
-
-		self.defn.view.subscribe(function () {
-			var args = Array.prototype.slice.call(arguments);
-			var dv = args[0]
-				, msg = args[1]
-				, info = args[2];
-
-			debug.info('GRID', 'Received message "%s" from data view: %O', msg, info);
-		});
-
-		self.defn.source.subscribe(function () {
-			var args = Array.prototype.slice.call(arguments);
-			var ds = args[0]
-				, msg = args[1]
-				, rest = args.slice(2);
-
-			debug.info('GRID', 'Received message "%s" from data source "%s": %O', msg, ds.name, rest);
-			switch (msg) {
-			case DataSource.messages.DATA_UPDATED:
-				self.refresh();
-				break;
-			}
-		});
-	}
+	});
 
 	if (self.tagOpts.runImmediately) {
 		self.showGrid();
@@ -2628,12 +2641,12 @@ Grid.prototype.refresh = function () {
 
 	if (self.features.pivot) {
 		debug.info('GRID', 'Creating PivotControl for pivot table output');
-		self.pivotControl = new PivotControl(self.defn, self.defn.view, self.features);
+		self.pivotControl = new PivotControl(self.defn, self.view, self.features);
 		self.pivotControl.draw(self.ui.gridContainer, self.tableDoneCont);
 	}
 	else {
 		debug.info('GRID', 'Creating GridTable for normal output');
-		self.gridTable = new GridTable(self.defn, self.defn.view, self.features);
+		self.gridTable = new GridTable(self.defn, self.view, self.features);
 		self.gridTable.draw(self.ui.gridContainer, self.tableDoneCont); // TODO load prefs
 	}
 };
@@ -2674,6 +2687,7 @@ Grid.prototype.updateRowCount = function (numRows, totalRows) {
 		, doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
 
 	debug.info('GRID', 'Updating row count');
+	self.setSpinner('working');
 
 	// When there's no titlebar, there's nothing for us to do here.
 

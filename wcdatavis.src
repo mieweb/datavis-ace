@@ -79,14 +79,6 @@
  */
 
 /**
- * @typedef TypeInfo
- * @type object
- *
- * @property {object} byName Type information indexed by name.
- * @property {array} byIndex Type information indexed by column number.
- */
-
-/**
  * @typedef UniqElt
  * @type object
  *
@@ -100,20 +92,22 @@
 	var gensymSeed = 0;
 
 	$INCLUDE('src/util.js');
+	$INCLUDE('src/ordmap.js');
 	$INCLUDE('src/datasource.js');
 	$INCLUDE('src/graph.js');
 	$INCLUDE('src/grid.js');
 
-	window.MIE                 = window.MIE || {};
-	window.MIE.log             = log;
-	window.MIE.debug           = debug;
-	window.MIE.ParamInput      = ParamInput;
-	window.MIE.ParamInputError = ParamInputError;
-	window.MIE.DataSource      = DataSource;
-	window.MIE.DataSourceError = DataSourceError;
-	window.MIE.trans           = I;
-	window.MIE.Grid            = Grid;
+	window.MIE        = window.MIE || {};
+	window.MIE.log    = log;
+	window.MIE.debug  = debug;
+	window.MIE.OrdMap = OrdMap;
+	window.MIE.trans  = I;
 
+	window.MIE.WC_DataVis            = window.MIE.WC_DataVis || {};
+	window.MIE.WC_DataVis.ParamInput = ParamInput;
+	window.MIE.WC_DataVis.Source     = DataSource;
+	window.MIE.WC_DataVis.View       = DataView;
+	window.MIE.WC_DataVis.Grid       = Grid;
 })(jQuery);
 
 // vim:set ft=javascript:
