@@ -818,19 +818,19 @@ ParamInput.prototype.toParams = function (obj) {
 	return self.filter.toParams(obj);
 };
 
-// DataSourceError {{{1
+// SourceError {{{1
 
-var DataSourceError = function (msg) {
+var SourceError = function (msg) {
 	this.message = msg;
 };
 
-DataSourceError.prototype = Object.create(Error.prototype);
-DataSourceError.prototype.name = 'DataSourceError';
-DataSourceError.prototype.constructor = DataSourceError;
+SourceError.prototype = Object.create(Error.prototype);
+SourceError.prototype.name = 'SourceError';
+SourceError.prototype.constructor = SourceError;
 
-// LocalDataSource {{{1
+// LocalSource {{{1
 
-var LocalDataSource = function (spec) {
+var LocalSource = function (spec) {
 	var self = this;
 
 	self.varName = spec.varName;
@@ -851,7 +851,7 @@ var LocalDataSource = function (spec) {
 
 // #getData {{{2
 
-LocalDataSource.prototype.getData = function (params, cont) {
+LocalSource.prototype.getData = function (params, cont) {
 	var self = this;
 
 	return cont(self.cache.data);
@@ -859,15 +859,15 @@ LocalDataSource.prototype.getData = function (params, cont) {
 
 // #getTypeInfo {{{2
 
-LocalDataSource.prototype.getTypeInfo = function (cont) {
+LocalSource.prototype.getTypeInfo = function (cont) {
 	var self = this;
 
 	return cont(self.cache.typeInfo);
 };
 
-// HttpDataSource {{{1
+// HttpSource {{{1
 
-var HttpDataSource = function (spec) {
+var HttpSource = function (spec) {
 	var self = this;
 
 	self.url = spec.url;
@@ -876,7 +876,7 @@ var HttpDataSource = function (spec) {
 	self.cache = null;
 };
 
-HttpDataSource.parseData = function (data) {
+HttpSource.parseData = function (data) {
 	var result = {};
 
 	debug.info('DATA SOURCE // HTTP // PARSER', 'Data = ' + ((data instanceof XMLDocument) ? '%o' : '%O'), data);
@@ -884,15 +884,15 @@ HttpDataSource.parseData = function (data) {
 	if (data instanceof XMLDocument) {
 		var root = jQuery(data).children('root');
 		if (!root.is('root')) {
-			throw new DataSourceError('HTTP Data Source / XML Parser / Missing (root) element');
+			throw new SourceError('HTTP Data Source / XML Parser / Missing (root) element');
 		}
 
 		var data = root.children('data');
 		if (data.length === 0) {
-			throw new DataSourceError('HTTP Data Source / XML Parser / Missing (root > data) element');
+			throw new SourceError('HTTP Data Source / XML Parser / Missing (root > data) element');
 		}
 		else if (data.length > 1) {
-			throw new DataSourceError('HTTP Data Source / XML Parser / Too many (root > data) elements');
+			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > data) elements');
 		}
 
 		result.data = [];
@@ -908,10 +908,10 @@ HttpDataSource.parseData = function (data) {
 
 		var typeInfo = root.children('typeInfo');
 		if (typeInfo.length === 0) {
-			throw new DataSourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo) element');
+			throw new SourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo) element');
 		}
 		else if (typeInfo.length > 1) {
-			throw new DataSourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo) elements');
+			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo) elements');
 		}
 
 		result.typeInfo = new MIE.OrdMap();
@@ -925,24 +925,24 @@ HttpDataSource.parseData = function (data) {
 			else {
 				var type = field.children('type');
 				if (type.length === 0) {
-					throw new DataSourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo > ' + fieldName + ' > type) element');
+					throw new SourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo > ' + fieldName + ' > type) element');
 				}
 				else if (type.length > 1) {
-					throw new DataSourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > type) elements');
+					throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > type) elements');
 				}
 				else if (type.children().length > 0) {
-					throw new DataSourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > type) element cannot have children');
+					throw new SourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > type) element cannot have children');
 				}
 
 				result.typeInfo.get(fieldName).type = type.text();
 
 				var format = field.children('format');
 				if (format.length > 1) {
-					throw new DataSourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > format) elements');
+					throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > format) elements');
 				}
 				else if (format.length === 1) {
 					if (format.children().length > 0) {
-						throw new DataSourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > format) element cannot have children');
+						throw new SourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > format) element cannot have children');
 					}
 					result.typeInfo.get(fieldName).format = format.text();
 				}
@@ -951,14 +951,14 @@ HttpDataSource.parseData = function (data) {
 	}
 	else {
 		if (data.data === undefined) {
-			throw new DataSourceError('HTTP Data Source / JSON Parser / Missing (data) property');
+			throw new SourceError('HTTP Data Source / JSON Parser / Missing (data) property');
 		}
 		else if (!_.isArray(data.data)) {
-			throw new DataSourceError('HTTP Data Source / JSON Parser / (data) property must be an array');
+			throw new SourceError('HTTP Data Source / JSON Parser / (data) property must be an array');
 		}
 
 		if (data.typeInfo === undefined) {
-			throw new DataSourceError('HTTP Data Source / JSON Parser / Missing (typeInfo) property');
+			throw new SourceError('HTTP Data Source / JSON Parser / Missing (typeInfo) property');
 		}
 
 		result = data;
@@ -969,17 +969,17 @@ HttpDataSource.parseData = function (data) {
 
 // #getData {{{2
 
-HttpDataSource.prototype.getData = function (params, cont) {
+HttpSource.prototype.getData = function (params, cont) {
 	var self = this;
 
 	if (self.cache === null) {
 		return jQuery.ajax(self.url, {
 			method: self.method,
 			error: function (jqXHR, textStatus, errorThrown) {
-				throw new DataSourceError('HTTP Data Source / AJAX Error / ' + errorThrown.message);
+				throw new SourceError('HTTP Data Source / AJAX Error / ' + errorThrown.message);
 			},
 			success: function (data, textStatus, jqXHR) {
-				self.cache = HttpDataSource.parseData(data);
+				self.cache = HttpSource.parseData(data);
 				return self.getData(params, cont);
 			}
 		});
@@ -990,7 +990,7 @@ HttpDataSource.prototype.getData = function (params, cont) {
 
 // #getTypeInfo {{{2
 
-HttpDataSource.prototype.getTypeInfo = function (cont) {
+HttpSource.prototype.getTypeInfo = function (cont) {
 	var self = this;
 
 	if (self.cache === null) {
@@ -1002,14 +1002,14 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
 	return cont(self.cache.typeInfo);
 };
 
-// DataSource {{{1
+// Source {{{1
 
 // JSDoc Typedefs {{{2
 
 /**
  * A callback function that receives the data obtained from a data source.
  *
- * @callback DataSource~getData_cb
+ * @callback Source~getData_cb
  *
  * @param {Array<Object>} data The data.
  */
@@ -1017,7 +1017,7 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
 /**
  * A callback function that receives unique element information from a data source.
  *
- * @callback DataSource~getUniqElts_cb
+ * @callback Source~getUniqElts_cb
  *
  * @param {Object<string, wcgraph.UniqElt>} uniqElts The unique element information.
  */
@@ -1025,7 +1025,7 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
 /**
  * A callback function that receives the type information about a data source.
  *
- * @callback DataSource~getTypeInfo_cb
+ * @callback Source~getTypeInfo_cb
  *
  * @param {TypeInfo} typeInfo The type information.
  */
@@ -1035,9 +1035,9 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
  * names.  Values can just be the type name as a string, in simple situations; when more info is
  * required, you can use the full object to describe the field.
  *
- * @typedef DataSource~TypeInfo
+ * @typedef Source~TypeInfo
  *
- * @type {Object<string,string|DataSource~TypeInfo_Field>}
+ * @type {Object<string,string|Source~TypeInfo_Field>}
  */
 
 /**
@@ -1048,7 +1048,7 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
  * updates this property, it's possible to perform your own conversion and still get the benefit of
  * type decoding on the result.
  *
- * @typedef DataSource~TypeInfo_Field
+ * @typedef Source~TypeInfo_Field
  *
  * @property {string} type What type of data are we receiving?  Must be one of the following:
  * string, number, date, datetime, currency.
@@ -1077,7 +1077,7 @@ HttpDataSource.prototype.getTypeInfo = function (cont) {
  * @property {boolean} guessColumnTypes
  */
 
-var DataSource = function (spec, params) {
+var Source = function (spec, params, userTypeInfo) {
 	var self = this;
 
 	self.name = spec.name; // The name of the data source, by which it can be addressed later.
@@ -1086,40 +1086,46 @@ var DataSource = function (spec, params) {
 	self.cache = {};
 	self.params = params;
 	self.locks = {};
-	self.subscribers = [];
-	self.guessColumnTypes = true;
 
-	if (DataSource.sources[self.type] === undefined) {
-		throw new DataSourceError('Unsupported data source type: ' + self.type);
+	self.eventHandlers = {};
+	_.each(_.keys(Source.events), function (evt) {
+		self.eventHandlers[evt] = [];
+	});
+
+	self.guessColumnTypes = true;
+	self.userTypeInfo = userTypeInfo;
+
+	if (Source.sources[self.type] === undefined) {
+		throw new SourceError('Unsupported data source type: ' + self.type);
 	}
 
-	self.source = new DataSource.sources[self.type](spec, params);
+	self.source = new Source.sources[self.type](spec, params);
 
 	if (!isNothing(spec.conversion) && !_.isArray(spec.conversion)) {
-		throw new DataSourceError('Invalid DataSource config: `.conversion` must be an array');
+		throw new SourceError('Invalid Source config: `.conversion` must be an array');
 	}
 
 	// Check the validity of all the specified conversions.
 	//
 	//   * If identified by name:
 	//
-	//     1. The name must already be registered in `DataSource.converters`
+	//     1. The name must already be registered in `Source.converters`
 	//     2. The registered converter must be a function
 	//
 	//   * Otherwise it needs to be a function.
 
 	_.each(spec.conversion, function (c, i) {
 		if (typeof c === 'string') {
-			if (DataSource.converters[c] === undefined) {
-				throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" not registered');
+			if (Source.converters[c] === undefined) {
+				throw new SourceError('Conversion #' + i + ': Named converter "' + c + '" not registered');
 			}
 
-			if (typeof DataSource.converters[c] !== 'function') {
-				throw new DataSourceError('Conversion #' + i + ': Named converter "' + c + '" is not a function');
+			if (typeof Source.converters[c] !== 'function') {
+				throw new SourceError('Conversion #' + i + ': Named converter "' + c + '" is not a function');
 			}
 		}
 		else if (typeof c !== 'function') {
-			throw new DataSourceError('Invalid DataSource config: `.conversion[' + i + ']` must be a function or string');
+			throw new SourceError('Invalid Source config: `.conversion[' + i + ']` must be a function or string');
 		}
 	});
 
@@ -1134,19 +1140,84 @@ var DataSource = function (spec, params) {
  * A map of source types to the classes that implement them.
  */
 
-DataSource.sources = {
-	local: LocalDataSource,
-	http: HttpDataSource
+Source.sources = {
+	local: LocalSource,
+	http: HttpSource
 };
 
 // .converters {{{2
 
-DataSource.converters = {};
+Source.converters = {};
 
-// .messages {{{2
+// .events {{{2
 
-DataSource.messages = {
-	DATA_UPDATED: 'DATA_UPDATED'
+Source.events = _.reduce(['dataUpdated'],
+														 function (o, evt) {
+															 o[evt] = evt;
+															 return o;
+														 },
+														 {});
+
+// #on {{{2
+
+/**
+ * Register an event handler for different things that happen in the source.  Multiple handlers can
+ * be registered on the same event; they will be called in the order they were reigstered.
+ *
+ * @param {string} event The kind of event to register on.
+ * @param {function} cb A function to call when the event fires.  The arguments to the function
+ * depend on the event.
+ */
+
+Source.prototype.on = function (evt, cb) {
+	var self = this;
+
+	if (Source.events[evt] === undefined) {
+		throw new SourceError('Unable to register handler for "' + evt + '" event: no such event available');
+	}
+
+	self.eventHandlers[evt].push(cb);
+
+	return self;
+};
+
+// #off {{{2
+
+/**
+ * Remove all registered event handlers for the specified events.
+ *
+ * @param {...string} events The events to remove handlers for.
+ */
+
+Source.prototype.off = function () {
+	var args = Array.prototype.slice.call(arguments)
+		, self = this;
+
+	_.each(args, function (evt) {
+		self.eventHandlers[evt] = [];
+	});
+};
+
+// #fire {{{2
+
+Source.prototype.fire = function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments)
+		, evt = args.shift();
+
+	if (Source.events[evt] === undefined) {
+		throw new Error('Illegal event: ' + evt);
+	}
+
+	if (self.eventHandlers[evt] === undefined) {
+		throw new Error('Event handlers not initialized for "' + evt + '" event');
+	}
+
+	debug.info('SOURCE // FIRE', 'Triggering "' + evt + '" event: %O', args);
+
+	_.each(self.eventHandlers[evt], function (cb) {
+		cb.apply(null, args);
+	});
 };
 
 // #getData {{{2
@@ -1157,10 +1228,10 @@ DataSource.messages = {
  *
  * @method
  *
- * @param {DataSource~getData_cb} cont Continuation function.
+ * @param {Source~getData_cb} cont Continuation function.
  */
 
-DataSource.prototype.getData = function (cont) {
+Source.prototype.getData = function (cont) {
 	var self = this;
 
 	if (self.locks.getData.isLocked()) {
@@ -1197,10 +1268,10 @@ DataSource.prototype.getData = function (cont) {
  *
  * @method
  *
- * @param {DataSource~getUniqElts_cb} cont Continuation function.
+ * @param {Source~getUniqElts_cb} cont Continuation function.
  */
 
-DataSource.prototype.getUniqueVals = function (cont) {
+Source.prototype.getUniqueVals = function (cont) {
 	var self = this;
 
 	if (!isNothing(self.cache.uniqElts)) {
@@ -1237,10 +1308,10 @@ DataSource.prototype.getUniqueVals = function (cont) {
 // #getTypeInfo {{{2
 
 /**
- * @param {DataSource~getTypeInfo_cb} cont Continuation function.
+ * @param {Source~getTypeInfo_cb} cont Continuation function.
  */
 
-DataSource.prototype.getTypeInfo = function (cont) {
+Source.prototype.getTypeInfo = function (cont) {
 	var self = this;
 
 	if (!isNothing(self.cache.typeInfo)) {
@@ -1259,14 +1330,14 @@ DataSource.prototype.getTypeInfo = function (cont) {
 			}
 		});
 
-		self.cache.typeInfo = typeInfo;
+		self.cache.typeInfo = jQuery.extend(true, {}, typeInfo, self.userTypeInfo);
 		return cont(self.cache.typeInfo);
 	});
 };
 
 // #getDisplayName {{{2
 
-DataSource.prototype.getDisplayName = function (cont) {
+Source.prototype.getDisplayName = function (cont) {
 	var self = this;
 
 	if (!isNothing(self.cache.displayName)) {
@@ -1287,14 +1358,14 @@ DataSource.prototype.getDisplayName = function (cont) {
 
 // #postProcess {{{2
 
-DataSource.prototype.postProcess = function (data, cont) {
+Source.prototype.postProcess = function (data, cont) {
 	var self = this;
 
 	if (isNothing(data)) {
-		throw new DataSourceError('Data Source / Post Process / Received nothing');
+		throw new SourceError('Data Source / Post Process / Received nothing');
 	}
 	else if (!_.isArray(data)) {
-		throw new DataSourceError('Data Source / Post Process / Data is not an array');
+		throw new SourceError('Data Source / Post Process / Data is not an array');
 	}
 
 	debug.info('DATA SOURCE // POST-PROCESSING', 'Beginning post-processing');
@@ -1307,7 +1378,7 @@ DataSource.prototype.postProcess = function (data, cont) {
 				convertFns.push(c);
 			}
 			else if (typeof c === 'string') {
-				convertFns.push(DataSource.converters[c]);
+				convertFns.push(Source.converters[c]);
 			}
 		});
 
@@ -1359,7 +1430,7 @@ DataSource.prototype.postProcess = function (data, cont) {
  * @method
  */
 
-DataSource.prototype.clearCachedData = function () {
+Source.prototype.clearCachedData = function () {
 	var self = this;
 
 	if (typeof self.source.clearCachedData === 'function') {
@@ -1367,7 +1438,7 @@ DataSource.prototype.clearCachedData = function () {
 	}
 
 	self.cache = {};
-	self.publish(DataSource.messages.DATA_UPDATED);
+	self.fire(Source.events.dataUpdated);
 };
 
 // #createParams {{{2
@@ -1382,7 +1453,7 @@ DataSource.prototype.clearCachedData = function () {
  * @returns {object} The CGI parameters needed for running a system report.
  */
 
-DataSource.prototype.createParams = function () {
+Source.prototype.createParams = function () {
 	var self = this
 		, obj = {};
 
@@ -1407,52 +1478,17 @@ DataSource.prototype.createParams = function () {
 	return obj;
 };
 
-// #subscribe {{{2
-
-/**
- * Subscribe to events on this data source.  This mechanism is used to notify clients that they need
- * to refresh their display after a data update.
- *
- * @method
- */
-
-DataSource.prototype.subscribe = function (f) {
-	this.subscribers.push(f);
-};
-
-// #publish {{{2
-
-/**
- * Notify all subscribers of a message.
- *
- * @param {string} msg The message to send to all subscribers.
- * @param {...string} rest Additional arguments to pass to the subscribers.
- */
-
-DataSource.prototype.publish = function () {
-	var self = this;
-	var args = Array.prototype.slice.call(arguments);
-
-	args.unshift(self);
-
-	debug.info('DATA SOURCE // PUBLISH', 'Sending message "%s" from data source "%s": %O', args[1], self.name, args.slice(2));
-
-	_.each(self.subscribers, function (f) {
-		f.apply(null, args);
-	});
-};
-
 // #swapRows {{{2
 
 /**
  *
  */
 
-DataSource.prototype.swapRows = function (oldIndex, newIndex) {
+Source.prototype.swapRows = function (oldIndex, newIndex) {
 	var self = this;
 
 	if (self.cache.data === undefined) {
-		throw new DataSourceError('Attempted to swap rows before retrieving data');
+		throw new SourceError('Attempted to swap rows before retrieving data');
 	}
 
 	var temp = self.cache.data.splice(oldIndex, 1);
@@ -1464,10 +1500,10 @@ DataSource.prototype.swapRows = function (oldIndex, newIndex) {
 
 // #toString {{{2
 
-DataSource.prototype.toString = function () {
+Source.prototype.toString = function () {
 	var self = this;
 
-	return 'DataSource <' + self.name + ', ' + self.type + '>';
+	return 'Source <' + self.name + ', ' + self.type + '>';
 };
 
 // Data Model {{{1
@@ -1476,39 +1512,40 @@ DataSource.prototype.toString = function () {
 // that we would put there.  So the data source is kind of acting as the model now.  This may change
 // when we add editing.
 
-// DataViewError {{{1
+// ViewError {{{1
 
-function DataViewError(msg) {
+function ViewError(msg) {
 	this.message = msg;
 }
 
-DataViewError.prototype = Object.create(Error.prototype);
-DataViewError.prototype.name = 'DataViewError';
-DataViewError.prototype.constructor = DataViewError;
+ViewError.prototype = Object.create(Error.prototype);
+ViewError.prototype.name = 'ViewError';
+ViewError.prototype.constructor = ViewError;
 
-// DataView {{{1
+// View {{{1
+// JSDoc Types {{{2
 
 /**
- * @typedef DataView~Data
+ * @typedef View~Data
  *
  * @property {boolean} isPlain
  * @property {boolean} isGroup
  * @property {boolean} isPivot
- * @property {Array.<DataView~Data_Row>} data
+ * @property {Array.<View~Data_Row>} data
  */
 
 /**
- * @typedef DataView~Data_Row
+ * @typedef View~Data_Row
  *
  * @property {number} rowNum A unique row number, which is used to track rows when they are moved
  * within the GridTable instance, e.g. by reordering the rows manually, or by sorting.
  *
- * @property {Object.<string, DataView~Data_Field>} rowData Contains the data for the row; keys are
+ * @property {Object.<string, View~Data_Field>} rowData Contains the data for the row; keys are
  * field names, and values are objects representing the value of that field within the row.
  */
 
 /**
- * @typedef DataView~Data_Field
+ * @typedef View~Data_Field
  *
  * @property {any} orig The original representation of the data as it came from the data source.
  * This is mostly only useful when displaying the value, when no `render` function has been
@@ -1518,7 +1555,7 @@ DataViewError.prototype.constructor = DataViewError;
  * and filtering.  This corresponds to the type of the field, e.g. when the field has a type of
  * "date," this property contains a Moment instance.
  *
- * @property {DataView~Data_Field_Render} [render] If this property exists, it specifies a function
+ * @property {View~Data_Field_Render} [render] If this property exists, it specifies a function
  * that is used to turn the internal representation into a printable value that will be placed into
  * the cell when the table is output.
  */
@@ -1527,12 +1564,14 @@ DataViewError.prototype.constructor = DataViewError;
  * A function called by the GridTable instance to produce a value that will be placed into a cell in
  * the table output.  An example usage would be to create a link based on the value of the cell.
  *
- * @callback DataView~Data_Field_Render
+ * @callback View~Data_Field_Render
  *
  * @returns {Element|jQuery|string} What should be put into the cell in the table output.
  */
 
 var DATA_VIEW_ID = 1;
+
+// Constructor {{{2
 
 /**
  * This represents a view of the data obtained by a data source.  While the pool of available data
@@ -1541,9 +1580,7 @@ var DATA_VIEW_ID = 1;
  *
  * @class
  *
- * @property {DataSource} source
- *
- * @property {Array.<function>} subscribers
+ * @property {Source} source
  *
  * @property {Object} sortSpec
  *
@@ -1572,28 +1609,103 @@ var DATA_VIEW_ID = 1;
  * @property {Timing} timing For keeping track of how long it takes to do things in the view.
  */
 
-// Constructor {{{2
-
-function DataView(source) {
+var View = function (source) {
 	var self = this;
 
+	if (!(source instanceof Source)) {
+		throw new ViewError('Source must be an instance of MIE.WC_DataVis.Source');
+	}
+
 	self.source = source;
-	self.subscribers = [];
+	self.source.on(Source.events.dataUpdated, function () {
+		self.clearCache();
+		self.fire(View.events.dataUpdated);
+	});
 	self.name = 'Data View #' + (DATA_VIEW_ID++);
-	self.eventHandlers = {
-		filter: [],
-		getTypeInfo: [],
-		sort: [],
-		workBegin: [],
-		workEnd: []
-	};
+
+	self.eventHandlers = {};
+	_.each(_.keys(View.events), function (evt) {
+		self.eventHandlers[evt] = [];
+	});
+
 	self.tryLimit = 5;
 	self.timing = new Timing();
-}
+};
 
-DataView.prototype = Object.create(Error.prototype);
-DataView.prototype.name = 'DataView';
-DataView.prototype.constructor = DataView;
+View.prototype = Object.create(Error.prototype);
+View.prototype.name = 'View';
+View.prototype.constructor = View;
+
+// .events {{{2
+
+View.events = _.reduce(['filter', 'getTypeInfo', 'sort', 'workBegin', 'workEnd', 'dataUpdated'],
+													 function (o, evt) {
+														 o[evt] = evt;
+														 return o;
+													 },
+													 {});
+
+// #on {{{2
+
+/**
+ * Register an event handler for different things that happen in the view.  Multiple handlers can be
+ * registered on the same event; they will be called in the order they were reigstered.
+ *
+ * @param {string} event The kind of event to register on.
+ * @param {function} cb A function to call when the event fires.  The arguments to the function
+ * depend on the event.
+ */
+
+View.prototype.on = function (evt, cb) {
+	var self = this;
+
+	if (View.events[evt] === undefined) {
+		throw new ViewError('Unable to register handler for "' + event + '" event: no such event available');
+	}
+
+	self.eventHandlers[evt].push(cb);
+
+	return self;
+};
+
+// #off {{{2
+
+/**
+ * Remove all registered event handlers for the specified events.
+ *
+ * @param {...string} events The events to remove handlers for.
+ */
+
+View.prototype.off = function () {
+	var args = Array.prototype.slice.call(arguments)
+		, self = this;
+
+	_.each(args, function (evt) {
+		self.eventHandlers[evt] = [];
+	});
+};
+
+// #fire {{{2
+
+View.prototype.fire = function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments)
+		, evt = args.shift();
+
+	if (View.events[evt] === undefined) {
+		throw new Error('Illegal event: ' + evt);
+	}
+
+	if (self.eventHandlers[evt] === undefined) {
+		throw new Error('Event handlers not initialized for "' + evt + '" event');
+	}
+
+	debug.info('VIEW // FIRE', 'Triggering "' + evt + '" event: %O', args);
+
+	_.each(self.eventHandlers[evt], function (cb) {
+		cb.apply(null, args);
+	});
+};
 
 // #getRowCount {{{2
 
@@ -1603,7 +1715,7 @@ DataView.prototype.constructor = DataView;
  * @return {number} The number of rows shown in the table output.
  */
 
-DataView.prototype.getRowCount = function () {
+View.prototype.getRowCount = function () {
 	var self = this;
 
 	if (self.data.isPlain) {
@@ -1635,48 +1747,8 @@ DataView.prototype.getRowCount = function () {
  * being sorted (e.g. because they have been filtered out).
  */
 
-DataView.prototype.getTotalRowCount = function () {
+View.prototype.getTotalRowCount = function () {
 	return this.source.cache.data.length;
-};
-
-// #on {{{2
-
-/**
- * Register an event handler for different things that happen in the view.  Multiple handlers can be
- * registered on the same event; they will be called in the order they were reigstered.
- *
- * @param {string} event The kind of event to register on.
- * @param {function} cb A function to call when the event fires.  The arguments to the function
- * depend on the event.
- */
-
-DataView.prototype.on = function (evt, cb) {
-	var self = this;
-
-	if (self.eventHandlers[evt] === undefined) {
-		throw new DataSourceError('Unable to register handler for "' + event + '" event: no such event available');
-	}
-
-	self.eventHandlers[evt].push(cb);
-
-	return self;
-};
-
-// #off {{{2
-
-/**
- * Remove all registered event handlers for the specified events.
- *
- * @param {...string} events The events to remove handlers for.
- */
-
-DataView.prototype.off = function () {
-	var args = Array.prototype.slice.call(arguments)
-		, self = this;
-
-	_.each(args, function (evt) {
-		self.eventHandlers[evt] = [];
-	});
 };
 
 // #issue {{{2
@@ -1684,7 +1756,7 @@ DataView.prototype.off = function () {
 /**
  */
 
-DataView.prototype.issue = function () {
+View.prototype.issue = function () {
 	var self = this
 		, args = Array.prototype.slice.call(arguments)
 		, evt = args.shift();
@@ -1713,7 +1785,7 @@ DataView.prototype.issue = function () {
  * @param {GridTable~Progress} progress
  */
 
-DataView.prototype.setSort = function (col, dir, dontNotify, progress) {
+View.prototype.setSort = function (col, dir, dontNotify, progress) {
 	var self = this;
 
 	self.clearCache();
@@ -1743,7 +1815,7 @@ DataView.prototype.setSort = function (col, dir, dontNotify, progress) {
  * view has been sorted.
  */
 
-DataView.prototype.clearSort = function (dontNotify) {
+View.prototype.clearSort = function (dontNotify) {
 	return this.setSort(null, null, dontNotify);
 };
 
@@ -1756,7 +1828,7 @@ DataView.prototype.clearSort = function (dontNotify) {
  * @param {function} cont Continuation function to which the sorted data is passed.
  */
 
-DataView.prototype.sort = function (cont) {
+View.prototype.sort = function (cont) {
 	var self = this
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Sorting']
 		, conv = I;
@@ -1798,11 +1870,11 @@ DataView.prototype.sort = function (cont) {
 	// us to sort by.
 
 	if (!self.typeInfo.isSet(self.sortSpec.col)) {
-		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - no type information available');
+		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - no type information available');
 	}
 
 	if (self.typeInfo.get(self.sortSpec.col).type === undefined) {
-		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - type is not provided');
+		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - type is not provided');
 	}
 
 	var fieldType = self.typeInfo.get(self.sortSpec.col).type;
@@ -1811,11 +1883,11 @@ DataView.prototype.sort = function (cont) {
 	// domain of the type of the field that the user wants us to sort by.
 
 	if (cmpFn[fieldType] === undefined) {
-		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - no function registered to compare values of type "' + fieldType + '"');
+		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - no function registered to compare values of type "' + fieldType + '"');
 	}
 
 	if (typeof cmpFn[fieldType] !== 'function') {
-		throw new DataViewError('Unable to sort by field "' + self.sortSpec.col + '" - function registered to compare values of type "' + fieldType + '" is not actually a function');
+		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - function registered to compare values of type "' + fieldType + '" is not actually a function');
 	}
 
 	var cmp = cmpFn[fieldType];
@@ -1847,14 +1919,14 @@ DataView.prototype.sort = function (cont) {
 // #setFilter {{{2
 
 /**
- * @typedef {Object<string,string>|Object<string,DataView_Filter_Spec_Value>} DataView_Filter_Spec
+ * @typedef {Object<string,string>|Object<string,View_Filter_Spec_Value>} View_Filter_Spec
  * The specification used for filtering within a data view.  The keys are column names, and the
  * values are either strings (implying an equality relationship) or objects indicating a more
  * complex relationship.
  */
 
 /**
- * @typedef {Object<string,any>} DataView_Filter_Spec_Value
+ * @typedef {Object<string,any>} View_Filter_Spec_Value
  * A value within the filter spec object.  In order for a row to "pass" the filter, all of the
  * conditions supplied must be true.  At least one of the following must be provided.
  *
@@ -1878,12 +1950,12 @@ DataView.prototype.sort = function (cont) {
  *   - $in, $nin
  *
  * @method
- * @memberof DataView
+ * @memberof View
  *
- * @param {DataView_Filter_Spec} spec How to perform filtering.
+ * @param {View_Filter_Spec} spec How to perform filtering.
  */
 
-DataView.prototype.setFilter = function (spec, dontNotify, progress) {
+View.prototype.setFilter = function (spec, dontNotify, progress) {
 	var self = this;
 
 	self.clearCache();
@@ -1901,7 +1973,7 @@ DataView.prototype.setFilter = function (spec, dontNotify, progress) {
  * view has been filtered.
  */
 
-DataView.prototype.clearFilter = function (dontNotify) {
+View.prototype.clearFilter = function (dontNotify) {
 	this.setFilter(null, dontNotify);
 };
 
@@ -1913,7 +1985,7 @@ DataView.prototype.clearFilter = function (dontNotify) {
  * @returns {boolean} True if the view has been filtered.
  */
 
-DataView.prototype.isFiltered = function () {
+View.prototype.isFiltered = function () {
 	return !isNothing(this.filterSpec);
 };
 
@@ -1925,7 +1997,7 @@ DataView.prototype.isFiltered = function () {
  * @param {function} cont Continuation function to which the filtered data is passed.
  */
 
-DataView.prototype.filter = function (cont) {
+View.prototype.filter = function (cont) {
 	var self = this
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Filtering'];
 
@@ -2013,7 +2085,7 @@ DataView.prototype.filter = function (cont) {
 				switch (operator) {
 				case '$in':
 					if (!_.isArray(operand)) {
-						throw new DataViewError('Invalid filter spec, operator "$in" for column "' + field + '" requires array value');
+						throw new ViewError('Invalid filter spec, operator "$in" for column "' + field + '" requires array value');
 					}
 
 					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) < 0) {
@@ -2023,7 +2095,7 @@ DataView.prototype.filter = function (cont) {
 
 				case '$nin':
 					if (!_.isArray(operand)) {
-						throw new DataViewError('Invalid filter spec, operator "$nin" for column "' + field + '" requires array value');
+						throw new ViewError('Invalid filter spec, operator "$nin" for column "' + field + '" requires array value');
 					}
 
 					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) >= 0) {
@@ -2032,7 +2104,7 @@ DataView.prototype.filter = function (cont) {
 					break;
 
 				default:
-					throw new DataViewError('Invalid operator "' + operator + '" for column "' + field + '"');
+					throw new ViewError('Invalid operator "' + operator + '" for column "' + field + '"');
 				}
 			}
 		}
@@ -2127,7 +2199,7 @@ DataView.prototype.filter = function (cont) {
  * @param {Function} spec.aggregate
  */
 
-DataView.prototype.setGroup = function (spec) {
+View.prototype.setGroup = function (spec) {
 	var self = this;
 
 	self.clearCache();
@@ -2141,7 +2213,7 @@ DataView.prototype.setGroup = function (spec) {
  * Remove any grouping that had been set.
  */
 
-DataView.prototype.clearGroup = function () {
+View.prototype.clearGroup = function () {
 	var self = this;
 
 	self.clearCache();
@@ -2156,7 +2228,7 @@ DataView.prototype.clearGroup = function () {
  * no return value.
  */
 
-DataView.prototype.group = function () {
+View.prototype.group = function () {
 	var self = this;
 
 	if (self.groupSpec === undefined) {
@@ -2267,7 +2339,7 @@ DataView.prototype.group = function () {
 
 // #setPivot {{{2
 
-DataView.prototype.setPivot = function (spec) {
+View.prototype.setPivot = function (spec) {
 	var self = this;
 
 	self.clearCache();
@@ -2277,7 +2349,7 @@ DataView.prototype.setPivot = function (spec) {
 
 // #clearPivot {{{2
 
-DataView.prototype.clearPivot = function () {
+View.prototype.clearPivot = function () {
 	var self = this;
 
 	self.clearCache();
@@ -2287,7 +2359,7 @@ DataView.prototype.clearPivot = function () {
 
 // #pivot {{{2
 
-DataView.prototype.pivot = function () {
+View.prototype.pivot = function () {
 	var self = this;
 
 	if (self.pivotSpec === undefined) {
@@ -2373,7 +2445,7 @@ DataView.prototype.pivot = function () {
  * @param {function} cont What to do next.
  */
 
-DataView.prototype.getData = function (cont, tries) {
+View.prototype.getData = function (cont, tries) {
 	var self = this;
 
 	if (tries === undefined) {
@@ -2381,7 +2453,7 @@ DataView.prototype.getData = function (cont, tries) {
 	}
 
 	if (tries === 5) {
-		throw new DataViewError('I appear to be stuck in an infinite loop (maximum try limit reached)');
+		throw new ViewError('I appear to be stuck in an infinite loop (maximum try limit reached)');
 	}
 
 	if (self.data === undefined) {
@@ -2433,7 +2505,7 @@ DataView.prototype.getData = function (cont, tries) {
  *
  */
 
-DataView.prototype.getTypeInfo = function (cont) {
+View.prototype.getTypeInfo = function (cont) {
 	var self = this;
 
 	if (self.typeInfo === undefined) {
@@ -2452,7 +2524,7 @@ DataView.prototype.getTypeInfo = function (cont) {
 
 // #clearCache {{{2
 
-DataView.prototype.clearCache = function () {
+View.prototype.clearCache = function () {
 	this.data = undefined;
 	this.dataGrouped = undefined;
 	this.typeInfo = undefined;
@@ -2465,7 +2537,7 @@ DataView.prototype.clearCache = function () {
  * all the "clear" functions.
  */
 
-DataView.prototype.reset = function (dontNotify) {
+View.prototype.reset = function (dontNotify) {
 	var self = this;
 
 	self.clearCache();
@@ -2473,7 +2545,7 @@ DataView.prototype.reset = function (dontNotify) {
 	self.clearFilter(true);
 
 	if (!dontNotify) {
-		self.publish(DataView.messages.RESET, {
+		self.fire(View.messages.reset, {
 			rowCount: self.source.cache.data.length
 		});
 	}
@@ -2481,52 +2553,9 @@ DataView.prototype.reset = function (dontNotify) {
 
 // #getUniqueVals {{{2
 
-DataView.prototype.getUniqueVals = function (cont) {
+View.prototype.getUniqueVals = function (cont) {
 	var self = this;
 
 	return self.source.getUniqueVals(cont);
 };
 
-// .messages {{{2
-
-DataView.messages = {
-	FILTERED: 'FILTERED',
-	SORTED: 'SORTED',
-	GROUPED: 'GROUPED',
-	RESET: 'RESET'
-};
-
-// #subscribe {{{2
-
-/**
- * Subscribe to events on this data source.  This mechanism is used to notify clients that they need
- * to refresh their display after a data update.
- */
-
-DataView.prototype.subscribe = function (f) {
-	var self = this;
-
-	self.subscribers.push(f);
-};
-
-// #publish {{{2
-
-/**
- * Notify all subscribers of a message.
- *
- * @param {string} msg The message to send to all subscribers.
- * @param {...string} rest Additional arguments to pass to the subscribers.
- */
-
-DataView.prototype.publish = function () {
-	var self = this;
-	var args = Array.prototype.slice.call(arguments);
-
-	args.unshift(self);
-
-	debug.info('DATA VIEW // PUBLISH', 'Sending message "%s" from data view: %O', args[1], args.slice(2));
-
-	_.each(self.subscribers, function (f) {
-		f.apply(null, args);
-	});
-};

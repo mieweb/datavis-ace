@@ -105,8 +105,8 @@
 
 	window.MIE.WC_DataVis            = window.MIE.WC_DataVis || {};
 	window.MIE.WC_DataVis.ParamInput = ParamInput;
-	window.MIE.WC_DataVis.Source     = DataSource;
-	window.MIE.WC_DataVis.View       = DataView;
+	window.MIE.WC_DataVis.Source     = Source;
+	window.MIE.WC_DataVis.View       = View;
 	window.MIE.WC_DataVis.Grid       = Grid;
 })(jQuery);
 

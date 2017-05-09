@@ -14,7 +14,7 @@
  *
  * @param {array} data
  *
- * @param {DataSource~TypeInfo} typeInfo
+ * @param {Source~TypeInfo} typeInfo
  *
  * @returns {Array.<string>} An array of the names of the fields that should constitute the columns
  * in the output.  This is not necessarily the same as the headers to be shown in the output.
@@ -202,11 +202,11 @@ function updateDefnDataInPlace(defn, srcIndex, data) {
 // Row Reordering {{{1
 
 function rowSwapIndex(defn, oldIndex, newIndex) {
-	if (defn.source instanceof DataSource) {
+	if (defn.source instanceof Source) {
 		defn.source.swapRows(oldIndex, newIndex);
 	}
 	else {
-		throw new NotImplementedError('Using a DataSource is required to reorder rows');
+		throw new NotImplementedError('Using a Source is required to reorder rows');
 	}
 }
 
@@ -337,7 +337,7 @@ GridError.prototype.constructor = GridError;
  *
  * @property {object} defn
  *
- * @property {DataView} view
+ * @property {View} view
  *
  * @property {Element} container
  */
@@ -526,9 +526,9 @@ GridTable.prototype.draw = function (container, tableDone) {
  * @param {Array.<string>} columns A list of the fields that are to be included as columns within
  * the GridTable.
  *
- * @param {DataView~Data} data
+ * @param {View~Data} data
  *
- * @param {DataSource~TypeInfo} typeInfo
+ * @param {Source~TypeInfo} typeInfo
  */
 
 GridTable.prototype.draw_header = function (columns, data, typeInfo) {
@@ -688,7 +688,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 		}
 
 		/*
-		 * Set up the sorting specification for the DataView that belongs to this GridTable.
+		 * Set up the sorting specification for the View that belongs to this GridTable.
 		 */
 
 		if (self.features.sort) {
@@ -700,7 +700,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 
 		/*
 		 * Set up the GridFilterSet instance that manages the (potentially multiple) filters on each
-		 * column of the DataView that belongs to this GridTable.
+		 * column of the View that belongs to this GridTable.
 		 */
 
 		if (self.features.filter) {
@@ -1392,7 +1392,7 @@ GridFilter.prototype.constructor = GridFilter;
  */
 
 /**
- * Gives the value that should be used when building the filters for the DataView from the user's
+ * Gives the value that should be used when building the filters for the View from the user's
  * input in the GridFilter.  A GridFilter can return either a single value (which should be combined
  * with the operator, e.g. "greater than 40") or a range value (where the operators are implicitly
  * greater-than-or-equal and less-than-or-equal, e.g. "between January 1st and March 31st").
@@ -1845,7 +1845,7 @@ GridFilter.defaultWidgets = {
  * @class
  * @property {object} defn
  *
- * @property {DataView} view
+ * @property {View} view
  *
  * @property {Element} thead
  *
@@ -1949,8 +1949,8 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target) 
 	// We use a data source to get the type information, so if the grid was built without a data
 	// source, this isn't going to work.
 
-	if (!(self.defn.source instanceof DataSource)) {
-		throw new GridFilterError('This can only be used with a DataSource');
+	if (!(self.defn.source instanceof Source)) {
+		throw new GridFilterError('This can only be used with a Source');
 	}
 
 	colType = self.defn.source.cache.typeInfo.get(field).type;
@@ -2158,6 +2158,7 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
 };
 
 // Grid {{{1
+// JSDoc Types {{{2
 
 /**
  * @typedef Grid~Defn
@@ -2202,6 +2203,8 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
  * @property {boolean} [limit=false] If true, then limit the amount of rows output by some method.
  */
 
+// Constructor {{{2
+
 /**
  * Create a new Grid and place it somewhere in the page.  A Grid consists of two major parts: the
  * decoration (e.g. titlebar and toolbar), and the underlying grid (e.g. jQWidgets or Tablesaw).
@@ -2240,8 +2243,6 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
  * @property {Grid~Features} features
  */
 
-// Constructor {{{2
-
 var Grid = function (id, view, source, defn, tagOpts, cb) {
 	var self = this;
 
@@ -2266,8 +2267,8 @@ var Grid = function (id, view, source, defn, tagOpts, cb) {
 		throw new GridError('The `view` argument is required');
 	}
 
-	if (!(view instanceof DataView)) {
-		throw new GridError('The `view` argument must be an instance of MIE.DataView');
+	if (!(view instanceof View)) {
+		throw new GridError('The `view` argument must be an instance of MIE.View');
 	}
 
 	if (tagOpts === undefined) {
@@ -2392,36 +2393,17 @@ var Grid = function (id, view, source, defn, tagOpts, cb) {
 		}
 	};
 
-	self.view.on('workBegin', function () {
+	self.view.on(View.events.workBegin, function () {
 		self.showSpinner();
 	});
 
-	self.view.on('workEnd', function (rowCount, totalRowCount) {
+	self.view.on(View.events.workEnd, function (rowCount, totalRowCount) {
 		self.hideSpinner();
 		self.updateRowCount(rowCount, totalRowCount);
 	});
 
-	self.view.subscribe(function () {
-		var args = Array.prototype.slice.call(arguments);
-		var dv = args[0]
-			, msg = args[1]
-			, info = args[2];
-
-		debug.info('GRID', 'Received message "%s" from data view: %O', msg, info);
-	});
-
-	self.source.subscribe(function () {
-		var args = Array.prototype.slice.call(arguments);
-		var ds = args[0]
-			, msg = args[1]
-			, rest = args.slice(2);
-
-		debug.info('GRID', 'Received message "%s" from data source "%s": %O', msg, ds.name, rest);
-		switch (msg) {
-		case DataSource.messages.DATA_UPDATED:
-			self.refresh();
-			break;
-		}
+	self.view.on(View.events.dataUpdated, function () {
+		self.refresh();
 	});
 
 	if (self.tagOpts.runImmediately) {
@@ -2971,7 +2953,7 @@ Grid.prototype.drawPivotControl = function () {
  *
  * @property {Object} defn
  *
- * @property {DataView} view
+ * @property {View} view
  *
  * @property {GridTable} gridTable
  *
@@ -3007,7 +2989,7 @@ Grid.prototype.drawPivotControl = function () {
  *
  * @param {Element} container
  *
- * @param {DataView} view
+ * @param {View} view
  */
 
 function PivotControl(defn, view, features) {
@@ -3020,8 +3002,8 @@ function PivotControl(defn, view, features) {
 	if (view === undefined) {
 		throw new Error('PivotControl(): Missing required argument: view');
 	}
-	else if (!(view instanceof DataView)) {
-		throw new Error('PivotControl(): Argument "view" must be an instance of DataView');
+	else if (!(view instanceof View)) {
+		throw new Error('PivotControl(): Argument "view" must be an instance of View');
 	}
 
 	if (features === undefined) {
