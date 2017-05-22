@@ -2,7 +2,7 @@
 	<head>
 		<meta charset="utf-8"/>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.4/numeral.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
@@ -37,7 +37,7 @@ $(document).ready(function () {
 		return false;
 	};
 
-	var source = new MIE.DataSource({
+	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
 		url: 'data.xml',
 		conversion: [bbcode]
@@ -46,7 +46,7 @@ $(document).ready(function () {
 		runImmediately: true,
 		title: 'Basic Example'
 	};
-	var view = new MIE.DataView(source);
+	var view = new MIE.WC_DataVis.View(source);
 	var defn = {
 		id: 'example',
 		table: {
@@ -66,7 +66,7 @@ $(document).ready(function () {
 		},
 		source: source
 	};
-	new MIE.Grid('example', view, source, defn, tagOpts);
+	new MIE.WC_DataVis.Grid('example', view, source, defn, tagOpts);
 });
 		</script>
 	</head>

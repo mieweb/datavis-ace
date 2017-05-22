@@ -28,6 +28,7 @@ data produced by a source, which is manipulated by a view, to be shown by an out
    pivot_control
    pivot_control_field
    group_pivot
+   known_issues
    meta_doc
 
 Auxiliary Stuff

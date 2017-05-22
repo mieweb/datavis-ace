@@ -165,6 +165,34 @@ var TableTool = {};
 		}
 	}
 
+	function uniqueIDs(clonedEle) {
+		function convertIDs(loopEle) { // perform the conversion. Add "-tt" to existing ID's
+			if (loopEle && loopEle.find) {
+				loopEle.find('*').filter('[id]').each(function(idx, ele) {
+					ele.id += '-tt';
+				});
+			}
+		}
+
+		function plainAry(clonedEle) { // helper function for plain arrays
+			for (var i = 0; i < clonedEle.length; i++) {
+				convertIDs(clonedEle[i]);
+			}
+		}
+
+		if (j.isArray(clonedEle)) { // if plain array [1,2,3] not "array like" jQuery object. If invoked like this uniqueIDs([jqEle1, jqEle2]);
+			plainAry(clonedEle);
+		} else {
+			if (arguments.length > 1) { // if invoked like this uniqueIDs(jqEle1, jqEle2);
+				plainAry(arguments);
+			} else {
+				convertIDs(clonedEle); // if invoked like this uniqueIDs(jqEle1);
+			}
+		}
+
+		return clonedEle;
+	}
+
 	function fixedWrap(table, height) {
 		var fixed = {},
 			colWidth = [],
@@ -189,6 +217,10 @@ var TableTool = {};
 		fixed.tbody = fixed.table.parents('.outer');
 		fixed.tfoot = fixed.tbody.clone(true).addClass('tfoot').appendTo(fixed.parent);
 		fixed.thead = fixed.tbody.clone(true).addClass('thead atTop').appendTo(fixed.parent);
+
+		// give cloned header and footer unique IDs. Wait until after append complete
+		uniqueIDs(fixed.thead, fixed.tfoot);
+
 		fixed.tbody.addClass('tbody');
 		fixed.theadTable = fixed.thead.find('table').removeAttr('id data-ttheight');
 		fixed.theadTable.children('tfoot, tbody').remove();
@@ -519,6 +551,10 @@ var TableTool = {};
 		sticky.tbody = sticky.table.parents('.outer');
 		sticky.tfoot = sticky.tbody.clone(true).addClass('tfoot').attr('aria-hidden', 'true').appendTo(sticky.parent);
 		sticky.thead = sticky.tbody.clone(true).addClass('thead').attr('aria-hidden', 'true').appendTo(sticky.parent);
+
+		// give cloned header and footer unique IDs. Wait until after append complete
+		uniqueIDs(sticky.thead, sticky.tfoot);
+
 		sticky.tbody.addClass('tbody');
 		sticky.tfootTable = sticky.tfoot.find('table');
 		sticky.theadTable = sticky.thead.find('table');
@@ -569,6 +605,9 @@ var TableTool = {};
 		sidescroll.bodyWrap = sidescroll.bodyTbl.parents('.scrollbodywrap');
 		sidescroll.sidePar = sidescroll.bodyTbl.parents('.ttsidescroll');
 		sidescroll.headerTbl = sidescroll.bodyTbl.clone(true).wrap('<div class="scrollheadwrap sideouter"></div>');
+
+		// give cloned header unique IDs. Wait until after wrap complete
+		uniqueIDs(sidescroll.headerTbl);
 		sidescroll.headerWrap = sidescroll.headerTbl.parent().prependTo(sidescroll.sidePar);
 		colDivideEle = sidescroll.bodyTbl.find('tbody > tr:first-child > *:nth-child(' + (colInt + 1) + ')'); // could be either TD or TH immediate children
 
@@ -860,7 +899,7 @@ var TableTool = {};
 
 	// Document Ready/Load
 	j(document).ready(init);
-	j(window).on('load', setupDetection);
+	j(window).load(setupDetection);
 
 	//define API
 	TableTool.init = init;

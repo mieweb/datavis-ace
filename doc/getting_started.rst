@@ -11,7 +11,7 @@ Required Dependencies
 The following libraries are required to use WC DataVis:
 
 * Underscore
-* jQuery
+* jQuery (version 1.12 if using TableTool)
 * jQuery UI
 * Numeral.js — For parsing number and currency data.
 * Moment.js — For parsing date/time data.
