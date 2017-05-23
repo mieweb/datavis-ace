@@ -927,6 +927,8 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 	}
 
 	var render = function (startIndex, howMany, nextChunk) {
+		var atLimit = false;
+
 		if (isNothing(startIndex)) {
 			startIndex = 0;
 		}
@@ -937,12 +939,21 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 
 		debug.info('GRID TABLE // DRAW', 'Rendering rows ' + startIndex + ' - ' + (startIndex + howMany - 1) + ' / ' + data.data.length);
 
-		for (var rowNum = startIndex; rowNum < data.data.length && rowNum < startIndex + howMany; rowNum += 1) {
+		for (var rowNum = startIndex; rowNum < data.data.length && rowNum < startIndex + howMany && !atLimit; rowNum += 1) {
 			var row = data.data[rowNum];
 			var tr;
 
-			if (useLimit && limitConfig.method === 'more' && rowNum > limitConfig.threshold) {
-				tr = jQuery('<tr>');
+			if (useLimit
+					&& limitConfig.method === 'more'
+					&& ((startIndex === 0 && rowNum === limitConfig.threshold - 1) // [1]
+							|| (startIndex > 0 && rowNum === startIndex + limitConfig.chunkSize - 1))) { // [2]
+
+				// Condition [1]: We've reached the initial threshold for showing the more button.
+				// Condition [2]: We're showing additional rows because they clicked the more button.
+
+				atLimit = true;
+
+				tr = jQuery('<tr>').addClass('wcdvgrid_more');
 
 				var colSpan = columns.length
 					+ (self.features.rowSelect ? 1 : 0)
@@ -951,11 +962,19 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 				var td = jQuery('<td>', {
 					colspan: colSpan
 				})
-					.css('text-align', 'center')
-					.text('Click me to add ' + limitConfig.chunkSize + ' more rows.');
+					.on('click', function () {
+						tr.remove(); // Eliminate the "more" row.
+						render(rowNum, limitConfig.chunkSize, nextChunk);
+					})
+					.append(fontAwesome('F13A'))
+					.append(jQuery('<span>Load ' + limitConfig.chunkSize + ' more rows.</span>')
+									.css({
+										'padding-left': '0.5em',
+										'padding-right': '0.5em'
+									}))
+					.append(fontAwesome('F13A'));
 
 				tr.append(td);
-				rowNum = data.data.length; // HACK Skip to the end of the loop.
 			}
 			else {
 				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum});
@@ -1007,10 +1026,35 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 
 					self.setCss(td, field);
 
-					var alignment = colConfig.cellAlignment
-						|| (['number', 'currency'].indexOf(typeInfo.get(field).type) >= 0 && 'right');
+					var alignment = colConfig.cellAlignment;
 
-					if (alignment !== undefined) {
+					if (alignment === undefined
+							&& (typeInfo.get(field).type === 'number'
+									|| typeInfo.get(field).type === 'currency')) {
+						alignment = 'right';
+					}
+
+					switch (alignment) {
+					case 'left':
+						td.addClass('wcdvgrid_textLeft');
+						break;
+
+					case 'right':
+						td.addClass('wcdvgrid_textRight');
+						break;
+
+					case 'center':
+						td.addClass('wcdvgrid_textCenter');
+						break;
+
+					case 'justify':
+						td.addClass('wcdvgrid_textJustify');
+						break;
+
+					default:
+						// We don't have a class for every possible value, so just set the style rule on the
+						// element in those cases.
+
 						td.css('text-align', alignment);
 					}
 
@@ -1051,17 +1095,35 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 	};
 
 	if (useIncremental) {
-		var nextChunk = function (startIndex, howMany) {
+		if (incrementalConfig.method === 'setTimeout') {
+			var nextChunk = function (startIndex, howMany) {
+				window.setTimeout(function () {
+					render(startIndex + howMany, howMany, nextChunk);
+				}, incrementalConfig.delay);
+			};
+
+			// Kick off the initial render starting at index 0.
+
 			window.setTimeout(function () {
-				render(startIndex + howMany, howMany, nextChunk);
+				render(0, incrementalConfig.chunkSize, nextChunk);
 			}, incrementalConfig.delay);
-		};
+		}
+		else if (incrementalConfig.method === 'requestAnimationFrame') {
+			var nextChunk = function (startIndex, howMany) {
+				window.requestAnimationFrame(function () {
+					render(startIndex + howMany, howMany, nextChunk);
+				});
+			};
 
-		// Kick off the initial render starting at index 0.
+			// Kick off the initial render starting at index 0.
 
-		window.setTimeout(function () {
-			render(0, incrementalConfig.chunkSize, nextChunk);
-		}, incrementalConfig.delay);
+			window.requestAnimationFrame(function () {
+				render(0, incrementalConfig.chunkSize, nextChunk);
+			});
+		}
+		else {
+			throw new GridTableError('Invalid value for `table.incremental.method` (' + incrementalConfig.method + ') - must be either "setTimeout" or "requestAnimationFrame"');
+		}
 	}
 	else {
 		render();

@@ -80,7 +80,43 @@
 	color: white;
 }
 
+/*
+ * Alignment classes.
+ */
 
+.wcdvgrid_textLeft {
+    text-align: left !important;
+}
+
+.wcdvgrid_textRight {
+    text-align: right !important;
+}
+
+.wcdvgrid_textCenter {
+    text-align: center !important;
+}
+
+.wcdvgrid_textJustify {
+    text-align: justify !important;
+}
+
+tr.wcdvgrid_more {
+	background-color: #F6F6F9;
+	border-top: 3px double #808080;
+	font-weight: normal;
+}
+
+tr.wcdvgrid_more td {
+	color: #646464;
+	font-size: .85em;
+	font-weight: normal;
+	padding-bottom: 3px;
+	padding-top: 3px;
+	text-align: center;
+	text-transform: uppercase;
+	vertical-align: bottom;
+	cursor: pointer;
+}
 
 /*
 		// jqx graph additions
