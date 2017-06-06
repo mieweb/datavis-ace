@@ -5,11 +5,11 @@ Class Overview & Relationships
 This is a reference for all the main classes involved in the datavis library, and how they
 relate to each other.
 
-WCGRAPH
-=======
+GRAPH
+=====
 
-WCGRID
-======
+GRID
+====
 
 This is the user interface for the grid, including the title bar and menu.  It is named after the
 ``<WCGRID>`` layout tag that creates it.
@@ -50,7 +50,7 @@ PivotControl
 GridTable
 =========
 
-* DataView (×1)
+* View (×1)
 
   The view is used as the source of data that is output within the grid.
 
@@ -58,9 +58,15 @@ GridTable
 
   - ``getData()``
 
-DataView
-========
+View
+====
 
+* Source (×1) — The backing source of the data used by this view.
 
+Source
+======
 
-* DataSource (×1) — The backing source of the data used by this view.
+The Source class presents a unified interface for obtaining data and metadata (e.g. field
+information) from some provider.  A Source instance wraps an instance of a class which implements
+the specifics of getting data from the provider.  These provider classes are registered by name in
+the ``Source.sources`` object.

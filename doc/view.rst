@@ -143,3 +143,21 @@ Here are the supported operators:
 +---------------+--------------------------+-----------------------------+
 
 When an array of operands is supposed, the condition on the row must "pass" for all operands.
+
+Events
+======
+
+``dataUpdated``
+  Fired when there has been a change in the data at the source.
+
+``sortBegin``
+  Fired when a sort operation begins.
+
+``sortEnd``
+  Fired when a sort operation ends.
+
+``filterBegin``
+  Fired when a filter operation begins.
+
+``filterEnd``
+  Fired when a filter operation ends.

@@ -32,13 +32,23 @@ function determineColumns(defn, data, typeInfo) {
 		if (!_.isArray(defn.table.columns)) {
 			throw new GridTableError('Determine Columns / (table.columns) must be an array');
 		}
+
 		_.each(defn.table.columns, function (elt, i) {
 			if (elt.field === undefined) {
 				throw new GridTableError('Determine Columns / Missing (table.columns[' + i + '].field)');
 			}
-			else if ((data.isPlain && data.data[0].rowData[elt.field] === undefined)
-							 || (data.isGroup && data.data[0][0].rowData[elt.field] === undefined)) {
-				log.warn('Determine Columns / (table.columns[' + i + ']) refers to field "' + elt.field + '" which does not exist in the data');
+		});
+
+		if ((data.isPlain && data.data.length === 0)
+				|| (data.isGroup && (data.data.length === 0 || data.data[0].length === 0))) {
+			log.warn('Unable to check column configuration using data with no rows');
+			return;
+		}
+
+		_.each(defn.table.columns, function (elt, i) {
+			if ((data.isPlain && data.data[0].rowData[elt.field] === undefined)
+					|| (data.isGroup && data.data[0][0].rowData[elt.field] === undefined)) {
+				log.warn('Column configuration refers to field "' + elt.field + '" which does not exist in the data');
 			}
 		});
 	}
@@ -347,6 +357,9 @@ GridError.prototype.constructor = GridError;
  * corresponding column in this grid table.
  *
  * @property {Timing} timing
+ *
+ * @property {boolean} needsRedraw True if the grid needs to redraw itself when the view is done
+ * working.
  */
 
 var GridTable = function (defn, view, features, timing) {
@@ -357,6 +370,10 @@ var GridTable = function (defn, view, features, timing) {
 	self.features = features;
 	self.timing = timing;
 
+	self.needsRedraw = false;
+
+	self.validateLimit();
+
 	self.colConfig = {};
 
 	_.each(self.defn.table.columns, function (col) {
@@ -366,6 +383,24 @@ var GridTable = function (defn, view, features, timing) {
 
 GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
+
+// #validateLimit {{{2
+
+/**
+ * Make sure the limit configuration is good.  If there's anything wrong, the limit feature is
+ * disabled automatically.
+ */
+
+GridTable.prototype.validateLimit = function () {
+	var self = this;
+
+	if (self.features.limit) {
+		if (self.defn.table.limit.threshold === undefined) {
+			debug.info('GRID TABLE // DRAW', 'Disabling limit feature because no limit threshold was provided');
+			self.features.limit = false;
+		}
+	}
+};
 
 // #clear {{{2
 
@@ -402,8 +437,8 @@ GridTable.prototype.draw = function (container, tableDone) {
 		return self.view.getTypeInfo(function (typeInfo) {
 			self.timing.start(['Grid Table', 'Draw']);
 
-			debug.info('GRIDTABLE', 'Data = %O', data);
-			debug.info('GRIDTABLE', 'TypeInfo = %O', typeInfo);
+			debug.info('GRID TABLE // DRAW', 'Data = %O', data);
+			debug.info('GRID TABLE // DRAW', 'TypeInfo = %O', typeInfo);
 
 			var tr
 				, srcIndex = 0;
@@ -435,32 +470,9 @@ GridTable.prototype.draw = function (container, tableDone) {
 
 			self.draw_header(columns, data, typeInfo);
 
-			/*
-			 * Draw the footer.
-			 */
-
-			tr = jQuery('<tr>');
-
-			if (self.features.rowSelect) {
-				self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
-					.on('change', function (evt) {
-						rowSelect_checkAll.call(this, evt, self.ui);
-					});
-				tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
+			if (self.features.footer) {
+				self.draw_footer(columns, data, typeInfo);
 			}
-
-			tr.append(_.map(columns, function (field, colIndex) {
-				var colConfig = self.defn.table.columns[colIndex] || {};
-				var td = jQuery('<td>').text(colConfig.displayText || field);
-				self.setCss(td, field);
-				return td;
-			}));
-
-			if (self.features.rowReorder) {
-				tr.append(jQuery('<td>').text('Options'));
-			}
-
-			self.ui.tfoot.append(tr);
 
 			/*
 			 * Draw the body.
@@ -480,50 +492,16 @@ GridTable.prototype.draw = function (container, tableDone) {
 				}
 			});
 
-			/*
-			 * Register the event handler for when a filter occurs in the view.  Even if we don't have the
-			 * filter feature turned on, we still need to do this because somebody else (e.g. PivotControl)
-			 * might be causing the view to be filtered.
-			 *
-			 * XXX This is currently a lie because filtering is not enabled in the PivotControl.
-			 */
+			self.addSortHandler();
+			self.addFilterHandler();
 
-			if (self.features.filter) {
-				var even = false; // Rows are 1-based to match our CSS zebra-striping.
+			// Sets up callbacks responsible for correctly redrawing the grid when the view has done work
+			// (e.g. sorting or filtering) that will change what is displayed.  This is only needed when
+			// limiting output because otherwise, sort and filter callbacks don't need to redraw the whole
+			// grid, and they are taken care of by the 'sort' and 'filter' events on a row-by-row basis.
 
-				self.view.off('filter');
-				self.view.on('filter', function (rowNum, hide) {
-					self.ui.tr[rowNum].removeClass('even odd');
-					if (hide) {
-						self.ui.tr[rowNum].hide();
-					}
-					else {
-						self.ui.tr[rowNum].show();
-						self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
-						even = !even;
-					}
-				});
-			}
-
-			/*
-			 * Register the event handler for when a sort occurs in the view.  Even if we don't have the sort
-			 * feature turned on, we still need to do this because somebody else (e.g. PivotControl) might be
-			 * causing the view to be sorted.
-			 *
-			 * XXX This is currently a lie because sorting is not enabled in the PivotControl.
-			 */
-
-			if (self.features.sort) {
-				self.view.off('sort');
-				self.view.on('sort', function (rowNum, position) {
-					var elt = jQuery(document.getElementById(self.defn.table.id + '_' + rowNum));
-
-					// Add one to the position (which is 0-based) to match the 1-based row number in CSS.
-
-					elt.removeClass('even odd');
-					elt.addClass((position + 1) % 2 === 0 ? 'even' : 'odd');
-					self.ui.tbody.append(elt);
-				});
+			if (self.features.limit) {
+				self.addWorkHandler();
 			}
 
 			if (self.features.rowReorder) {
@@ -532,20 +510,138 @@ GridTable.prototype.draw = function (container, tableDone) {
 
 			self.ui.tbl.attr('class', 'newui zebra');
 
-			// Activate TableTool using this attribute, if the user asked for it.
-
-			if (self.features.tabletool) {
-				self.ui.tbl.attr('data-tttype', 'sticky');
-			}
-
 			self.ui.tbl.append(self.ui.thead);
 
 			if (!getProp(self.defn, 'table', 'incremental', 'appendBodyLast')) {
 				self.ui.tbl.append(self.ui.tbody);
 			}
 
+			if (self.features.footer) {
+				self.ui.tbl.append(self.ui.tfoot);
+			}
+
 			container.append(self.ui.tbl);
+
+			// Activate TableTool using this attribute, if the user asked for it.
+
+			if (self.features.tabletool) {
+				debug.info('GRID TABLE // DRAW', 'Enabling TableTool');
+				self.ui.tbl.attr('data-tttype', 'sticky');
+			}
 		});
+	});
+};
+
+// #addSortHandler {{{2
+
+GridTable.prototype.addSortHandler = function () {
+	var self = this;
+
+	// Register the event handler for when a sort occurs in the view.  The way this works is that
+	// the view will invoke the callback for each row in order.  We just append them to the table
+	// body in that same order, and boom: all the rows are sorted.
+	//
+	// However, we DON'T want to do this if we're limiting the output because we're currently only
+	// showing part of the data.  So, when we sort, we need to completely redraw the window (e.g.
+	// rows 21-40) that we're showing.
+	//
+	// FIXME - This will cause problems with multiple grids (some supporting sorting, some not)
+	// using the same view.
+
+	self.view.off('sort');
+
+	if (self.features.sort) {
+		if (self.features.limit) {
+			self.view.on('sortEnd', function () {
+				debug.info('GRID TABLE // HANDLER (sortEnd)', 'Marking table to be redrawn');
+				self.needsRedraw = true;
+			});
+		}
+		else {
+			self.view.on('sort', function (rowNum, position) {
+				var elt = jQuery(document.getElementById(self.defn.table.id + '_' + rowNum));
+
+				// Add one to the position (which is 0-based) to match the 1-based row number in CSS.
+
+				elt.removeClass('even odd');
+				elt.addClass((position + 1) % 2 === 0 ? 'even' : 'odd');
+				self.ui.tbody.append(elt);
+			});
+		}
+	}
+};
+
+// #addFilterHandler {{{2
+
+GridTable.prototype.addFilterHandler = function () {
+	var self = this;
+
+	// Register the event handler for when a filter occurs in the view.  The way this works is that
+	// the view will invoke the callback for each row and indicate if it should be shown or hidden.
+	//
+	// However, we DON'T want to do this if we're limiting the output because we're currently only
+	// showing part of the data.  So, when we filter, we need to completely redraw the window (e.g.
+	// rows 21-40) that we're showing.
+	//
+	// FIXME - This will cause problems with multiple grids (some supporting filtering, some not)
+	// using the same view.
+
+	self.view.off('filter');
+
+	if (self.features.filter) {
+		if (self.features.limit) {
+			self.view.on('filterEnd', function () {
+				debug.info('GRID TABLE // HANDLER (filterEnd)', 'Marking table to be redrawn');
+				self.needsRedraw = true;
+			});
+		}
+		else {
+			var even = false; // Rows are 1-based to match our CSS zebra-striping.
+
+			self.view.on('filter', function (rowNum, hide) {
+				self.ui.tr[rowNum].removeClass('even odd');
+				if (hide) {
+					self.ui.tr[rowNum].hide();
+				}
+				else {
+					self.ui.tr[rowNum].show();
+					self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
+					even = !even;
+				}
+			});
+		}
+	}
+};
+
+// #addWorkHandler {{{2
+
+GridTable.prototype.addWorkHandler = function () {
+	var self = this;
+
+	self.view.on('workEnd', function () {
+		if (self.needsRedraw) {
+			debug.info('GRID TABLE // HANDLER (workEnd)', 'Redrawing because the view has done work');
+
+			self.needsRedraw = false;
+
+			return self.view.getData(function (data) {
+				return self.view.getTypeInfo(function (typeInfo) {
+					self.timing.start(['Grid Table', 'Redraw triggered by view']);
+
+					// Determine what columns will be in the table.  This comes from the user, or from the
+					// data itself.  We may then add columns for extra features (like row selection or
+					// reordering).
+
+					var columns = determineColumns(self.defn, data, typeInfo);
+
+					// Draw the body.
+
+					self.draw_body(data, typeInfo, columns, function () {
+						self.timing.stop(['Grid Table', 'Redraw triggered by view']);
+					});
+				});
+			});
+		}
 	});
 };
 
@@ -785,7 +881,37 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 				jQuery(fontAwesome('F0B0', null, 'Click to add a filter on this column'))
 					.css({'cursor': 'pointer', 'margin-left': '0.5ex'})
 					.on('click', function () {
-						self.defn.gridFilterSet.add(field, $(this).closest('thead').find('th.filter_col_' + colIndex), colConfig.filter, jQuery(this));
+						// When using TableTool, we need to put the filter UI into the floating (clone) header,
+						// instead of the original (variable `filterTh` holds the original).  This jQuery will
+						// always do the right thing.
+
+						var thead = $(this).closest('thead');
+						var tr = thead.children('tr:eq(1)');
+						var th = tr.children('th.filter_col_' + colIndex);
+
+						var adjustTableToolHeight = function () {
+							if (self.features.tabletool) {
+								// Update the height of the original, non-floating header to be the same as that of
+								// the floating header.  This is needed because otherwise the floating header will
+								// cover up the first rows of the table body as we add filters.  TableTool does not
+								// keep the heights of the original and clone in sync on its own (using the `update`
+								// function only synchronizes the widths).
+
+								//var targetHeight = th.innerHeight();
+								var trHeight = tr.innerHeight();
+
+								//debug.info('GRID TABLE // ADD FILTER', 'Adjusting original table header height to ' + targetHeight + 'px to match floating header height');
+								debug.info('GRID TABLE // ADD FILTER', 'Adjusting original table header height to ' + trHeight + 'px to match floating header height');
+								//filterTh.innerHeight(targetHeight);
+								filterTr.innerHeight(trHeight);
+							}
+						};
+
+						var onRemove = adjustTableToolHeight;
+
+						self.defn.gridFilterSet.add(field, th, colConfig.filter, jQuery(this), onRemove);
+
+						adjustTableToolHeight();
 					})
 					.appendTo(headingTh);
 			}
@@ -830,6 +956,35 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 	}
 	else {
 		drawPlain();
+	}
+};
+
+// #draw_footer {{{2
+
+GridTable.prototype.draw_footer = function (columns, data, typeInfo) {
+	var tr = jQuery('<tr>');
+
+	if (getProp(self.defn, 'table', 'footer') === undefined) {
+		if (self.features.rowSelect) {
+			self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
+				.on('change', function (evt) {
+					rowSelect_checkAll.call(this, evt, self.ui);
+				});
+			tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
+		}
+
+		tr.append(_.map(columns, function (field, colIndex) {
+			var colConfig = self.defn.table.columns[colIndex] || {};
+			var td = jQuery('<td>').text(colConfig.displayText || field);
+			self.setCss(td, field);
+			return td;
+		}));
+
+		if (self.features.rowReorder) {
+			tr.append(jQuery('<td>').text('Options'));
+		}
+
+		self.ui.tfoot.append(tr);
 	}
 };
 
@@ -896,22 +1051,11 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 		}
 	};
 
-	/*
-	 * Check to see if we should be limiting our output.
-	 */
+	var useLimit = self.features.limit;
+	var limitConfig = getPropDef({}, self.defn, 'table', 'limit');
 
-	var useLimit = false;
-	var limitConfig;
-	
-	if (self.features.limit) {
-		if (self.defn.table.limit.threshold === undefined) {
-			debug.info('GRID TABLE // DRAW', 'Disabling limit feature because no limit threshold was provided');
-		}
-		else if (data.data.length > self.defn.table.limit.threshold) {
-			useLimit = true;
-			limitConfig = self.defn.table.limit;
-			debug.info('GRID TABLE // DRAW', 'Limiting output to first ' + limitConfig.threshold + ' rows');
-		}
+	if (limitConfig && data.data.length > limitConfig.threshold) {
+		debug.info('GRID TABLE // DRAW', 'Limiting output to first ' + limitConfig.threshold + ' rows');
 	}
 
 	/*
@@ -926,6 +1070,12 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 		incrementalConfig = self.defn.table.incremental;
 	}
 
+	// Clear out the body of the table.  We do this in case somebody invokes this function multiple
+	// times.  This function draws the entirety of the data, we certainly don't want to just tack rows
+	// on to the end.
+
+	self.ui.tbody.children().remove();
+
 	var render = function (startIndex, howMany, nextChunk) {
 		var atLimit = false;
 
@@ -937,7 +1087,16 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 			howMany = data.data.length;
 		}
 
-		debug.info('GRID TABLE // DRAW', 'Rendering rows ' + startIndex + ' - ' + (startIndex + howMany - 1) + ' / ' + data.data.length);
+		debug.info('GRID TABLE // DRAW', 'Rendering rows '
+							 + startIndex
+							 + ' - '
+							 + Math.min(useLimit && startIndex === 0 ? limitConfig.threshold - 1 : Number.POSITIVE_INFINITY
+													, startIndex + howMany - 1
+													, data.data.length - 1)
+							 + ' '
+							 + (data.data.length - 1 <= startIndex + howMany - 1
+									? '[END]'
+									: ('/ ' + data.data.length - 1)));
 
 		for (var rowNum = startIndex; rowNum < data.data.length && rowNum < startIndex + howMany && !atLimit; rowNum += 1) {
 			var row = data.data[rowNum];
@@ -967,7 +1126,16 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 						render(rowNum, limitConfig.chunkSize, nextChunk);
 					})
 					.append(fontAwesome('F13A'))
-					.append(jQuery('<span>Load ' + limitConfig.chunkSize + ' more rows.</span>')
+					.append(jQuery('<span>Showing rows '
+												 + '1–'
+												 + rowNum
+												 + ' of '
+												 + (data.data.length + 1)
+												 + '.</span>')
+									.css({
+										'padding-left': '0.5em',
+									}))
+					.append(jQuery('<span>Click to load ' + limitConfig.chunkSize + ' more rows.</span>')
 									.css({
 										'padding-left': '0.5em',
 										'padding-right': '0.5em'
@@ -1070,6 +1238,10 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 
 			self.ui.tr.push(tr);
 			self.ui.tbody.append(tr);
+		}
+
+		if (self.features.tabletool && window.TableTool !== undefined) {
+			TableTool.update();
 		}
 
 		if (rowNum === data.data.length) {
@@ -1478,7 +1650,7 @@ var GridFilter = (function () {
 		return 'GridFilter_' + id++;
 	};
 
-	return function (field, filterType, filterBtn, gridFilterSet, th) {
+	return function (field, filterType, filterBtn, gridFilterSet, th, onRemove) {
 		var self = this;
 
 		self.field = field;
@@ -1490,6 +1662,7 @@ var GridFilter = (function () {
 		self.div = jQuery('<div>')
 			.css({'white-space': 'nowrap', 'padding-top': 2, 'padding-bottom': 2});
 		self.removeBtn = self.makeRemoveBtn();
+		self.onRemove = onRemove;
 		self.id = genId();
 		self.progress = {
 			start: function () {
@@ -1636,6 +1809,9 @@ GridFilter.prototype.makeRemoveBtn = function () {
 	removeBtn.css({'cursor': 'pointer', 'margin-left': '0.5em'})
 	removeBtn.on('click', function () {
 		self.gridFilterSet.remove(self.getId(), self.filterBtn);
+		if (typeof self.onRemove === 'function') {
+			self.onRemove();
+		}
 	});
 
 	return removeBtn;
@@ -1728,8 +1904,8 @@ var StringDropdownGridFilter = function () {
 
 	GridFilter.apply(self, arguments);
 
+	self.super = makeSuper(self, GridFilter);
 	self.limit = 1;
-
 	self.input = jQuery('<select>').attr({
 		'multiple': true
 	});
@@ -1748,7 +1924,7 @@ var StringDropdownGridFilter = function () {
 					'value': val
 				}).text(val).appendTo(self.input);
 			});
-			self.input.chosen({'width': '100%'});
+			self.input.chosen(/*{'width': '100%'}*/);
 		});
 	};
 };
@@ -1759,6 +1935,15 @@ StringDropdownGridFilter.prototype = Object.create(GridFilter.prototype);
 
 StringDropdownGridFilter.prototype.getOperator = function () {
 	return '$in';
+};
+
+// #getValue {{{3
+
+StringDropdownGridFilter.prototype.getValue = function () {
+	var self = this
+		, val = self.super.getValue(self);
+
+	return val === null ? undefined : val;
 };
 
 // StringCheckedListGridFilter {{{2
@@ -2028,6 +2213,15 @@ var GridFilterSet = function (defn, view) {
 	self.delayUpdate = false;
 };
 
+// .events {{{2
+
+GridFilterSet.events = objFromArray([
+		'filterAdded'
+	, 'filterRemoved'
+]);
+
+mixinEventHandling(GridFilterSet, 'GridFilterSet', GridFilterSet.events);
+
 // #add {{{2
 
 /**
@@ -2045,11 +2239,11 @@ var GridFilterSet = function (defn, view) {
  * it, if we've reached the maximum number of filters allowed on the column.
  */
 
-GridFilterSet.prototype.add = function (field, target, filterType, filterBtn) {
+GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, onRemove) {
 	var self = this
 		, filter;
 
-	filter = self.build(field, filterType, filterBtn, target);
+	filter = self.build(field, filterType, filterBtn, target, onRemove);
 
 	// Make sure that requisite data structures are there.
 
@@ -2078,6 +2272,8 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn) {
 		filterBtn.hide();
 	}
 
+	self.fire(GridFilterSet.events.filterAdded);
+
 	// Check to see if this filter should take effect as soon as it is created.
 
 	if (filter.applyImmediately) {
@@ -2087,7 +2283,7 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn) {
 
 // #build {{{2
 
-GridFilterSet.prototype.build = function (field, filterType, filterBtn, target) {
+GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, onRemove) {
 	var self = this
 		, colType
 		, ctor;
@@ -2130,7 +2326,7 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target) 
 
 	debug.info('GRID FILTER', 'Creating new widget: column type = "' + colType + '" ; filter type = "' + filterType + '"');
 
-	return new ctor(field, filterType, filterBtn, self, target);
+	return new ctor(field, filterType, filterBtn, self, target, onRemove);
 };
 
 // #remove {{{2
@@ -2162,6 +2358,8 @@ GridFilterSet.prototype.remove = function (id, filterBtn) {
 	if (self.filters.byCol[filter.field].length < filter.limit) {
 		filterBtn.show();
 	}
+
+	self.fire(GridFilterSet.events.filterRemoved);
 };
 
 // #reset {{{2
@@ -2211,6 +2409,10 @@ GridFilterSet.prototype.update = function (dontSavePrefs, progress) {
 	_.each(self.filters.byCol, function (filterList, field) {
 		_.each(filterList, function (filter) {
 			var value = filter.getValue();
+
+			if (value === undefined) {
+				return;
+			}
 
 			if (spec[field] === undefined) {
 				spec[field] = {};
@@ -2324,6 +2526,9 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
 /**
  * @typedef Grid~Features
  *
+ * @property {boolean} [footer=false] If true, then a footer is shown at the bottom of the table.
+ * This is automatically enabled if `defn.table.footer` is provided.
+ *
  * @property {boolean} [sort=false] If true, the user is allowed to sort the data by clicking the
  * column header.
  *
@@ -2429,7 +2634,6 @@ var Grid = function (id, view, source, defn, tagOpts, cb) {
 		});
 	}
 
-	self.id = id; // ID of the div that contains the whole tag output.
 	self.defn = defn; // Definition used to retrieve data and output grid.
 	self.tagOpts = tagOpts; // Other tag options, not related to the grid.
 	self.grid = null; // List of all grids generated as a result.
@@ -2440,39 +2644,8 @@ var Grid = function (id, view, source, defn, tagOpts, cb) {
 
 	self.defn.grid = self;
 
-	// Set up the features object based on what the user asked for.
-
-	self.features = {};
-
-	_.each(['sort', 'filter', 'group', 'pivot', 'rowSelect', 'rowReorder', 'add', 'edit', 'delete', 'limit', 'tabletool'], function (feat) {
-		self.features[feat] = getPropDef(false, self.defn, 'table', 'features', feat);
-	});
-
-	debug.info('GRID', 'Features =', self.features);
-
-	// If the ID was specified as a jQuery object, extract the ID from the element.
-
-	if (_.isArray(id) && id[0] instanceof jQuery) {
-		id = id[0];
-	}
-
-	if (id instanceof jQuery) {
-		id = id.attr('id');
-	}
-
-	if (typeof id !== 'string') {
-		throw '<grid> "id" is not a string';
-	}
-
-	if (document.getElementById(id) === null) {
-		throw 'No element exists with given ID: ' + id;
-	}
-
-	defn._id = id;
-
-	defn.table = defn.table || {};
-
-	defn.table.id = id + '_gridContainer';
+	self._validateFeatures();
+	self._validateId(id);
 
 	/*
 	 * Set up other container elements.
@@ -2572,6 +2745,69 @@ var Grid = function (id, view, source, defn, tagOpts, cb) {
 
 	window.MIE.WC_DataVis.grids = window.MIE.WC_DataVis.grids || {};
 	window.MIE.WC_DataVis.grids[id] = self;
+};
+
+// #_validateFeatures {{{2
+
+Grid.prototype._validateFeatures = function () {
+	var self = this;
+
+	self.features = {};
+
+	var availableFeatures = [
+		'footer',
+		'sort',
+		'filter',
+		'group',
+		'pivot',
+		'rowSelect',
+		'rowReorder',
+		'add',
+		'edit',
+		'delete',
+		'limit',
+		'tabletool'
+	];
+
+	// When the user has specified the `footer` option, enable the footer feature (if it hasn't
+	// already been set by the user - in other words, the user can override this automatic behavior).
+
+	if (getProp(self.defn, 'table', 'footer') !== undefined) {
+		setPropDef(true, self.defn, 'table', 'features', 'footer');
+	}
+
+	_.each(availableFeatures, function (feat) {
+		self.features[feat] = getPropDef(false, self.defn, 'table', 'features', feat);
+	});
+
+	debug.info('GRID', 'Features =', self.features);
+};
+
+// #_validateId {{{2
+
+Grid.prototype._validateId = function (id) {
+	var self = this;
+
+	// If the ID was specified as a jQuery object, extract the ID from the element.
+
+	if (_.isArray(id) && id[0] instanceof jQuery) {
+		id = id[0];
+	}
+
+	if (id instanceof jQuery) {
+		id = id.attr('id');
+	}
+
+	if (typeof id !== 'string') {
+		throw '<grid> "id" is not a string';
+	}
+
+	if (document.getElementById(id) === null) {
+		throw 'No element exists with given ID: ' + id;
+	}
+
+	self.id = id;
+	setProp(id + '_gridContainer', self.defn, 'table', 'id');
 };
 
 // #addHeaderWidgets {{{2

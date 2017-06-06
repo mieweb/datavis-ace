@@ -1170,74 +1170,9 @@ Source.converters = {};
 
 // .events {{{2
 
-Source.events = _.reduce(['dataUpdated'],
-														 function (o, evt) {
-															 o[evt] = evt;
-															 return o;
-														 },
-														 {});
+Source.events = objFromArray(['dataUpdated']);
 
-// #on {{{2
-
-/**
- * Register an event handler for different things that happen in the source.  Multiple handlers can
- * be registered on the same event; they will be called in the order they were reigstered.
- *
- * @param {string} event The kind of event to register on.
- * @param {function} cb A function to call when the event fires.  The arguments to the function
- * depend on the event.
- */
-
-Source.prototype.on = function (evt, cb) {
-	var self = this;
-
-	if (Source.events[evt] === undefined) {
-		throw new SourceError('Unable to register handler for "' + evt + '" event: no such event available');
-	}
-
-	self.eventHandlers[evt].push(cb);
-
-	return self;
-};
-
-// #off {{{2
-
-/**
- * Remove all registered event handlers for the specified events.
- *
- * @param {...string} events The events to remove handlers for.
- */
-
-Source.prototype.off = function () {
-	var args = Array.prototype.slice.call(arguments)
-		, self = this;
-
-	_.each(args, function (evt) {
-		self.eventHandlers[evt] = [];
-	});
-};
-
-// #fire {{{2
-
-Source.prototype.fire = function () {
-	var self = this
-		, args = Array.prototype.slice.call(arguments)
-		, evt = args.shift();
-
-	if (Source.events[evt] === undefined) {
-		throw new Error('Illegal event: ' + evt);
-	}
-
-	if (self.eventHandlers[evt] === undefined) {
-		throw new Error('Event handlers not initialized for "' + evt + '" event');
-	}
-
-	debug.info('SOURCE // FIRE', 'Triggering "' + evt + '" event: %O', args);
-
-	_.each(self.eventHandlers[evt], function (cb) {
-		cb.apply(null, args);
-	});
-};
+mixinEventHandling(Source, 'Source', Source.events);
 
 // #getData {{{2
 
@@ -1657,74 +1592,20 @@ View.prototype.constructor = View;
 
 // .events {{{2
 
-View.events = _.reduce(['filter', 'getTypeInfo', 'sort', 'workBegin', 'workEnd', 'dataUpdated'],
-													 function (o, evt) {
-														 o[evt] = evt;
-														 return o;
-													 },
-													 {});
+View.events = objFromArray([
+		'getTypeInfo' // ???
+	, 'workBegin'   // ???
+	, 'workEnd'     // ???
+	, 'dataUpdated' // The data has changed in the source.
+	, 'sortBegin'   // A sort operation has started.
+	, 'sort'        // Sort information for a row is available.
+	, 'sortEnd'     // A sort operation has finished.
+	, 'filterBegin' // A filter operation has started.
+	, 'filter'      // Filter information for a row is available.
+	, 'filterEnd'   // A filter operation has finished.
+]);
 
-// #on {{{2
-
-/**
- * Register an event handler for different things that happen in the view.  Multiple handlers can be
- * registered on the same event; they will be called in the order they were reigstered.
- *
- * @param {string} event The kind of event to register on.
- * @param {function} cb A function to call when the event fires.  The arguments to the function
- * depend on the event.
- */
-
-View.prototype.on = function (evt, cb) {
-	var self = this;
-
-	if (View.events[evt] === undefined) {
-		throw new ViewError('Unable to register handler for "' + event + '" event: no such event available');
-	}
-
-	self.eventHandlers[evt].push(cb);
-
-	return self;
-};
-
-// #off {{{2
-
-/**
- * Remove all registered event handlers for the specified events.
- *
- * @param {...string} events The events to remove handlers for.
- */
-
-View.prototype.off = function () {
-	var args = Array.prototype.slice.call(arguments)
-		, self = this;
-
-	_.each(args, function (evt) {
-		self.eventHandlers[evt] = [];
-	});
-};
-
-// #fire {{{2
-
-View.prototype.fire = function () {
-	var self = this
-		, args = Array.prototype.slice.call(arguments)
-		, evt = args.shift();
-
-	if (View.events[evt] === undefined) {
-		throw new Error('Illegal event: ' + evt);
-	}
-
-	if (self.eventHandlers[evt] === undefined) {
-		throw new Error('Event handlers not initialized for "' + evt + '" event');
-	}
-
-	debug.info('VIEW // FIRE', 'Triggering "' + evt + '" event: %O', args);
-
-	_.each(self.eventHandlers[evt], function (cb) {
-		cb.apply(null, args);
-	});
-};
+mixinEventHandling(View, 'View', View.events);
 
 // #getRowCount {{{2
 
@@ -1768,25 +1649,6 @@ View.prototype.getRowCount = function () {
 
 View.prototype.getTotalRowCount = function () {
 	return this.source.cache.data.length;
-};
-
-// #issue {{{2
-
-/**
- */
-
-View.prototype.issue = function () {
-	var self = this
-		, args = Array.prototype.slice.call(arguments)
-		, evt = args.shift();
-
-	if (self.eventHandlers[evt] === undefined) {
-		throw new Error('CALL ERROR - Invalid event: "' + evt + '"');
-	}
-
-	_.each(self.eventHandlers[evt], function (f) {
-		f.apply(undefined, args);
-	});
 };
 
 // #setSort {{{2
@@ -1878,13 +1740,6 @@ View.prototype.sort = function (cont) {
 		return cont(self.data.data);
 	}
 
-	self.timing.start(timingEvt);
-
-	if (self.sortProgress
-			&& typeof self.sortProgress.start === 'function') {
-		self.sortProgress.start();
-	}
-
 	// Check to make sure we have enough information about the type of the field that the user wants
 	// us to sort by.
 
@@ -1911,6 +1766,21 @@ View.prototype.sort = function (cont) {
 
 	var cmp = cmpFn[fieldType];
 
+	// Start the timer for the sort.
+
+	self.timing.start(timingEvt);
+
+	// If there's a progress callback, perform its start event.
+
+	if (self.sortProgress
+			&& typeof self.sortProgress.start === 'function') {
+		self.sortProgress.start();
+	}
+
+	// Fire the event for starting the sort.
+
+	self.fire(View.events.sortBegin);
+
 	// Actually perform the sort.
 
 	mergeSort3(self.data.data,
@@ -1920,19 +1790,29 @@ View.prototype.sort = function (cont) {
 						 },
 						 function (sorted) {
 							 _.each(sorted, function (row, position) {
-								 self.issue('sort', row.rowNum, position);
+								 self.fire('sort', row.rowNum, position);
 							 });
+
+							 // If there's a progress callback, perform its done event.
 
 							 if (self.sortProgress
 									 && typeof self.sortProgress.done === 'function') {
 								 self.sortProgress.done();
 							 }
 
+							 // Fire the event for finishing the sort.
+
+							 self.fire(View.events.sortEnd);
+
+							 // Stop the timer for the sort.
+
 							 self.timing.stop(timingEvt);
+
+							 // Pass the sorted data to the continuation.
+
 							 return cont(sorted);
 						 },
-						 self.sortProgress && self.sortProgress.update
-	);
+						 self.sortProgress && self.sortProgress.update);
 };
 
 // #setFilter {{{2
@@ -2139,7 +2019,7 @@ View.prototype.filter = function (cont) {
 
 		var passes = isNothing(self.filterSpec) ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
 
-		self.issue('filter', row.rowNum, !passes);
+		self.fire('filter', row.rowNum, !passes);
 
 		return passes;
 	}
@@ -2161,8 +2041,6 @@ View.prototype.filter = function (cont) {
 		self.timing.stop(timingEvt);
 	}
 	*/
-
-	self.timing.start(timingEvt);
 
 	var i0 = {
 		val: 0
@@ -2187,21 +2065,34 @@ View.prototype.filter = function (cont) {
 			return window.setTimeout(doFilter);
 		}
 		else {
-			self.timing.stop(timingEvt);
-
+			// If there's a progress callback, perform its done event.
 			if (self.filterProgress
 					&& typeof self.filterProgress.done === 'function') {
 				self.filterProgress.done();
 			}
 
+			// Fire the event for finishing the filter.
+			self.fire(View.events.filterEnd);
+
+			// Stop the timer for the sort.
+			self.timing.stop(timingEvt);
+
+			// Pass the filtered data to the continuation.
 			return cont(newData);
 		}
 	};
 
+	// Start the timer for the filter operation.
+	self.timing.start(timingEvt);
+
+	// If there's a progress callback, perform its start event.
 	if (self.filterProgress
 			&& typeof self.filterProgress.start === 'function') {
 		self.filterProgress.start();
 	}
+
+	// Fire the event for starting the sort.
+	self.fire(View.events.filterBegin);
 
 	return doFilter();
 };
@@ -2476,7 +2367,7 @@ View.prototype.getData = function (cont, tries) {
 	}
 
 	if (self.data === undefined) {
-		self.issue('workBegin');
+		self.fire('workBegin');
 
 		return self.source.getData(function (data) {
 			return self.source.getTypeInfo(function (typeInfo) {
@@ -2511,7 +2402,7 @@ View.prototype.getData = function (cont, tries) {
 
 	debug.info('DATA VIEW', 'Got data: %O', self.data);
 
-	self.issue('workEnd', self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
+	self.fire('workEnd', self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
 
 	if (typeof cont === 'function') {
 		return cont(self.data);
@@ -2534,7 +2425,7 @@ View.prototype.getTypeInfo = function (cont) {
 		});
 	}
 
-	self.issue('getTypeInfo', self.typeInfo);
+	self.fire('getTypeInfo', self.typeInfo);
 
 	if (typeof cont === 'function') {
 		return cont(self.typeInfo);

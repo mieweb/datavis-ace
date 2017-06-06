@@ -759,6 +759,13 @@ function needArg(val, varName) {
 		return true;
 	}
 
+function objFromArray(a) {
+	return _.reduce(a, function (o, x) {
+		o[x] = x;
+		return o;
+	}, {});
+}
+
 	/**
 	 * Treating an object like a tree, descends through object values until it hits a non-object, then
 	 * calls the given function.
@@ -794,6 +801,14 @@ function needArg(val, varName) {
 			});
 		}
 	}
+
+// Object Orientation {{{1
+
+var makeSuper = function (me, parent) {
+	return _.mapObject(parent.prototype, function (v, k) {
+		return _.bind(v, me);
+	});
+};
 
 	// HTML {{{1
 
@@ -1582,3 +1597,74 @@ Timing.prototype.dump = function (subject) {
 		_.each(self.getSubjects(), f);
 	}
 };
+
+// Event Handling {{{1
+
+function mixinEventHandling(obj, name, events) {
+
+	// #_initEventHandlers {{{2
+
+	obj.prototype._initEventHandlers = function () {
+		var self = this;
+
+		if (self.eventHandlers === undefined) {
+			self.eventHandlers = {};
+
+			_.each(events, function (evt) {
+				self.eventHandlers[evt] = [];
+			});
+		}
+	};
+
+	// #on {{{2
+
+	obj.prototype.on = function (evt, cb) {
+		var self = this
+			, myName = typeof name === 'function' ? name(self) : name;
+
+		self._initEventHandlers();
+
+		if (events[evt] === undefined) {
+			throw new Error('Unable to register handler on ' + myName + ' for "' + evt + '" event: no such event available');
+		}
+
+		self.eventHandlers[evt].push(cb);
+
+		return self;
+	};
+
+	// #off {{{2
+
+	obj.prototype.off = function () {
+		var args = Array.prototype.slice.call(arguments)
+			, self = this
+			, myName = typeof name === 'function' ? name(self) : name;
+
+		self._initEventHandlers();
+
+		_.each(args, function (evt) {
+			self.eventHandlers[evt] = [];
+		});
+	};
+
+	// #fire {{{2
+
+	obj.prototype.fire = function () {
+		var self = this
+			, args = Array.prototype.slice.call(arguments)
+			, evt = args.shift()
+			, myName = typeof name === 'function' ? name(self) : name;
+
+		self._initEventHandlers();
+
+		if (events[evt] === undefined) {
+			throw new Error('Illegal event: ' + evt);
+		}
+
+		debug.info(myName.toUpperCase() + ' // FIRE', 'Triggering "' + evt + '" event: ' + JSON.stringify(args));
+
+		_.each(self.eventHandlers[evt], function (cb) {
+			cb.apply(null, args);
+		});
+	};
+}
