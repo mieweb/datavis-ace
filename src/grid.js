@@ -379,10 +379,26 @@ var GridTable = function (defn, view, features, timing) {
 	_.each(self.defn.table.columns, function (col) {
 		self.colConfig[col.field] = col;
 	});
+
+	if (self.features.limit && self.defn.table.limit.method === 'more') {
+		jQuery(window).on('DOMContentLoaded load resize scroll', function () {
+			if (typeof self.moreVisibleHandler === 'function') {
+				self.moreVisibleHandler();
+			}
+		});
+	}
 };
 
 GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
+
+// .events {{{2
+
+GridTable.events = objFromArray([
+		'columnResize' // Fired when a column is resized.
+]);
+
+mixinEventHandling(GridTable, 'GridTable', GridTable.events);
 
 // #validateLimit {{{2
 
@@ -618,7 +634,7 @@ GridTable.prototype.addFilterHandler = function () {
 GridTable.prototype.addWorkHandler = function () {
 	var self = this;
 
-	self.view.on('workEnd', function () {
+	self.view.on(View.events.workEnd, function () {
 		if (self.needsRedraw) {
 			debug.info('GRID TABLE // HANDLER (workEnd)', 'Redrawing because the view has done work');
 
@@ -638,9 +654,16 @@ GridTable.prototype.addWorkHandler = function () {
 
 					self.draw_body(data, typeInfo, columns, function () {
 						self.timing.stop(['Grid Table', 'Redraw triggered by view']);
+
+						// Potentially the columns resized as a result of sorting, filtering, or adding new data.
+						self.fire(GridTable.events.columnResize);
 					});
 				});
 			});
+		}
+		else {
+			// Potentially the columns resized as a result of sorting, filtering, or adding new data.
+			self.fire(GridTable.events.columnResize);
 		}
 	});
 };
@@ -831,7 +854,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 		 */
 
 		if (self.features.filter) {
-			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view);
+			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view, self);
 		}
 
 		/*
@@ -871,7 +894,8 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 				//
 				// Unfortunately, the ID attribute is copied when using TableTool so this might mess us up.
 
-				var filterTh = jQuery('<th>', { id: gensym() }).addClass('filter_col_' + colIndex).css(filterThCss);
+				var filterThId = gensym();
+				var filterTh = jQuery('<th>', { id: filterThId }).addClass('filter_col_' + colIndex).css(filterThCss);
 				self.setCss(filterTh, field);
 				filterTr.append(filterTh);
 
@@ -906,7 +930,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 
 						var onRemove = adjustTableToolHeight;
 
-						self.defn.gridFilterSet.add(field, th, colConfig.filter, jQuery(this), onRemove);
+						self.defn.gridFilterSet.add(field, th, colConfig.filter, jQuery(this), onRemove, filterTh);
 
 						adjustTableToolHeight();
 					})
@@ -1115,13 +1139,15 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 					+ (self.features.rowSelect ? 1 : 0)
 					+ (self.features.rowReorder ? 1 : 0);
 
+				var showMore = function () {
+						tr.remove(); // Eliminate the "more" row.
+						render(rowNum, limitConfig.chunkSize, nextChunk);
+				};
+
 				var td = jQuery('<td>', {
 					colspan: colSpan
 				})
-					.on('click', function () {
-						tr.remove(); // Eliminate the "more" row.
-						render(rowNum, limitConfig.chunkSize, nextChunk);
-					})
+					.on('click', showMore)
 					.append(fontAwesome('F13A'))
 					.append(jQuery('<span>Showing rows '
 												 + '1–'
@@ -1138,6 +1164,13 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 										'padding-right': '0.5em'
 									}))
 					.append(fontAwesome('F13A'));
+
+				self.moreVisibleHandler = onVisibilityChange(td, function(isVisible) {
+					if (isVisible) {
+						debug.info('GRID TABLE // MORE', '"Show More Rows" button scrolled into view');
+						showMore();
+					}
+				});
 
 				tr.append(td);
 			}
@@ -1256,6 +1289,10 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 		}
 		else if (typeof nextChunk === 'function') {
 			return nextChunk(startIndex, howMany);
+		}
+
+		if (typeof cont === 'function') {
+			return cont();
 		}
 
 		// Nothing to do next, but we're done here.
@@ -1484,6 +1521,7 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 												done: function () {
 													if (window.NProgress !== undefined) {
 														window.NProgress.done();
+														jQuery('.nprogress-custom-parent').removeClass('nprogress-custom-parent');
 													}
 												}
 											});
@@ -1647,7 +1685,7 @@ var GridFilter = (function () {
 		return 'GridFilter_' + id++;
 	};
 
-	return function (field, filterType, filterBtn, gridFilterSet, th, onRemove) {
+	return function (field, filterType, filterBtn, gridFilterSet, th, onRemove, sizingElement) {
 		var self = this;
 
 		self.field = field;
@@ -1661,6 +1699,7 @@ var GridFilter = (function () {
 		self.removeBtn = self.makeRemoveBtn();
 		self.onRemove = onRemove;
 		self.id = genId();
+		self.sizingElement = sizingElement;
 		self.progress = {
 			start: function () {
 				console.log('Configuring NProgress');
@@ -1887,7 +1926,7 @@ StringTextboxGridFilter.prototype.getOperator = function () {
 }
 */
 
-// StringDropdownGridFilter {{{2
+// StringDropdownGridFilterChosen {{{2
 
 /**
  * Represents a filter for multiple strings.
@@ -1896,7 +1935,7 @@ StringTextboxGridFilter.prototype.getOperator = function () {
  * @extends GridFilter
  */
 
-var StringDropdownGridFilter = function () {
+var StringDropdownGridFilterChosen = function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -1922,24 +1961,116 @@ var StringDropdownGridFilter = function () {
 				}).text(val).appendTo(self.input);
 			});
 			self.input.chosen({'width': self.div.innerWidth() - self.removeBtn.outerWidth()});
+			self.chosen = self.input.next('div.chosen-container');
 		});
 	};
+
+	self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+		var targetWidth = self.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
+		debug.info('GRID FILTER // HANDLER (columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
+		self.chosen.innerWidth(targetWidth);
+	});
 };
 
-StringDropdownGridFilter.prototype = Object.create(GridFilter.prototype);
+StringDropdownGridFilterChosen.prototype = Object.create(GridFilter.prototype);
 
 // #getOperator {{{3
 
-StringDropdownGridFilter.prototype.getOperator = function () {
+StringDropdownGridFilterChosen.prototype.getOperator = function () {
 	return '$in';
 };
 
 // #getValue {{{3
 
-StringDropdownGridFilter.prototype.getValue = function () {
+StringDropdownGridFilterChosen.prototype.getValue = function () {
 	var self = this
 		, val = self.super.getValue(self);
 
+	return val === null ? undefined : val;
+};
+
+// StringDropdownGridFilterSumo {{{2
+
+/**
+ * Represents a filter for multiple strings.
+ *
+ * @class
+ * @extends GridFilter
+ */
+
+var StringDropdownGridFilterSumo = function () {
+	var self = this;
+
+	GridFilter.apply(self, arguments);
+
+	self.super = makeSuper(self, GridFilter);
+	self.limit = 1;
+	self.input = jQuery('<select>').attr({
+		'multiple': true
+	})
+		.on('change', function (evt) {
+			self.gridFilterSet.update(false, self.progress);
+		});
+
+	self.div
+		.append(self.input)
+		.append(self.removeBtn);
+
+	self.afterAdd = function (target) {
+		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
+			_.each(uniqueVals[self.field].values, function (val) {
+				jQuery('<option>').attr({
+					'value': val
+				}).text(val).appendTo(self.input);
+			});
+			var sumo = self.input.SumoSelect({
+				triggerChangeCombined: true,
+				selectAll: true,
+				search: true,
+				okCancelInMulti: true,
+				isClickAwayOk: true
+			});
+			self.input.closest('div.SumoSelect').outerWidth(self.div.innerWidth() - self.removeBtn.outerWidth());
+		});
+	};
+
+	self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+		// In case we're using TableTool, we need to carry around this idea of the sizing element.  At
+		// this point in the JS execution, TableTool hasn't caught up and correctly resized the floating
+		// header to match the original header column widths.  Therefore, we can't use `self.div` for
+		// determining the correct width (it's the wrong size, because it's still in a column which is
+		// the wrong size).  Instead, we need to use the sizing element - which is the original version
+		// of the TH containing `self.div` - to determine the correct size.  TableTool will catch up
+		// later, correctly resizing the column to align perfectly with what we set here.
+		//
+		// HACK: The fudge factor (subtract 14) is determined by experimentation to produce the correct
+		// look.  I'm not sure what padding or margin somewhere is causing that difference.
+		//
+		// FIXME: This is extremely tightly coupled to knowledge about how the grid table is laid out
+		// and what features it has (e.g. TableTool).  It would be better to pass in what the size of
+		// the column currently is with the event handler.
+
+		var targetWidth = self.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
+		debug.info('GRID FILTER // HANDLER (columnResize)', 'Adjusting SumoSelect widget width to ' + targetWidth + 'px to match column width');
+		self.input.closest('div.SumoSelect').innerWidth(targetWidth);
+	});
+};
+
+StringDropdownGridFilterSumo.prototype = Object.create(GridFilter.prototype);
+
+// #getOperator {{{3
+
+StringDropdownGridFilterSumo.prototype.getOperator = function () {
+	return '$in';
+};
+
+// #getValue {{{3
+
+StringDropdownGridFilterSumo.prototype.getValue = function () {
+	var self = this
+		, val = self.super.getValue();
+
+	console.log('--> ' + JSON.stringify(val));
 	return val === null ? undefined : val;
 };
 
@@ -2144,7 +2275,7 @@ BooleanCheckboxGridFilter.prototype.getId = function () {
 GridFilter.widgets = {
 	'string': {
 		'textbox': StringTextboxGridFilter,
-		'dropdown': StringDropdownGridFilter
+		'dropdown': StringDropdownGridFilterSumo
 	},
 	'number': {
 		'textbox': NumberTextboxGridFilter
@@ -2191,7 +2322,7 @@ GridFilter.defaultWidgets = {
  * internally when loading preferences to avoid updating for every single filter.
  */
 
-var GridFilterSet = function (defn, view) {
+var GridFilterSet = function (defn, view, gridTable) {
 	var self = this;
 
 	if (defn === undefined) {
@@ -2200,6 +2331,7 @@ var GridFilterSet = function (defn, view) {
 
 	self.defn = defn;
 	self.view = view;
+	self.gridTable = gridTable;
 
 	self.filters = {
 		all: [],
@@ -2236,11 +2368,11 @@ mixinEventHandling(GridFilterSet, 'GridFilterSet', GridFilterSet.events);
  * it, if we've reached the maximum number of filters allowed on the column.
  */
 
-GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, onRemove) {
+GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, onRemove, sizingElement) {
 	var self = this
 		, filter;
 
-	filter = self.build(field, filterType, filterBtn, target, onRemove);
+	filter = self.build(field, filterType, filterBtn, target, onRemove, sizingElement);
 
 	// Make sure that requisite data structures are there.
 
@@ -2280,7 +2412,7 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, on
 
 // #build {{{2
 
-GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, onRemove) {
+GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, onRemove, sizingElement) {
 	var self = this
 		, colType
 		, ctor;
@@ -2323,7 +2455,7 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, 
 
 	debug.info('GRID FILTER', 'Creating new widget: column type = "' + colType + '" ; filter type = "' + filterType + '"');
 
-	return new ctor(field, filterType, filterBtn, self, target, onRemove);
+	return new ctor(field, filterType, filterBtn, self, target, onRemove, sizingElement);
 };
 
 // #remove {{{2

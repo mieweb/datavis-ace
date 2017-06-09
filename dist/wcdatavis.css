@@ -131,8 +131,22 @@ tr.wcdvgrid_more td {
  * blank space in the header.
  */
 
+/*
 .ttsticky .thead .inner {
-	height: 1000px;
+	height: 500px;
+}
+*/
+
+.gridwrapper .tabletool .thead {
+   overflow: initial;
+}
+
+.gridwrapper .tabletool .outer {
+	overflow: initial;
+}
+
+.gridwrapper .tabletool.ttsticky .thead.outer .inner {
+	overflow: initial;
 }
 
 /*

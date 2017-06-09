@@ -840,6 +840,43 @@ var makeSuper = function (me, parent) {
 		return elt.css('display') !== 'none' && elt.css('visibility') === 'visible';
 	}
 
+/*
+ * Taken from --
+ *   https://stackoverflow.com/a/7557433/5628
+ */
+
+function isElementInViewport (el) {
+
+    //special bonus for those using jQuery
+    if (typeof jQuery === "function" && el instanceof jQuery) {
+        el = el[0];
+    }
+
+    var rect = el.getBoundingClientRect();
+
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /*or $(window).height() */
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /*or $(window).width() */
+    );
+}
+
+function onVisibilityChange(el, callback) {
+	var old_visible;
+	return function () {
+		var visible = isElementInViewport(el);
+		if (visible != old_visible) {
+			if (old_visible != undefined) {
+				if (typeof callback == 'function') {
+					callback(visible);
+				}
+			}
+			old_visible = visible;
+		}
+	}
+}
+
 function fontAwesome(hex, cls, title) {
 	var span = jQuery('<span>')
 		.addClass('fa')
@@ -1647,11 +1684,12 @@ function mixinEventHandling(obj, name, events) {
 		});
 	};
 
-	// #fire {{{2
+	// #_fire {{{2
 
-	obj.prototype.fire = function () {
+	obj.prototype._fire = function () {
 		var self = this
 			, args = Array.prototype.slice.call(arguments)
+			, opts = args.shift()
 			, evt = args.shift()
 			, myName = typeof name === 'function' ? name(self) : name;
 
@@ -1661,10 +1699,34 @@ function mixinEventHandling(obj, name, events) {
 			throw new Error('Illegal event: ' + evt);
 		}
 
-		debug.info(myName.toUpperCase() + ' // FIRE', 'Triggering "' + evt + '" event: ' + JSON.stringify(args));
+		if (!opts || !opts.silent) {
+			debug.info(myName.toUpperCase() + ' // FIRE', 'Triggering "' + evt + '" event: ' + JSON.stringify(args));
+		}
 
 		_.each(self.eventHandlers[evt], function (cb) {
 			cb.apply(null, args);
 		});
+	};
+
+	// #fire {{{2
+
+	obj.prototype.fire = function () {
+		var self = this
+			, args = Array.prototype.slice.call(arguments)
+			, pass = Array.prototype.concat.call([{
+				silent: false
+			}], args);
+		return self._fire.apply(self, pass);
+	};
+
+	// #fireQuietly {{{2
+	
+	obj.prototype.fireQuietly = function () {
+		var self = this
+			, args = Array.prototype.slice.call(arguments)
+			, pass = Array.prototype.concat.call([{
+				silent: true
+			}], args);
+		return self._fire.apply(self, pass);
 	};
 }

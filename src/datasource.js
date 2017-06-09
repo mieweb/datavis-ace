@@ -1790,7 +1790,7 @@ View.prototype.sort = function (cont) {
 						 },
 						 function (sorted) {
 							 _.each(sorted, function (row, position) {
-								 self.fire('sort', row.rowNum, position);
+								 self.fireQuietly(View.events.sort, row.rowNum, position);
 							 });
 
 							 // If there's a progress callback, perform its done event.
@@ -2019,7 +2019,7 @@ View.prototype.filter = function (cont) {
 
 		var passes = isNothing(self.filterSpec) ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
 
-		self.fire('filter', row.rowNum, !passes);
+		self.fireQuietly(View.events.filter, row.rowNum, !passes);
 
 		return passes;
 	}
@@ -2368,7 +2368,6 @@ View.prototype.getData = function (cont, tries) {
 
 	if (self.data === undefined) {
 		self.fire('workBegin');
-
 		return self.source.getData(function (data) {
 			return self.source.getTypeInfo(function (typeInfo) {
 				self.data = {
@@ -2382,17 +2381,14 @@ View.prototype.getData = function (cont, tries) {
 						};
 					})
 				};
-
 				self.typeInfo = typeInfo;
-
 				return self.filter(function (filteredData) {
 					self.data.data = filteredData;
-
 					self.group();
 					self.pivot();
 					return self.sort(function (sortedData) {
 						self.data.data = sortedData;
-
+						self.fire('workEnd', self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
 						return self.getData(cont, tries + 1);
 					});
 				});
@@ -2401,8 +2397,6 @@ View.prototype.getData = function (cont, tries) {
 	}
 
 	debug.info('DATA VIEW', 'Got data: %O', self.data);
-
-	self.fire('workEnd', self.getRowCount(), self.isFiltered() ? self.getTotalRowCount() : undefined);
 
 	if (typeof cont === 'function') {
 		return cont(self.data);
