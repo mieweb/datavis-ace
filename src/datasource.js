@@ -1777,8 +1777,8 @@ View.prototype.sort = function (cont) {
 	// If there's a progress callback, perform its start event.
 
 	if (self.sortProgress
-			&& typeof self.sortProgress.start === 'function') {
-		self.sortProgress.start();
+			&& typeof self.sortProgress.begin === 'function') {
+		self.sortProgress.begin();
 	}
 
 	// Fire the event for starting the sort.
@@ -1800,8 +1800,8 @@ View.prototype.sort = function (cont) {
 							 // If there's a progress callback, perform its done event.
 
 							 if (self.sortProgress
-									 && typeof self.sortProgress.done === 'function') {
-								 self.sortProgress.done();
+									 && typeof self.sortProgress.end === 'function') {
+								 self.sortProgress.end();
 							 }
 
 							 // Fire the event for finishing the sort.
@@ -2071,8 +2071,8 @@ View.prototype.filter = function (cont) {
 		else {
 			// If there's a progress callback, perform its done event.
 			if (self.filterProgress
-					&& typeof self.filterProgress.done === 'function') {
-				self.filterProgress.done();
+					&& typeof self.filterProgress.end === 'function') {
+				self.filterProgress.end();
 			}
 
 			// Fire the event for finishing the filter.
@@ -2091,8 +2091,8 @@ View.prototype.filter = function (cont) {
 
 	// If there's a progress callback, perform its start event.
 	if (self.filterProgress
-			&& typeof self.filterProgress.start === 'function') {
-		self.filterProgress.start();
+			&& typeof self.filterProgress.begin === 'function') {
+		self.filterProgress.begin();
 	}
 
 	// Fire the event for starting the sort.

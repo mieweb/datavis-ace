@@ -465,8 +465,54 @@ GridTable.prototype.draw = function (container, tableDone) {
 				tbody: jQuery('<tbody>'),
 				tfoot: jQuery('<tfoot>'),
 				thMap: {},
-				tr: []
+				tr: [],
+				progress: jQuery('<div>')
 			};
+
+			if (self.features.block) {
+				var blockConfig = {
+					overlayCSS: {
+						opacity: 0.9,
+						backgroundColor: '#FFF'
+					}
+				};
+
+				if (self.features.progress && getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
+					blockConfig.message = jQuery('<div>')
+						.append(jQuery('<h1>').text('Working...'))
+						.append(self.ui.progress);
+				}
+			}
+
+			self.view.on('workBegin', function () {
+				if (self.features.block) {
+					debug.info('GRID TABLE // HANDLER (View.workBegin)', 'Blocking table body');
+					if (getProp(self.defn, 'table', 'block', 'wholePage')) {
+						jQuery.blockUI(blockConfig);
+					}
+					else {
+						self.ui.tbl.block(blockConfig);
+					}
+				}
+				if (self.features.tabletool) {
+					TableTool.update();
+				}
+			});
+
+			self.view.on(View.events.workEnd, function () {
+				if (self.features.block) {
+					debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Unblocking table body');
+					if (getProp(self.defn, 'table', 'block', 'wholePage')) {
+						jQuery.unblockUI();
+					}
+					else {
+						self.ui.tbl.unblock();
+					}
+				}
+				if (self.features.tabletool) {
+					TableTool.update();
+				}
+			});
 
 			/*
 			 * Determine what columns will be in the table.  This comes from the user, or from the data
@@ -569,7 +615,7 @@ GridTable.prototype.addSortHandler = function () {
 	if (self.features.sort) {
 		if (self.features.limit) {
 			self.view.on('sortEnd', function () {
-				debug.info('GRID TABLE // HANDLER (sortEnd)', 'Marking table to be redrawn');
+				debug.info('GRID TABLE // HANDLER (View.sortEnd)', 'Marking table to be redrawn');
 				self.needsRedraw = true;
 			});
 		}
@@ -607,7 +653,7 @@ GridTable.prototype.addFilterHandler = function () {
 	if (self.features.filter) {
 		if (self.features.limit) {
 			self.view.on('filterEnd', function () {
-				debug.info('GRID TABLE // HANDLER (filterEnd)', 'Marking table to be redrawn');
+				debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
 				self.needsRedraw = true;
 			});
 		}
@@ -636,7 +682,7 @@ GridTable.prototype.addWorkHandler = function () {
 
 	self.view.on(View.events.workEnd, function () {
 		if (self.needsRedraw) {
-			debug.info('GRID TABLE // HANDLER (workEnd)', 'Redrawing because the view has done work');
+			debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
 
 			self.needsRedraw = false;
 
@@ -839,6 +885,8 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 			}
 		}
 
+		var progress = self.makeProgress('Filter');
+
 		/*
 		 * Set up the sorting specification for the View that belongs to this GridTable.
 		 */
@@ -856,7 +904,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 		 */
 
 		if (self.features.filter) {
-			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view, self);
+			self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view, self, progress);
 		}
 
 		/*
@@ -979,6 +1027,61 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 	}
 	else {
 		drawPlain();
+	}
+};
+
+// #makeProgress {{{2
+
+GridTable.prototype.makeProgress = function (thing) {
+	var self = this;
+
+	if (!self.features.progress) {
+		return;
+	}
+
+	if (getProp(self.defn, 'table', 'progress', 'method') === 'NProgress') {
+		return {
+			begin: function () {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', 'Begin');
+				if (window.NProgress !== undefined) {
+					window.NProgress.start();
+				}
+			},
+			update: function (amount, estTotal) {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', sprintf('Update: %d / %d = %.0f%%', amount, estTotal, (amount / estTotal) * 100));
+				if (window.NProgress !== undefined) {
+					window.NProgress.set(amount / estTotal);
+				}
+			},
+			end: function () {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', 'End');
+				if (window.NProgress !== undefined) {
+					window.NProgress.done();
+					jQuery('.nprogress-custom-parent').removeClass('nprogress-custom-parent');
+				}
+			}
+		};
+	}
+	else if (getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
+		return {
+			begin: function () {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', 'Begin');
+				self.ui.progress.progressbar({
+					'classes': {
+						'ui-progressbar': 'wcdvgrid_progressbar',
+						'ui-progressbar-value': 'wcdvgrid_progressbar'
+					}
+				});
+			},
+			update: function (amount, estTotal) {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', sprintf('Update: %d / %d = %.0f%%', amount, estTotal, (amount / estTotal) * 100));
+				self.ui.progress.progressbar('value', (amount / estTotal) * 100);
+			},
+			end: function () {
+				debug.info('GRID TABLE // PROGRESS (' + thing + ')', 'End');
+				self.ui.progress.progressbar('destroy');
+			}
+		};
 	}
 };
 
@@ -1504,29 +1607,7 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 		self.view.setSort(self.defn.sortSpec.col,
 											self.defn.sortSpec.asc ? 'ASC' : 'DESC',
 											false,
-											{
-												start: function () {
-													if (window.NProgress !== undefined) {
-														window.NProgress.configure({
-															parent: '#' + headingTh.attr('id'),
-															showSpinner: false
-														});
-														window.NProgress.start();
-													}
-												},
-												update: function (amount, estTotal) {
-													console.log(sprintf('Sort progress: %.0f%%', (amount / estTotal) * 100));
-													if (window.NProgress !== undefined) {
-														window.NProgress.set(amount / estTotal);
-													}
-												},
-												done: function () {
-													if (window.NProgress !== undefined) {
-														window.NProgress.done();
-														jQuery('.nprogress-custom-parent').removeClass('nprogress-custom-parent');
-													}
-												}
-											});
+											self.makeProgress('Sort'));
 	};
 
 	sortSpan.addClass('sort_indicator');
@@ -1702,29 +1783,6 @@ var GridFilter = (function () {
 		self.onRemove = onRemove;
 		self.id = genId();
 		self.sizingElement = sizingElement;
-		self.progress = {
-			start: function () {
-				console.log('Configuring NProgress');
-				if (window.NProgress !== undefined) {
-					window.NProgress.configure({
-						parent: '#' + th.attr('id'),
-						showSpinner: false
-					});
-					window.NProgress.start();
-				}
-			},
-			update: function (amount, estTotal) {
-				console.log(sprintf('Filter progress: %.0f%%', (amount / estTotal) * 100));
-				if (window.NProgress !== undefined) {
-					window.NProgress.set(amount / estTotal);
-				}
-			},
-			done: function () {
-				if (window.NProgress !== undefined) {
-					window.NProgress.done();
-				}
-			}
-		};
 
 		self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
 			self.adjustInputWidth({ useSizingElement: true, fromColumnResize: true });
@@ -1832,7 +1890,7 @@ GridFilter.prototype.makeOperatorDrop = function (include) {
 
 	operatorDrop.on('change', function () {
 		if (self.getValue() !== '') {
-			self.gridFilterSet.update(false, self.progress);
+			self.gridFilterSet.update(false);
 		}
 	});
 
@@ -1865,7 +1923,7 @@ GridFilter.prototype.remove = function () {
 	var self = this;
 
 	self.div.remove();
-	self.gridFilterSet.update(false, self.progress);
+	self.gridFilterSet.update(false);
 };
 
 // #isRange {{{3
@@ -1890,9 +1948,6 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 	// wrong size).  Instead, we need to use the sizing element - which is the original version of the
 	// TH containing `self.div` - to determine the correct size.  TableTool will catch up later,
 	// correctly resizing the column to align perfectly with what we set here.
-	//
-	// HACK: The fudge factor (subtract 14) is determined by experimentation to produce the correct
-	// look.  I'm not sure what padding or margin somewhere is causing that difference.
 	//
 	// FIXME: This is extremely tightly coupled to knowledge about how the grid table is laid out and
 	// what features it has (e.g. TableTool).  It would be better to pass in what the size of the
@@ -1938,7 +1993,7 @@ var StringTextboxGridFilter = function () {
 
 	self.input = jQuery('<input type="text">');
 	self.input.on('change', function (evt) {
-		self.gridFilterSet.update(false, self.progress);
+		self.gridFilterSet.update(false);
 	});
 
 	self.operatorDrop = self.makeOperatorDrop(/*['$eq', '$ne']*/);
@@ -2000,7 +2055,7 @@ var StringDropdownGridFilterChosen = function () {
 		'multiple': true
 	});
 	self.input.on('change', function (evt) {
-		self.gridFilterSet.update(false, self.progress);
+		self.gridFilterSet.update(false);
 	});
 
 	self.div
@@ -2021,7 +2076,7 @@ var StringDropdownGridFilterChosen = function () {
 
 	self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
 		var targetWidth = self.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
-		debug.info('GRID FILTER // HANDLER (columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
+		debug.info('GRID FILTER // HANDLER (GridTable.columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
 		self.chosen.innerWidth(targetWidth);
 	});
 };
@@ -2063,7 +2118,7 @@ var StringDropdownGridFilterSumo = function () {
 		'multiple': true
 	})
 		.on('change', function (evt) {
-			self.gridFilterSet.update(false, self.progress);
+			self.gridFilterSet.update(false);
 		});
 
 	self.div
@@ -2135,7 +2190,7 @@ var NumberTextboxGridFilter = function () {
 
 	self.input = jQuery('<input type="text">');
 	self.input.on('change', function (evt) {
-		self.gridFilterSet.update(false, self.progress);
+		self.gridFilterSet.update(false);
 	});
 
 	self.operatorDrop = self.makeOperatorDrop(['$eq', '$ne', '$lt', '$lte', '$gt', '$gte']);
@@ -2157,7 +2212,7 @@ var NumberCheckboxGridFilter = function () {
 
 	self.input = jQuery('<input>', {'id': gensym(), 'type': 'checkbox'});
 	self.input.on('change', function () {
-		self.gridFilterSet.update(false, self.progress);
+		self.gridFilterSet.update(false);
 	});
 
 	self.div
@@ -2240,7 +2295,7 @@ var DateRangeGridFilter = function () {
 		'altInput': false,
 		'mode': 'range',
 		'onChange': function (selectedDates, dateStr, instance) {
-			self.gridFilterSet.update(false, self.progress);
+			self.gridFilterSet.update(false);
 		}
 	});
 
@@ -2344,6 +2399,7 @@ GridFilter.defaultWidgets = {
 };
 
 // GridFilterSet {{{1
+// Constructor {{{2
 
 /**
  * @memberof wcgraph_int
@@ -2369,7 +2425,7 @@ GridFilter.defaultWidgets = {
  * internally when loading preferences to avoid updating for every single filter.
  */
 
-var GridFilterSet = function (defn, view, gridTable) {
+var GridFilterSet = function (defn, view, gridTable, progress) {
 	var self = this;
 
 	if (defn === undefined) {
@@ -2379,6 +2435,7 @@ var GridFilterSet = function (defn, view, gridTable) {
 	self.defn = defn;
 	self.view = view;
 	self.gridTable = gridTable;
+	self.progress = progress;
 
 	self.filters = {
 		all: [],
@@ -2568,7 +2625,7 @@ GridFilterSet.prototype.reset = function () {
  * @param {boolean} dontSavePrefs If true, don't save preferences.
  */
 
-GridFilterSet.prototype.update = function (dontSavePrefs, progress) {
+GridFilterSet.prototype.update = function (dontSavePrefs) {
 	var self = this
 		, spec = {};
 
@@ -2621,7 +2678,7 @@ GridFilterSet.prototype.update = function (dontSavePrefs, progress) {
 
 	debug.info('GRID FILTER SET', 'Updating with ' + self.filters.all.length + ' filters: ', spec);
 
-	self.view.setFilter(spec, false, progress);
+	self.view.setFilter(spec, false, self.progress);
 
 	if (getProp(self.defn, 'table', 'prefs', 'enableSaving') && !dontSavePrefs) {
 		self.savePrefs();
@@ -2733,6 +2790,12 @@ GridFilterSet.prototype.loadPrefs = function (prefs) {
  *
  * @property {boolean} [tabletool=false] If true, then use TableTool to create a floating header for
  * the table.
+ *
+ * @property {boolean} [blockUI=false] If true, use BlockUI to prevent interaction with the table
+ * while the View is doing something.
+ *
+ * @property {boolean} [nprogress=false] If true, use nprogress to show the progress of sort/filter
+ * operations that the View is performing.
  */
 
 // Constructor {{{2
@@ -2944,7 +3007,9 @@ Grid.prototype._validateFeatures = function () {
 		'edit',
 		'delete',
 		'limit',
-		'tabletool'
+		'tabletool',
+		'block',
+		'progress'
 	];
 
 	// When the user has specified the `footer` option, enable the footer feature (if it hasn't

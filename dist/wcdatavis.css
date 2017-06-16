@@ -126,21 +126,6 @@ tr.wcdvgrid_more td {
 	cursor: pointer;
 }
 
-/*
- * Fix for the Chosen dropdown, to keep it from getting cut off by TableTool's floating header.
- * Suggested by Dan in #57907.
- *
- * HACK: It seems like you'd want to set this as high as possible, otherwise you're just guessing
- * about how tall it might need to be.  However, if you set it too high (e.g. 9999) you get just
- * blank space in the header.
- */
-
-/*
-.ttsticky .thead .inner {
-	height: 500px;
-}
-*/
-
 .gridwrapper .tabletool .thead {
    overflow: initial;
 }
@@ -151,6 +136,15 @@ tr.wcdvgrid_more td {
 
 .gridwrapper .tabletool.ttsticky .thead.outer .inner {
 	overflow: initial;
+}
+
+.ui-progressbar.wcdvgrid_progressbar {
+	height: 32px;
+	padding: 8px;
+}
+
+.ui-progressbar .ui-progressbar-value.wcdvgrid_progressbar {
+	background: #80A0C0;
 }
 
 /*
