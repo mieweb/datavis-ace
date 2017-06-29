@@ -58,7 +58,7 @@ function makeAggregate(userdata, aggregate) {
 
 /**
  * Invoke the core implementation of an aggregate function.  This is used by most aggregate
- * functions (properties of `Aggregates`) to perform the data traversal.
+ * functions (properties of `AGGREGATES`) to perform the data traversal.
  *
  * - The implementation may throw an exception to abort the process at any time (e.g. if an item
  *   doesn't match the expected type or is in some other way borked).
@@ -86,12 +86,12 @@ function invokeAggregate(data, aggregate, init) {
 		i0 = 0;
 	}
 	else {
-		acc = data[0];
+		acc = data[0].rowData;
 		i0 = 1;
 	}
 	for (i = i0; i < len; i += 1) {
 		try {
-			acc = aggregate(acc, data[i], data, i);
+			acc = aggregate(acc, data[i].rowData, data, i);
 		}
 		catch (e) {
 			if (_.isString(e)) {
@@ -105,6 +105,37 @@ function invokeAggregate(data, aggregate, init) {
 	return acc;
 }
 
+function getRealValue(cell) {
+	if (_.isString(cell)) {
+		return cell;
+	}
+	else if (_.isNumber(cell)) {
+		return cell;
+	}
+	else if (_.isObject(cell)) {
+		if (cell.value !== undefined) {
+			return cell.value;
+		}
+		else if (cell.orig !== undefined) {
+			return cell.orig;
+		}
+		else {
+			throw new Error('Unable to get real value of cell');
+		}
+	}
+}
+
+function getRealValueAsKey(cell) {
+	var val = getRealValue(cell);
+
+	if (window.numeral && window.numeral.isNumeral(val)) {
+		return val.value();
+	}
+	else if (window.moment && window.moment.isMoment(val)) {
+		return val.unix();
+	}
+}
+
 /**
  * @typedef {Object} Aggregate
  *
@@ -115,13 +146,14 @@ function invokeAggregate(data, aggregate, init) {
  * Example:
  *
  * ```
- * var findAverageAge = Aggregates.average.fun({field: 'age'});
+ * var findAverageAge = AGGREGATES.average.fun({field: 'age'});
  * var averageAge1 = findAverageAge(data1);
  * var averageAge2 = findAverageAge(data2);
  * ```
  *
- * @property {string} type The type of the result of the aggregate function, e.g. a string or a
- * number.
+ * @property {string} type The type of the result of the aggregate function (e.g. `groupConcat` is
+ * string, `sum` is number).  When undefined, the type is dependent on the data being consumed (e.g.
+ * `min` and `max`).
  */
 
 /**
@@ -205,15 +237,15 @@ function invokeAggregate(data, aggregate, init) {
  *
  *   - field
  */
-var Aggregates = {};
+var AGGREGATES = {};
 
 // .count {{{1
 
-Aggregates.count = {
+AGGREGATES.count = {
 	fun: function (opts) {
 		opts = opts || {};
 		return function (data) {
-			return data.length;
+			return numeral(data.length);
 		};
 	},
 	type: 'number'
@@ -221,7 +253,7 @@ Aggregates.count = {
 
 // .countDistinct {{{1
 
-Aggregates.countDistinct = {
+AGGREGATES.countDistinct = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -229,14 +261,15 @@ Aggregates.countDistinct = {
 		}
 		return function (data) {
 			return invokeAggregate(data, makeAggregate({}, function (acc, next, _1, _2, set) {
-				if (set[next[opts.field]]) {
+				var key = getRealValueAsKey(next[opts.field]);
+				if (set[key]) {
 					return acc;
 				}
 				else {
-					set[next[opts.field]] = true;
-					return acc + 1;
+					set[key] = true;
+					return acc.add(1);
 				}
-			}), 0);
+			}), numeral(0));
 		};
 	},
 	type: 'number'
@@ -244,7 +277,7 @@ Aggregates.countDistinct = {
 
 // .sum {{{1
 
-Aggregates.sum = {
+AGGREGATES.sum = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -252,8 +285,18 @@ Aggregates.sum = {
 		}
 		return function (data) {
 			return invokeAggregate(data, function (acc, next) {
-				var val = next[opts.field];
-				if (!_.isNumber(val)) {
+				var val = next[opts.field].value;
+
+				if (window.numeral && window.numeral.isNumeral(val)) {
+					// Check to see if this is a plain number, or a number wrapped by the Numeral library.  It
+					// should always be the latter, but we check anyway, because there's no reason not to.
+
+					val = val.value();
+				}
+				else if (_.isString(val)) {
+					// We can also handle when it's a number represented as a string.  We'll try to convert it
+					// either to an integer or a float.
+
 					if (isInt(val)) {
 						val = toInt(val);
 					}
@@ -261,11 +304,15 @@ Aggregates.sum = {
 						val = toFloat(val);
 					}
 					else {
-						throw 'sum aggregate: field ' + opts.field + ' is not a number';
+						throw 'sum aggregate: field ' + opts.field + ' cannot be interpreted as a number (value = ' + JSON.stringify(val) + ')';
 					}
 				}
-				return acc + val;
-			}, 0);
+				else {
+						throw 'sum aggregate: field ' + opts.field + ' cannot be interpreted as a number (value = ' + JSON.stringify(val) + ')';
+				}
+
+				return acc.add(val);
+			}, numeral(0));
 		};
 	},
 	type: 'number'
@@ -273,14 +320,14 @@ Aggregates.sum = {
 
 // .average {{{1
 
-Aggregates.average = {
+AGGREGATES.average = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
 			throw 'average aggregate: missing [field] property';
 		}
 		return function (data) {
-			return Aggregates.sum.fun(opts)(data) / data.length;
+			return numeral(AGGREGATES.sum.fun(opts)(data).value() / data.length);
 		};
 	},
 	type: 'number'
@@ -288,7 +335,7 @@ Aggregates.average = {
 
 // .groupConcat {{{1
 
-Aggregates.groupConcat = {
+AGGREGATES.groupConcat = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -302,7 +349,7 @@ Aggregates.groupConcat = {
 		}
 		return function (data) {
 			return invokeAggregate(data, function (acc, next) {
-				return acc === null ? next[opts.field] : acc + opts.separator + next[opts.field];
+				return acc === null ? next[opts.field].value : acc + opts.separator + next[opts.field].value;
 			}, null);
 		};
 	},
@@ -311,7 +358,7 @@ Aggregates.groupConcat = {
 
 // .groupConcatDistinct {{{1
 
-Aggregates.groupConcatDistinct = {
+AGGREGATES.groupConcatDistinct = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -325,12 +372,12 @@ Aggregates.groupConcatDistinct = {
 		}
 		return function (data) {
 			return invokeAggregate(data, makeAggregate({}, function (acc, next, _1, _2, set) {
-				if (set[next[opts.field]]) {
+				if (set[next[opts.field].value]) {
 					return acc;
 				}
 				else {
-					set[next[opts.field]] = true;
-					return acc === null ? next[opts.field] : acc + opts.separator + next[opts.field];
+					set[next[opts.field].value] = true;
+					return acc === null ? next[opts.field].value : acc + opts.separator + next[opts.field].value;
 				}
 			}), null);
 		};
@@ -340,37 +387,37 @@ Aggregates.groupConcatDistinct = {
 
 // .first {{{1
 
-Aggregates.first = {
+AGGREGATES.first = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
 			throw 'first aggregate: missing [field] property';
 		}
 		return function (data) {
-			return data[0][opts.field];
+			return getRealValue(data[0].rowData[opts.field]);
 		};
 	},
-	type: 'string'
+	type: undefined
 };
 
 // .last {{{1
 
-Aggregates.last = {
+AGGREGATES.last = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
 			throw 'last aggregate: missing [field] property';
 		}
 		return function (data) {
-			return data[data.length][opts.field];
+			return getRealValue(data[data.length].rowData[opts.field]);
 		};
 	},
-	type: 'string'
+	type: undefined
 };
 
 // .nth {{{1
 
-Aggregates.nth = {
+AGGREGATES.nth = {
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -383,82 +430,78 @@ Aggregates.nth = {
 			throw 'nth aggregate: [index] property must be an interger';
 		}
 		return function (data) {
-			return opts.index >= data.length ? (opts.nonExistent || '[ERROR:OUT-OF-RANGE]') : data[opts.index][opts.field];
+			return opts.index >= data.length ? (opts.nonExistent || '[ERROR:OUT-OF-RANGE]') : getRealValue(data[opts.index].rowData[opts.field]);
 		};
 	},
-	type: 'string'
+	type: undefined
 };
 
 // .min {{{1
 
-Aggregates.min = {
+AGGREGATES.min = {
 	fun: function (opts) {
-		var convert = I;
 		opts = _.defaults(opts || {}, {
-			type: 'string',
-			compare: universalCmp
+			type: 'string'
 		});
-		if (_.isUndefined(opts.field)) {
+
+		if (opts.field === undefined) {
 			throw 'min aggregate: missing [field] property';
 		}
-		if (!_.isString(opts.type)) {
+
+		if (typeof opts.type !== 'string') {
 			throw 'min aggregate: [type] property must be a string';
 		}
-		if (!_.isFunction(opts.compare)) {
+
+		if (opts.compare === undefined) {
+			opts.compare = getComparisonFn.byType(opts.type);
+		}
+
+		if (typeof opts.compare !== 'function') {
 			throw 'min aggregate: [compare] property must be a function';
 		}
-		if (opts.type === 'integer') {
-			convert = function (a) {
-				return parseInt(a, 10);
-			};
-		}
-		else if (opts.type === 'float' || opts.type === 'number') {
-			convert = parseFloat;
-		}
+
 		return function (data) {
 			return invokeAggregate(data, function (acc, next) {
-				var n = convert(next[opts.field]);
-				return opts.compare(n, acc) < 0 ? n : acc;
-			}, convert(data[0][opts.field]));
+				var n = getRealValue(next[opts.field]);
+				return opts.compare(n, acc) ? n : acc;
+			}, getRealValue(data[0].rowData[opts.field]));
 		};
 	},
-	type: 'string'
+	type: undefined
 };
 
 // .max {{{1
 
-Aggregates.max = {
+AGGREGATES.max = {
 	fun: function (opts) {
-		var convert = I;
 		opts = _.defaults(opts || {}, {
-			type: 'string',
-			compare: universalCmp
+			type: 'string'
 		});
-		if (_.isUndefined(opts.field)) {
+
+		if (opts.field === undefined) {
 			throw 'max aggregate: missing [field] property';
 		}
-		if (!_.isString(opts.type)) {
+
+		if (typeof opts.type !== 'string') {
 			throw 'max aggregate: [type] property must be a string';
 		}
-		if (!_.isFunction(opts.compare)) {
+
+		if (opts.compare === undefined) {
+			opts.compare = getComparisonFn.byType(opts.type);
+		}
+
+		if (typeof opts.compare !== 'function') {
 			throw 'max aggregate: [compare] property must be a function';
 		}
-		if (opts.type === 'integer') {
-			convert = function (a) {
-				return parseInt(a, 10);
-			};
-		}
-		else if (opts.type === 'float' || opts.type === 'number') {
-			convert = parseFloat;
-		}
+
 		return function (data) {
 			return invokeAggregate(data, function (acc, next) {
-				var n = convert(next[opts.field]);
-				return opts.compare(n, acc) > 0 ? n : acc;
-			}, convert(data[0][opts.field]));
+				var n = getRealValue(next[opts.field]);
+				return opts.compare(n, acc) ? acc : n;
+			}, getRealValue(data[0].rowData[opts.field]));
 		};
 	},
-	type: 'string'
+	type: undefined
 };
 
 /**
@@ -476,7 +519,7 @@ function checkAggregate(defn, agg, source) {
 	if (!_.isString(agg.fun)) {
 		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a string'));
 	}
-	if (!Aggregates[agg.fun]) {
+	if (!AGGREGATES[agg.fun]) {
 		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a valid builtin aggregate function'));
 	}
 	// INPUT VALIDATION: [displayText]

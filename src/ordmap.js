@@ -119,3 +119,7 @@ OrdMap.prototype.keys = function () {
 	}
 	return result;
 };
+
+OrdMap.prototype.toMap = function () {
+	return this._map;
+};

@@ -1083,7 +1083,22 @@ HttpSource.prototype.getTypeInfo = function (cont) {
  * the JSON API).
  *
  * @param {object} spec
+ *
  * @param {object} params
+ *
+ * @param {object} userTypeInfo Provided by the user to override the type information that comes
+ * from the origin.  For example, you might be using an origin backed by MySQL, which reports a
+ * column type as being a string... but we want to treat it as a date.  You would override that
+ * field's type information to indicate it should be parsed as a date instead of a string.  Another
+ * possibility is to discard time information from a datetime, treating it as a date instead.
+ *
+ * ```
+ * {
+ *   "Birth Date": {
+ *     "type": "date"
+ *   }
+ * }
+ * ```
  *
  * @class
  * @property {string} name
@@ -1288,7 +1303,16 @@ Source.prototype.getTypeInfo = function (cont) {
 			}
 		});
 
-		self.cache.typeInfo = jQuery.extend(true, {}, typeInfo, self.userTypeInfo);
+		var typeInfoClone = jQuery.extend(true, {}, typeInfo);
+
+		if (self.userTypeInfo !== undefined) {
+			_.each(self.userTypeInfo, function (fieldTypeInfo, field) {
+				jQuery.extend(true, typeInfoClone.get(field), fieldTypeInfo);
+				debug.info('SOURCE // GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', fieldTypeInfo);
+			});
+		}
+
+		self.cache.typeInfo = typeInfoClone;
 		return cont(self.cache.typeInfo);
 	});
 };
@@ -1718,28 +1742,6 @@ View.prototype.sort = function (cont) {
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Sorting']
 		, conv = I;
 
-	var cmpFn = {};
-
-	// Dates and times are stored as Moment instances, so we need to compare them accordingly.
-
-	cmpFn.date = function (a, b) {
-		return a.isBefore(b);
-	};
-	cmpFn.time = cmpFn.date;
-	cmpFn.datetime = cmpFn.date;
-
-	// Strings, numbers, and currency are stored as JavaScript primitives, so using the builtin
-	// operators to compare them is OK.
-
-	cmpFn.string = function (a, b) {
-		return a < b;
-	};
-
-	cmpFn.number = function (a, b) {
-		return a._value < b._value;
-	};
-	cmpFn.currency = cmpFn.number;
-
 	if (self.sortSpec === undefined) {
 		return cont(self.data.data);
 	}
@@ -1756,19 +1758,18 @@ View.prototype.sort = function (cont) {
 	}
 
 	var fieldType = self.typeInfo.get(self.sortSpec.col).type;
+	var cmp = getComparisonFn.byType(fieldType);
 
 	// Check to make sure that we have a valid function registered to use for comparing values in the
 	// domain of the type of the field that the user wants us to sort by.
 
-	if (cmpFn[fieldType] === undefined) {
+	if (cmp === undefined) {
 		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - no function registered to compare values of type "' + fieldType + '"');
 	}
 
-	if (typeof cmpFn[fieldType] !== 'function') {
+	if (typeof cmp !== 'function') {
 		throw new ViewError('Unable to sort by field "' + self.sortSpec.col + '" - function registered to compare values of type "' + fieldType + '" is not actually a function');
 	}
-
-	var cmp = cmpFn[fieldType];
 
 	// Start the timer for the sort.
 

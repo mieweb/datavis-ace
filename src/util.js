@@ -58,6 +58,47 @@
 		return a === b ? 0 : a < b ? -1 : 1;
 	}
 
+var getComparisonFn = (function () {
+	var cmpFn = {};
+
+	// Dates and times are stored as Moment instances, so we need to compare them accordingly.
+
+	cmpFn.date = function (a, b) {
+		return a.isBefore(b);
+	};
+	cmpFn.time = cmpFn.date;
+	cmpFn.datetime = cmpFn.date;
+
+	// Strings, numbers, and currency are stored as JavaScript primitives, so using the builtin
+	// operators to compare them is OK.
+
+	cmpFn.string = function (a, b) {
+		return a < b;
+	};
+
+	cmpFn.number = function (a, b) {
+		return a._value < b._value;
+	};
+	cmpFn.currency = cmpFn.number;
+
+	return {
+		byType: (function (type) {
+			return cmpFn[type];
+		}),
+		byValue: (function (val) {
+			if (window.numeral && window.numeral.isNumeral(val)) {
+				return cmpFn.number;
+			}
+			else if (window.moment && window.moment.isMoment(val)) {
+				return cmpFn.date;
+			}
+			else {
+				return cmpFn.string;
+			}
+		})
+	};
+})();
+
 	/**
 	 * Call a chain of functions, such that each function consumes as its arguments the result(s) of
 	 * the previous function.
@@ -847,19 +888,18 @@ var makeSuper = function (me, parent) {
 
 function isElementInViewport (el) {
 
-    //special bonus for those using jQuery
-    if (typeof jQuery === "function" && el instanceof jQuery) {
-        el = el[0];
-    }
+	//special bonus for those using jQuery
+	if (typeof jQuery === "function" && el instanceof jQuery) {
+		el = el[0];
+	}
 
-    var rect = el.getBoundingClientRect();
+	var rect = el.getBoundingClientRect();
 
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /*or $(window).height() */
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /*or $(window).width() */
-    );
+	return rect.top >= 0
+		&& rect.left >= 0
+		&& rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) /*or $(window).height() */
+		//&& rect.right <= (window.innerWidth || document.documentElement.clientWidth) /*or $(window).width() */
+	;
 }
 
 function onVisibilityChange(el, callback) {
@@ -987,6 +1027,68 @@ function fontAwesome(hex, cls, title) {
 		emailWarning(defn, output);
 	}
 
+/**
+ * Correctly format a value according to its type and user specification.
+ *
+ * @param {object} colConfig Configuration object for the column corresponding to this field.
+ *
+ * @param {object} typeInfo
+ *
+ * @param {string|Numeral|Moment} value The true value, as used by the View to perform sorting and
+ * filtering.
+ *
+ * @param {string} [orig] A representation of the value which isn't the true value of the cell   For
+ * example, this is used by Webchart's links:
+ *
+ * ```
+ * value = William Hart
+ * orig = William Hart{$p}18
+ * ```
+ *
+ * Again, the value is used internally for sorting and filtering, but the original datum from the
+ * source is maintained because it's needed by the renderer to construct the link.
+ *
+ * @param {function} [render]
+ */
+
+function format(colConfig, typeInfo, value, orig, render, opts) {
+	var result = orig || value;
+
+	opts = opts || {};
+
+	_.defaults(opts, {
+		alwaysFormat: false
+	});
+
+	var t = opts.overrideType || typeInfo.type;
+
+	// For types that support formatting, use that instead of the value.
+
+	if (['date', 'datetime'].indexOf(t) >= 0
+			&& !value.isValid()) {
+
+		// Invalid dates (like our beloved 0000-00-00) show up as nothing.
+
+		result = '';
+	}
+	else if (['date', 'datetime', 'number', 'currency'].indexOf(t) >= 0
+					 && (colConfig.format !== undefined || opts.alwaysFormat)) {
+
+		// The value here could be either from NumeralJS or from Moment, but fortunately it doesn't
+		// matter because they both have the format() method.
+
+		result = value.format(colConfig.format);
+	}
+
+	// If there's a rendering function, pass the (possibly formatted) value through it to get the new
+	// value to display.
+
+	if (typeof render === 'function') {
+		result = render(result);
+	}
+
+	return result;
+};
 
 	// Date and Time Formatting {{{1
 
@@ -1655,7 +1757,7 @@ function mixinEventHandling(obj, name, events) {
 
 	// #on {{{2
 
-	obj.prototype.on = function (evt, cb) {
+	obj.prototype.on = function (evt, cb, who) {
 		var self = this
 			, myName = typeof name === 'function' ? name(self) : name;
 
@@ -1665,23 +1767,42 @@ function mixinEventHandling(obj, name, events) {
 			throw new Error('Unable to register handler on ' + myName + ' for "' + evt + '" event: no such event available');
 		}
 
-		self.eventHandlers[evt].push(cb);
+		self.eventHandlers[evt].push({
+			who: who,
+			cb: cb
+		});
 
 		return self;
 	};
 
 	// #off {{{2
 
-	obj.prototype.off = function () {
-		var args = Array.prototype.slice.call(arguments)
-			, self = this
+	obj.prototype.off = function (evt, who) {
+		var self = this
 			, myName = typeof name === 'function' ? name(self) : name;
 
 		self._initEventHandlers();
 
-		_.each(args, function (evt) {
-			self.eventHandlers[evt] = [];
+		if (evt === '*') {
+			_.each(events, function (e) {
+				self.off(e, who);
+			});
+			return;
+		}
+
+		if (events[evt] === undefined) {
+			throw new Error('Unable to register handler on ' + myName + ' for "' + evt + '" event: no such event available');
+		}
+
+		var startLen = self.eventHandlers[evt].length;
+
+		self.eventHandlers[evt] = _.reject(self.eventHandlers[evt], function (h) {
+			return h.who === who;
 		});
+
+		var endLen = self.eventHandlers[evt].length;
+
+		debug.info(myName.toUpperCase() + ' // OFF', 'Removed ' + (startLen - endLen) + ' handlers from ' + who + ' on "' + evt + '" event');
 	};
 
 	// #_fire {{{2
@@ -1700,11 +1821,11 @@ function mixinEventHandling(obj, name, events) {
 		}
 
 		if (!opts || !opts.silent) {
-			debug.info(myName.toUpperCase() + ' // FIRE', 'Triggering "' + evt + '" event: ' + JSON.stringify(args));
+			debug.info(myName.toUpperCase() + ' // FIRE', 'Triggering "' + evt + '" event on ' + self.eventHandlers[evt].length + ' handlers:', args);
 		}
 
-		_.each(self.eventHandlers[evt], function (cb) {
-			cb.apply(null, args);
+		_.each(self.eventHandlers[evt], function (h) {
+			h.cb.apply(null, args);
 		});
 	};
 

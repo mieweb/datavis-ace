@@ -59,6 +59,71 @@ Editing
 
   Editing is not allowed when grouping or pivotting.
 
+Feature Flags
+=============
+
+All features default to being off.
+
+* ``footer``
+* ``sort``
+* ``filter``
+* ``group``
+* ``pivot``
+* ``rowSelect``
+* ``rowReorder``
+* ``add``
+* ``edit``
+* ``delete``
+* ``limit``
+* ``tabletool``
+* ``blockUI``
+* ``progress``
+
+Feature Configuration
+=====================
+
+Footer
+------
+
+* ``footer.field``
+* ``footer.format``
+* ``footer.aggregate``
+
+Limit
+-----
+
+``limit.method`` : string
+  Must be one of:
+
+  + **more** — Place a button at the bottom of the table, which when clicked shows more rows.
+  + **paging** — Use traditional paging.
+
+``limit.threshold`` : number
+  The minimum number of rows required before the limit kicks in; if there are fewer rows then they
+  are all shown.  When using the "more" limit method, this many rows are shown initially.
+
+``limit.chunkSize`` : number
+  + With the "more" limit method, how many additional rows to load each time the "more" button is
+    clicked / revealed.
+  + With the "paging" limit method, how many rows are on each page.
+
+BlockUI
+-------
+
+``blockUI.wholePage`` : boolean
+  If true, then the whole page is blocked when a View is doing work.  If false, only the affected
+  Grid Tables are blocked.
+
+Progress
+--------
+
+``progress.method`` : string
+  Must be one of:
+
+  + **NProgress** — Renders a progress bar using the NProgress library.
+  + **jQueryUI** — Renders a progress bar using the jQuery UI library.  Only works when the
+    ``blockUI`` feature is turned on.
+
 API
 ===
 

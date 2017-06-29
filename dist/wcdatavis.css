@@ -1,4 +1,7 @@
 /* WC DATAVIS STYLES */
+.tabletool {
+	margin-top: 1px;
+}
 .gridwrapper {
 	margin-top: 1em;
 }
@@ -130,11 +133,11 @@ tr.wcdvgrid_more td {
    overflow: initial;
 }
 
-.gridwrapper .tabletool .outer {
+.gridwrapper .tabletool .outer.thead {
 	overflow: initial;
 }
 
-.gridwrapper .tabletool.ttsticky .thead.outer .inner {
+.gridwrapper .tabletool.ttsticky .outer.thead .inner {
 	overflow: initial;
 }
 

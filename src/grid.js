@@ -362,9 +362,10 @@ GridError.prototype.constructor = GridError;
  * working.
  */
 
-var GridTable = function (defn, view, features, timing) {
+var GridTable = function (defn, view, features, timing, id) {
 	var self = this;
 
+	self.id = id;
 	self.defn = defn;
 	self.view = view;
 	self.features = features;
@@ -427,6 +428,8 @@ GridTable.prototype.validateLimit = function () {
 GridTable.prototype.clear = function () {
 	var self = this;
 
+	self.view.off('*', self);
+
 	self.container.children().remove();
 };
 
@@ -454,7 +457,7 @@ GridTable.prototype.draw = function (container, tableDone) {
 			self.timing.start(['Grid Table', 'Draw']);
 
 			debug.info('GRID TABLE // DRAW', 'Data = %O', data);
-			debug.info('GRID TABLE // DRAW', 'TypeInfo = %O', typeInfo);
+			debug.info('GRID TABLE // DRAW', 'TypeInfo = %O', typeInfo.toMap());
 
 			var tr
 				, srcIndex = 0;
@@ -484,7 +487,7 @@ GridTable.prototype.draw = function (container, tableDone) {
 				}
 			}
 
-			self.view.on('workBegin', function () {
+			self.view.on(View.events.workBegin, function () {
 				if (self.features.block) {
 					debug.info('GRID TABLE // HANDLER (View.workBegin)', 'Blocking table body');
 					if (getProp(self.defn, 'table', 'block', 'wholePage')) {
@@ -497,7 +500,7 @@ GridTable.prototype.draw = function (container, tableDone) {
 				if (self.features.tabletool) {
 					TableTool.update();
 				}
-			});
+			}, self);
 
 			self.view.on(View.events.workEnd, function () {
 				if (self.features.block) {
@@ -512,7 +515,7 @@ GridTable.prototype.draw = function (container, tableDone) {
 				if (self.features.tabletool) {
 					TableTool.update();
 				}
-			});
+			}, self);
 
 			/*
 			 * Determine what columns will be in the table.  This comes from the user, or from the data
@@ -617,7 +620,7 @@ GridTable.prototype.addSortHandler = function () {
 			self.view.on('sortEnd', function () {
 				debug.info('GRID TABLE // HANDLER (View.sortEnd)', 'Marking table to be redrawn');
 				self.needsRedraw = true;
-			});
+			}, self);
 		}
 		else {
 			self.view.on('sort', function (rowNum, position) {
@@ -628,7 +631,7 @@ GridTable.prototype.addSortHandler = function () {
 				elt.removeClass('even odd');
 				elt.addClass((position + 1) % 2 === 0 ? 'even' : 'odd');
 				self.ui.tbody.append(elt);
-			});
+			}, self);
 		}
 	}
 };
@@ -652,15 +655,15 @@ GridTable.prototype.addFilterHandler = function () {
 
 	if (self.features.filter) {
 		if (self.features.limit) {
-			self.view.on('filterEnd', function () {
+			self.view.on(View.events.filterEnd, function () {
 				debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
 				self.needsRedraw = true;
-			});
+			}, self);
 		}
 		else {
 			var even = false; // Rows are 1-based to match our CSS zebra-striping.
 
-			self.view.on('filter', function (rowNum, hide) {
+			self.view.on(View.events.filter, function (rowNum, hide) {
 				self.ui.tr[rowNum].removeClass('even odd');
 				if (hide) {
 					self.ui.tr[rowNum].hide();
@@ -670,7 +673,7 @@ GridTable.prototype.addFilterHandler = function () {
 					self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
 					even = !even;
 				}
-			});
+			}, self);
 		}
 	}
 };
@@ -681,6 +684,8 @@ GridTable.prototype.addWorkHandler = function () {
 	var self = this;
 
 	self.view.on(View.events.workEnd, function () {
+		debug.info('GRID TABLE // HANDLER (View.workEnd)', 'View has finished doing work');
+
 		if (self.needsRedraw) {
 			debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
 
@@ -711,7 +716,7 @@ GridTable.prototype.addWorkHandler = function () {
 			// Potentially the columns resized as a result of sorting, filtering, or adding new data.
 			self.fire(GridTable.events.columnResize);
 		}
-	});
+	}, self);
 };
 
 // #draw_header {{{2
@@ -988,13 +993,7 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 			}
 
 			self.setCss(headingTh, field);
-
-			var alignment = colConfig.headerAlignment
-				|| (['number', 'currency'].indexOf(typeInfo.get(field).type) >= 0 && 'right');
-
-			if (alignment !== undefined) {
-				headingTh.css('text-align', alignment);
-			}
+			self.setAlignment(headingTh, colConfig, typeInfo, field);
 
 			self.ui.thMap[field] = headingTh;
 			headingTr.append(headingTh);
@@ -1088,30 +1087,82 @@ GridTable.prototype.makeProgress = function (thing) {
 // #draw_footer {{{2
 
 GridTable.prototype.draw_footer = function (columns, data, typeInfo) {
-	var tr = jQuery('<tr>');
+	var self = this
+		, tr = jQuery('<tr>');
 
-	if (getProp(self.defn, 'table', 'footer') === undefined) {
-		if (self.features.rowSelect) {
-			self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
-				.on('change', function (evt) {
-					rowSelect_checkAll.call(this, evt, self.ui);
-				});
-			tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
-		}
-
-		tr.append(_.map(columns, function (field, colIndex) {
-			var colConfig = self.defn.table.columns[colIndex] || {};
-			var td = jQuery('<td>').text(colConfig.displayText || field);
-			self.setCss(td, field);
-			return td;
-		}));
-
-		if (self.features.rowReorder) {
-			tr.append(jQuery('<td>').text('Options'));
-		}
-
-		self.ui.tfoot.append(tr);
+	if (self.features.rowSelect) {
+		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
+			.on('change', function (evt) {
+				rowSelect_checkAll.call(this, evt, self.ui);
+			});
+		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
+
+	tr.append(_.map(columns, function (field, colIndex) {
+		var colConfig = self.defn.table.columns[colIndex] || {}
+			, colTypeInfo = typeInfo.get(field)
+			, td = jQuery('<td>')
+			, footerConfig = getProp(self.defn, 'table', 'footer', field)
+			, agg
+			, aggFun
+			, aggResult
+			, footerVal;
+
+		self.setCss(td, field);
+		self.setAlignment(td, colConfig, typeInfo, field);
+
+		if (footerConfig !== undefined) {
+			debug.info('GRID TABLE // FOOTER { field = "' + field + '" }', 'Creating footer using config: %O', footerConfig);
+			switch (typeof footerConfig.aggregate) {
+			case 'function':
+				agg = footerConfig.aggregate;
+				break;
+			case 'string':
+				if (typeof AGGREGATES[footerConfig.aggregate] === undefined) {
+					throw new Error('Footer config for field "' + field + '": requested aggregate function "' + footerConfig.aggregate + '" does not exist; supported aggregates are: ' + JSON.stringify(_.keys(AGGREGATES)));
+				}
+				else {
+					agg = AGGREGATES[footerConfig.aggregate];
+				}
+				break;
+			default:
+				throw new Error('Footer config for field "' + field + '": `aggregate` must be a function or string');
+			}
+
+			aggFun = agg.fun({field: field, type: colTypeInfo.type});
+			aggType = agg.type;
+			aggResult = format(colConfig, typeInfo.get(field), aggFun(data.data), undefined, undefined, {
+				alwaysFormat: true,
+				overrideType: aggType
+			});
+
+			switch (typeof footerConfig.format) {
+			case 'function':
+				footerVal = footerConfig.format(aggResult);
+				break;
+			case 'string':
+				footerVal = sprintf(footerConfig.format, aggResult);
+				break;
+			default:
+				throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
+			}
+
+			if (footerVal instanceof Element || footerVal instanceof jQuery) {
+				td.append(footerVal);
+			}
+			else {
+				td.text(footerVal);
+			}
+		}
+
+		return td;
+	}));
+
+	if (self.features.rowReorder) {
+		tr.append(jQuery('<td>').text('Options'));
+	}
+
+	self.ui.tfoot.append(tr);
 };
 
 // #makeRowReorderBtn {{{2
@@ -1180,7 +1231,7 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 	var useLimit = self.features.limit;
 	var limitConfig = getPropDef({}, self.defn, 'table', 'limit');
 
-	if (limitConfig && data.data.length > limitConfig.threshold) {
+	if (self.features.limit && limitConfig && data.data.length > limitConfig.threshold) {
 		debug.info('GRID TABLE // DRAW', 'Limiting output to first ' + limitConfig.threshold + ' rows');
 	}
 
@@ -1245,8 +1296,8 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 					+ (self.features.rowReorder ? 1 : 0);
 
 				var showMore = function () {
-						tr.remove(); // Eliminate the "more" row.
-						render(rowNum, limitConfig.chunkSize, nextChunk);
+					tr.remove(); // Eliminate the "more" row.
+					render(rowNum, limitConfig.chunkSize, nextChunk);
 				};
 
 				var td = jQuery('<td>', {
@@ -1300,25 +1351,7 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 					var cell = row.rowData[field];
 
 					var td = jQuery('<td>');
-					var value = cell.orig || cell.value;
-
-					// For types that support formatting, use that instead of the value.
-
-					if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo.get(field).type) >= 0
-							&& colConfig.format) {
-
-						// The value here could be either from NumeralJS or from Moment, but fortunately it doesn't
-						// matter because they both have the format() method.
-
-						value = cell.value.format(colConfig.format);
-					}
-
-					// If there's a rendering function, pass the (possibly formatted) value through it to get the
-					// new value to display.
-
-					if (cell.render) {
-						value = cell.render(value);
-					}
+					var value = format(colConfig, typeInfo.get(field), cell.value, cell.orig, cell.render);
 
 					if (value instanceof Element || value instanceof jQuery) {
 						td.append(value);
@@ -1328,38 +1361,7 @@ GridTable.prototype.draw_body_plain = function (data, typeInfo, columns, cont) {
 					}
 
 					self.setCss(td, field);
-
-					var alignment = colConfig.cellAlignment;
-
-					if (alignment === undefined
-							&& (typeInfo.get(field).type === 'number'
-									|| typeInfo.get(field).type === 'currency')) {
-						alignment = 'right';
-					}
-
-					switch (alignment) {
-					case 'left':
-						td.addClass('wcdvgrid_textLeft');
-						break;
-
-					case 'right':
-						td.addClass('wcdvgrid_textRight');
-						break;
-
-					case 'center':
-						td.addClass('wcdvgrid_textCenter');
-						break;
-
-					case 'justify':
-						td.addClass('wcdvgrid_textJustify');
-						break;
-
-					default:
-						// We don't have a class for every possible value, so just set the style rule on the
-						// element in those cases.
-
-						td.css('text-align', alignment);
-					}
+					self.setAlignment(td, colConfig, typeInfo, field);
 
 					tr.append(td);
 				});
@@ -1509,26 +1511,7 @@ GridTable.prototype.draw_body_group = function (data, typeInfo, columns) {
 
 				_.each(rowGroup, function (row) {
 					var cell = row.rowData[field];
-					var value = cell.orig || cell.value;
-
-					// For types that support formatting, use that instead of the value.
-
-					if (['number', 'currency', 'date', 'time', 'datetime'].indexOf(typeInfo.get(field).type) >= 0
-							&& colConfig.format) {
-
-						// The value here could be either from NumeralJS or from Moment, but fortunately it doesn't
-						// matter because they both have the format() method.
-
-						value = cell.value.format(colConfig.format);
-					}
-
-					// If there's a rendering function, pass the (possibly formatted) value through it to get the
-					// new value to display.
-
-					if (cell.render) {
-						value = cell.render(value);
-					}
-
+					var value = format(colConfig, typeInfo.get(field), cell.value, cell.orig, cell.render);
 					uniqueVals.push(value);
 				});
 
@@ -1635,11 +1618,47 @@ GridTable.prototype.setCss = function (elt, colName) {
 		{ configName: 'maxWidth'     , cssName: 'max-width'  },
 		{ configName: 'cellAlignment', cssName: 'text-align' }
 	];
-	
+
 	for (var i = 0; i < css.length; i += 1) {
 		if (self.colConfig[css[i].configName] !== undefined) {
 			elt.css(css[i].cssName, self.colConfig[css[i].configName]);
 		}
+	}
+};
+
+// #setAlignment {{{2
+
+GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo, field) {
+	var alignment = colConfig.cellAlignment;
+
+	if (alignment === undefined
+			&& (typeInfo.get(field).type === 'number'
+					|| typeInfo.get(field).type === 'currency')) {
+		alignment = 'right';
+	}
+
+	switch (alignment) {
+	case 'left':
+		elt.addClass('wcdvgrid_textLeft');
+		break;
+
+	case 'right':
+		elt.addClass('wcdvgrid_textRight');
+		break;
+
+	case 'center':
+		elt.addClass('wcdvgrid_textCenter');
+		break;
+
+	case 'justify':
+		elt.addClass('wcdvgrid_textJustify');
+		break;
+
+	default:
+		// We don't have a class for every possible value, so just set the style rule on the
+		// element in those cases.
+
+		elt.css('text-align', alignment);
 	}
 };
 
@@ -1708,6 +1727,27 @@ GridTable.prototype.setSelectedRows = function (r) {
 	var self = this;
 
 	throw new NotImplementedError();
+};
+
+// #updateFeatures {{{2
+
+GridTable.prototype.updateFeatures = function (f) {
+	var self = this;
+
+	_.each(f, function (v, k) {
+		self.features[k] = v;
+	});
+
+	self.clear();
+	self.draw(self.container);
+};
+
+// #toString {{{2
+
+GridTable.prototype.toString = function () {
+	var self = this;
+
+	return 'GridTable{id="' + self.id + '"}';
 };
 
 // GridFilterError {{{1
@@ -1940,7 +1980,7 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 	if (opts === undefined) {
 		opts = {};
 	}
-	
+
 	// In case we're using TableTool, we need to carry around this idea of the sizing element.  At
 	// this point in the JS execution, TableTool hasn't caught up and correctly resized the floating
 	// header to match the original header column widths.  Therefore, we can't use `self.div` for
@@ -1958,18 +1998,18 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 		input: self.input
 	});
 
-	console.log('         TARGET: %O', opts.input);
+	debug.info('GRID FILTER // ADJUST INPUT WIDTH', '         Target: %O', opts.input);
 
 	var targetWidth = opts.useSizingElement ? self.sizingElement.width() : self.div.width();
-	console.log('AVAILABLE SPACE: ' + targetWidth + 'px ' + (opts.useSizingElement ? '[sizing element]' : '[div]'));
+	debug.info('GRID FILTER // ADJUST INPUT WIDTH', 'Available Space: ' + targetWidth + 'px ' + (opts.useSizingElement ? '[sizing element]' : '[div]'));
 
 	targetWidth -= self.removeBtn.outerWidth();
-	console.log('  REMOVE BUTTON: ' + self.removeBtn.outerWidth() + 'px');
+	debug.info('GRID FILTER // ADJUST INPUT WIDTH', '  Remove Button: ' + self.removeBtn.outerWidth() + 'px');
 
 
 	if (self.operatorDrop !== undefined) {
 		targetWidth -= self.operatorDrop.outerWidth();
-		console.log('  OPERATOR DROP: ' + self.operatorDrop.outerWidth() + 'px');
+		debug.info('GRID FILTER // ADJUST INPUT WIDTH', '  Operator Drop: ' + self.operatorDrop.outerWidth() + 'px');
 	}
 
 	debug.info('GRID FILTER' + (opts.fromColumnResize ? ' // HANDLER (columnResize)' : ''), 'Adjusting ' + self.field + ' filter widget width to ' + targetWidth + 'px to match column width');
@@ -2003,7 +2043,7 @@ var StringTextboxGridFilter = function () {
 		.on('change', function () {
 			self.gridFilterSet.update();
 		});
-	*/
+		*/
 
 	self.div
 		.append(self.operatorDrop)
@@ -2172,7 +2212,6 @@ StringDropdownGridFilterSumo.prototype.getValue = function () {
 	var self = this
 		, val = self.super.getValue();
 
-	console.log('--> ' + JSON.stringify(val));
 	return val === null ? undefined : val;
 };
 
@@ -2217,8 +2256,8 @@ var NumberCheckboxGridFilter = function () {
 
 	self.div
 		.append(jQuery('<label>')
-			.append(self.input)
-			.append(' Filter'))
+						.append(self.input)
+						.append(' Filter'))
 		.append(self.removeBtn);
 
 	self.applyImmediately = true;
@@ -2253,7 +2292,7 @@ var DateSingleGridFilter = function () {
 		'type': 'text',
 		'placeholder': 'Select date...'
 	});
-	
+
 	self.input.flatpickr({
 		'altInput': false,
 		'onChange': function (selectedDates, dateStr, instance) {
@@ -2290,7 +2329,7 @@ var DateRangeGridFilter = function () {
 		'placeholder': 'Click here; pick start/end dates.',
 		'size': 28
 	});
-	
+
 	self.widget = self.input.flatpickr({
 		'altInput': false,
 		'mode': 'range',
@@ -2449,7 +2488,7 @@ var GridFilterSet = function (defn, view, gridTable, progress) {
 // .events {{{2
 
 GridFilterSet.events = objFromArray([
-		'filterAdded'
+	'filterAdded'
 	, 'filterRemoved'
 ]);
 
@@ -3112,15 +3151,15 @@ Grid.prototype._addHeaderWidgets = function (header, doingServerFilter, runImmed
 			.hide()
 			.append(' (')
 			.append(
-				jQuery('<span>', {'class': 'link'})
-					.text('reset')
-					.on('click', function (evt) {
-						evt.stopPropagation();
-						self.ui.clearFilter.hide();
-						if (self.defn.gridFilterSet !== undefined) {
-							self.defn.gridFilterSet.reset();
-						}
-					})
+							jQuery('<span>', {'class': 'link'})
+							.text('reset')
+							.on('click', function (evt) {
+								evt.stopPropagation();
+								self.ui.clearFilter.hide();
+								if (self.defn.gridFilterSet !== undefined) {
+									self.defn.gridFilterSet.reset();
+								}
+							})
 			)
 			.append(')')
 			.appendTo(notHeader);
@@ -3174,21 +3213,32 @@ Grid.prototype._addCommonButtons = function (toolbar) {
 	setPropDef(true, self.defn, 'table', 'limit', 'autoShowMore');
 
 	var showMoreRowsCheckbox = jQuery('<input>', {
-			'id': gensym(),
-			'type': 'checkbox',
-			'checked': self.defn.table.limit.autoShowMore
-		})
+		'id': gensym(),
+		'type': 'checkbox',
+		'checked': self.defn.table.limit.autoShowMore
+	})
 		.on('change', function (evt) {
 			var isChecked = showMoreRowsCheckbox.prop('checked');
 			debug.info('GRID // TOOLBAR', 'Setting `table.limit.autoShowMore` to ' + isChecked);
 			self.defn.table.limit.autoShowMore = isChecked;
 		})
-		.appendTo(toolbar)
+		.appendTo(toolbar);
 
 	var showMoreRowsLabel = jQuery('<label>', {
 		'for': showMoreRowsCheckbox.attr('id')
 	})
 		.text('Show More Rows on Scroll')
+		.appendTo(toolbar);
+
+	var showAllRowsButton = jQuery('<button>')
+		.on('click', function (evt) {
+			self.gridTable.updateFeatures({
+				'blockUI': true,
+				'progress': true,
+				'limit': false
+			});
+		})
+		.text('Show All Rows')
 		.appendTo(toolbar);
 };
 
@@ -3221,49 +3271,49 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 
 	var viewDropdown =
 		$('<select>')
-			.append($('<option>', { value: 'NEW' }).text('New View...'))
-			.append($('<option>', { value: 'Main' }).text('Main'));
+		.append($('<option>', { value: 'NEW' }).text('New View...'))
+		.append($('<option>', { value: 'Main' }).text('Main'));
 
 	var curView =
 		$('<div>')
-			.css({'display': 'inline-block'})
-			.appendTo(toolbar)
-			.append($('<span>').text('Current View: '))
-			.append(viewDropdown);
+		.css({'display': 'inline-block'})
+		.appendTo(toolbar)
+		.append($('<span>').text('Current View: '))
+		.append(viewDropdown);
 
 	var newViewInput = $('<input>', { 'type': 'text' });
 
 	var newViewButton =
 		$('<button>', { 'type': 'button' })
-			.html(fontAwesome('F0FE'))
-			.on('click', function () {
-				var viewName = newViewInput.val();
-				newViewInput.val('');
-				viewDropdown.append($('<option>', { value: viewName }).text(viewName));
-				viewDropdown.val(viewName);
-				self.defn.prefs.setView(viewName);
-				newView.hide();
-				curView.show();
-			})
+		.html(fontAwesome('F0FE'))
+		.on('click', function () {
+			var viewName = newViewInput.val();
+			newViewInput.val('');
+			viewDropdown.append($('<option>', { value: viewName }).text(viewName));
+			viewDropdown.val(viewName);
+			self.defn.prefs.setView(viewName);
+			newView.hide();
+			curView.show();
+		})
 
 	var newViewCancel =
 		$('<button>', { 'type': 'button' })
-			.html(fontAwesome('F05E'))
-			.on('click', function () {
-				newViewInput.val('');
-				newView.hide();
-				curView.show();
-			})
+		.html(fontAwesome('F05E'))
+		.on('click', function () {
+			newViewInput.val('');
+			newView.hide();
+			curView.show();
+		})
 
 	var newView =
 		$('<div>')
-			.css({'display': 'inline-block'})
-			.hide()
-			.appendTo(toolbar)
-			.append($('<span>').text('New View: '))
-			.append(newViewInput)
-			.append(newViewButton)
-			.append(newViewCancel);
+		.css({'display': 'inline-block'})
+		.hide()
+		.appendTo(toolbar)
+		.append($('<span>').text('New View: '))
+		.append(newViewInput)
+		.append(newViewButton)
+		.append(newViewCancel);
 
 	viewDropdown.on('change', function () {
 		if (viewDropdown.val() === 'NEW') {
@@ -3348,7 +3398,7 @@ Grid.prototype.refresh = function () {
 		}
 		else {
 			debug.info('GRID', 'Creating PivotControl for pivot table output');
-			self.pivotControl = new PivotControl(self.defn, self.view, self.features);
+			self.pivotControl = new PivotControl(self.defn, self.view, self.features, self.timing, self.id);
 		}
 		self.pivotControl.draw(self.ui.gridContainer, self.tableDoneCont);
 	}
@@ -3358,7 +3408,7 @@ Grid.prototype.refresh = function () {
 		}
 		else {
 			debug.info('GRID', 'Creating GridTable for normal output');
-			self.gridTable = new GridTable(self.defn, self.view, self.features, self.timing);
+			self.gridTable = new GridTable(self.defn, self.view, self.features, self.timing, self.id);
 		}
 		self.gridTable.draw(self.ui.gridContainer, self.tableDoneCont); // TODO load prefs
 	}
@@ -3643,7 +3693,7 @@ Grid.prototype.drawPivotControl = function () {
  * @param {View} view
  */
 
-function PivotControl(defn, view, features) {
+function PivotControl(defn, view, features, timing, id) {
 	var self = this;
 
 	if (defn === undefined) {
@@ -3664,6 +3714,7 @@ function PivotControl(defn, view, features) {
 	self.defn = defn;
 	self.view = view;
 	self.features = features;
+	self.timing = timing;
 
 	// Create a new grid table to show the pivotted data.  Make sure that we disable some of the
 	// features that don't make sense when showing a pivot table.
@@ -3672,7 +3723,7 @@ function PivotControl(defn, view, features) {
 		filter: false,
 		rowSelect: false,
 		rowReorder: false
-	}));
+	}), self.timing, id);
 
 	self.gridFilterSet = new GridFilterSet(self.defn, self.view);
 	self.fields = [];

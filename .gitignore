@@ -1,4 +1,5 @@
 .*.swp
+.python-version
 jsdoc
 node_modules
 doc/_build
@@ -6,3 +7,4 @@ doc/.python-version
 dist/wcdatavis.js
 examples/wcdatavis.js
 examples/wcdatavis.css
+examples/wcdatavis-extra.css
