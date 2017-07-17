@@ -39,15 +39,17 @@ function determineColumns(defn, data, typeInfo) {
 			}
 		});
 
-		if ((data.isPlain && data.data.length === 0)
-				|| (data.isGroup && (data.data.length === 0 || data.data[0].length === 0))) {
+		if ((data.isPivot && (data.data.length === 0 || data.data[0].length === 0 || data.data[0][0].length === 0))
+				|| (!data.isPivot && data.isGroup && (data.data.length === 0 || data.data[0].length === 0))
+				|| (data.isPlain && (data.data.length === 0))) {
 			log.warn('Unable to check column configuration using data with no rows');
 			return;
 		}
 
 		_.each(defn.table.columns, function (elt, i) {
-			if ((data.isPlain && data.data[0].rowData[elt.field] === undefined)
-					|| (data.isGroup && data.data[0][0].rowData[elt.field] === undefined)) {
+			if ((data.isPivot && data.data[0][0][0].rowData[elt.field] === undefined)
+					|| (!data.isPivot && data.isGroup && data.data[0][0].rowData[elt.field] === undefined)
+					|| (data.isPlain && data.data[0].rowData[elt.field] === undefined)) {
 				log.warn('Column configuration refers to field "' + elt.field + '" which does not exist in the data');
 			}
 		});
@@ -893,17 +895,6 @@ GridTable.prototype.draw_header = function (columns, data, typeInfo) {
 		var progress = self.makeProgress('Filter');
 
 		/*
-		 * Set up the sorting specification for the View that belongs to this GridTable.
-		 */
-
-		if (self.features.sort) {
-			self.defn.sortSpec = {
-				col: null,
-				asc: false
-			};
-		}
-
-		/*
 		 * Set up the GridFilterSet instance that manages the (potentially multiple) filters on each
 		 * column of the View that belongs to this GridTable.
 		 */
@@ -1577,6 +1568,13 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 		jQuery('span.sort_indicator').hide();
 		cloneSortSpan.show();
 
+		if (self.defn.sortSpec === undefined) {
+			self.defn.sortSpec = {
+				col: null,
+				asc: false
+			};
+		}
+
 		// Save the sort spec.  If we're resorting a column (i.e. we just sorted it) then
 		// reverse the sort direction.  Otherwise, start in ascending order.
 
@@ -1861,16 +1859,26 @@ GridFilter.prototype.constructor = GridFilter;
  */
 
 GridFilter.prototype.getValue = function () {
-	var self = this;
+	var self = this
+		fti = self.gridFilterSet.view.typeInfo.get(self.field);
 
-	switch (self.gridFilterSet.view.typeInfo.get(self.field).type) {
+	switch (fti.type) {
 	case 'date':
 	case 'time':
 	case 'datetime':
-		return moment(this.input.val());
+		return fti.internalType === 'moment' ? moment(this.input.val()) : this.input.val();
 	case 'number':
 	case 'currency':
-		return numeral(this.input.val());
+		switch (fti.internalType) {
+		case 'numeral':
+			return numeral(this.input.val());
+		case 'primitive':
+			return isInt(this.input.val()) ? toInt(this.input.val())
+				: isFloat(this.input.val()) ? toFloat(this.input.val())
+				: this.input.val();
+		default:
+			return this.input.val();
+		}
 	case 'string':
 	default:
 		return this.input.val();
@@ -2015,6 +2023,10 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 	debug.info('GRID FILTER' + (opts.fromColumnResize ? ' // HANDLER (columnResize)' : ''), 'Adjusting ' + self.field + ' filter widget width to ' + targetWidth + 'px to match column width');
 
 	opts.input.outerWidth(targetWidth);
+
+	if (typeof opts.callback === 'function') {
+		opts.callback(targetWidth);
+	}
 };
 
 // StringTextboxGridFilter {{{2
@@ -2154,6 +2166,7 @@ var StringDropdownGridFilterSumo = function () {
 
 	self.super = makeSuper(self, GridFilter);
 	self.limit = 1;
+	self.minDropdownWidth = 200;
 	self.input = jQuery('<select>').attr({
 		'multiple': true
 	})
@@ -2179,7 +2192,13 @@ var StringDropdownGridFilterSumo = function () {
 				okCancelInMulti: true,
 				isClickAwayOk: true
 			});
-			self.adjustInputWidth();
+			self.optWrapper = self.input.closest('div.SumoSelect').find('div.optWrapper');
+			/*
+			optWrapper.resizable({
+				helper: 'ui-resizable-helper'
+			});
+			*/
+			//self.adjustInputWidth();
 		});
 	};
 };
@@ -2196,6 +2215,9 @@ StringDropdownGridFilterSumo.prototype.adjustInputWidth = function (opts) {
 	}
 
 	opts.input = self.input.closest('div.SumoSelect');
+	opts.callback = function (width) {
+		self.optWrapper.outerWidth(Math.max(width, self.minDropdownWidth));
+	};
 
 	self.super.adjustInputWidth(opts);
 };
@@ -2533,11 +2555,11 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, on
 
 	target.append(filter.div);
 
-	filter.adjustInputWidth();
-
 	if (typeof filter.afterAdd === 'function') {
 		filter.afterAdd(target);
 	}
+
+	filter.adjustInputWidth();
 
 	// Hide the "add filter" button if we've reached the limit of the number of filters we're allowed
 	// to have for this column.

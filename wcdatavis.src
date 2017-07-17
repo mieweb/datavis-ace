@@ -95,7 +95,8 @@
 	$INCLUDE('src/ordmap.js');
 	$INCLUDE('src/prefs.js');
 	$INCLUDE('src/aggregates.js');
-	$INCLUDE('src/datasource.js');
+	$INCLUDE('src/source.js');
+	$INCLUDE('src/view.js');
 	$INCLUDE('src/graph.js');
 	$INCLUDE('src/grid.js');
 

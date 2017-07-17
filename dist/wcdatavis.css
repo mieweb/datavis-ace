@@ -150,6 +150,10 @@ tr.wcdvgrid_more td {
 	background: #80A0C0;
 }
 
+.ui-resizable-helper {
+	border: solid 2px dotted;
+}
+
 /*
 		// jqx graph additions
 		miestrlist_append(l,".graphwrapper {"

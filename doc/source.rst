@@ -51,6 +51,11 @@ The type information for each field indicates the following:
   If this is true, then type decoding of the raw data into an internal representation is not
   necessary for sorting.
 
+``internalType``
+  The type of the data when stored internally.  For dates, can be "moment" to indicate that the
+  value is wrapped by Moment.  For numbers, can be "numeral" to indicate that the value is wrapped
+  by Numeral, or "primitive_number" to indicate that a raw JS number is used.
+
 .. table:: Available types
 
    +--------------+--------------------------------------------------------------------------------+

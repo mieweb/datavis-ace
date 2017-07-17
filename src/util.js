@@ -732,7 +732,7 @@ function needArg(val, varName) {
 		cmp = cmp || function (a, b) { return a < b };
 		var size = data.length;
 		var step = 0;
-		var stepsBeforeUpdate = Math.min(data.length / 50, 1000);
+		var stepsBeforeUpdate = Math.min(data.length / 50, 500);
 
 		function merge(left, right) {
 			var result = []

@@ -2,8 +2,26 @@
 Getting Started
 ***************
 
-Dependencies
+Building
+========
+
+To make it easier to keep track of all the code in this very large project, different classes are
+kept in different files within the ``src/`` directory.  These are compiled together according to the
+``wcdatavis.src`` file, using a tool called ``jspp`` (which is a Bash shell script found in the
+``bin/`` directory).  Basically, ``wcdatavis.src`` is a JavaScript file with a special "function"
+that includes a file in that place when processed by ``jspp``, just like the C preprocessor does.
+This is all just for developer convenience.
+
+Simply running ``make`` in the toplevel directory will cause all the files you need to be built and
+copied to the ``dist/`` directory.
+
+Installation
 ============
+
+Copy the JS and CSS files from the ``dist/`` directory and include them in your page.
+
+Runtime Dependencies
+====================
 
 Required Dependencies
 ---------------------
@@ -28,11 +46,6 @@ Optional Dependencies
 ---------------------
 
 * NProgress
-
-Installation
-============
-
-Copy the JS and CSS files from the ``dist/`` directory and include them in your page.
 
 Basic Usage
 ===========
