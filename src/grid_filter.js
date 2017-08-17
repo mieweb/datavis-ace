@@ -713,12 +713,26 @@ GridFilter.defaultWidgets = {
 // Constructor {{{2
 
 /**
- * @memberof wcgraph_int
+ * Create a new collection of filters.
+ *
+ * @param {object} defn
+ *
+ * @param {View} view The view that we will be updating the filter for.
+ *
+ * @param {GridTable} gridTable A reference to the table that this filter set is displayed on.  This
+ * is used only to make sure that the widgets shown in the columns are resized correctly when the
+ * table's columns change width.
+ *
+ * @param {object} progress An object describing how to show a progress dialog when the view is
+ * updated.
  *
  * @class
  * @property {object} defn
  *
- * @property {View} view
+ * @property {View} view The view that we will be updating the filter for.
+ *
+ * @property {object} progress An object describing how to show a progress dialog when the view is
+ * updated.
  *
  * @property {Element} thead
  *
@@ -829,6 +843,30 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, on
 
 // #build {{{2
 
+/**
+ * Create a new GridFilter instance.
+ *
+ * @param {string} field
+ * Name of the field to apply the filter to.  Passed to the View.
+ *
+ * @param {string} filterType
+ * What type of widget to use for the filter (e.g. dropdown, text box, checkbox).
+ *
+ * @param {Element} filterBtn
+ * Button to add a new filter item.  Might be shown/hidden depending on how many items are allowed
+ * (e.g. a multi-select dropdown only allows one "item" as that's all you need).
+ *
+ * @param {Element} target
+ * Where the filter should be placed.
+ *
+ * @param {function} onRemove
+ * Function to call when the filter is removed.
+ *
+ * @param {Element} [sizingElement]
+ * If present, the element to use to calculate the width of the filter widget.  When absent, the
+ * div which is placed within the `target` is used.
+ */
+
 GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, onRemove, sizingElement) {
 	var self = this
 		, colType
@@ -877,6 +915,17 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, 
 
 // #remove {{{2
 
+/**
+ * Remove a filter.
+ *
+ * @param {string} id
+ * The unique ID of the filter to remove.
+ *
+ * @param {Element} filterBtn
+ * Button to add a new filter item.  Might be shown/hidden depending on how many items are allowed
+ * (e.g. a multi-select dropdown only allows one "item" as that's all you need).
+ */
+
 GridFilterSet.prototype.remove = function (id, filterBtn) {
 	var self = this
 		, filter = self.filters.byId[id];
@@ -910,6 +959,10 @@ GridFilterSet.prototype.remove = function (id, filterBtn) {
 
 // #reset {{{2
 
+/**
+ * Clear all filters.
+ */
+
 GridFilterSet.prototype.reset = function () {
 	var self = this;
 
@@ -933,6 +986,8 @@ GridFilterSet.prototype.reset = function () {
 // #update {{{2
 
 /**
+ * Set the filters on the View based on what the user has entered into the user interface.
+ *
  * @param {boolean} dontSavePrefs If true, don't save preferences.
  */
 

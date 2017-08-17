@@ -336,8 +336,11 @@ View.prototype.sort = function (cont) {
 		// There are two ways to sort grouped data: by a field that is part of the group (changes the
 		// ordering of the groups), and by a field that isn't part of the group (changes the ordering of
 		// the rows within each group).
+
+		return cont(false, self.data.data);
 	}
 	else if (self.data.isPivot) {
+		return cont(false, self.data.data);
 	}
 };
 

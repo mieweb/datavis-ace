@@ -896,17 +896,28 @@ LocalSource.prototype.getTypeInfo = function (cont) {
 
 // HttpSource {{{1
 
-var HttpSource = function (spec) {
+var HttpSource = function (spec, params, userTypeInfo) {
 	var self = this;
 
 	self.url = spec.url;
 	self.method = spec.method || 'GET';
 
 	self.cache = null;
+	self.userTypeInfo = userTypeInfo;
 };
 
-HttpSource.parseData = function (data) {
-	var result = {};
+HttpSource.prototype.parseData = function (data) {
+	var self = this
+		, result = {
+			data: [],
+			typeInfo: new MIE.OrdMap()
+		};
+
+	if (self.userTypeInfo) {
+		_.each(self.userTypeInfo, function (fti) {
+			result.typeInfo.set(fti.field, fti);
+		});
+	}
 
 	debug.info('DATA SOURCE // HTTP // PARSER', 'Data = ' + ((data instanceof XMLDocument) ? '%o' : '%O'), data);
 
@@ -924,7 +935,6 @@ HttpSource.parseData = function (data) {
 			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > data) elements');
 		}
 
-		result.data = [];
 		data.children('item').each(function (_itemIndex, item) {
 			item = jQuery(item);
 			var row = {};
@@ -943,7 +953,6 @@ HttpSource.parseData = function (data) {
 			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo) elements');
 		}
 
-		result.typeInfo = new MIE.OrdMap();
 		typeInfo.children().each(function (_fieldIndex, field) {
 			field = jQuery(field);
 			var fieldName = field.prop('tagName');
@@ -978,6 +987,18 @@ HttpSource.parseData = function (data) {
 			}
 		});
 	}
+	else if (typeof data === 'string') {
+		var decoded = Papa.parse(data)
+			, fields = decoded.data[0];
+
+		_.each(decoded.data.slice(1), function (row) {
+			var newRow = {};
+			_.each(row, function (colVal, colIdx) {
+				newRow[fields[colIdx]] = colVal;
+			});
+			result.data.push(newRow);
+		});
+	}
 	else {
 		if (data.data === undefined) {
 			throw new SourceError('HTTP Data Source / JSON Parser / Missing (data) property');
@@ -990,27 +1011,23 @@ HttpSource.parseData = function (data) {
 			throw new SourceError('HTTP Data Source / JSON Parser / Missing (typeInfo) property');
 		}
 
-		var typeInfo = new MIE.OrdMap();
-
 		_.each(data.typeInfo, function (fti) {
 			var field = fti.field;
 			delete fti.field;
-			typeInfo.set(field, fti);
+			result.typeInfo.set(field, fti);
 		});
-
-		data.typeInfo = typeInfo;
 
 		for (var rowNum = 0; rowNum < data.data.length; rowNum += 1) {
 			if (_.isArray(data.data[rowNum])) {
 				var newRow = {};
-				typeInfo.each(function (fti, field, i) {
+				result.typeInfo.each(function (fti, field, i) {
 					newRow[field] = data.data[rowNum][i];
 				});
 				data.data[rowNum] = newRow;
 			}
 		}
 
-		result = data;
+		result.data = data.data;
 	}
 
 	return result;
@@ -1028,7 +1045,7 @@ HttpSource.prototype.getData = function (params, cont) {
 				throw new SourceError('HTTP Data Source / AJAX Error / ' + errorThrown.message);
 			},
 			success: function (data, textStatus, jqXHR) {
-				self.cache = HttpSource.parseData(data);
+				self.cache = self.parseData(data);
 				return self.getData(params, cont);
 			}
 		});
@@ -1173,7 +1190,7 @@ var Source = function (spec, params, userTypeInfo, opts) {
 		throw new SourceError('Unsupported data source type: ' + self.type);
 	}
 
-	self.source = new Source.sources[self.type](spec, params);
+	self.source = new Source.sources[self.type](spec, params, userTypeInfo);
 
 	var checkConversionArray = function (convs, field) {
 		// Check the validity of all the specified conversions.
@@ -1492,9 +1509,7 @@ Source.prototype.setConversionTypeInfo = function (data) {
 
 	_.each(self.cache.typeInfo.asMap(), function (fti /* field type info */, f /* field */) {
 		if (['number', 'currency', 'date', 'datetime'].indexOf(fti.type) >= 0) {
-			if (self.opts.deferDecoding) {
-				fti.deferDecoding = true;
-			}
+			fti.deferDecoding = self.opts.deferDecoding;
 
 			if (fti.type === 'number' || fti.type === 'currency') {
 				fti.needsDecoding = true;
@@ -1523,8 +1538,10 @@ Source.prototype.setConversionTypeInfo = function (data) {
 				}
 			}
 
-			debug.info('SOURCE // CONVERSION', 'Deferring conversion until <%s> { field = "%s", type = "%s", format = "%s" }',
-								 fti.needsDecoding ? 'SORT' : 'DISPLAY', f, fti.type, fti.format);
+			if (fti.deferDecoding) {
+				debug.info('SOURCE // CONVERSION', 'Deferring conversion until <%s> { field = "%s", type = "%s", format = "%s" }',
+									 fti.needsDecoding ? 'SORT' : 'DISPLAY', f, fti.type, fti.format);
+			}
 		}
 	});
 };

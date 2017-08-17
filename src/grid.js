@@ -1368,7 +1368,23 @@ GridControl.prototype.makeAddButton = function (target) {
 		.addClass('wcdv_button')
 		.css({'margin-left': '4px'})
 		.on('click', function () {
-			self.add(self.ui.dropdown.val());
+			self.addField(self.ui.dropdown.val());
+		})
+		.appendTo(target);
+};
+
+// #makeClearButton {{{2
+
+GridControl.prototype.makeClearButton = function (target) {
+	var self = this;
+
+	return jQuery(fontAwesome('F05E'))
+		.addClass('wcdv_button')
+		.css('margin-left', '4px')
+		.hide()
+		.on('click', function () {
+			jQuery(this).hide();
+			self.clear();
 		})
 		.appendTo(target);
 };
@@ -1415,7 +1431,13 @@ GroupControl.prototype.draw = function () {
 	var self = this;
 
 	self.ui.root = jQuery('<div>');
-	self.ui.title = jQuery('<span>', { 'class': 'wcdv_title' }).text('Group Fields').appendTo(self.ui.root);
+	self.ui.title = jQuery('<div>')
+		.addClass('wcdv_control_title_bar')
+		.appendTo(self.ui.root);
+	jQuery('<span>', { 'class': 'wcdv_control_title' })
+		.text('Group Fields')
+		.appendTo(self.ui.title);
+	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.groupFields = jQuery('<ul>').appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
@@ -1433,25 +1455,42 @@ GroupControl.prototype.draw = function () {
 	return self.ui.root;
 };
 
-// #add {{{2
+// #addField {{{2
 
-GroupControl.prototype.add = function (field) {
+GroupControl.prototype.addField = function (field) {
 	var self = this
 		, gcf = new GroupControlField(self, field, self.colConfig[field] || {});
+
+	self.ui.clearBtn.show();
 
 	jQuery('<li>').append(gcf.draw()).appendTo(self.ui.groupFields); // Add it to the DOM.
 	self.groupFields.push(field); // Add it to the groupFields array.
 	self.updateView();
 };
 
-// #remove {{{2
+// #removeField {{{2
 
-GroupControl.prototype.remove = function (gcf) {
+GroupControl.prototype.removeField = function (gcf) {
 	var self = this
 		, fieldIndex = self.groupFields.indexOf(gcf.field);
 
 	gcf.getElement().parent('li').remove(); // Remove it from the DOM.
 	self.groupFields.splice(fieldIndex, 1); // Remove it from the groupFields array.
+
+	if (self.pivotFields.length === 0) {
+		self.clearBtn.hide();
+	}
+
+	self.updateView();
+};
+
+// #clear {{{2
+
+GroupControl.prototype.clear = function () {
+	var self = this;
+
+	self.groupFields = [];
+	self.ui.groupFields.children().remove();
 	self.updateView();
 };
 
@@ -1473,9 +1512,38 @@ GroupControl.prototype.updateView = function () {
 // Constructor {{{2
 
 /**
+ * Used to inform other parties of the aggregate function configuration.  For example, it can be
+ * used to have the grid table redraw its contents (rendering cells with the new aggregate function
+ * and field).
+ *
+ * @callback PivotControl~onAggregateChange
+ *
+ * @param {string} aggFun
+ * Name of the aggregate function to use.
+ *
+ * @param {string} aggField
+ * Name of the field to apply the function on (if applicable; decided by the `needsField` property
+ * of the aggregate object).
+ */
+
+/**
  * Part of the user interface which governs: (1) the fields that are part of the pivot, including
  * filtering; (2) the aggregate function [and potentially its arguments] that produces the values in
  * the pivot table.
+ *
+ * @class
+ *
+ * @property {GridControl} super
+ * Proxy to call prototype ("superclass") methods even if we override them.
+ *
+ * @property {object} opts
+ *
+ * @property {PivotControl~onAggregateChange} opts.onAggregateChange
+ * If set, this function will be called when the aggregate configuration is changed.  It is
+ * currently used to redraw the grid table with the new aggregate function results in its cells.
+ *
+ * @property {string[]} pivotFields
+ * Names of the fields 
  */
 
 function PivotControl() {
@@ -1533,9 +1601,19 @@ PivotControl.prototype.draw = function () {
 		})
 	;
 	
-	self.ui.pivotFieldsContainer = jQuery('<div>', { 'class': 'wcdv_pivot_fields_container' }).appendTo(self.ui.root);
-	self.ui.pivotFieldsTitle = jQuery('<span>', { 'class': 'wcdv_title' }).text('Pivot Fields').appendTo(self.ui.pivotFieldsContainer);
-	self.ui.pivotFields = jQuery('<ul>').appendTo(self.ui.pivotFieldsContainer);
+	self.ui.pivotFieldsContainer = jQuery('<div>')
+		.addClass('wcdv_pivot_fields_container')
+		.appendTo(self.ui.root);
+	self.ui.pivotFieldsTitle = jQuery('<div>')
+		.addClass('wcdv_control_title_bar')
+		.appendTo(self.ui.pivotFieldsContainer);
+	jQuery('<span>')
+		.addClass('wcdv_control_title')
+		.text('Pivot Fields')
+		.appendTo(self.ui.pivotFieldsTitle);
+	self.ui.clearBtn = self.makeClearButton(self.ui.pivotFieldsTitle);
+	self.ui.pivotFields = jQuery('<ul>')
+		.appendTo(self.ui.pivotFieldsContainer);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.pivotFieldsContainer);
 	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
@@ -1553,29 +1631,66 @@ PivotControl.prototype.draw = function () {
 	return self.ui.root;
 };
 
-// #add {{{2
+// #addField {{{2
 
-PivotControl.prototype.add = function (field) {
+/**
+ * Add a field to the pivot configuration.
+ *
+ * @param {string} field
+ * Name of the field to add to the pivot.
+ */
+
+PivotControl.prototype.addField = function (field) {
 	var self = this
 		, pcf = new PivotControlField(self, field, self.colConfig[field] || {});
+
+	self.ui.clearBtn.show();
 
 	jQuery('<li>').append(pcf.draw()).appendTo(self.ui.pivotFields); // Add it to the DOM.
 	self.pivotFields.push(field); // Add it to the pivotFields array.
 	self.updateView();
 };
 
-// #remove {{{2
+// #removeField {{{2
 
-PivotControl.prototype.remove = function (pcf) {
+/**
+ * Remove a field from the pivot configuration.
+ *
+ * @param {PivotControlField} pcf
+ * The control field to remove.
+ */
+
+PivotControl.prototype.removeField = function (pcf) {
 	var self = this
 		, fieldIndex = self.pivotFields.indexOf(pcf.field);
 
 	pcf.getElement().parent('li').remove(); // Remove it from the DOM.
 	self.pivotFields.splice(fieldIndex, 1); // Remove it from the pivotFields array.
+
+	if (self.pivotFields.length === 0) {
+		self.clearBtn.hide();
+	}
+
+	self.updateView();
+};
+
+// #clear {{{2
+
+PivotControl.prototype.clear = function () {
+	var self = this;
+
+	self.pivotFields = [];
+	self.ui.pivotFields.children().remove();
 	self.updateView();
 };
 
 // #updateView {{{2
+
+/**
+ * Set the pivot configuration on the View.  The pivot configuration consists of:
+ *
+ *   - Fields that are part of the pivot.
+ */
 
 PivotControl.prototype.updateView = function () {
 	var self = this;
@@ -1591,6 +1706,13 @@ PivotControl.prototype.updateView = function () {
 };
 
 // #triggerAggChange {{{2
+
+/**
+ * Perform necessary actions when the aggregate function is changed.
+ *
+ *   - Update the UI to show/hide field argument.
+ *   - Invoke the `onAggregateChange` function.
+ */
 
 PivotControl.prototype.triggerAggChange = function () {
 	var self = this
@@ -1667,22 +1789,22 @@ FilterControl.prototype.draw = function () {
 	return self.ui.root;
 };
 
-// #add {{{2
+// #addField {{{2
 
-FilterControl.prototype.add = function (field) {
+FilterControl.prototype.addField = function (field) {
 	var self = this
-		, gcf = new GroupControlField(self, field, self.colConfig[field] || {});
+		, fcf = new FieldControlField(self, field, self.colConfig[field] || {});
 
 	jQuery('<li>').append(gcf.draw()).appendTo(self.ui.groupFields); // Add it to the DOM.
 	self.groupFields.push(field); // Add it to the groupFields array.
 	self.updateView();
 };
 
-// #remove {{{2
+// #removeField {{{2
 
-FilterControl.prototype.remove = function (gcf) {
+FilterControl.prototype.removeField = function (fcf) {
 	var self = this
-		, fieldIndex = self.groupFields.indexOf(gcf.field);
+		, fieldIndex = self.filterFields.indexOf(fcf.field);
 
 	gcf.getElement().parent('li').remove(); // Remove it from the DOM.
 	self.groupFields.splice(fieldIndex, 1); // Remove it from the groupFields array.
@@ -1734,7 +1856,7 @@ GridControlField.prototype.draw = function () {
 			.attr('title', 'Remove')
 			.addClass('wcdv_button wcdv_remove')
 			.on('click', function () {
-				self.control.remove(self);
+				self.control.removeField(self);
 			})
 		)
 		.append(jQuery('<span>').text(self.colConfig.displayText || self.field))

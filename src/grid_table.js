@@ -1285,8 +1285,15 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont) {
 		//   ... row[col] | col ∉ groupFields ...
 		// </tr>
 
-		_.each(data.rowVals[groupNum], function (rowVal) {
-			jQuery('<th>', { colspan: columns.length }).text(rowVal).appendTo(tr);
+		console.log(data);
+		_.each(data.rowVals[groupNum], function (colVal, colIdx) {
+			var attrs = {};
+
+			if (colIdx === data.groupFields.length - 1) {
+				attrs.colspan = columns.length - data.groupFields.length + 1;
+			}
+
+			jQuery('<th>', attrs).text(colVal).appendTo(tr);
 		});
 
 		self.ui.tr.push(tr);
@@ -1519,7 +1526,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
 
 		_.each(rowGroup, function (colGroup) {
-			var colConfig = opts.pivotConfig.aggField ? self.defn.table.columns_map[opts.pivotConfig.aggField] : {};
+			var colConfig = opts.pivotConfig.aggField ? self.colConfig[opts.pivotConfig.aggField] : {};
 			var colTypeInfo = opts.pivotConfig.aggField ? typeInfo.get(opts.pivotConfig.aggField) : {};
 
 			var agg = AGGREGATES[opts.pivotConfig.aggFun || 'count'];
@@ -1529,7 +1536,6 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				alwaysFormat: true,
 				overrideType: aggType
 			});
-			console.log(aggResult);
 			var td = jQuery('<td>').text(aggResult);
 			// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
 			// self.setCss(td, col);

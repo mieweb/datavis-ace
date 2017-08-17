@@ -1989,44 +1989,52 @@ Graph.prototype.draw = function () {
 // #normalize {{{2
 
 Graph.prototype.normalize = function (opts) {
-	if (opts.type === undefined) {
-		throw new Error('Graph config error: missing `type`');
-	}
-
-	if (!_.isString(opts.type)) {
-		throw new Error('Graph config error: `type` must be a string');
-	}
-
-	if (['area', 'bar', 'column'].indexOf(opts.type) === -1) {
-		throw new Error('Graph config error: invalid `type`: ' + opts.type);
-	}
-
-	switch (opts.type) {
-	case 'area':
-	case 'bar':
-	case 'column':
-		if (opts.valueField !== undefined && opts.valueFields !== undefined) {
-			throw new Error('Graph config error: can\'t define both `valueField` and `valueFields`');
+	_.each(['whenPlain', 'whenGroup', 'whenPivot'], function (dataFormat) {
+		if (opts[dataFormat] === undefined) {
+			return;
 		}
 
-		if (opts.valueField !== undefined) {
-			if (!_.isString(opts.valueField)) {
-				throw new Error('Graph config error: `valueField` must be a string');
+		var config = opts[dataFormat];
+
+		if (config.graphType === undefined) {
+			throw new Error('Graph config error: data format "' + dataFormat + '": missing `graphType`');
+		}
+
+		if (!_.isString(config.graphType)) {
+			throw new Error('Graph config error: data format "' + dataFormat + '": `graphType` must be a string');
+		}
+
+		if (['area', 'bar', 'column'].indexOf(config.graphType) === -1) {
+			throw new Error('Graph config error: data format "' + dataFormat + '": invalid `graphType`: ' + config.graphType);
+		}
+
+		switch (config.graphType) {
+		case 'area':
+		case 'bar':
+		case 'column':
+			if (config.valueField !== undefined && config.valueFields !== undefined) {
+				throw new Error('Graph config error: data format "' + dataFormat + '": can\'t define both `valueField` and `valueFields`');
 			}
-			opts.valueFields = [opts.valueField];
-			delete opts.valueField;
-		}
 
-		if (!_.isArray(opts.valueFields)) {
-			throw new Error('Graph config error: `valueFields` must be an array');
-		}
-
-		_.each(opts.valueFields, function (f, i) {
-			if (!_.isString(f)) {
-				throw new Error('Graph config error: `valueFields[' + i + ']` must be a string');
+			if (config.valueField !== undefined) {
+				if (!_.isString(config.valueField)) {
+					throw new Error('Graph config error: data format "' + dataFormat + '": `valueField` must be a string');
+				}
+				config.valueFields = [config.valueField];
+				delete config.valueField;
 			}
-		});
-	}
+
+			if (!_.isArray(config.valueFields)) {
+				throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields` must be an array');
+			}
+
+			_.each(config.valueFields, function (f, i) {
+				if (!_.isString(f)) {
+					throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields[' + i + ']` must be a string');
+				}
+			});
+		}
+	});
 };
 
 // GraphRenderer {{{1
@@ -2074,6 +2082,172 @@ GraphRendererGoogle = function (id, view, opts) {
 GraphRendererGoogle.prototype = Object.create(GraphRenderer.prototype);
 GraphRendererGoogle.prototype.constructor = GraphRendererGoogle;
 
+// #draw_plain {{{2
+
+GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt) {
+	var self = this
+		, graphConfig;
+
+	var convertType = function (t) {
+		switch (t) {
+		case 'currency':
+			return 'number';
+		default:
+			return t;
+		}
+	};
+
+	if (self.opts.whenPlain === undefined) {
+		debug.info('GRAPH RENDERER', 'No graph configuration defined for plain data');
+		return;
+	}
+
+	graphConfig = self.opts.whenPlain;
+
+	dt.addColumn(convertType(typeInfo.get(graphConfig.categoryField).type), graphConfig.categoryField);
+
+	_.each(graphConfig.valueFields, function (field) {
+		dt.addColumn(convertType(typeInfo.get(field).type), field);
+	});
+
+	var getRealValue = function (f, x) {
+		if (typeInfo.get(f).type === 'date' && moment.isMoment(x.value)) {
+			return {v: x.value.toDate(), f: x.orig};
+		}
+		else if (['number', 'currency'].indexOf(typeInfo.get(f).type) >= 0 && numeral.isNumeral(x.value)) {
+			return {v: x.value._value, f: x.orig};
+		}
+		else {
+			return x;
+		}
+	};
+
+	_.each(data.data, function (row) {
+		var newRow;
+
+		newRow = _.map([graphConfig.categoryField].concat(graphConfig.valueFields), function (f) {
+			return getRealValue(f, row.rowData[f]);
+		});
+
+		console.log(newRow);
+		dt.addRow(newRow);
+	});
+
+	return graphConfig;
+};
+
+// #draw_group {{{2
+
+GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt) {
+	var self = this
+		, graphConfig;
+
+	graphConfig = self.opts.whenGroup || {};
+	jQuery.extend(true, graphConfig, {
+		graphType: 'column',
+		categoryField: data.groupFields[0],
+		valueFields: [{
+			name: 'Count',
+			aggFun: 'count'
+		}]
+	});
+
+	dt.addColumn(typeInfo.get(graphConfig.categoryField).type, graphConfig.categoryField);
+
+	_.each(graphConfig.valueFields, function (f) {
+		var agg, aggType;
+
+		if (typeof f === 'string') {
+			dt.addColumn(typeInfo.get(f).type, f);
+		}
+		else if (typeof f === 'object') {
+			if (f.aggFun) {
+				agg = AGGREGATES[f.aggFun];
+
+				if (agg.type) {
+					aggType = agg.type;
+				}
+				else if (f.aggField) {
+					aggType = typeInfo.get(f.aggField).type;
+				}
+				else {
+					// Aggregate function doesn't have a specified type, but it isn't being applied to a
+					// specific field, so there's no way to tell what the output type is going to be.
+					//
+					// TODO Choose a default type like 'string' instead of throwing.
+
+					throw new Error('Unable to determine type of value aggregate');
+				}
+
+				dt.addColumn(aggType, f.aggFun + '(' + (f.aggField || '') + ')');
+			}
+			else {
+				// The only configuration allowed when not a string is to specify an aggregate function,
+				// which they didn't do.
+
+				throw new Error('Invalid value specification');
+			}
+		}
+		else {
+			// Not a string (field name) and not an object (aggregate function), so it's some other
+			// weird thing that we don't know what to do with.
+
+			throw new Error('Invalid value specification');
+		}
+	});
+
+	_.each(data.data, function (group, groupNum) {
+		var newRow;
+
+		newRow = [data.rowVals[groupNum].join(', ')];
+		newRow = newRow.concat([group.length]);
+		/*
+		newRow = newRow.concat(_.map(graphConfig.valueFields, function (f) {
+			if (typeof f === 'string') {
+				// FIXME
+				throw new Error('Not sure what to do here');
+			}
+			else if (typeof f === 'object') {
+				var agg = AGGREGATES[f.aggFun];
+				var aggFun = agg.fun({field: f.aggField});
+				var aggType = agg.type;
+				var aggResult = format(colConfig, colTypeInfo, aggFun(colGroup), {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+				// Calculate the aggregate function result from the data in the group.
+				//
+			}
+			else {
+				// Not a string (field name) and not an object (aggregate function), so it's some other
+				// weird thing that we don't know what to do with.
+
+				throw new Error('Invalid value specification');
+			}
+		}));
+		*/
+
+		dt.addRow(newRow);
+	});
+
+	return graphConfig;
+};
+
+// #draw_pivot {{{2
+
+GraphRendererGoogle.prototype.draw_pivot = function (data, typeInfo, dt) {
+	var self = this
+		, graphConfig;
+
+	graphConfig = self.opts.whenPivot || {};
+	jQuery.extend(true, graphConfig, {
+		categoryField: data.groupFields[0],
+		valueFields: data.pivotFields
+	});
+
+	return graphConfig;
+};
+
 // #draw {{{2
 
 GraphRendererGoogle.prototype.draw = function () {
@@ -2083,129 +2257,28 @@ GraphRendererGoogle.prototype.draw = function () {
 
 	self.view.getData(function (data) {
 		self.view.getTypeInfo(function (typeInfo) {
-			var graphConfig = {};
+			var graphConfig
+				, dt = new google.visualization.DataTable();
 
 			if (data.isPlain) {
-				if (self.opts.whenPlain === undefined) {
-					debug.info('GRAPH RENDERER', 'No graph configuration defined for plain data');
-					return;
-				}
-				graphConfig = self.opts.whenPlain;
+				graphConfig = self.draw_plain(data, typeInfo, dt);
 			}
 			else if (data.isGroup) {
-				graphConfig = self.opts.whenGroup || {};
-				jQuery.extend(true, graphConfig, {
-					categoryField: data.groupFields[0],
-					valueFields: [{
-						name: 'Count',
-						aggFun: 'count'
-					}]
-				});
+				graphConfig = self.draw_group(data, typeInfo, dt);
 			}
 			else if (data.isPivot) {
-				graphConfig = self.opts.whenPivot || {};
-				jQuery.extend(true, graphConfig, {
-					categoryField: data.groupFields[0],
-					valueFields: data.pivotFields
-				});
+				graphConfig = self.draw_pivot(data, typeInfo, dt);
 			}
 
-			var dt = new google.visualization.DataTable();
+			if (graphConfig === undefined) {
+				return;
+			}
 
 			var ctor = {
 				area: 'AreaChart',
 				bar: 'BarChart',
 				column: 'ColumnChart'
 			};
-
-			dt.addColumn(typeInfo.get(graphConfig.categoryField).type, graphConfig.categoryField);
-
-			_.each(graphConfig.valueFields, function (f) {
-				var agg, aggType;
-
-				if (typeof f === 'string') {
-					dt.addColumn(typeInfo.get(f).type, f);
-				}
-				else if (typeof f === 'object') {
-					if (f.aggFun) {
-						agg = AGGREGATES[f.aggFun];
-
-						if (agg.type) {
-							aggType = agg.type;
-						}
-						else if (f.aggField) {
-							aggType = typeInfo.get(f.aggField).type;
-						}
-						else {
-							// Aggregate function doesn't have a specified type, but it isn't being applied to a
-							// specific field, so there's no way to tell what the output type is going to be.
-							//
-							// TODO Choose a default type like 'string' instead of throwing.
-
-							throw new Error('Unable to determine type of value aggregate');
-						}
-
-						dt.addColumn(aggType, f.aggFun + '(' + (f.aggField || '') + ')');
-					}
-					else {
-						// The only configuration allowed when not a string is to specify an aggregate function,
-						// which they didn't do.
-
-						throw new Error('Invalid value specification');
-					}
-				}
-				else {
-					// Not a string (field name) and not an object (aggregate function), so it's some other
-					// weird thing that we don't know what to do with.
-
-					throw new Error('Invalid value specification');
-				}
-			});
-
-			if (data.isPlain) {
-				_.each(data.data, function (row) {
-					var newRow;
-
-					newRow = [row.rowData[graphConfig.categoryField].value];
-					newRow = newRow.concat(_.map(graphConfig.valueFields, function (f) {
-						return row.rowData[f].value;
-					}));
-
-					dt.addRow(newRow);
-				});
-			}
-			else if (data.isGroup) {
-				_.each(data.data, function (row) {
-					var newRow;
-
-					newRow = [row.rowData[graphConfig.categoryField].value];
-					newRow = newRow.concat(_.map(graphConfig.valueFields, function (f) {
-						if (typeof f === 'string') {
-							// FIXME
-							throw new Error('Not sure what to do here');
-						}
-						else if (typeof f === 'object') {
-							var agg = AGGREGATES[f.aggFun];
-							var aggFun = agg.fun({field: f.aggField});
-							var aggType = agg.type;
-							var aggResult = format(colConfig, colTypeInfo, aggFun(colGroup), {
-								alwaysFormat: true,
-								overrideType: aggType
-							});
-							// Calculate the aggregate function result from the data in the group.
-							//
-						}
-						else {
-							// Not a string (field name) and not an object (aggregate function), so it's some other
-							// weird thing that we don't know what to do with.
-
-							throw new Error('Invalid value specification');
-						}
-					}));
-
-					dt.addRow(newRow);
-				});
-			}
 
 			var options = {
 				title: self.opts.title,
@@ -2224,7 +2297,7 @@ GraphRendererGoogle.prototype.draw = function () {
 
 			console.log(options);
 
-			var chart = new google.visualization[ctor[graphConfig.type]](document.getElementById(self.id));
+			var chart = new google.visualization[ctor[graphConfig.graphType]](document.getElementById(self.id));
 			chart.draw(dt, options);
 		});
 	});

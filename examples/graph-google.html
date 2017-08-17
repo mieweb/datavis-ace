@@ -13,6 +13,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/sprintf/1.0.3/sprintf.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/jquery.sumoselect.min.js"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.5/papaparse.min.js"></script>
 		<script src="tabletool.js"></script>
 		<script src="wcdatavis.js"></script>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
@@ -31,21 +32,35 @@ $(document).ready(function () {
 	google.charts.setOnLoadCallback(function () {
 		var source = new MIE.WC_DataVis.Source({
 			type: 'http',
-			url: 'redmine1.json'
-		});
+			url: 'fruit.csv'
+		}, null, [{
+			field: 'Order ID',
+			type: 'number'
+		}, {
+			field: 'Product',
+			type: 'string'
+		}, {
+			field: 'Category',
+			type: 'string'
+		}, {
+			field: 'Amount',
+			type: 'currency'
+		}, {
+			field: 'Date',
+			type: 'date',
+			format: 'M/D/YYYY'
+		}, {
+			field: 'Country',
+			type: 'string'
+		}]);
 		var view = new MIE.WC_DataVis.View(source);
 		new MIE.WC_DataVis.Graph('graph', view, {
 			title: 'Google Charts Example',
-			type: 'column',
-			categoryField: 'Employee',
-			valueField: 'Hours Reported',
-			height: 600,
-			options: {
-				hAxis: {
-					slantedText: true,
-					slantedTextAngle: 90,
-					showTextEvery: 1
-				}
+			height: 400,
+			whenPlain: {
+				graphType: 'area',
+				categoryField: 'Date',
+				valueField: 'Amount'
 			}
 		});
 		new MIE.WC_DataVis.Grid('grid', view, {
@@ -65,7 +80,7 @@ $(document).ready(function () {
 			},
 			source: source
 		}, {
-			title: 'Example Data',
+			title: 'Fruit Sales',
 			runImmediately: true
 		});
 	});

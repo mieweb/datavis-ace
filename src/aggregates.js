@@ -291,7 +291,7 @@ AGGREGATES.sum = {
 			throw 'sum aggregate: missing [field] property';
 		}
 		return function (data) {
-			return invokeAggregate(data, function (acc, next) {
+			var result = invokeAggregate(data, function (acc, next) {
 				var val = next[opts.field].value;
 
 				if (window.numeral && window.numeral.isNumeral(val)) {
@@ -322,6 +322,11 @@ AGGREGATES.sum = {
 
 				return acc.add(val);
 			}, numeral(0));
+
+			return format(opts.colConfig, null, result, {
+				alwaysFormat: true,
+				overrideType: opts.type
+			});
 		};
 	},
 	canBePivotCell: true,
