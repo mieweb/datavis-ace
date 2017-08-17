@@ -61,6 +61,12 @@ $(document).ready(function () {
 				graphType: 'area',
 				categoryField: 'Date',
 				valueField: 'Amount'
+			},
+			whenGroup: {
+				graphType: 'pie',
+				options: {
+					pieHole: 0.5
+				}
 			}
 		});
 		new MIE.WC_DataVis.Grid('grid', view, {

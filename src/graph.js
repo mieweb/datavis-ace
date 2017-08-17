@@ -2004,7 +2004,7 @@ Graph.prototype.normalize = function (opts) {
 			throw new Error('Graph config error: data format "' + dataFormat + '": `graphType` must be a string');
 		}
 
-		if (['area', 'bar', 'column'].indexOf(config.graphType) === -1) {
+		if (['area', 'bar', 'column', 'pie'].indexOf(config.graphType) === -1) {
 			throw new Error('Graph config error: data format "' + dataFormat + '": invalid `graphType`: ' + config.graphType);
 		}
 
@@ -2142,8 +2142,8 @@ GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt) {
 	var self = this
 		, graphConfig;
 
-	graphConfig = self.opts.whenGroup || {};
-	jQuery.extend(true, graphConfig, {
+	graphConfig = deepCopy(self.opts.whenGroup || {});
+	_.defaults(graphConfig, {
 		graphType: 'column',
 		categoryField: data.groupFields[0],
 		valueFields: [{
@@ -2277,7 +2277,8 @@ GraphRendererGoogle.prototype.draw = function () {
 			var ctor = {
 				area: 'AreaChart',
 				bar: 'BarChart',
-				column: 'ColumnChart'
+				column: 'ColumnChart',
+				pie: 'PieChart'
 			};
 
 			var options = {

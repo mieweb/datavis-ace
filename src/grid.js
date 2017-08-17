@@ -1477,7 +1477,7 @@ GroupControl.prototype.removeField = function (gcf) {
 	gcf.getElement().parent('li').remove(); // Remove it from the DOM.
 	self.groupFields.splice(fieldIndex, 1); // Remove it from the groupFields array.
 
-	if (self.pivotFields.length === 0) {
+	if (self.groupFields.length === 0) {
 		self.clearBtn.hide();
 	}
 
