@@ -1004,7 +1004,7 @@ Grid.prototype.refresh = function () {
 		self.ui.rowCount.text('');
 	}
 
-	delete self.defn._data;
+	self.view.clearCache();
 
 	if (self.tagOpts.filterInput) {
 		self.tagOpts.filterInput.store();
