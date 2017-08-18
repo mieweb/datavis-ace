@@ -195,6 +195,25 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 	text-transform: none;
 }
 
+.wcdv_drop_target_hover {
+	background-color: #ffeb3b !important;
+}
+
+.wcdv_drag_handle.ui-draggable-dragging {
+	border: solid 1px #888;
+	background-color: #EEE;
+	padding: 4px;
+	border-radius: 4px;
+
+	/*
+	 * Without negative margin, the extra space in the span causes the table column sizes to be
+	 * recalculated, making everything shift around when you start dragging.  Feels like a hack.
+	 * The exact number was determined by just playing around to find what works.
+	 */
+
+	margin: -10px;
+}
+
 /*
  * Alignment classes.
  */

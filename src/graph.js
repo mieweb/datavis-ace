@@ -2129,7 +2129,6 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt) {
 			return getRealValue(f, row.rowData[f]);
 		});
 
-		console.log(newRow);
 		dt.addRow(newRow);
 	});
 
@@ -2239,10 +2238,56 @@ GraphRendererGoogle.prototype.draw_pivot = function (data, typeInfo, dt) {
 	var self = this
 		, graphConfig;
 
-	graphConfig = self.opts.whenPivot || {};
-	jQuery.extend(true, graphConfig, {
+	graphConfig = deepCopy(self.opts.whenPivot || {});
+	_.defaults(graphConfig, {
+		graphType: 'column',
 		categoryField: data.groupFields[0],
-		valueFields: data.pivotFields
+		valueFields: [],
+		options: {
+			isStacked: true
+		}
+	});
+
+	dt.addColumn(typeInfo.get(graphConfig.categoryField).type, graphConfig.categoryField);
+
+	_.each(data.colVals, function (colVal) {
+		dt.addColumn('number', colVal.join(', '));
+	});
+
+	_.each(data.data, function (group, groupNum) {
+		var newRow;
+
+		newRow = [data.rowVals[groupNum].join(', ')];
+		newRow = newRow.concat(_.map(group, function (pivot) {
+			return pivot.length;
+		}));
+		/*
+		newRow = newRow.concat(_.map(graphConfig.valueFields, function (f) {
+			if (typeof f === 'string') {
+				// FIXME
+				throw new Error('Not sure what to do here');
+			}
+			else if (typeof f === 'object') {
+				var agg = AGGREGATES[f.aggFun];
+				var aggFun = agg.fun({field: f.aggField});
+				var aggType = agg.type;
+				var aggResult = format(colConfig, colTypeInfo, aggFun(colGroup), {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+				// Calculate the aggregate function result from the data in the group.
+				//
+			}
+			else {
+				// Not a string (field name) and not an object (aggregate function), so it's some other
+				// weird thing that we don't know what to do with.
+
+				throw new Error('Invalid value specification');
+			}
+		}));
+		*/
+
+		dt.addRow(newRow);
 	});
 
 	return graphConfig;
@@ -2263,7 +2308,7 @@ GraphRendererGoogle.prototype.draw = function () {
 			if (data.isPlain) {
 				graphConfig = self.draw_plain(data, typeInfo, dt);
 			}
-			else if (data.isGroup) {
+			else if (data.isGroup && !data.isPivot) {
 				graphConfig = self.draw_group(data, typeInfo, dt);
 			}
 			else if (data.isPivot) {

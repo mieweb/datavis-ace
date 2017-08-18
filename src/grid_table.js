@@ -153,10 +153,10 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 	};
 
 	sortSpan.addClass('sort_indicator');
-	sortSpan.css({'cursor': 'pointer'});
+	sortSpan.css({'cursor': 'pointer', 'margin-right': '0.5ex'});
 	sortSpan.on('click', onClick);
 
-	headingSpan.css({'cursor': 'pointer', 'margin-left': '0.5ex'});
+	headingSpan.css({'cursor': 'pointer'});
 	headingSpan.on('click', onClick);
 
 	headingTh.prepend(sortSpan);
@@ -646,7 +646,18 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
 			colIndex += 1; // Add a column for the row selection checkbox.
 		}
 
-		var headingSpan = jQuery('<span>').text(colConfig.displayText || field);
+		var headingSpan = jQuery('<span>')
+			.attr('data-wcdv-field', field)
+			.text(colConfig.displayText || field)
+			.draggable({
+				classes: {
+					'ui-draggable-handle': 'wcdv_drag_handle'
+				},
+				distance: 8, // FIXME Deprecated [1.12]: replacement will be in 1.13
+				helper: 'clone',
+				revert: true,
+				revertDuration: 0
+			});
 
 		var headingTh = jQuery('<th>', { id: gensym() })
 			.css(headingThCss)
@@ -1237,7 +1248,18 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
 			return;
 		}
 
-		headingSpan = jQuery('<span>').text(colName);
+		headingSpan = jQuery('<span>')
+			.attr('data-wcdv-field', colName)
+			.text(colName)
+			.draggable({
+				classes: {
+					'ui-draggable-handle': 'wcdv_drag_handle'
+				},
+				distance: 8, // FIXME Deprecated [1.12]: replacement will be in 1.13
+				helper: 'clone',
+				revert: true,
+				revertDuration: 0
+			});
 
 		headingTh = jQuery('<th>')
 			.css(headingThCss)

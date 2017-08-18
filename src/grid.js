@@ -464,9 +464,6 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	var rowCount = null; // Container span for the row counter.
 	var clearFilter = null; // Container span for the "clear filter" link.
-	var gridToolBar = null;
-	var gridToolBarHeading = null;
-	var gridToolBarButtons = null;
 	var doingServerFilter = getProp(defn, 'server', 'filter') && getProp(defn, 'server', 'limit') !== -1;
 	var viewDropdown = null;
 	var prefsCallback = null;
@@ -517,21 +514,36 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		if (!_.isString(tagOpts.title)) {
 			throw '<tagOpts.title> is not a string';
 		}
-		gridToolBar = jQuery('<div>').addClass('wcdv_grid_toolbar').appendTo(self.ui.root);
-		gridToolBarHeading = jQuery('<div class="heading">')
+		
+		self.ui.gridToolBar = jQuery('<div>')
+			.addClass('wcdv_grid_toolbar')
+			.appendTo(self.ui.root)
+			.droppable({
+				over: function (evt, ui) {
+					self.ui.gridToolBarButtons.show();
+					self.ui.gridControl.show();
+
+					// Need to recalculate the position of the droppable targets, because they are now
+					// guaranteed to be visible (they may have been hidden within the grid control before).
+
+					ui.draggable.draggable('option', 'refreshPositions', true);
+				}
+			});
+
+		self.ui.gridToolBarHeading = jQuery('<div class="heading">')
 			.attr('title', MIE.trans('SHOWHIDE'))
 			.on('click', function (evt) {
 				evt.stopPropagation();
 				self.toggleGrid();
 			})
-			.appendTo(gridToolBar);
-		gridToolBarButtons = jQuery('<div class="buttons">').appendTo(gridToolBar);
+			.appendTo(self.ui.gridToolBar);
+		self.ui.gridToolBarButtons = jQuery('<div class="buttons">').appendTo(self.ui.gridToolBar);
 
-		self._addHeaderWidgets(gridToolBarHeading, doingServerFilter, !!self.tagOpts.runImmediately, id);
-		self._addCommonButtons(gridToolBarButtons);
+		self._addHeaderWidgets(self.ui.gridToolBarHeading, doingServerFilter, !!self.tagOpts.runImmediately, id);
+		self._addCommonButtons(self.ui.gridToolBarButtons);
 
 		if (getProp(self.defn, 'table', 'prefs', 'enableSaving')) {
-			prefsCallback = self._addPrefsButtons(gridToolBarButtons);
+			prefsCallback = self._addPrefsButtons(self.ui.gridToolBarButtons);
 		}
 	}
 
@@ -545,7 +557,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		.append(self.ui.groupControl)
 		.append(self.ui.filterControl)
 		.append(self.ui.pivotControl)
-		.appendTo(gridToolBarButtons);
+		.appendTo(self.ui.gridToolBarButtons);
 
 	self.ui.grid.appendTo(self.ui.root);
 
@@ -583,6 +595,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	};
 
 	self.view.on(View.events.workBegin, function () {
+		self.setSpinner('working');
 		self.showSpinner();
 	});
 
@@ -808,7 +821,7 @@ Grid.prototype._addCommonButtons = function (toolbar) {
 	setPropDef(true, self.defn, 'table', 'limit', 'autoShowMore');
 
 	makeCheckbox(self.defn.table.limit.autoShowMore, function () {
-		var isChecked = showMoreRowsCheckbox.prop('checked');
+		var isChecked = jQuery(this).prop('checked');
 		debug.info('GRID // TOOLBAR', 'Setting `table.limit.autoShowMore` to ' + isChecked);
 		self.defn.table.limit.autoShowMore = isChecked;
 	}, 'Show More Rows on Scroll', toolbar);
@@ -1000,7 +1013,8 @@ Grid.prototype.refresh = function () {
 	if (self.features.group) {
 		self.groupControl = new GroupControl(self.defn, self.view, self.features, self.timing);
 		self.ui.groupControl.children().remove();
-		self.ui.groupControl.append(self.groupControl.draw()).show();
+		self.groupControl.draw(self.ui.groupControl);
+		self.ui.groupControl.show();
 	}
 	else {
 		self.ui.groupControl.hide();
@@ -1009,7 +1023,8 @@ Grid.prototype.refresh = function () {
 	if (false && self.features.filter) { // XXX
 		self.filterControl = new FilterControl(self.defn, self.view, self.features, self.timing);
 		self.ui.filterControl.children().remove();
-		self.ui.filterControl.append(self.filterControl.draw()).show();
+		self.filterControl.draw(self.ui.filterControl);
+		self.ui.filterControl.show();
 	}
 	else {
 		self.ui.filterControl.hide();
@@ -1033,7 +1048,8 @@ Grid.prototype.refresh = function () {
 			}
 		});
 		self.ui.pivotControl.children().remove();
-		self.ui.pivotControl.append(self.pivotControl.draw()).show();
+		self.pivotControl.draw(self.ui.pivotControl);
+		self.ui.pivotControl.show();
 	}
 	else {
 		self.ui.pivotControl.hide();
@@ -1101,9 +1117,6 @@ Grid.prototype.redraw = function () {
 Grid.prototype.updateRowCount = function (info, ops) {
 	var self = this
 		, doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
-
-	console.log(info);
-	console.log(ops);
 
 	debug.info('GRID', 'Updating row count');
 	self.setSpinner('working');
@@ -1427,10 +1440,22 @@ GroupControl.prototype.constructor = GroupControl;
  * @returns {jQuery} The DIV element that holds the entire UI.
  */
 
-GroupControl.prototype.draw = function () {
+GroupControl.prototype.draw = function (parent) {
 	var self = this;
 
-	self.ui.root = jQuery('<div>');
+	parent.droppable({
+		classes: {
+			'ui-droppable-hover': 'wcdv_drop_target_hover'
+		},
+		drop: function (evt, ui) {
+			// Turn this off for the sake of efficiency.
+			ui.draggable.draggable('option', 'refreshPositions', false);
+
+			self.addField(ui.draggable.attr('data-wcdv-field'));
+		}
+	});
+
+	self.ui.root = jQuery('<div>').appendTo(parent);
 	self.ui.title = jQuery('<div>')
 		.addClass('wcdv_control_title_bar')
 		.appendTo(self.ui.root);
@@ -1478,7 +1503,7 @@ GroupControl.prototype.removeField = function (gcf) {
 	self.groupFields.splice(fieldIndex, 1); // Remove it from the groupFields array.
 
 	if (self.groupFields.length === 0) {
-		self.clearBtn.hide();
+		self.ui.clearBtn.hide();
 	}
 
 	self.updateView();
@@ -1570,13 +1595,19 @@ PivotControl.prototype.constructor = PivotControl;
  * @returns {jQuery} The DIV element that holds the entire UI.
  */
 
-PivotControl.prototype.draw = function () {
+PivotControl.prototype.draw = function (parent) {
 	var self = this;
 
-	self.ui.root = jQuery('<div>');
+	self.ui.root = jQuery('<div>').appendTo(parent);
 
 	self.ui.aggContainer = jQuery('<div>', { 'class': 'wcdv_aggregate_container' }).appendTo(self.ui.root).hide();
-	self.ui.aggregateTitle = jQuery('<span>', { 'class': 'wcdv_title' }).text('Pivot Aggregate').appendTo(self.ui.aggContainer);
+	self.ui.aggregateTitle = jQuery('<div>')
+		.addClass('wcdv_control_title_bar')
+		.appendTo(self.ui.aggContainer);
+	jQuery('<span>')
+		.addClass('wcdv_control_title')
+		.text('Pivot Aggregate')
+		.appendTo(self.ui.aggregateTitle);
 	self.ui.aggFun = jQuery('<div>').css({'margin-top': '7px'}).appendTo(self.ui.aggContainer);
 	jQuery('<label>').text('Function:').appendTo(self.ui.aggFun);
 	self.ui.aggFunDropdown = jQuery('<select>')
@@ -1602,6 +1633,17 @@ PivotControl.prototype.draw = function () {
 	;
 	
 	self.ui.pivotFieldsContainer = jQuery('<div>')
+		.droppable({
+			classes: {
+				'ui-droppable-hover': 'wcdv_drop_target_hover'
+			},
+			drop: function (evt, ui) {
+				// Turn this off for the sake of efficiency.
+				ui.draggable.draggable('option', 'refreshPositions', false);
+
+				self.addField(ui.draggable.attr('data-wcdv-field'));
+			}
+		})
 		.addClass('wcdv_pivot_fields_container')
 		.appendTo(self.ui.root);
 	self.ui.pivotFieldsTitle = jQuery('<div>')
@@ -1668,7 +1710,7 @@ PivotControl.prototype.removeField = function (pcf) {
 	self.pivotFields.splice(fieldIndex, 1); // Remove it from the pivotFields array.
 
 	if (self.pivotFields.length === 0) {
-		self.clearBtn.hide();
+		self.ui.clearBtn.hide();
 	}
 
 	self.updateView();
