@@ -196,7 +196,7 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 }
 
 .wcdv_drop_target_hover {
-	background-color: #ffeb3b !important;
+	background-color: rgb(255, 235, 59) !important;
 }
 
 .wcdv_drag_handle.ui-draggable-dragging {
@@ -282,7 +282,7 @@ tr.wcdvgrid_more td {
 }
 
 .wcdv_grid_table td.wcdv_selected_row {
-	background-color: #FFA;
+	background-color: rgba(255, 235, 59, .4) !important;
 }
 
 /*

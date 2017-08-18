@@ -1243,14 +1243,16 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
 		headingTr.append(headingTh);
 	});
 
-	_.each(columns, function (colName) {
-		if (data.groupFields.indexOf(colName) >= 0) {
+	_.each(columns, function (field, colIndex) {
+		var colConfig = getPropDef({}, self.defn, 'table', 'columns', colIndex)
+
+		if (data.groupFields.indexOf(field) >= 0) {
 			return;
 		}
 
 		headingSpan = jQuery('<span>')
-			.attr('data-wcdv-field', colName)
-			.text(colName)
+			.attr('data-wcdv-field', field)
+			.text(field)
 			.draggable({
 				classes: {
 					'ui-draggable-handle': 'wcdv_drag_handle'
@@ -1265,11 +1267,12 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
 			.css(headingThCss)
 			.append(headingSpan);
 
-		self._addSortingToHeader(colName, headingSpan, headingTh);
+		self._addSortingToHeader(field, headingSpan, headingTh);
 
-		self.setCss(headingTh, colName);
+		self.setCss(headingTh, field);
+		self.setAlignment(headingTh, colConfig, typeInfo, field);
 
-		self.ui.thMap[colName] = headingTh;
+		self.ui.thMap[field] = headingTh;
 		headingTr.append(headingTh);
 	});
 
