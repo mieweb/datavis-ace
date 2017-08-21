@@ -91,6 +91,7 @@
 	var filters = [];
 	var gensymSeed = 0;
 
+	$INCLUDE('src/jquery.js');
 	$INCLUDE('src/util.js');
 	$INCLUDE('src/ordmap.js');
 	$INCLUDE('src/prefs.js');

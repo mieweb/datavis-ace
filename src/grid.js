@@ -1405,8 +1405,13 @@ GridControl.prototype.makeClearButton = function (target) {
 // #addField {{{2
 
 GridControl.prototype.addField = function (field) {
-	var self = this
-		, gcf = new self.controlFieldCtor(self, field, self.colConfig[field] || {});
+	var self = this;
+
+	if (self.fields.indexOf(field) >= 0) {
+		return;
+	}
+
+	var gcf = new self.controlFieldCtor(self, field, self.colConfig[field] || {});
 
 	self.ui.clearBtn.show();
 

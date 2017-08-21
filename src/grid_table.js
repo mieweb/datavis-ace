@@ -649,15 +649,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
 		var headingSpan = jQuery('<span>')
 			.attr('data-wcdv-field', field)
 			.text(colConfig.displayText || field)
-			.draggable({
-				classes: {
-					'ui-draggable-handle': 'wcdv_drag_handle'
-				},
-				distance: 8, // FIXME Deprecated [1.12]: replacement will be in 1.13
-				helper: 'clone',
-				revert: true,
-				revertDuration: 0
-			});
+			._makeDraggableField();
 
 		var headingTh = jQuery('<th>', { id: gensym() })
 			.css(headingThCss)
@@ -1193,6 +1185,8 @@ GridTablePlain.prototype.updateFeatures = function (f) {
 
 // GridTableGroup {{{1
 
+// Constructor {{{2
+
 var GridTableGroup = function (defn, view, features, timing, id) {
 	var self = this;
 
@@ -1253,15 +1247,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
 		headingSpan = jQuery('<span>')
 			.attr('data-wcdv-field', field)
 			.text(field)
-			.draggable({
-				classes: {
-					'ui-draggable-handle': 'wcdv_drag_handle'
-				},
-				distance: 8, // FIXME Deprecated [1.12]: replacement will be in 1.13
-				helper: 'clone',
-				revert: true,
-				revertDuration: 0
-			});
+			._makeDraggableField();
 
 		headingTh = jQuery('<th>')
 			.css(headingThCss)
@@ -1388,6 +1374,8 @@ GridTableGroup.prototype.addWorkHandler = function () {
 
 // GridTablePivot {{{1
 
+// Constructor {{{2
+
 var GridTablePivot = function (defn, view, features, timing, id) {
 	var self = this;
 
@@ -1444,11 +1432,21 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
 		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
 
-		// Create dummy cells to take up the columns that will be used below by the headers for the
-		// group fields.
+		_.each(data.groupFields, function (field) {
+			headingSpan = jQuery('<span>').text(field);
 
-		_.each(data.groupFields, function () {
-			jQuery('<td>').appendTo(headingTr);
+			headingTh = jQuery('<th>')
+				.attr('data-wcdv-field', field)
+				.css(headingThCss)
+				.append(headingSpan)
+				._makeDraggableField();
+
+			self._addSortingToHeader(field, headingSpan, headingTh);
+
+			self.setCss(headingTh, field);
+
+			self.ui.thMap[field] = headingTh;
+			headingTr.append(headingTh);
 		});
 
 		lastColVal = null;
@@ -1475,8 +1473,6 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
 				headingTh = jQuery('<th>')
 					.css(headingThCss)
 					.append(headingSpan);
-
-				self._addSortingToHeader(colVal, headingSpan, headingTh);
 
 				self.setCss(headingTh, colVal);
 				// REMOVED: I'm not sure how this would function in the pivot table.
@@ -1574,4 +1570,3 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		return cont();
 	}
 };
-
