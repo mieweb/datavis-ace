@@ -229,6 +229,11 @@ GridTable.prototype.addFilterHandler = function () {
 			var even = false; // Rows are 1-based to match our CSS zebra-striping.
 
 			self.view.on(View.events.filter, function (rowNum, hide) {
+				if (isNothing(self.ui.tr[rowNum])) {
+					debug.info('GRID TABLE // HANDLER (View.filter)', 'We were told to ' + (hide ? 'hide' : 'show') + ' row ' + rowNum + ', but it doesn\'t exist');
+					return;
+				}
+
 				self.ui.tr[rowNum].removeClass('even odd');
 				if (hide) {
 					self.ui.tr[rowNum].hide();
@@ -317,7 +322,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				tbody: jQuery('<tbody>'),
 				tfoot: jQuery('<tfoot>'),
 				thMap: {},
-				tr: [],
+				tr: {},
 				progress: jQuery('<div>')
 			};
 
@@ -631,7 +636,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
 	 */
 
 	if (self.features.filter) {
-		self.defn.gridFilterSet = new GridFilterSet(self.defn, self.view, self, progress);
+		self.defn.gridFilterSet = new GridFilterSet(self.view, null, self, progress);
 	}
 
 	/*
@@ -902,7 +907,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont) {
 				}
 			}
 
-			self.ui.tr.push(tr);
+			self.ui.tr[rowNum] = tr;
 			self.ui.tbody.append(tr);
 		}
 
@@ -1306,7 +1311,6 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont) {
 			jQuery('<th>', attrs).text(colVal).appendTo(tr);
 		});
 
-		self.ui.tr.push(tr);
 		self.ui.tbody.append(tr);
 
 		_.each(rowGroup, function (row, rowNum) {
@@ -1339,7 +1343,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont) {
 				tr.append(td);
 			});
 
-			self.ui.tr.push(tr);
+			self.ui.tr[rowNum] = tr;
 			self.ui.tbody.append(tr);
 		});
 	});
@@ -1562,7 +1566,6 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td.appendTo(tr);
 		});
 
-		self.ui.tr.push(tr);
 		self.ui.tbody.append(tr);
 	});
 

@@ -1353,6 +1353,30 @@ Grid.prototype.togglePivot = function () {
 
 // GridControl {{{1
 
+/**
+ * @class
+ *
+ * An abstract class that represents some kind of interface that the user can operate over the
+ * available fields.
+ *
+ * Subclasses should implement the following functions:
+ *
+ * - `draw(TARGET)`
+ *   Called to create all required user interface components.
+ *
+ * - `updateView()`
+ *   Use `self.fields` to set whatever properties are needed on the view.
+ *
+ * @property {Array.<string>} fields
+ * List of all the fields selected by the user.
+ *
+ * @property {object} ui
+ * Object containing different user interface components.
+ *
+ * @property {jQuery} ui.dropdown
+ * The SELECT element containing the available fields.
+ */
+
 function GridControl() {
 }
 
@@ -1374,10 +1398,20 @@ GridControl.prototype.init = function (defn, view, features, timing) {
 
 // #makeAddButton {{{2
 
+/**
+ * Make a button that calls the `addField` method when clicked.
+ *
+ * @param {jQuery} target
+ * Where to append the button.
+ *
+ * @returns {jQuery}
+ * The button created.
+ */
+
 GridControl.prototype.makeAddButton = function (target) {
 	var self = this;
 
-	jQuery(fontAwesome('F0FE'))
+	return jQuery(fontAwesome('F0FE'))
 		.addClass('wcdv_button')
 		.css({'margin-left': '4px'})
 		.on('click', function () {
@@ -1387,6 +1421,16 @@ GridControl.prototype.makeAddButton = function (target) {
 };
 
 // #makeClearButton {{{2
+
+/**
+ * Make a button that calls the `clear` method when clicked.
+ *
+ * @param {jQuery} target
+ * Where to append the button.
+ *
+ * @returns {jQuery}
+ * The button created.
+ */
 
 GridControl.prototype.makeClearButton = function (target) {
 	var self = this;
@@ -1403,6 +1447,13 @@ GridControl.prototype.makeClearButton = function (target) {
 };
 
 // #addField {{{2
+
+/**
+ * Add a field to this control.  Automatically updates the view afterwards.
+ *
+ * @param {string} field
+ * Name of the field to add.
+ */
 
 GridControl.prototype.addField = function (field) {
 	var self = this;
@@ -1428,6 +1479,13 @@ GridControl.prototype.addField = function (field) {
 
 // #removeField {{{2
 
+/**
+ * Remove a field from this control.  Automatically updates the view afterwards.
+ *
+ * @param {ControlField} cf
+ * The field to remove.
+ */
+
 GridControl.prototype.removeField = function (cf) {
 	var self = this
 		, fieldIndex = self.fields.indexOf(cf.field);
@@ -1447,6 +1505,10 @@ GridControl.prototype.removeField = function (cf) {
 };
 
 // #clear {{{2
+
+/**
+ * Removes all fields from the control.  Automatically updates the view afterwards.
+ */
 
 GridControl.prototype.clear = function () {
 	var self = this;
@@ -1770,6 +1832,7 @@ function FilterControl() {
 
 	self.super = makeSuper(self, GridControl);
 	self.super.init.apply(self, arguments);
+	self.gfs = new GridFilterSet();
 }
 
 FilterControl.prototype = Object.create(GridControl.prototype);
@@ -1813,7 +1876,7 @@ FilterControl.prototype.updateView = function () {
 	var self = this;
 
 	if (self.fields.length > 0) {
-		self.view.setGroup({fieldNames: self.fields});
+		self.view.setFilter();
 	}
 	else {
 		self.view.clearGroup();

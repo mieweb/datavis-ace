@@ -715,9 +715,11 @@ GridFilter.defaultWidgets = {
 /**
  * Create a new collection of filters.
  *
- * @param {object} defn
+ * @param {View} view
+ * The view that we will be updating the filter for.
  *
- * @param {View} view The view that we will be updating the filter for.
+ * @param {Prefs} prefs
+ *
  *
  * @param {GridTable} gridTable A reference to the table that this filter set is displayed on.  This
  * is used only to make sure that the widgets shown in the columns are resized correctly when the
@@ -727,9 +729,10 @@ GridFilter.defaultWidgets = {
  * updated.
  *
  * @class
- * @property {object} defn
+ * @property {View} view
+ * The view that we will be updating the filter for.
  *
- * @property {View} view The view that we will be updating the filter for.
+ * @property {Prefs} prefs
  *
  * @property {object} progress An object describing how to show a progress dialog when the view is
  * updated.
@@ -750,15 +753,11 @@ GridFilter.defaultWidgets = {
  * internally when loading preferences to avoid updating for every single filter.
  */
 
-var GridFilterSet = function (defn, view, gridTable, progress) {
+var GridFilterSet = function (view, prefs, gridTable, progress) {
 	var self = this;
 
-	if (defn === undefined) {
-		throw new Error('GridFilterSet(): Missing required argument: defn');
-	}
-
-	self.defn = defn;
 	self.view = view;
+	self.prefs = prefs;
 	self.gridTable = gridTable;
 	self.progress = progress;
 
@@ -874,12 +873,10 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, 
 
 	// We use a data source to get the type information, so if the grid was built without a data
 	// source, this isn't going to work.
+	//
+	// FIXME Don't rely on the cache, do it right.
 
-	if (!(self.defn.source instanceof Source)) {
-		throw new GridFilterError('This can only be used with a Source');
-	}
-
-	colType = self.defn.source.cache.typeInfo.get(field).type;
+	colType = self.view.typeInfo.get(field).type;
 
 	// Make sure that we are able to get the column type.
 
@@ -1046,7 +1043,7 @@ GridFilterSet.prototype.update = function (dontSavePrefs) {
 
 	self.view.setFilter(spec, false, self.progress);
 
-	if (getProp(self.defn, 'table', 'prefs', 'enableSaving') && !dontSavePrefs) {
+	if (self.prefs && !dontSavePrefs) {
 		self.savePrefs();
 	}
 };
@@ -1061,20 +1058,6 @@ GridFilterSet.prototype.savePrefs = function () {
 	var self = this
 		, filters = [];
 
-	// Make sure that there's a way to save prefs.
-
-	if (isNothing(self.defn.prefs)) {
-		log.error('Unable to save prefs: [defn.prefs] does not exist');
-		return;
-	}
-
-	// Make sure the API we're expecting is going to be there.
-
-	if (!(self.defn.prefs instanceof Prefs)) {
-		log.error('Unable to save prefs: [defn.prefs] is not a Prefs instance');
-		return;
-	}
-
 	_.each(self.filters.all, function (filter) {
 		var filterPref = {};
 
@@ -1086,8 +1069,8 @@ GridFilterSet.prototype.savePrefs = function () {
 		filters.push(filterPref);
 	});
 
-	self.defn.prefs.setUserData('html/filters', filters);
-	self.defn.prefs.save();
+	self.prefs.setUserData('html/filters', filters);
+	self.prefs.save();
 };
 
 // #loadPrefs {{{2
