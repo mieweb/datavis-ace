@@ -7,13 +7,14 @@ GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
 
 // #init {{{2
-GridTable.prototype.init = function (defn, view, features, timing, id) {
+GridTable.prototype.init = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.id = id;
 	self.defn = defn;
 	self.view = view;
 	self.features = features;
+	self.opts = opts;
 	self.timing = timing;
 
 	self.needsRedraw = false;
@@ -550,11 +551,11 @@ GridTable.prototype.makeProgress = function (thing) {
  * working.
  */
 
-var GridTablePlain = function (defn, view, features, timing, id) {
+var GridTablePlain = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.super = makeSuper(self, GridTable);
-	self.super.init(defn, view, features, timing, id);
+	self.super.init(defn, view, features, opts, timing, id);
 };
 
 GridTablePlain.prototype = Object.create(GridTable.prototype);
@@ -1192,7 +1193,7 @@ GridTablePlain.prototype.updateFeatures = function (f) {
 
 // Constructor {{{2
 
-var GridTableGroup = function (defn, view, features, timing, id) {
+var GridTableGroup = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = jQuery.extend(true, {}, features);
@@ -1200,7 +1201,7 @@ var GridTableGroup = function (defn, view, features, timing, id) {
 	features.footer = false;
 
 	self.super = makeSuper(self, GridTable);
-	self.super.init(defn, view, features, timing, id);
+	self.super.init(defn, view, features, opts, timing, id);
 };
 
 GridTableGroup.prototype = Object.create(GridTable.prototype);
@@ -1380,7 +1381,7 @@ GridTableGroup.prototype.addWorkHandler = function () {
 
 // Constructor {{{2
 
-var GridTablePivot = function (defn, view, features, timing, id) {
+var GridTablePivot = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = jQuery.extend(true, {}, features);
@@ -1388,7 +1389,7 @@ var GridTablePivot = function (defn, view, features, timing, id) {
 	features.footer = false;
 
 	self.super = makeSuper(self, GridTable);
-	self.super.init(defn, view, features, timing, id);
+	self.super.init(defn, view, features, opts, timing, id);
 };
 
 GridTablePivot.prototype = Object.create(GridTable.prototype);
@@ -1431,30 +1432,48 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
 	// +------+--------+-----+----------+-------+
 
 	var pivotFieldNum, colValNum;
-	var lastColVal = null, lastColValCount = 0, colVal;
+	var colVal;
 
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
 		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
 
-		_.each(data.groupFields, function (field) {
-			headingSpan = jQuery('<span>').text(field);
+		// Create headers for the fields that we've grouped by.  The headers are the names of those
+		// fields.  We only do this for the last row of the header, i.e. the final pivot field.
+		//
+		// +---------------------------+-----------------------------------------------------+
+		// | ( not here )              | PIVOT COLVAL 1                    | PIVOT COLVAL 2  |
+		// +-------------+-------------+-----------------+-----------------+-----------------+
+		// | GROUP FIELD | GROUP FIELD | PIVOT COLVAL 1A | PIVOT COLVAL 1B | PIVOT COLVAL 2A |
+		// +-------------+-------------+-----------------+-----------------+-----------------+
 
-			headingTh = jQuery('<th>')
-				.attr('data-wcdv-field', field)
-				.css(headingThCss)
-				.append(headingSpan)
-				._makeDraggableField();
+		if (pivotFieldNum === data.pivotFields.length - 1) {
+			_.each(data.groupFields, function (field) {
+				headingSpan = jQuery('<span>').text(field);
 
-			self._addSortingToHeader(field, headingSpan, headingTh);
+				headingTh = jQuery('<th>')
+					.attr('data-wcdv-field', field)
+					.css(headingThCss)
+					.append(headingSpan)
+					._makeDraggableField();
 
-			self.setCss(headingTh, field);
+				self._addSortingToHeader(field, headingSpan, headingTh);
 
-			self.ui.thMap[field] = headingTh;
-			headingTr.append(headingTh);
-		});
+				self.setCss(headingTh, field);
 
-		lastColVal = null;
-		lastColValCount = 0;
+				self.ui.thMap[field] = headingTh;
+				headingTr.append(headingTh);
+			});
+		}
+		else {
+			headingTr.append(jQuery('<th>', { colspan: data.groupFields.length }));
+		}
+
+		// Create headers for the fields that we've pivotted by.  The headers are the column values for
+		// those fields.
+
+		var lastColVal = null;
+		var lastColValCount = 0;
+
 		for (colValNum = 0; colValNum < data.colVals.length; colValNum += 1) {
 			colVal = data.colVals[colValNum][pivotFieldNum];
 			if (colVal !== lastColVal || pivotFieldNum === data.pivotFields.length - 1) {

@@ -1071,14 +1071,29 @@ Grid.prototype.refresh = function () {
 	*/
 
 	var makeGridTable = function (viewOps) {
+		var gridTableCtor
+			, gridTableOpts;
+
 		debug.info('GRID', 'Creating grid table to handle the data: { group = %s, pivot = %s }', viewOps.group, viewOps.pivot);
-		var ctor = viewOps.pivot ? GridTablePivot : viewOps.group ? GridTableGroup : GridTablePlain;
+
+		if (viewOps.pivot) {
+			gridTableCtor = GridTablePivot;
+			gridTableOpts = self.defn.whenPivot;
+		}
+		else if (viewOps.group) {
+			gridTableCtor = GridTableGroup;
+			gridTableOpts = self.defn.whenGroup;
+		}
+		else {
+			gridTableCtor = GridTablePlain;
+			gridTableOpts = self.defn.whenPlain;
+		}
 
 		if (self.gridTable) {
 			self.gridTable.clear();
 		}
 
-		self.gridTable = new ctor(self.defn, self.view, self.features, self.timing, self.id);
+		self.gridTable = new gridTableCtor(self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
 		self.gridTable.on(GridTable.events.unableToRender, makeGridTable);
 		self.gridTable.draw(self.ui.grid, self.tableDoneCont); // TODO load prefs
 	};
