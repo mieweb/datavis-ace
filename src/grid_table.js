@@ -388,7 +388,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				numCols += 1; // Add a column for the reordering button.
 			}
 
-			self.drawHeader(columns, data, typeInfo);
+			self.drawHeader(columns, data, typeInfo, opts);
 
 			if (self.features.footer) {
 				self.drawFooter(columns, data, typeInfo);
@@ -1397,7 +1397,7 @@ GridTablePivot.prototype.constructor = GridTablePivot;
 
 // #drawHeader {{{2
 
-GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
+GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
 	var headingTr, headingSpan, headingTh;
@@ -1498,8 +1498,10 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
 					.append(headingSpan);
 
 				self.setCss(headingTh, colVal);
-				// REMOVED: I'm not sure how this would function in the pivot table.
-				// self.ui.thMap[colName] = headingTh;
+
+				if (getProp(opts, 'pivotConfig', 'aggField')) {
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+				}
 			}
 			else {
 				lastColValCount += 1;
@@ -1518,10 +1520,13 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo) {
 			_.each(self.opts.addCols, function (addCol) {
 				headingSpan = jQuery('<span>')
 					.text(addCol.name);
-				jQuery('<th>')
+				headingTh = jQuery('<th>')
 					.css(headingThCss)
 					.append(headingSpan)
 					.appendTo(headingTr);
+				if (getProp(opts, 'pivotConfig', 'aggField')) {
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+				}
 			});
 		}
 
@@ -1600,6 +1605,11 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var td = jQuery('<td>').text(text);
 			// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
 			// self.setCss(td, col);
+			
+			if (getProp(opts, 'pivotConfig', 'aggField')) {
+				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+			}
+
 			td.appendTo(tr);
 		});
 
@@ -1620,14 +1630,20 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var addColResult = addCol.value(data.data, groupNum, rowAgg);
 
 			if (addColResult instanceof Element || addColResult instanceof jQuery) {
-				jQuery('<td>').append(addColResult).appendTo(tr);
+				var td = jQuery('<td>').append(addColResult);
 			}
 			else {
 				var addColText = format(pivotAggColConfig, pivotAggColTypeInfo, addColResult, {
 					alwaysFormat: true
 				});
-				jQuery('<td>').text(addColText).appendTo(tr);
+				var td = jQuery('<td>').text(addColText);
 			}
+
+			if (getProp(opts, 'pivotConfig', 'aggField')) {
+				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+			}
+
+			td.appendTo(tr);
 		});
 
 		self.ui.tbody.append(tr);
