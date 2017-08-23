@@ -1996,27 +1996,30 @@ Graph.prototype.normalize = function (opts) {
 
 		var config = opts[dataFormat];
 
-		if (config.graphType === undefined) {
-			throw new Error('Graph config error: data format "' + dataFormat + '": missing `graphType`');
-		}
+		// Check the "graphType" property.
 
-		if (!_.isString(config.graphType)) {
-			throw new Error('Graph config error: data format "' + dataFormat + '": `graphType` must be a string');
-		}
+		if (!isNothing(config.graphType)) {
+			if (!_.isString(config.graphType)) {
+				throw new Error('Graph config error: data format "' + dataFormat + '": `graphType` must be a string');
+			}
 
-		if (['area', 'bar', 'column', 'pie'].indexOf(config.graphType) === -1) {
-			throw new Error('Graph config error: data format "' + dataFormat + '": invalid `graphType`: ' + config.graphType);
+			if (['area', 'bar', 'column', 'pie'].indexOf(config.graphType) === -1) {
+				throw new Error('Graph config error: data format "' + dataFormat + '": invalid `graphType`: ' + config.graphType);
+			}
 		}
 
 		switch (config.graphType) {
 		case 'area':
 		case 'bar':
 		case 'column':
-			if (config.valueField !== undefined && config.valueFields !== undefined) {
+		case 'pie':
+			if (!isNothing(config.valueField) && !isNothing(config.valueFields)) {
 				throw new Error('Graph config error: data format "' + dataFormat + '": can\'t define both `valueField` and `valueFields`');
 			}
 
-			if (config.valueField !== undefined) {
+			// Turn the singular "valueField" into the plural "valueFields."
+
+			if (!isNothing(config.valueField)) {
 				if (!_.isString(config.valueField)) {
 					throw new Error('Graph config error: data format "' + dataFormat + '": `valueField` must be a string');
 				}
@@ -2024,15 +2027,19 @@ Graph.prototype.normalize = function (opts) {
 				delete config.valueField;
 			}
 
-			if (!_.isArray(config.valueFields)) {
-				throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields` must be an array');
-			}
+			// Check the "valueFields" property, if it exists.
 
-			_.each(config.valueFields, function (f, i) {
-				if (!_.isString(f)) {
-					throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields[' + i + ']` must be a string');
+			if (!isNothing(config.valueFields)) {
+				if (!_.isArray(config.valueFields)) {
+					throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields` must be an array');
 				}
-			});
+
+				_.each(config.valueFields, function (f, i) {
+					if (!_.isString(f)) {
+						throw new Error('Graph config error: data format "' + dataFormat + '": `valueFields[' + i + ']` must be a string');
+					}
+				});
+			}
 		}
 	});
 };
@@ -2118,7 +2125,7 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt) {
 			return {v: x.value._value, f: x.orig};
 		}
 		else {
-			return x;
+			return x.value;
 		}
 	};
 
