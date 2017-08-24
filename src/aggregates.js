@@ -421,7 +421,7 @@ AGGREGATES.first = {
 			throw 'first aggregate: missing [field] property';
 		}
 		return function (data) {
-			return getRealValue(data[0].rowData[opts.field]);
+			return data.length > 0 ? getRealValue(data[0].rowData[opts.field]) : '';
 		};
 	},
 	canBePivotCell: true,
@@ -438,7 +438,7 @@ AGGREGATES.last = {
 			throw 'last aggregate: missing [field] property';
 		}
 		return function (data) {
-			return getRealValue(data[data.length - 1].rowData[opts.field]);
+			return data.length > 0 ? getRealValue(data[data.length - 1].rowData[opts.field]) : '';
 		};
 	},
 	canBePivotCell: true,
