@@ -716,7 +716,14 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
 
 					var onRemove = adjustTableToolHeight;
 
-					self.defn.gridFilterSet.add(field, th, colConfig.filter, jQuery(this), onRemove, filterTh);
+					self.defn.gridFilterSet.add(field, th, {
+						filterType: colConfig.filter,
+						filterButton: jQuery(this),
+						makeRemoveButton: true,
+						onRemove: onRemove,
+						autoUpdateInputWidth: true,
+						sizingElement: filterTh
+					});
 
 					adjustTableToolHeight();
 				})

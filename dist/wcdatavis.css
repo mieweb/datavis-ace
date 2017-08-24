@@ -143,11 +143,13 @@ span.wcdv_button {
 }
 
 .wcdv_group_control .wcdv_remove,
+.wcdv_filter_control .wcdv_remove,
 .wcdv_pivot_control .wcdv_remove {
 	margin-right: 4px;
 }
 
 .wcdv_group_control ul,
+.wcdv_filter_control ul,
 .wcdv_pivot_fields_container ul {
 	list-style-type: none;
 	padding: 0px;
@@ -156,6 +158,7 @@ span.wcdv_button {
 }
 
 .wcdv_group_control,
+.wcdv_filter_control,
 .wcdv_pivot_control .wcdv_aggregate_container,
 .wcdv_pivot_control .wcdv_pivot_fields_container {
 	border: solid 1px #888;
@@ -171,6 +174,7 @@ span.wcdv_button {
 }
 
 .wcdv_group_control,
+.wcdv_filter_control,
 .wcdv_pivot_control {
 	display: inline-block;
 	margin-bottom: 4px;
@@ -182,6 +186,7 @@ span.wcdv_button {
 }
 
 .wcdv_group_control ul li .wcdv_field,
+.wcdv_filter_control ul li .wcdv_field,
 .wcdv_pivot_fields_container ul li .wcdv_field {
 	border: solid 1px #444;
 	border-radius: 4px;
@@ -191,6 +196,10 @@ span.wcdv_button {
 .wcdv_group_control ul li, /* HORIZONTAL */
 .wcdv_pivot_fields_container ul li .wcdv_field {
 	margin-right: 4px;
+}
+
+.wcdv_filter_control_filter_container {
+	display: inline-block;
 }
 
 .wcdv_grid_table {

@@ -29,11 +29,17 @@ GridFilterError.prototype.constructor = GridError;
  *
  * @property {string} field
  *
- * @property {string} filterType
- *
- * @property {string} filterBtn
- *
  * @property {GridFilterSet} gridFilterSet
+ *
+ * @property {object} opts
+ *
+ * @property {string} [opts.filterType]
+ *
+ * @property {string} [opts.filterButton]
+ * The button used to add a new filter.
+ *
+ * @property {string} [opts.noRemoveButton=false]
+ * If true, don't create a remove button to place next to the filter.
  *
  * @property {number} limit
  *
@@ -56,25 +62,28 @@ var GridFilter = (function () {
 		return 'GridFilter_' + id++;
 	};
 
-	return function (field, filterType, filterBtn, gridFilterSet, th, onRemove, sizingElement) {
+	return function (field, gridFilterSet, opts) {
 		var self = this;
 
+		self.id = genId();
 		self.field = field;
-		self.filterType = filterType;
-		self.filterBtn = filterBtn;
 		self.gridFilterSet = gridFilterSet;
+		self.opts = opts;
+
 		self.limit = 0;
 		self.applyImmediately = false;
 		self.div = jQuery('<div>')
 			.css({'white-space': 'nowrap', 'padding-top': 2, 'padding-bottom': 2});
-		self.removeBtn = self.makeRemoveBtn();
-		self.onRemove = onRemove;
-		self.id = genId();
-		self.sizingElement = sizingElement;
 
-		self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
-			self.adjustInputWidth({ useSizingElement: true, fromColumnResize: true });
-		});
+		if (self.opts.makeRemoveButton) {
+			self.removeBtn = self.makeRemoveBtn();
+		}
+
+		if (self.gridFilterSet.gridTable) {
+			self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+				self.adjustInputWidth({ useSizingElement: true, fromColumnResize: true });
+			});
+		}
 	};
 })();
 
@@ -206,9 +215,9 @@ GridFilter.prototype.makeRemoveBtn = function () {
 
 	removeBtn.css({'cursor': 'pointer', 'margin-left': '0.5em'})
 	removeBtn.on('click', function () {
-		self.gridFilterSet.remove(self.getId(), self.filterBtn);
-		if (typeof self.onRemove === 'function') {
-			self.onRemove();
+		self.gridFilterSet.remove(self.getId(), self.opts.filterButton);
+		if (typeof self.opts.onRemove === 'function') {
+			self.opts.onRemove();
 		}
 	});
 
@@ -235,6 +244,10 @@ GridFilter.prototype.isRange = function () {
 GridFilter.prototype.adjustInputWidth = function (opts) {
 	var self = this;
 
+	if (!self.opts.autoUpdateInputWidth) {
+		return;
+	}
+
 	if (opts === undefined) {
 		opts = {};
 	}
@@ -258,12 +271,13 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 
 	debug.info('GRID FILTER // ADJUST INPUT WIDTH', '         Target: %O', opts.input);
 
-	var targetWidth = opts.useSizingElement ? self.sizingElement.width() : self.div.width();
+	var targetWidth = opts.useSizingElement ? self.opts.sizingElement.width() : self.div.width();
 	debug.info('GRID FILTER // ADJUST INPUT WIDTH', 'Available Space: ' + targetWidth + 'px ' + (opts.useSizingElement ? '[sizing element]' : '[div]'));
 
-	targetWidth -= self.removeBtn.outerWidth();
-	debug.info('GRID FILTER // ADJUST INPUT WIDTH', '  Remove Button: ' + self.removeBtn.outerWidth() + 'px');
-
+	if (self.removeBtn) {
+		targetWidth -= self.removeBtn.outerWidth();
+		debug.info('GRID FILTER // ADJUST INPUT WIDTH', '  Remove Button: ' + self.removeBtn.outerWidth() + 'px');
+	}
 
 	if (self.operatorDrop !== undefined) {
 		targetWidth -= self.operatorDrop.outerWidth();
@@ -309,33 +323,14 @@ var StringTextboxGridFilter = function () {
 
 	self.div
 		.append(self.operatorDrop)
-		.append(self.input)
-		.append(self.removeBtn);
+		.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 };
 
 StringTextboxGridFilter.prototype = Object.create(GridFilter.prototype);
-
-/*
-StringTextboxGridFilter.prototype.getOperator = function () {
-	var self = this;
-
-	var op = GridFilter.prototype.getOperator.call(self);
-
-	if (self.strictChkbox[0].checked) {
-		return op;
-	}
-	else {
-		switch (op) {
-		case '$eq':
-			return '$contains';
-		case '$ne':
-			return '$notcontains';
-		default:
-			throw new GridFilterError('<< TSNH >> Unable to determine corresponding non-strict operator for ' + op);
-		}
-	}
-}
-*/
 
 // StringDropdownGridFilterChosen {{{2
 
@@ -361,8 +356,11 @@ var StringDropdownGridFilterChosen = function () {
 	});
 
 	self.div
-		.append(self.input)
-		.append(self.removeBtn);
+		.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 
 	self.afterAdd = function (target) {
 		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
@@ -376,11 +374,13 @@ var StringDropdownGridFilterChosen = function () {
 		});
 	};
 
-	self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
-		var targetWidth = self.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
-		debug.info('GRID FILTER // HANDLER (GridTablePlain.columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
-		self.chosen.innerWidth(targetWidth);
-	});
+	if (self.gridFilterSet.gridTable) {
+		self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+			var targetWidth = self.opts.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
+			debug.info('GRID FILTER // HANDLER (GridTablePlain.columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
+			self.chosen.innerWidth(targetWidth);
+		});
+	}
 };
 
 StringDropdownGridFilterChosen.prototype = Object.create(GridFilter.prototype);
@@ -424,9 +424,11 @@ var StringDropdownGridFilterSumo = function () {
 			self.gridFilterSet.update(false);
 		});
 
-	self.div
-		.append(self.input)
-		.append(self.removeBtn);
+	self.div.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 
 	self.afterAdd = function (target) {
 		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
@@ -506,10 +508,12 @@ var NumberTextboxGridFilter = function () {
 
 	self.operatorDrop = self.makeOperatorDrop(['$eq', '$ne', '$lt', '$lte', '$gt', '$gte']);
 
-	self.div
-		.append(self.operatorDrop)
-		.append(self.input)
-		.append(self.removeBtn);
+	self.div.append(self.operatorDrop);
+	self.div.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 };
 
 NumberTextboxGridFilter.prototype = Object.create(GridFilter.prototype);
@@ -529,8 +533,11 @@ var NumberCheckboxGridFilter = function () {
 	self.div
 		.append(jQuery('<label>')
 						.append(self.input)
-						.append(' Filter'))
-		.append(self.removeBtn);
+						.append(' Filter'));
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 
 	self.applyImmediately = true;
 	self.limit = 1;
@@ -575,8 +582,11 @@ var DateSingleGridFilter = function () {
 	});
 
 	self.div
-		.append(self.input)
-		.append(self.removeBtn);
+		.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 };
 
 DateSingleGridFilter.prototype = Object.create(GridFilter.prototype);
@@ -613,8 +623,11 @@ var DateRangeGridFilter = function () {
 	});
 
 	self.div
-		.append(self.input)
-		.append(self.removeBtn);
+		.append(self.input);
+
+	if (self.removeBtn) {
+		self.div.append(self.removeBtn);
+	}
 };
 
 DateRangeGridFilter.prototype = Object.create(GridFilter.prototype);
@@ -772,11 +785,16 @@ var GridFilterSet = function (view, prefs, gridTable, progress) {
 	self.delayUpdate = false;
 };
 
+GridFilterSet.prototype = Object.create(Object.prototype);
+GridFilterSet.prototype.constructor = GridFilterSet;
+
 // .events {{{2
 
 GridFilterSet.events = objFromArray([
-	'filterAdded'
+		'filterAdded'
 	, 'filterRemoved'
+	, 'widgetResizedHoriz'
+	, 'widgetResizedVert'
 ]);
 
 mixinEventHandling(GridFilterSet, 'GridFilterSet', GridFilterSet.events);
@@ -798,11 +816,12 @@ mixinEventHandling(GridFilterSet, 'GridFilterSet', GridFilterSet.events);
  * it, if we've reached the maximum number of filters allowed on the column.
  */
 
-GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, onRemove, sizingElement) {
+GridFilterSet.prototype.add = function (field, target, opts) {
 	var self = this
+		, opts = opts || {}
 		, filter;
 
-	filter = self.build(field, filterType, filterBtn, target, onRemove, sizingElement);
+	filter = self.build(field, target, opts);
 
 	// Make sure that requisite data structures are there.
 
@@ -829,8 +848,8 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, on
 	// Hide the "add filter" button if we've reached the limit of the number of filters we're allowed
 	// to have for this column.
 
-	if (self.filters.byCol[field].length === filter.limit) {
-		filterBtn.hide();
+	if (opts.filterBtn && self.filters.byCol[field].length === filter.limit) {
+		opts.filterBtn.hide();
 	}
 
 	self.fire(GridFilterSet.events.filterAdded);
@@ -868,17 +887,15 @@ GridFilterSet.prototype.add = function (field, target, filterType, filterBtn, on
  * div which is placed within the `target` is used.
  */
 
-GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, onRemove, sizingElement) {
-	var self = this
-		, colType
-		, ctor;
+GridFilterSet.prototype.build = function (field, target, opts) {//filterType, filterBtn, target, onRemove, sizingElement, noRemoveBtn) {
+	var self = this;
 
 	// We use a data source to get the type information, so if the grid was built without a data
 	// source, this isn't going to work.
 	//
 	// FIXME Don't rely on the cache, do it right.
 
-	colType = self.view.typeInfo.get(field).type;
+	var colType = self.view.typeInfo.get(field).type;
 
 	// Make sure that we are able to get the column type.
 
@@ -895,13 +912,8 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, 
 	// When the user didn't request a filter type, just use the first one in the allowed list.
 	// Otherwise, make sure that the filter type they asked for makes sense for the column type.
 
-	if (isNothing(filterType)) {
-		filterType = GridFilter.defaultWidgets[colType];
-		ctor = GridFilter.widgets[colType][filterType];
-	}
-	else {
-		ctor = GridFilter.widgets[colType][filterType];
-	}
+	var filterType = opts.filterType || GridFilter.defaultWidgets[colType];
+	var ctor = GridFilter.widgets[colType][filterType];
 
 	if (ctor === undefined) {
 		throw new GridFilterError('Invalid filter type "' + filterType + '" for type "' + colType + '" of column "' + field + '"');
@@ -909,7 +921,7 @@ GridFilterSet.prototype.build = function (field, filterType, filterBtn, target, 
 
 	debug.info('GRID FILTER', 'Creating new widget: column type = "' + colType + '" ; filter type = "' + filterType + '"');
 
-	return new ctor(field, filterType, filterBtn, self, target, onRemove, sizingElement);
+	return new ctor(field, self, opts);
 };
 
 // #remove {{{2
@@ -949,7 +961,7 @@ GridFilterSet.prototype.remove = function (id, filterBtn) {
 	// Show the "add filter" button if we're below the limit of the number of filters we're allowed to
 	// have for this column.
 
-	if (self.filters.byCol[filter.field].length < filter.limit) {
+	if (filterBtn && self.filters.byCol[filter.field].length < filter.limit) {
 		filterBtn.show();
 	}
 

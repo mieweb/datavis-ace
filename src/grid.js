@@ -1077,7 +1077,7 @@ Grid.prototype.refresh = function () {
 		self.ui.groupControl.hide();
 	}
 
-	if (false && self.features.filter) { // XXX
+	if (self.features.filter) {
 		self.filterControl = new FilterControl(self.defn, self.view, self.features, self.timing);
 		self.ui.filterControl.children().remove();
 		self.filterControl.draw(self.ui.filterControl);
@@ -1484,6 +1484,7 @@ GridControl.prototype.init = function (defn, view, features, timing) {
 	self.timing = timing;
 	self.ui = {};
 	self.colConfig = _.indexBy(getPropDef({}, self.defn, 'table', 'columns'), 'field');
+	self.fields = [];
 };
 
 // #makeAddButton {{{2
@@ -1545,18 +1546,19 @@ GridControl.prototype.makeClearButton = function (target) {
  * Name of the field to add.
  */
 
-GridControl.prototype.addField = function (field) {
-	var self = this;
+GridControl.prototype.addField = function (field, opts) {
+	var self = this
+		, opts = opts || {};
 
 	if (isNothing(field) || field === '' || self.fields.indexOf(field) >= 0) {
 		return;
 	}
 
-	var gcf = new self.controlFieldCtor(self, field, self.colConfig[field] || {});
+	var cf = new self.controlFieldCtor(self, field, self.colConfig[field] || {});
 
 	self.ui.clearBtn.show();
 
-	jQuery('<li>').append(gcf.draw()).appendTo(self.ui.fields); // Add it to the DOM.
+	jQuery('<li>').append(cf.draw()).appendTo(self.ui.fields); // Add it to the DOM.
 
 	self.ui.dropdown.find('option').filter(function () {
 		return jQuery(this).val() === field;
@@ -1564,7 +1566,10 @@ GridControl.prototype.addField = function (field) {
 	self.ui.dropdown.val('');
 
 	self.fields.push(field); // Add it to the fields array.
-	self.updateView();
+
+	if (!isNothing(opts.noUpdate) && opts.noUpdate) {
+		self.updateView();
+	}
 };
 
 // #removeField {{{2
@@ -1633,8 +1638,6 @@ function GroupControl() {
 
 	self.super = makeSuper(self, GridControl);
 	self.super.init.apply(self, arguments);
-
-	self.fields = [];
 }
 
 GroupControl.prototype = Object.create(GridControl.prototype);
@@ -1754,8 +1757,6 @@ function PivotControl() {
 	self.super = makeSuper(self, GridControl);
 	self.super.init.apply(self, args);
 	self.opts = opts;
-
-	self.fields = [];
 }
 
 PivotControl.prototype = Object.create(GridControl.prototype);
@@ -1922,11 +1923,13 @@ function FilterControl() {
 
 	self.super = makeSuper(self, GridControl);
 	self.super.init.apply(self, arguments);
-	self.gfs = new GridFilterSet();
+	self.gfs = new GridFilterSet(self.view);
 }
 
 FilterControl.prototype = Object.create(GridControl.prototype);
 FilterControl.prototype.constructor = FilterControl;
+
+FilterControl.prototype.controlFieldCtor = FilterControlField;
 
 // #draw {{{2
 
@@ -1937,19 +1940,28 @@ FilterControl.prototype.constructor = FilterControl;
  * @returns {jQuery} The DIV element that holds the entire UI.
  */
 
-FilterControl.prototype.draw = function () {
+FilterControl.prototype.draw = function (parent) {
 	var self = this;
 
-	self.ui.root = jQuery('<div>');
-	self.ui.title = jQuery('<span>', { 'class': 'wcdv_title' }).text('Filter').appendTo(self.ui.root);
+	self.ui.root = jQuery('<div>').appendTo(parent);
+	self.ui.title = jQuery('<div>')
+		.addClass('wcdv_control_title_bar')
+		.appendTo(self.ui.root);
+	jQuery('<span>', { 'class': 'wcdv_control_title' })
+		.text('Filters')
+		.appendTo(self.ui.title);
+	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
 	self.makeAddButton(dropdownContainer);
 
+	jQuery('<option>', { 'value': '', 'disabled': true, 'selected': true })
+		.text('Select Field')
+		.appendTo(self.ui.dropdown);
+
 	self.view.on('getTypeInfo', function (typeInfo) {
-		self.ui.dropdown.children().remove();
 		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
@@ -1959,6 +1971,13 @@ FilterControl.prototype.draw = function () {
 	return self.ui.root;
 };
 
+// #addField {{{2
+
+FilterControl.prototype.addField = function (field) {
+	var self = this;
+
+	self.super.addField(field, { noUpdate: true });	
+};
 
 // #updateView {{{2
 
@@ -2043,3 +2062,28 @@ function PivotControlField() {
 
 PivotControlField.prototype = Object.create(GridControlField.prototype);
 PivotControlField.prototype.constructor = PivotControlField;
+// FilterControlField {{{1
+
+function FilterControlField() {
+	var self = this;
+
+	self.super = makeSuper(self, GridControlField);
+	self.super.init.apply(self, arguments);
+};
+
+FilterControlField.prototype = Object.create(GridControlField.prototype);
+FilterControlField.prototype.constructor = FilterControlField;
+
+// #draw {{{2
+
+FilterControlField.prototype.draw = function () {
+	var self = this;
+
+	self.super.draw();
+	self.ui.filterContainer = jQuery('<div>')
+		.addClass('wcdv_filter_control_filter_container')
+		.appendTo(self.ui.root);
+	self.control.gfs.add(self.field, self.ui.filterContainer);
+
+	return self.ui.root;
+};
