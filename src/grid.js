@@ -904,6 +904,7 @@ Grid.prototype.addPivotButtons = function (parent) {
 		parent,
 		function (isChecked) {
 			setProp(isChecked ? newAddCols : userAddCols, self.defn, 'table', 'whenPivot', 'addCols');
+			/*
 			var gridTableOpts = {};
 
 			if (self.pivotAggConfig) {
@@ -912,9 +913,10 @@ Grid.prototype.addPivotButtons = function (parent) {
 					aggField: self.pivotAggConfig.aggField
 				};
 			}
+			*/
 
 			self.gridTable.clear();
-			self.gridTable.draw(self.ui.grid, self.tableDoneCont, gridTableOpts);
+			self.gridTable.draw(self.ui.grid, self.tableDoneCont/*, gridTableOpts*/);
 		}
 	);
 };
@@ -1100,18 +1102,22 @@ Grid.prototype.refresh = function () {
 
 				debug.info('GRID // ON AGGREGATE CHANGE', 'Redrawing pivot table: { aggFun = "%s", aggField = "%s" }', aggFun, aggField);
 
+				/*
 				self.pivotAggConfig = {
 					aggFun: aggFun,
 					aggField: aggField
 				};
+				*/
 
-				self.gridTable.clear();
-				self.gridTable.draw(self.ui.grid, self.tableDoneCont, {
+				self.gridTable.setDrawOptions({
 					pivotConfig: {
-						aggFun: self.pivotAggConfig.aggFun,
-						aggField: self.pivotAggConfig.aggField
+						aggFun: aggFun,
+						aggField: aggField
 					}
 				});
+
+				self.gridTable.clear();
+				self.gridTable.draw(self.ui.grid, self.tableDoneCont);
 			}
 		});
 		self.ui.pivotControl.children().remove();

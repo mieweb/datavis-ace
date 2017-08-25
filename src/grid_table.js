@@ -1,5 +1,33 @@
 // GridTable {{{1
 
+/**
+ * @class
+ *
+ * An abstract base class for all grid tables (which are responsible for building the DOM elements
+ * to represent the data in a tabular format).  Concrete subclasses must implement the following
+ * methods:
+ *
+ *   - `drawHeader(columns, data, typeInfo, opts)`
+ *   - `drawBody(data, typeInfo, columns, cont, opts)`
+ *   - `addWorkHandler()`
+ *
+ * @property {string} id
+ *
+ * @property {object} defn
+ *
+ * @property {View} view
+ *
+ * @property {object} features
+ *
+ * @property {object} opts
+ *
+ * @property {Timing} timing
+ *
+ * @property {boolean} needsRedraw
+ *
+ * @property {Object.<string, ColConfig>} colConfig
+ */
+
 var GridTable = function () {
 };
 
@@ -247,61 +275,12 @@ GridTable.prototype.addFilterHandler = function () {
 	}
 };
 
-// #addWorkHandler {{{2
-
-GridTable.prototype.addWorkHandler = function () {
-	var self = this;
-
-	self.view.on(View.events.workEnd, function (info, ops) {
-		debug.info('GRID TABLE // HANDLER (View.workEnd)', 'View has finished doing work');
-
-		if (ops.group || ops.pivot) {
-
-			// If the data is grouped or pivotted, we can't render it.  Emit the "unable to render" event
-			// so that our Grid instance can replace us with a GridTableGroup or GridTablePivot instance
-			// which can render the data.
-
-			self.fire(GridTable.events.unableToRender, ops);
-			return;
-		}
-
-		if (self.needsRedraw) {
-			debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
-
-			self.needsRedraw = false;
-
-			return self.view.getData(function (data) {
-				return self.view.getTypeInfo(function (typeInfo) {
-					self.timing.start(['Grid Table', 'Redraw triggered by view']);
-
-					// Determine what columns will be in the table.  This comes from the user, or from the
-					// data itself.  We may then add columns for extra features (like row selection or
-					// reordering).
-
-					var columns = determineColumns(self.defn, data, typeInfo);
-
-					// Draw the body.
-
-					self.drawBody(data, typeInfo, columns, function () {
-						self.timing.stop(['Grid Table', 'Redraw triggered by view']);
-
-						// Potentially the columns resized as a result of sorting, filtering, or adding new data.
-						self.fire(GridTable.events.columnResize);
-					});
-				});
-			});
-		}
-		else {
-			// Potentially the columns resized as a result of sorting, filtering, or adding new data.
-			self.fire(GridTable.events.columnResize);
-		}
-	}, { who: self });
-};
-
 // #draw {{{2
 
 GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	var self = this;
+
+	opts = opts || self.drawOpts;
 
 	self.root = root;
 
@@ -413,13 +392,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			self.addSortHandler();
 			self.addFilterHandler();
 
-			// Sets up callbacks responsible for correctly redrawing the grid when the view has done work
-			// (e.g. sorting or filtering) that will change what is displayed.  This is only needed when
-			// limiting output because otherwise, sort and filter callbacks don't need to redraw the whole
-			// grid, and they are taken care of by the 'sort' and 'filter' events on a row-by-row basis.
-
-			self.addWorkHandler();
-
 			if (self.features.rowReorder) {
 				configureRowReordering(self.defn, self.ui.tbody);
 			}
@@ -444,6 +416,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				debug.info('GRID TABLE // DRAW', 'Enabling TableTool');
 				self.ui.tbl.attr('data-tttype', 'sticky');
 			}
+
+			self.addWorkHandler();
 		});
 	});
 };
@@ -515,6 +489,22 @@ GridTable.prototype.makeProgress = function (thing) {
 			}
 		};
 	}
+};
+
+// #setDrawOptions {{{2
+
+GridTable.prototype.setDrawOptions = function (opts) {
+	var self = this;
+
+	self.drawOpts = opts;
+};
+
+// #clearDrawOptions {{{2
+
+GridTable.prototype.clearDrawOptions = function () {
+	var self = this;
+
+	delete self.drawOpts;
 };
 
 // GridTablePlain {{{1
@@ -593,7 +583,7 @@ GridTablePlain.prototype._validateLimit = function () {
  * @param {Source~TypeInfo} typeInfo
  */
 
-GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
+GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
 	var headingTr, headingSpan, headingTh;
@@ -758,7 +748,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo) {
 
 // #drawBody {{{2
 
-GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont) {
+GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opts) {
 	var self = this;
 
 	var check_handler = function () {
@@ -1197,6 +1187,62 @@ GridTablePlain.prototype.updateFeatures = function (f) {
 	self.draw(self.root);
 };
 
+// #addWorkHandler {{{2
+
+GridTablePlain.prototype.addWorkHandler = function () {
+	var self = this;
+
+	// Sets up callbacks responsible for correctly redrawing the grid when the view has done work
+	// (e.g. sorting or filtering) that will change what is displayed.  This is only needed when
+	// limiting output because otherwise, sort and filter callbacks don't need to redraw the whole
+	// grid, and they are taken care of by the 'sort' and 'filter' events on a row-by-row basis.
+
+	self.view.on(View.events.workEnd, function (info, ops) {
+		debug.info('GRID TABLE // HANDLER (View.workEnd)', 'View has finished doing work');
+
+		if (ops.group || ops.pivot) {
+
+			// If the data is grouped or pivotted, we can't render it.  Emit the "unable to render" event
+			// so that our Grid instance can replace us with a GridTableGroup or GridTablePivot instance
+			// which can render the data.
+
+			self.fire(GridTable.events.unableToRender, ops);
+			return;
+		}
+
+		if (self.needsRedraw) {
+			debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
+
+			self.needsRedraw = false;
+
+			return self.view.getData(function (data) {
+				return self.view.getTypeInfo(function (typeInfo) {
+					self.timing.start(['Grid Table', 'Redraw triggered by view']);
+
+					// Determine what columns will be in the table.  This comes from the user, or from the
+					// data itself.  We may then add columns for extra features (like row selection or
+					// reordering).
+
+					var columns = determineColumns(self.defn, data, typeInfo);
+
+					// Draw the body.
+
+					self.drawBody(data, typeInfo, columns, function () {
+						self.timing.stop(['Grid Table', 'Redraw triggered by view']);
+
+						// Potentially the columns resized as a result of sorting, filtering, or adding new data.
+						self.fire(GridTable.events.columnResize);
+					});
+				});
+			});
+		}
+		else {
+			// Potentially the columns resized as a result of sorting, filtering, or adding new data.
+			self.fire(GridTable.events.columnResize);
+		}
+	}, { who: self });
+};
+
 // GridTableGroup {{{1
 
 // Constructor {{{2
@@ -1217,7 +1263,7 @@ GridTableGroup.prototype.constructor = GridTableGroup;
 
 // #drawHeader {{{2
 
-GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
+GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
 	var headingTr, headingSpan, headingTh;
@@ -1287,7 +1333,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo) {
 
 // #drawBody {{{2
 
-GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont) {
+GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opts) {
 	var self = this;
 
 	if (!data.isGroup) {
@@ -1667,3 +1713,23 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		return cont();
 	}
 };
+// #addWorkHandler {{{2
+
+GridTablePivot.prototype.addWorkHandler = function () {
+	var self = this;
+
+	self.view.on(View.events.workEnd, function (info, ops) {
+		debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'View has finished doing work');
+
+		if (!ops.pivot) {
+			debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'Unable to render this data: %O', ops);
+			self.fire(GridTable.events.unableToRender, ops);
+			return;
+		}
+
+		debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
+		self.clear();
+		self.draw(self.root);
+	}, { who: self });
+};
+
