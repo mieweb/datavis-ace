@@ -390,6 +390,8 @@ View.prototype.setFilter = function (spec, dontNotify, progress) {
 	self.filterSpec = spec;
 	self.filterProgress = progress;
 	self.getData();
+
+	return true;
 };
 
 // #clearFilter {{{2
@@ -683,6 +685,8 @@ View.prototype.setGroup = function (spec) {
 	self.clearCache();
 	self.groupSpec = spec;
 	self.getData();
+
+	return true;
 };
 
 // #clearGroup {{{2
@@ -825,13 +829,15 @@ View.prototype.setPivot = function (spec) {
 	var self = this;
 
 	if (self.groupSpec === undefined) {
-		alert("Can't pivot without group yet, sorry!");
-		return;
+		alert("Come on, you're just doing this on purpose now!");
+		return false;
 	}
 
 	self.clearCache();
 	self.pivotSpec = spec;
 	self.getData();
+
+	return true;
 };
 
 // #clearPivot {{{2

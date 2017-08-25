@@ -1609,7 +1609,7 @@ GridControl.prototype.removeField = function (cf) {
  * Removes all fields from the control.  Automatically updates the view afterwards.
  */
 
-GridControl.prototype.clear = function () {
+GridControl.prototype.clear = function (noUpdateView) {
 	var self = this;
 
 	self.fields = [];
@@ -1617,7 +1617,11 @@ GridControl.prototype.clear = function () {
 	self.ui.dropdown.find('option:disabled').filter(function () {
 		return jQuery(this).val() !== '';
 	}).prop('disabled', false);
-	self.updateView();
+	self.ui.clearBtn.hide();
+
+	if (!noUpdateView) {
+		self.updateView();
+	}
 };
 
 // GroupControl {{{1
@@ -1860,6 +1864,35 @@ PivotControl.prototype.draw = function (parent) {
 	return self.ui.root;
 };
 
+// #addField {{{2
+
+PivotControl.prototype.addField = function (field) {
+	var self = this;
+
+	self.ui.aggContainer.show();
+	self.super.addField(field);
+};
+
+// #removeField {{{2
+
+PivotControl.prototype.removeField = function (cf) {
+	var self = this;
+
+	self.super.removeField(cf);
+	if (self.fields.length === 0) {
+		self.ui.aggContainer.hide();
+	}
+};
+
+// #clear {{{2
+
+PivotControl.prototype.clear = function (noUpdateView) {
+	var self = this;
+
+	self.super.clear(noUpdateView);
+	self.ui.aggContainer.hide();
+};
+
 // #updateView {{{2
 
 /**
@@ -1874,12 +1907,12 @@ PivotControl.prototype.updateView = function () {
 	debug.info('GRID // PIVOT CONTROL', 'Setting pivot fields to: %O', self.fields);
 
 	if (self.fields.length > 0) {
-		self.ui.aggContainer.show();
-		self.view.setPivot({fieldNames: self.fields});
+		if (!self.view.setPivot({fieldNames: self.fields})) {
+			self.clear(true);
+		}
 	}
 	else {
 		self.view.clearPivot();
-		self.ui.aggContainer.hide();
 	}
 };
 
