@@ -22,6 +22,8 @@ GridFilterError.prototype.constructor = GridError;
 
 // Superclass {{{2
 
+// Constructor {{{3
+
 /**
  * Base class for all grid filter widgets.
  *
@@ -998,6 +1000,8 @@ GridFilterSet.prototype.removeField = function (fieldName, filterBtn) {
 GridFilterSet.prototype.reset = function () {
 	var self = this;
 
+	self.delayUpdate = true;
+
 	// Remove every filter from the user interface.
 
 	_.each(self.filters.all, function (filter) {
@@ -1013,6 +1017,8 @@ GridFilterSet.prototype.reset = function () {
 	};
 
 	self.view.clearFilter();
+
+	self.delayUpdate = false;
 };
 
 // #update {{{2
