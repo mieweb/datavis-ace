@@ -13,7 +13,7 @@ GridTable.prototype.init = function (defn, view, features, opts, timing, id) {
 	self.id = id;
 	self.defn = defn;
 	self.view = view;
-	self.features = features;
+	self.features = deepCopy(features);
 	self.opts = opts;
 	self.timing = timing;
 
@@ -219,33 +219,31 @@ GridTable.prototype.addFilterHandler = function () {
 
 	self.view.off('filter');
 
-	if (self.features.filter) {
-		if (self.features.limit) {
-			self.view.on(View.events.filterEnd, function () {
-				debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
-				self.needsRedraw = true;
-			}, { who: self });
-		}
-		else {
-			var even = false; // Rows are 1-based to match our CSS zebra-striping.
+	if (self.features.limit) {
+		self.view.on(View.events.filterEnd, function () {
+			debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
+			self.needsRedraw = true;
+		}, { who: self });
+	}
+	else {
+		var even = false; // Rows are 1-based to match our CSS zebra-striping.
 
-			self.view.on(View.events.filter, function (rowNum, hide) {
-				if (isNothing(self.ui.tr[rowNum])) {
-					debug.info('GRID TABLE // HANDLER (View.filter)', 'We were told to ' + (hide ? 'hide' : 'show') + ' row ' + rowNum + ', but it doesn\'t exist');
-					return;
-				}
+		self.view.on(View.events.filter, function (rowNum, hide) {
+			if (isNothing(self.ui.tr[rowNum])) {
+				debug.info('GRID TABLE // HANDLER (View.filter)', 'We were told to ' + (hide ? 'hide' : 'show') + ' row ' + rowNum + ', but it doesn\'t exist');
+				return;
+			}
 
-				self.ui.tr[rowNum].removeClass('even odd');
-				if (hide) {
-					self.ui.tr[rowNum].hide();
-				}
-				else {
-					self.ui.tr[rowNum].show();
-					self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
-					even = !even;
-				}
-			}, { who: self });
-		}
+			self.ui.tr[rowNum].removeClass('even odd');
+			if (hide) {
+				self.ui.tr[rowNum].hide();
+			}
+			else {
+				self.ui.tr[rowNum].show();
+				self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
+				even = !even;
+			}
+		}, { who: self });
 	}
 };
 
@@ -553,6 +551,9 @@ GridTable.prototype.makeProgress = function (thing) {
 
 var GridTablePlain = function (defn, view, features, opts, timing, id) {
 	var self = this;
+
+	features = deepCopy(features);
+	features.filter = false;
 
 	self.super = makeSuper(self, GridTable);
 	self.super.init(defn, view, features, opts, timing, id);
@@ -1203,7 +1204,7 @@ GridTablePlain.prototype.updateFeatures = function (f) {
 var GridTableGroup = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = jQuery.extend(true, {}, features);
+	features = deepCopy(features);
 	features.limit = false;
 	features.footer = false;
 
@@ -1391,7 +1392,7 @@ GridTableGroup.prototype.addWorkHandler = function () {
 var GridTablePivot = function (defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = jQuery.extend(true, {}, features);
+	features = deepCopy(features);
 	features.limit = false;
 	features.footer = false;
 

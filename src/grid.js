@@ -1956,6 +1956,19 @@ FilterControl.prototype.draw = function (parent) {
 		minWidth: 100
 	});
 
+	parent.droppable({
+		classes: {
+			'ui-droppable-hover': 'wcdv_drop_target_hover'
+		},
+		drop: function (evt, ui) {
+			// Turn this off for the sake of efficiency.
+			ui.draggable.draggable('option', 'refreshPositions', false);
+
+			self.addField(ui.draggable.attr('data-wcdv-field'));
+		}
+	});
+
+
 	self.ui.root = jQuery('<div>').appendTo(parent);
 	self.ui.title = jQuery('<div>')
 		.addClass('wcdv_control_title_bar')
@@ -1992,6 +2005,24 @@ FilterControl.prototype.addField = function (field) {
 	self.super.addField(field, { noUpdate: true });	
 };
 
+// #removeField {{{2
+
+FilterControl.prototype.removeField = function (cf) {
+	var self = this;
+
+	self.gfs.removeField(cf.field);
+	self.super.removeField(cf);
+};
+
+// #clear {{{2
+
+FilterControl.prototype.clear = function () {
+	var self = this;
+
+	self.gfs.reset();
+	self.super.clear();
+};
+
 // #updateView {{{2
 
 FilterControl.prototype.updateView = function () {
@@ -2022,15 +2053,16 @@ GridControlField.prototype.init = function (control, field, colConfig) {
 GridControlField.prototype.draw = function () {
 	var self = this;
 
+	self.ui.removeButton = jQuery(fontAwesome('F146'))
+		.attr('title', 'Remove')
+		.addClass('wcdv_button wcdv_remove')
+		.on('click', function () {
+			self.control.removeField(self);
+		})
+	;
+
 	self.ui.root = jQuery('<div>', { 'class': 'wcdv_field' })
-		.append(
-			jQuery(fontAwesome('F146'))
-			.attr('title', 'Remove')
-			.addClass('wcdv_button wcdv_remove')
-			.on('click', function () {
-				self.control.removeField(self);
-			})
-		)
+		.append(self.ui.removeButton)
 		.append(jQuery('<span>').text(self.colConfig.displayText || self.field))
 	;
 

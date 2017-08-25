@@ -64,6 +64,7 @@ var GridFilter = (function () {
 
 	return function (field, gridFilterSet, opts) {
 		var self = this;
+		var localRemoveButton;
 
 		self.id = genId();
 		self.field = field;
@@ -77,6 +78,19 @@ var GridFilter = (function () {
 
 		if (self.opts.makeRemoveButton) {
 			self.removeBtn = self.makeRemoveBtn();
+			localRemoveButton = self.removeBtn;
+		}
+		else if (self.opts.removeButton) {
+			localRemoveButton = self.opts.removeButton;
+		};
+
+		if (localRemoveButton) {
+			localRemoveButton.on('click', function () {
+				self.gridFilterSet.remove(self.getId(), self.opts.filterButton);
+				if (typeof self.opts.onRemove === 'function') {
+					self.opts.onRemove();
+				}
+			});
 		}
 
 		if (self.gridFilterSet.gridTable) {
@@ -214,13 +228,6 @@ GridFilter.prototype.makeRemoveBtn = function () {
 	var removeBtn = jQuery(fontAwesome('F00D', null, 'Click to remove filter'));
 
 	removeBtn.css({'cursor': 'pointer', 'margin-left': '0.5em'})
-	removeBtn.on('click', function () {
-		self.gridFilterSet.remove(self.getId(), self.opts.filterButton);
-		if (typeof self.opts.onRemove === 'function') {
-			self.opts.onRemove();
-		}
-	});
-
 	return removeBtn;
 };
 
@@ -937,7 +944,7 @@ GridFilterSet.prototype.build = function (field, target, opts) {//filterType, fi
  * (e.g. a multi-select dropdown only allows one "item" as that's all you need).
  */
 
-GridFilterSet.prototype.remove = function (id, filterBtn) {
+GridFilterSet.prototype.remove = function (id, filterBtn, noEvent) {
 	var self = this
 		, filter = self.filters.byId[id];
 
@@ -964,6 +971,20 @@ GridFilterSet.prototype.remove = function (id, filterBtn) {
 	if (filterBtn && self.filters.byCol[filter.field].length < filter.limit) {
 		filterBtn.show();
 	}
+
+	if (!noEvent) {
+		self.fire(GridFilterSet.events.filterRemoved);
+	}
+};
+
+// #removeField {{{2
+
+GridFilterSet.prototype.removeField = function (fieldName, filterBtn) {
+	var self = this;
+
+	_.each(self.filters.byCol[fieldName], function (filter) {
+		self.remove(filter.getId(), filterBtn, true);
+	});
 
 	self.fire(GridFilterSet.events.filterRemoved);
 };

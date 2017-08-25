@@ -869,7 +869,7 @@ var LocalSource = function (spec) {
 	*/
 
 	self.cache = {
-		data: jQuery.extend(true, {}, window[self.varName].data),
+		data: deepCopy(window[self.varName].data),
 		typeInfo: new OrdMap()
 	};
 
@@ -1374,7 +1374,7 @@ Source.prototype.getTypeInfo = function (cont) {
 		//
 		// TODO Try to do this without cloning.
 
-		var typeInfoClone = jQuery.extend(true, {}, typeInfo);
+		var typeInfoClone = deepCopy(typeInfo);
 
 		if (self.userTypeInfo !== undefined) {
 			_.each(self.userTypeInfo, function (fieldTypeInfo, field) {
@@ -1384,7 +1384,7 @@ Source.prototype.getTypeInfo = function (cont) {
 		}
 
 		self.cache.typeInfo = typeInfoClone;
-		debug.info('SOURCE // GET TYPE INFO', 'Type Info = %O', jQuery.extend(true, {}, self.cache.typeInfo.asMap()));
+		debug.info('SOURCE // GET TYPE INFO', 'Type Info = %O', deepCopy(self.cache.typeInfo.asMap()));
 		return cont(self.cache.typeInfo);
 	});
 };
