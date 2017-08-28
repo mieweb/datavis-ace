@@ -1422,9 +1422,10 @@ Source.prototype.postProcess = function (data, cont) {
 		throw new SourceError('Data Source / Post Process / Data is not an array');
 	}
 
-	debug.info('DATA SOURCE // POST-PROCESSING', 'Beginning post-processing');
+	debug.info('SOURCE // POST-PROCESSING', 'Beginning post-processing');
 
 	self.getTypeInfo(function (typeInfo) {
+		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo);
 
 		// Gather the user's conversion functions, which will be applied on every row.  Conversion
 		// functions can be applied across all fields (specified as an array), or on a per-field basis
@@ -1468,6 +1469,8 @@ Source.prototype.postProcess = function (data, cont) {
 				}
 			});
 		});
+
+		debug.info('SOURCE // POST-PROCESSING', 'Post-processing finished');
 
 		return cont(data);
 	});

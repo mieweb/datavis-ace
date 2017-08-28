@@ -728,7 +728,7 @@ View.prototype.clearGroup = function () {
 View.prototype.group = function () {
 	var self = this;
 
-	if (self.groupSpec === undefined) {
+	if (isNothing(self.groupSpec)) {
 		return false;
 	}
 
@@ -877,7 +877,7 @@ View.prototype.pivot = function () {
 		, colVals     // Array of all possible column value combinations.
 	;
 
-	if (self.pivotSpec === undefined) {
+	if (isNothing(self.pivotSpec)) {
 		return false;
 	}
 

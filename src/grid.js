@@ -472,7 +472,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	// Clean up the inputs that we received.
 
-	normalizeDefn(defn);
+	self.normalize(defn);
 
 	debug.info('GRID', 'Definition: %O', defn);
 
@@ -1442,6 +1442,87 @@ Grid.prototype.togglePivot = function () {
 	}
 
 	self.refresh();
+};
+
+// normalize {{{2
+
+/**
+ * The point of "normalizing" a definition is to expand shortcut configurations.  For example, lots
+ * of properties can be a string (the shortcut) or an object which contains the same info plus some
+ * additional configuration.  This function would convert the string into the object.  This way,
+ * later code only has to check for the object version.  It also adds a layer of backwards
+ * compatibility.
+ *
+ * You only need to normalize a definition once; after doing so, we flag it so we won't mess with it
+ * again, even though it should be possible to normalize something that's already been done.
+ */
+
+Grid.prototype.normalize = function (defn) {
+	var self = this;
+
+	if (defn.normalized) {
+		return;
+	}
+	defn.normalized = true;
+	defn.prefs = new Prefs(defn);
+	if (typeof getProp(defn, 'table', 'output') === 'string') {
+		var method = defn.table.output;
+		defn.table.output = {
+			method: method
+		};
+	}
+
+	self.normalizeLimit(defn);
+	self.normalizeColumns(defn);
+
+	if (getProp(defn, 'table', 'columns') !== undefined) {
+		defn.table.columns_map = _.indexBy(defn.table.columns, 'field');
+	}
+};
+
+Grid.prototype.normalizeLimit = function (defn) {
+	var self = this;
+
+	if (defn.table.features.limit) {
+		defn.table.limit = defn.table.limit || {};
+
+		_.defaults(defn.table.limit, {
+			method: 'more',
+			threshold: 100,
+			chunkSize: 50
+		});
+	}
+};
+
+Grid.prototype.normalizeColumns = function (defn) {
+	var self = this;
+
+	// If the column configuration is just a string, that's just the name of a column to show.  Let's
+	// convert it into the object format.
+
+	if (getProp(defn, 'table', 'columns')) {
+		for (var i = 0; i < defn.table.columns.length; i += 1) {
+			var colConfig = defn.table.columns[i];
+			if (_.isString(colConfig)) {
+				defn.table.columns[i] = {
+					field: colConfig
+				};
+			}
+		}
+	}
+
+	_.each(getPropDef([], defn, 'table', 'columnConfig'), function (colConfig, colName) {
+
+		// When you want to show a checkbox to represent the value, it only makes sense to have a
+		// checkbox for the filter widget.
+
+		if (colConfig.widget === 'checkbox') {
+			if (colConfig.filter !== undefined && colConfig.filter !== 'checkbox') {
+				log.warn('Overriding configuration to use filter type "' + colConfig.filter + '" for checkbox widgets.');
+			}
+			colConfig.filter = 'checkbox';
+		}
+	});
 };
 
 // GridControl {{{1
