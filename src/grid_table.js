@@ -280,16 +280,19 @@ GridTable.prototype.addFilterHandler = function () {
 GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	var self = this;
 
+	debug.info('GRID TABLE // DRAW', 'Beginning draw operation; opts = %O', opts);
+
 	opts = opts || self.drawOpts;
 
 	self.root = root;
 
 	return self.view.getData(function (data) {
-		return self.view.getTypeInfo(function (typeInfo) {
-			self.timing.start(['Grid Table', 'Draw']);
+		debug.info('GRID TABLE // DRAW', 'Data = %O', data);
 
-			debug.info('GRID TABLE // DRAW', 'Data = %O', data);
+		return self.view.getTypeInfo(function (typeInfo) {
 			debug.info('GRID TABLE // DRAW', 'TypeInfo = %O', typeInfo.asMap());
+
+			self.timing.start(['Grid Table', 'Draw']);
 
 			var tr
 				, srcIndex = 0;
@@ -543,6 +546,8 @@ var GridTablePlain = function (defn, view, features, opts, timing, id) {
 
 	features = deepCopy(features);
 	features.filter = false;
+
+	debug.info('GRID TABLE - PLAIN', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
 	self.super.init(defn, view, features, opts, timing, id);
@@ -1254,6 +1259,8 @@ var GridTableGroup = function (defn, view, features, opts, timing, id) {
 	features.limit = false;
 	features.footer = false;
 
+	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
+
 	self.super = makeSuper(self, GridTable);
 	self.super.init(defn, view, features, opts, timing, id);
 };
@@ -1447,6 +1454,8 @@ var GridTablePivot = function (defn, view, features, opts, timing, id) {
 	features = deepCopy(features);
 	features.limit = false;
 	features.footer = false;
+
+	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
 	self.super.init(defn, view, features, opts, timing, id);
