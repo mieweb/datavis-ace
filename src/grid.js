@@ -1200,6 +1200,7 @@ Grid.prototype.refresh = function () {
 		return;
 	}
 
+	self.view.reset(true);
 	self.view.source.clearCachedData();
 };
 

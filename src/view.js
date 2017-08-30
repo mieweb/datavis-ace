@@ -192,13 +192,10 @@ View.prototype.getTotalRowCount = function () {
  *
  * @param {string} dir Direction to sort by, either "ASC" or "DESC."
  *
- * @param {boolean} dontNotify If true, don't fire off the message notifying subscribers that the
- * view has been sorted.
- *
  * @param {GridTable~Progress} progress
  */
 
-View.prototype.setSort = function (col, dir, dontNotify, progress) {
+View.prototype.setSort = function (col, dir, progress, noUpdate) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -207,8 +204,6 @@ View.prototype.setSort = function (col, dir, dontNotify, progress) {
 			self.setSort.apply(self, args);
 		}, 'Waiting to set sort: ' + col + ' (' + desc + ')');
 	}
-
-	self.clearCache();
 
 	if (isNothing(col) || isNothing(dir)) {
 		self.sortSpec = null;
@@ -221,20 +216,24 @@ View.prototype.setSort = function (col, dir, dontNotify, progress) {
 		self.sortProgress = progress;
 	}
 
+	if (noUpdate) {
+		return true;
+	}
+
+	self.clearCache();
 	self.getData();
+
+	return true;
 };
 
 // #clearSort {{{2
 
 /**
  * Clear the sort spec for the view.
- *
- * @param {boolean} dontNotify If true, don't fire off the message notifying subscribers that the
- * view has been sorted.
  */
 
-View.prototype.clearSort = function (dontNotify) {
-	return this.setSort(null, null, dontNotify);
+View.prototype.clearSort = function (noUpdate) {
+	return this.setSort(null, null, null, noUpdate);
 };
 
 // #sort {{{2
@@ -251,7 +250,7 @@ View.prototype.sort = function (cont) {
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Sorting']
 		, conv = I;
 
-	if (self.sortSpec === undefined) {
+	if (isNothing(self.sortSpec)) {
 		return cont(false, self.data.data);
 	}
 
@@ -388,7 +387,7 @@ View.prototype.sort = function (cont) {
  * @param {View_Filter_Spec} spec How to perform filtering.
  */
 
-View.prototype.setFilter = function (spec, dontNotify, progress) {
+View.prototype.setFilter = function (spec, progress, noUpdate) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -398,9 +397,14 @@ View.prototype.setFilter = function (spec, dontNotify, progress) {
 		}, 'Waiting to set filter: ' + JSON.stringify(spec));
 	}
 
-	self.clearCache();
 	self.filterSpec = spec;
 	self.filterProgress = progress;
+
+	if (noUpdate) {
+		return true;
+	}
+
+	self.clearCache();
 	self.getData();
 
 	return true;
@@ -410,13 +414,10 @@ View.prototype.setFilter = function (spec, dontNotify, progress) {
 
 /**
  * Clear the spec used to filter this view.
- *
- * @param {boolean} dontNotify If true, don't send the notification message to subscribers that this
- * view has been filtered.
  */
 
-View.prototype.clearFilter = function (dontNotify) {
-	this.setFilter(null, dontNotify);
+View.prototype.clearFilter = function (noUpdate) {
+	this.setFilter(null, null, noUpdate);
 };
 
 // #isFiltered {{{2
@@ -443,7 +444,7 @@ View.prototype.filter = function (cont) {
 	var self = this
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Filtering'];
 
-	if (self.filterSpec === undefined) {
+	if (isNothing(self.filterSpec)) {
 		return cont(false, self.data.data);
 	}
 
@@ -691,7 +692,7 @@ View.prototype.filter = function (cont) {
  * @param {Function} spec.aggregate
  */
 
-View.prototype.setGroup = function (spec) {
+View.prototype.setGroup = function (spec, noUpdate) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -701,8 +702,13 @@ View.prototype.setGroup = function (spec) {
 		}, 'Waiting to set group: ' + JSON.stringify(spec));
 	}
 
-	self.clearCache();
 	self.groupSpec = spec;
+
+	if (noUpdate) {
+		return true;
+	}
+
+	self.clearCache();
 	self.getData();
 
 	return true;
@@ -714,8 +720,8 @@ View.prototype.setGroup = function (spec) {
  * Remove any grouping that had been set.
  */
 
-View.prototype.clearGroup = function () {
-	return this.setGroup(null);
+View.prototype.clearGroup = function (noUpdate) {
+	return this.setGroup(null, noUpdate);
 };
 
 // #group {{{2
@@ -840,12 +846,12 @@ View.prototype.group = function () {
 
 // #setPivot {{{2
 
-View.prototype.setPivot = function (spec) {
+View.prototype.setPivot = function (spec, noUpdate) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
-	if (self.groupSpec === undefined) {
-		alert("Come on, you're just doing this on purpose now!");
+	if (!isNothing(spec) && isNothing(self.groupSpec)) {
+		alert('Pivot without grouping is not supported.');
 		return false;
 	}
 
@@ -855,8 +861,13 @@ View.prototype.setPivot = function (spec) {
 		}, 'Waiting to set pivot: ' + JSON.stringify(spec));
 	}
 
-	self.clearCache();
 	self.pivotSpec = spec;
+
+	if (noUpdate) {
+		return true;
+	}
+
+	self.clearCache();
 	self.getData();
 
 	return true;
@@ -864,8 +875,8 @@ View.prototype.setPivot = function (spec) {
 
 // #clearPivot {{{2
 
-View.prototype.clearPivot = function () {
-	return this.setPivot(null);
+View.prototype.clearPivot = function (noUpdate) {
+	return this.setPivot(null, noUpdate);
 };
 
 // #pivot {{{2
@@ -1074,7 +1085,7 @@ View.prototype.getTypeInfo = function (cont) {
 
 // #clearCache {{{2
 
-View.prototype.clearCache = function (clearSource) {
+View.prototype.clearCache = function () {
 	var self = this;
 
 	self.data = undefined;
@@ -1086,22 +1097,24 @@ View.prototype.clearCache = function (clearSource) {
 // #reset {{{2
 
 /**
- * Reset the view to reflect the data source with no transformations.  This is the same as calling
- * all the "clear" functions.
+ * Reset the view to reflect the data with no transformations.  This calls all the individual
+ * "clear" functions, but doesn't notify consumers that there's been work done until the end.
  */
 
-View.prototype.reset = function (dontNotify) {
+View.prototype.reset = function (noUpdate) {
 	var self = this;
 
-	self.clearCache();
 	self.clearSort(true);
 	self.clearFilter(true);
+	self.clearGroup(true);
+	self.clearPivot(true);
 
-	if (!dontNotify) {
-		self.fire(View.messages.reset, {
-			rowCount: self.source.cache.data.length
-		});
+	if (noUpdate) {
+		delete self.lastOps;
+		return;
 	}
+
+	self.getData();
 };
 
 // #getUniqueVals {{{2
