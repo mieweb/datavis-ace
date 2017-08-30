@@ -202,7 +202,7 @@ View.prototype.setSort = function (col, dir, progress, noUpdate) {
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
 			self.setSort.apply(self, args);
-		}, 'Waiting to set sort: ' + col + ' (' + desc + ')');
+		}, 'Waiting to set sort: ' + col + ' (' + dir + ')');
 	}
 
 	if (isNothing(col) || isNothing(dir)) {
