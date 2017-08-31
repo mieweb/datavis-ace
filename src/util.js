@@ -1926,13 +1926,28 @@ function mixinEventHandling(obj, name, events) {
 		debug.info(myName + ' // OFF', 'Removed ' + (startLen - endLen) + ' handlers from ' + who + ' on "' + evt + '" event');
 	};
 
-	// #_fire {{{2
+	// #fire {{{2
 
-	obj.prototype._fire = function () {
+	/**
+	 * @param {string} event
+	 *
+	 * @param {object} opts
+	 *
+	 * @param {boolean} opts.silent
+	 * If true, don't print a debugging log entry for sending the event.  This is useful for some
+	 * really spammy events which would otherwise slow down the console.
+	 *
+	 * @param {object|Array.<object>|function} opts.notTo
+	 * Indicates entities which should not receive the event.  Can either be the entity itself, a list
+	 * of entities, or a function which returns true when passed an entity which shouldn't receive the
+	 * event.  An entity here is registered in the `who` property of the handler.
+	 */
+
+	obj.prototype.fire = function () {
 		var self = this
 			, args = Array.prototype.slice.call(arguments)
-			, opts = args.shift()
 			, evt = args.shift()
+			, opts = args.shift() || {}
 			, myName = typeof name === 'function' ? name(self) : name;
 
 		self._initEventHandlers();
@@ -1941,13 +1956,34 @@ function mixinEventHandling(obj, name, events) {
 			throw new Error('Illegal event: ' + evt);
 		}
 
-		if (!opts || !opts.silent) {
+		// Print a debugging message unless invoked with the silent option (used internally to prevent
+		// spamming millions of messages, which slows down the console).
+
+		if (!opts.silent) {
 			debug.info(myName + ' // FIRE', 'Triggering "' + evt + '" event on ' + self.eventHandlers[evt].length + ' handlers:', args);
 		}
 
 		for (var i = 0; i < self.eventHandlers[evt].length; i += 1) {
 			var h = self.eventHandlers[evt][i];
+
+			// Check to see if this handler is for someone we shouldn't be sending to.
+			//
+			//   - `notTo` is an array (check memberof)
+			//   - `notTo` is a function returning true
+			//   - `notTo` is an object (direct comparison)
+
+			if (h.who && opts.notTo &&
+					((_.isArray(opts.notTo) && opts.notTo.indexOf(h.who) >= 0)
+						|| (typeof opts.notTo === 'function' && opts.notTo(h.who))
+						|| (typeof opts.notTo === 'object' && opts.notTo === h.who))) {
+				continue;
+			}
+
 			h.cb.apply(null, args);
+
+			// Remove the handler if we've hit the limit of how many times we're supposed to invoke it.
+			// Actually we just set the handler to null and remove it below.
+
 			if (h.limit) {
 				h.limit -= 1;
 				if (h.limit <= 0) {
@@ -1957,29 +1993,8 @@ function mixinEventHandling(obj, name, events) {
 			}
 		}
 
+		// Clean up handlers we removed (because they reached the limit).
+
 		self.eventHandlers[evt] = _.without(self.eventHandlers[evt], null);
 	};
-
-	// #fire {{{2
-
-	obj.prototype.fire = function () {
-		var self = this
-			, args = Array.prototype.slice.call(arguments)
-			, pass = Array.prototype.concat.call([{
-				silent: false
-			}], args);
-		return self._fire.apply(self, pass);
-	};
-
-	// #fireQuietly {{{2
-	
-	obj.prototype.fireQuietly = function () {
-		var self = this
-			, args = Array.prototype.slice.call(arguments)
-			, pass = Array.prototype.concat.call([{
-				silent: true
-			}], args);
-		return self._fire.apply(self, pass);
-	};
 }
-

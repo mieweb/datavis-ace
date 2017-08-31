@@ -123,7 +123,7 @@ View.prototype.constructor = View;
 // .events {{{2
 
 View.events = objFromArray([
-		'getTypeInfo' // ???
+		'getTypeInfo' // Type information has been retrieved from the source.
 	, 'workBegin'   // ???
 	, 'workEnd'     // ???
 	, 'dataUpdated' // The data has changed in the source.
@@ -312,7 +312,9 @@ View.prototype.sort = function (cont) {
 							 },
 							 function (sorted) {
 								 _.each(sorted, function (row, position) {
-									 self.fireQuietly(View.events.sort, row.rowNum, position);
+									 self.fire(View.events.sort, {
+										 silent: true
+									 }, row.rowNum, position);
 								 });
 
 								 // If there's a progress callback, perform its done event.
@@ -599,7 +601,9 @@ View.prototype.filter = function (cont) {
 
 		var passes = isNothing(self.filterSpec) ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
 
-		self.fireQuietly(View.events.filter, row.rowNum, !passes);
+		self.fire(View.events.filter, {
+			silent: true
+		}, row.rowNum, !passes);
 
 		return passes;
 	}
@@ -1047,7 +1051,7 @@ View.prototype.getData = function (cont) {
 					}
 
 					self.lastOps = ops;
-					self.fire(View.events.workEnd, workEndObj, ops);
+					self.fire(View.events.workEnd, null, workEndObj, ops);
 
 					self.lock.unlock();
 					debug.info('VIEW (' + self.name + ')', 'Got new data: %O', self.data);
@@ -1076,7 +1080,7 @@ View.prototype.getTypeInfo = function (cont) {
 		});
 	}
 
-	self.fire('getTypeInfo', self.typeInfo);
+	self.fire(View.events.getTypeInfo, null, self.typeInfo);
 
 	if (typeof cont === 'function') {
 		return cont(self.typeInfo);

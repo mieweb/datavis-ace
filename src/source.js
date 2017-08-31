@@ -1425,7 +1425,7 @@ Source.prototype.postProcess = function (data, cont) {
 	debug.info('SOURCE // POST-PROCESSING', 'Beginning post-processing');
 
 	self.getTypeInfo(function (typeInfo) {
-		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo);
+		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo.asMap());
 
 		// Gather the user's conversion functions, which will be applied on every row.  Conversion
 		// functions can be applied across all fields (specified as an array), or on a per-field basis

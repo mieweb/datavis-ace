@@ -1211,7 +1211,7 @@ GridTablePlain.prototype.addWorkHandler = function () {
 			// so that our Grid instance can replace us with a GridTableGroup or GridTablePivot instance
 			// which can render the data.
 
-			self.fire(GridTable.events.unableToRender, ops);
+			self.fire(GridTable.events.unableToRender, null, ops);
 			return;
 		}
 
@@ -1434,7 +1434,7 @@ GridTableGroup.prototype.addWorkHandler = function () {
 		debug.info('GRID TABLE - GROUP // HANDLER (View.workEnd)', 'View has finished doing work');
 
 		if (!ops.group || ops.pivot) {
-			self.fire(GridTable.events.unableToRender, ops);
+			self.fire(GridTable.events.unableToRender, null, ops);
 			return;
 		}
 
@@ -1732,7 +1732,7 @@ GridTablePivot.prototype.addWorkHandler = function () {
 
 		if (!ops.pivot) {
 			debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'Unable to render this data: %O', ops);
-			self.fire(GridTable.events.unableToRender, ops);
+			self.fire(GridTable.events.unableToRender, null, ops);
 			return;
 		}
 
