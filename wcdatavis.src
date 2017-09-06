@@ -103,11 +103,12 @@
 	$INCLUDE('src/grid_table.js');
 	$INCLUDE('src/grid.js');
 
-	window.MIE        = window.MIE || {};
-	window.MIE.log    = log;
-	window.MIE.debug  = debug;
-	window.MIE.OrdMap = OrdMap;
-	window.MIE.trans  = I;
+	window.MIE              = window.MIE || {};
+	window.MIE.log          = log;
+	window.MIE.debug        = debug;
+	window.MIE.OrdMap       = OrdMap;
+	window.MIE.trans        = I;
+	window.MIE.makeSubclass = makeSubclass;
 
 	window.MIE.WC_DataVis            = window.MIE.WC_DataVis || {};
 	window.MIE.WC_DataVis.ParamInput = ParamInput;
@@ -117,6 +118,7 @@
 	window.MIE.WC_DataVis.grids      = [];
 	window.MIE.WC_DataVis.Graph      = Graph;
 	window.MIE.WC_DataVis.graphs     = [];
+	window.MIE.WC_DataVis.Prefs      = Prefs;
 })(jQuery);
 
 // vim:set ft=javascript:
