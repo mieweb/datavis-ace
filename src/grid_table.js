@@ -244,12 +244,15 @@ GridTable.prototype.addFilterHandler = function () {
 	// showing part of the data.  So, when we filter, we need to completely redraw the window (e.g.
 	// rows 21-40) that we're showing.
 	//
-	// FIXME - This will cause problems with multiple grids (some supporting filtering, some not)
-	// using the same view.
+	// We also can't use this approach when we're using preferences, because those can cause the data
+	// to be filtered down before our grid actually creates all the rows.  (The prefs are applied
+	// before the grid table is created.)  At that point, showing or hiding rows is irrelevant because
+	// the grid table doesn't event know what the unfiltered ones are, it's only ever seen the data
+	// with filters applied.
 
 	self.view.off('filter');
 
-	if (self.features.limit) {
+	if (self.features.limit || self.view.prefs) {
 		self.view.on(View.events.filterEnd, function () {
 			debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
 			self.needsRedraw = true;

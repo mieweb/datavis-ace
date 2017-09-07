@@ -93,10 +93,10 @@ Prefs.prototype.apply = function (prefs, cont) {
 	}
 
 	if (isNothing(prefs.filter)) {
-		self.view.clearFilter(true);
+		self.view.clearFilter({ notify: true, update: false });
 	}
 	else {
-		self.view.setFilter(prefs.filter, null, true);
+		self.view.setFilter(prefs.filter, null, { notify: true, update: false });
 	}
 
 	if (isNothing(prefs.group)) {

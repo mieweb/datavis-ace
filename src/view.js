@@ -407,9 +407,17 @@ View.prototype.sort = function (cont) {
  * @param {View_Filter_Spec} spec How to perform filtering.
  */
 
-View.prototype.setFilter = function (spec, progress, noUpdate, dontTell) {
+View.prototype.setFilter = function (spec, progress, opts) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, opts = deepCopy(opts) || {};
+
+	debug.info('VIEW (' + self.name + ') // SET SORT', 'spec = %O ; options = %O', spec, opts);
+
+	_.defaults(opts, {
+		notify: false,
+		update: true
+	});
 
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
@@ -420,16 +428,16 @@ View.prototype.setFilter = function (spec, progress, noUpdate, dontTell) {
 	self.filterSpec = spec;
 	self.filterProgress = progress;
 
-	self.fire(View.events.filterSet, {
-		notTo: dontTell
-	}, spec);
-
-	if (noUpdate) {
-		return true;
+	if (opts.notify) {
+		self.fire(View.events.filterSet, {
+			notTo: opts.dontTell
+		}, spec);
 	}
 
-	self.clearCache();
-	self.getData();
+	if (opts.update) {
+		self.clearCache();
+		self.getData();
+	}
 
 	return true;
 };
@@ -448,8 +456,8 @@ View.prototype.getFilter = function () {
  * Clear the spec used to filter this view.
  */
 
-View.prototype.clearFilter = function (noUpdate, dontTell) {
-	this.setFilter(null, null, noUpdate, dontTell);
+View.prototype.clearFilter = function (opts) {
+	this.setFilter(null, null, opts);
 };
 
 // #isFiltered {{{2
@@ -1175,7 +1183,7 @@ View.prototype.reset = function (noUpdate) {
 	var self = this;
 
 	self.clearSort(true);
-	self.clearFilter(true);
+	self.clearFilter({ update: false });
 	self.clearGroup(true);
 	self.clearPivot(true);
 

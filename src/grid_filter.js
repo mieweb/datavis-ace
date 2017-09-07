@@ -64,13 +64,14 @@ var GridFilter = (function () {
 		return 'GridFilter_' + id++;
 	};
 
-	return function (field, gridFilterSet, opts) {
+	return function (field, gridFilterSet, typeInfo, opts) {
 		var self = this;
 		var localRemoveButton;
 
 		self.id = genId();
 		self.field = field;
 		self.gridFilterSet = gridFilterSet;
+		self.typeInfo = typeInfo;
 		self.opts = opts;
 
 		self.limit = 0;
@@ -670,6 +671,7 @@ var DateRangeGridFilter = function () {
 		'allowInput': true,
 		'mode': 'range',
 		'onChange': function (selectedDates, dateStr, instance) {
+			self.selectedDates = selectedDates;
 			self.gridFilterSet.update(false);
 		}
 	});
@@ -697,17 +699,32 @@ DateRangeGridFilter.prototype = Object.create(GridFilter.prototype);
  */
 
 DateRangeGridFilter.prototype.getValue = function () {
-	var self = this;
+	var self = this
+		, result;
+
+	console.log(self.isRange());
 
 	if (self.isRange()) {
-		return {
-			'start': moment(self.widget.selectedDates[0]),
-			'end': moment(self.widget.selectedDates[1])
+		result = {
+			'start': moment(self.selectedDates[0]),
+			'end': moment(self.selectedDates[1]).hour(23).minute(59).second(59)
 		};
+
+		if (self.typeInfo.internalType === 'string') {
+			result = _.mapObject(result, function (m) {
+				return m.format('YYYY-MM-DD HH:mm:ss')
+			});
+		}
 	}
 	else {
-		return moment(self.widget.selectedDates[0]);
+		result = moment(self.selectedDates[0]);
+
+		if (self.typeInfo.internalType === 'string') {
+			result = result.format('YYYY-MM-DD HH:mm:ss');
+		}
 	}
+
+	return result;
 };
 
 // #getOperator {{{3
@@ -727,7 +744,7 @@ DateRangeGridFilter.prototype.getOperator = function () {
 DateRangeGridFilter.prototype.isRange = function () {
 	var self = this;
 
-	return self.widget.selectedDates.length > 1;
+	return self.selectedDates.length > 1;
 };
 
 // BooleanCheckboxGridFilter {{{2
@@ -766,6 +783,10 @@ GridFilter.widgets = {
 	'date': {
 		'single': DateSingleGridFilter,
 		'range': DateRangeGridFilter
+	},
+	'datetime': {
+		'single': DateSingleGridFilter,
+		'range': DateRangeGridFilter
 	}
 };
 
@@ -773,7 +794,8 @@ GridFilter.defaultWidgets = {
 	'string': 'dropdown',
 	'number': 'textbox',
 	'currency': 'textbox',
-	'date': 'range'
+	'date': 'range',
+	'datetime': 'range'
 };
 
 // GridFilterSet {{{1
@@ -949,7 +971,8 @@ GridFilterSet.prototype.build = function (field, target, opts) {//filterType, fi
 	//
 	// FIXME Don't rely on the cache, do it right.
 
-	var colType = self.view.typeInfo.get(field).type;
+	var fti = self.view.typeInfo.get(field);
+	var colType = fti.type;
 
 	// Make sure that we are able to get the column type.
 
@@ -975,7 +998,7 @@ GridFilterSet.prototype.build = function (field, target, opts) {//filterType, fi
 
 	debug.info('GRID FILTER', 'Creating new widget: column type = "' + colType + '" ; filter type = "' + filterType + '"');
 
-	return new ctor(field, self, opts);
+	return new ctor(field, self, fti, opts);
 };
 
 // #remove {{{2
@@ -1074,11 +1097,9 @@ GridFilterSet.prototype.reset = function (opts) {
 
 /**
  * Set the filters on the View based on what the user has entered into the user interface.
- *
- * @param {boolean} dontSavePrefs If true, don't save preferences.
  */
 
-GridFilterSet.prototype.update = function (dontSavePrefs) {
+GridFilterSet.prototype.update = function () {
 	var self = this
 		, spec = {};
 
@@ -1132,10 +1153,6 @@ GridFilterSet.prototype.update = function (dontSavePrefs) {
 	debug.info('GRID FILTER SET', 'Updating with ' + self.filters.all.length + ' filters: ', spec);
 
 	self.view.setFilter(spec, false, self.progress);
-
-	if (self.prefs && !dontSavePrefs) {
-		self.savePrefs();
-	}
 };
 
 // #set {{{2
