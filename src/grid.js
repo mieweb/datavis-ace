@@ -553,10 +553,12 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		self.addHeaderWidgets(self.ui.gridToolBarHeading, doingServerFilter, !!self.tagOpts.runImmediately, id);
 		self.addCommonButtons(self.ui.gridToolBarButtons);
 
-		self.ui.toolbarPrefs = jQuery('<div>')
-			.addClass('wcdv_toolbar_section')
-			.appendTo(self.ui.gridToolBarButtons);
-		self.addPrefsButtons(self.ui.toolbarPrefs);
+		if (self.view.opts.saveViewConfig) {
+			self.ui.toolbarPrefs = jQuery('<div>')
+				.addClass('wcdv_toolbar_section')
+				.appendTo(self.ui.gridToolBarButtons);
+			self.addPrefsButtons(self.ui.toolbarPrefs);
+		}
 
 		self.ui.toolbarPlain = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
@@ -617,9 +619,6 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		// there's no need to change the view dropdown when that happens.
 
 		if (initialRender) {
-			if (prefsCallback !== null) {
-				prefsCallback();
-			}
 			initialRender = false;
 		}
 

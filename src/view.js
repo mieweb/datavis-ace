@@ -91,8 +91,15 @@ var DATA_VIEW_ID = 1;
  * @property {Timing} timing For keeping track of how long it takes to do things in the view.
  */
 
-var View = function (source, name) {
-	var self = this;
+var View = function (source, name, opts) {
+	var self = this
+		, opts = opts || {};
+
+	_.defaults(opts, {
+		saveViewConfig: false
+	});
+
+	self.opts = opts;
 
 	if (!(source instanceof Source)) {
 		throw new ViewError('Source must be an instance of MIE.WC_DataVis.Source');
@@ -114,7 +121,10 @@ var View = function (source, name) {
 	self.timing = new Timing();
 
 	self.lock = new Lock('View Lock (' + self.name + ')');
-	self.prefs = new LocalStoragePrefs(self);
+
+	if (self.opts.saveViewConfig) {
+		self.prefs = new LocalStoragePrefs(self);
+	}
 };
 
 View.prototype = Object.create(Error.prototype);
@@ -1068,7 +1078,7 @@ View.prototype.getData = function (cont) {
 		return self.source.getTypeInfo(function (typeInfo) {
 			self.typeInfo = typeInfo;
 
-			if (!self.prefsLoaded) {
+			if (self.opts.saveViewConfig && !self.prefsLoaded) {
 				self.prefs.load(function () {
 					self.prefsLoaded = true;
 					self.lock.unlock();
@@ -1123,7 +1133,10 @@ View.prototype.getData = function (cont) {
 						workEndObj.numPivots = 0;
 					}
 
-					self.prefs.save();
+					if (self.opts.saveViewConfig) {
+						self.prefs.save();
+					}
+
 					self.lastOps = ops;
 					self.fire(View.events.workEnd, null, workEndObj, ops);
 

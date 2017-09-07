@@ -252,7 +252,7 @@ GridTable.prototype.addFilterHandler = function () {
 
 	self.view.off('filter');
 
-	if (self.features.limit || self.view.prefs) {
+	if (self.features.limit || self.view.opts.saveViewConfig) {
 		self.view.on(View.events.filterEnd, function () {
 			debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
 			self.needsRedraw = true;
