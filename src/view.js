@@ -422,7 +422,7 @@ View.prototype.setFilter = function (spec, progress, opts) {
 		, args = Array.prototype.slice.call(arguments)
 		, opts = deepCopy(opts) || {};
 
-	debug.info('VIEW (' + self.name + ') // SET SORT', 'spec = %O ; options = %O', spec, opts);
+	debug.info('VIEW (' + self.name + ') // SET FILTER', 'spec = %O ; options = %O', spec, opts);
 
 	_.defaults(opts, {
 		notify: false,
@@ -433,6 +433,10 @@ View.prototype.setFilter = function (spec, progress, opts) {
 		return self.lock.onUnlock(function () {
 			self.setFilter.apply(self, args);
 		}, 'Waiting to set filter: ' + JSON.stringify(spec));
+	}
+
+	if (!isNothing(self.filterSpec) && isNothing(spec)) {
+		self.wasPreviouslyFiltered = true;
 	}
 
 	self.filterSpec = spec;
@@ -495,7 +499,12 @@ View.prototype.filter = function (cont) {
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Filtering'];
 
 	if (isNothing(self.filterSpec)) {
-		return cont(false, self.data.data);
+		if (!self.wasPreviouslyFiltered) {
+			return cont(false, self.data.data);
+		}
+		else {
+			self.wasPreviouslyFiltered = false;
+		}
 	}
 
 	// Make sure that each column that we're filtering has been type decoded, if necessary.
