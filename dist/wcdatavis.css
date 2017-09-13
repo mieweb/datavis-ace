@@ -1,6 +1,6 @@
 /* WC DATAVIS STYLES */
 
-span.wcdv_button {
+.wcdv_button {
 	cursor: pointer;
 }
 
@@ -24,19 +24,18 @@ span.wcdv_button {
 	background-color: #EEE;
 }
 
-.wcdv_grid_toolbar .buttons button {
+.wcdv_grid_toolbar .buttons button,
+.wcdv_grid_toolbar .buttons label,
+.wcdv_grid_toolbar .buttons .wcdv_button,
+.wcdv_grid_toolbar .buttons input {
 	margin-left: 0.5em;
 }
 
-.wcdv_grid_toolbar .buttons label {
-	margin-left: 0.5em;
-}
 
-.wcdv_grid_toolbar .buttons button:first-child {
-	margin-left: 0;
-}
-
-.wcdv_grid_toolbar .buttons label:first-child {
+.wcdv_grid_toolbar .buttons button:first-child,
+.wcdv_grid_toolbar .buttons label:first-child,
+.wcdv_grid_toolbar .buttons .wcdv_button:first-child,
+.wcdv_grid_toolbar .buttons input:first-child {
 	margin-left: 0;
 }
 
@@ -275,8 +274,8 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 
 .wcdv_toolbar_section {
 	display: inline-block;
-	padding-left: 0.5ex;
-	margin-left: 0.5ex;
+	padding-left: 0.5em;
+	margin-left: 0.5em;
 	border-left: solid 2px #BBB;
 }
 

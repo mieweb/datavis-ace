@@ -987,8 +987,7 @@ Grid.prototype.addPrefsButtons = function (parent) {
 		.appendTo(div)
 	;
 
-	var renameBtn = jQuery('<button>', { type: 'button' })
-		.text('Rename')
+	var renameBtn = jQuery(fontAwesome('F040', 'wcdv_button', 'Rename'))
 		.on('click', function () {
 			var oldName = dropdown.val();
 
@@ -1009,8 +1008,7 @@ Grid.prototype.addPrefsButtons = function (parent) {
 		.appendTo(div)
 	;
 
-	var deleteBtn = jQuery('<button>', { type: 'button' })
-		.text('Delete')
+	var deleteBtn = jQuery(fontAwesome('F1F8', 'wcdv_button', 'Delete'))
 		.on('click', function () {
 			if (dropdown.val() === 'Main') {
 				alert('Cannot delete "Main" view!');
