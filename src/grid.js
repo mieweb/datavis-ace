@@ -1679,7 +1679,14 @@ GridControl.prototype.addField = function (field, opts) {
 
 	self.ui.clearBtn.show();
 
-	jQuery('<li>').append(cf.draw()).appendTo(self.ui.fields); // Add it to the DOM.
+	var li = jQuery('<li>');
+
+	if (self.ui.fields.data('isHorizontal')) {// && self.ui.fields.children('li').size() > 0) {
+		li.append(fontAwesome('F178'));
+	}
+
+	li.append(cf.draw());
+	li.appendTo(self.ui.fields); // Add it to the DOM.
 
 	self.ui.dropdown.find('option').filter(function () {
 		return jQuery(this).val() === field;
@@ -1841,7 +1848,9 @@ GroupControl.prototype.draw = function (parent) {
 		.text('Group Fields')
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
-	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
+	self.ui.fields = jQuery('<ul>')
+		.data('isHorizontal', true)
+		.appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
@@ -2001,6 +2010,7 @@ PivotControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.fieldsTitle);
 	self.ui.clearBtn = self.makeClearButton(self.ui.fieldsTitle);
 	self.ui.fields = jQuery('<ul>')
+		.data('isHorizontal', true)
 		.appendTo(self.ui.fieldsContainer);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.fieldsContainer);
