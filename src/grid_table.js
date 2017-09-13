@@ -189,7 +189,6 @@ GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headin
 
 		self.view.setSort(self.defn.sortSpec.col,
 											self.defn.sortSpec.asc ? 'ASC' : 'DESC',
-											false,
 											self.makeProgress('Sort'));
 	};
 
