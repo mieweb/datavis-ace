@@ -92,11 +92,10 @@ var DATA_VIEW_ID = 1;
  */
 
 var View = function (source, name, opts) {
-	var self = this
-		, opts = opts || {};
+	var self = this;
 
-	_.defaults(opts, {
-		saveViewConfig: false
+	opts = deepDefaults(opts, {
+		saveViewConfig: true
 	});
 
 	self.opts = opts;

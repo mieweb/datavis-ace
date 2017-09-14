@@ -396,6 +396,28 @@ function tryFloatConvert(x) {
 		return numProps === 0;
 	}
 
+function deepDefaults() {
+	var args = Array.prototype.slice.call(arguments)
+		, base = deepCopy(args.shift());
+
+	var f = function (a, b) {
+		_.each(b, function (v, k) {
+			if (a[k] === undefined) {
+				a[k] = deepCopy(v);
+			}
+			else if (_.isObject(a[k]) && _.isObject(v)) {
+				f(a[k], v);
+			}
+		});
+	};
+
+	_.each(args, function (arg) {
+		f(base, arg);
+	});
+
+	return base;
+}
+
 	/**
 	 * Safely get the value of a property path in an object, even if some properties in the path don't
 	 * exist.  Returns the value of the last property in the path, or undefined if some elements in
