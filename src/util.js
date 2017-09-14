@@ -1,62 +1,62 @@
-	// Functional {{{1
+// Functional {{{1
 
-	/**
-	 * Generate unique symbols to use for element IDs. It doesn't much matter what the actual string
-	 * produced is, as long as it's unique. That's why we use the 'gensymSeed' upvalue.
-	 */
+/**
+ * Generate unique symbols to use for element IDs. It doesn't much matter what the actual string
+ * produced is, as long as it's unique. That's why we use the 'gensymSeed' upvalue.
+ */
 
-	var gensym = (function () {
-		var gensymSeed = 0;
-		return function () {
-			gensymSeed += 1;
-			return 'gensym-' + gensymSeed;
-		};
-	})();
-
-	/**
-	 * Y combinator.
-	 */
-
-	function Y(f) {
-		return (function (g) {
-			return g(g);
-		})(function (g) {
-			return f(function () {
-				return g(g).apply(this, arguments);
-			});
-		});
-	}
-
-	/**
-	 * Identity function.
-	 */
-
-	function I(x) {
-		return x;
-	}
-
-	/**
-	 * Does nothing.
-	 */
-
-	function NOP() {
-		return;
+var gensym = (function () {
+	var gensymSeed = 0;
+	return function () {
+		gensymSeed += 1;
+		return 'gensym-' + gensymSeed;
 	};
+})();
 
-	/**
-	 * Universal comparison function.  Uses the builtin JavaScript type-safe equality and less-than
-	 * operators to do the comparison.
-	 *
-	 * @param {any} a First operand.
-	 * @param {any} b Second operand.
-	 *
-	 * @returns {number} Zero if operands are equal, -1 if the first operand compares less than the
-	 * second, and +1 if the first operand compares greater than the second.
-	 */
+/**
+ * Y combinator.
+ */
 
-	function universalCmp(a, b) {
-		return a === b ? 0 : a < b ? -1 : 1;
-	}
+function Y(f) {
+	return (function (g) {
+		return g(g);
+	})(function (g) {
+		return f(function () {
+			return g(g).apply(this, arguments);
+		});
+	});
+}
+
+/**
+ * Identity function.
+ */
+
+function I(x) {
+	return x;
+}
+
+/**
+ * Does nothing.
+ */
+
+function NOP() {
+	return;
+};
+
+/**
+ * Universal comparison function.  Uses the builtin JavaScript type-safe equality and less-than
+ * operators to do the comparison.
+ *
+ * @param {any} a First operand.
+ * @param {any} b Second operand.
+ *
+ * @returns {number} Zero if operands are equal, -1 if the first operand compares less than the
+ * second, and +1 if the first operand compares greater than the second.
+ */
+
+function universalCmp(a, b) {
+	return a === b ? 0 : a < b ? -1 : 1;
+}
 
 var getComparisonFn = (function () {
 	var cmpFn = {};
@@ -125,141 +125,141 @@ var getComparisonFn = (function () {
 	};
 })();
 
-	/**
-	 * Call a chain of functions, such that each function consumes as its arguments the result(s) of
-	 * the previous function.
-	 *
-	 * @param {array} #0 The arguments to pass to the first function in the chain.  If it's not an
-	 * array, that's OK.  An array of multiple elements gets turned into multiple arguments for the
-	 * first function in the chain.
-	 *
-	 * @param {function} ... The functions to call in a chain.
-	 *
-	 * @returns {any} Whatever the result of calling the last function in the chain is.
-	 */
+/**
+ * Call a chain of functions, such that each function consumes as its arguments the result(s) of
+ * the previous function.
+ *
+ * @param {array} #0 The arguments to pass to the first function in the chain.  If it's not an
+ * array, that's OK.  An array of multiple elements gets turned into multiple arguments for the
+ * first function in the chain.
+ *
+ * @param {function} ... The functions to call in a chain.
+ *
+ * @returns {any} Whatever the result of calling the last function in the chain is.
+ */
 
-	function chain() {
-		var args = Array.prototype.slice.call(arguments);
-		var fnArgs = args.shift();
-		var fn;
+function chain() {
+	var args = Array.prototype.slice.call(arguments);
+	var fnArgs = args.shift();
+	var fn;
 
-		while (args.length > 0) {
-			fn = args.shift();
+	while (args.length > 0) {
+		fn = args.shift();
 
-			if (!(fnArgs instanceof Array)) {
-				fnArgs = [fnArgs];
-			}
-
-			if (typeof fn !== 'function') {
-				return fnArgs;
-			}
-
-			fnArgs = fn.apply(null, fnArgs);
+		if (!(fnArgs instanceof Array)) {
+			fnArgs = [fnArgs];
 		}
 
-		return fnArgs;
-	}
-
-	/**
-	 * Build a function that invokes a chain of function calls, where each function consumes as its
-	 * arguments the result of the previous call (converting an array into separate arguments).  The
-	 * arguments of the function thus produced are the arguments for the first function in the chain.
-	 *
-	 * @param {function} ... The functions to chain together.
-	 *
-	 * @returns {function} A function that takes any number of arguments; these are passed to the first
-	 * function in the chain.  The result of the last function of the chain is the return value.
-	 */
-
-	function makeChain() {
-		var fns = Array.prototype.slice.call(arguments);
-		return function () {
-			var args = Array.prototype.slice.call(arguments);
-			return chain.apply(null, Array.prototype.concat.call([args], fns));
-		};
-	}
-
-	function makeArray() {
-		return Array.prototype.slice.call(arguments);
-	}
-
-	/**
-	 * Call methods on an object, and build an object from the values which are passed to callbacks by
-	 * those methods.  In other words, it's a way to get results from multiple callback-taking methods
-	 * at the same time.
-	 *
-	 * @param {Function} cont
-	 * @param {Array.<Object.<fn:string, prop:string>>} spec
-	 * @param {Object} thisArg
-	 * @param {?Object} acc
-	 *
-	 * @example
-	 * trulyYours(cont, [{prop: a, fn: alpha}, {prop: b, fn: bravo}], target) =>
-	 *
-	 * var obj = {};
-	 * return target.alpha(function (x) {
-	 *   obj[a] = x;
-	 *   return target.bravo(function (y) {
-	 *     obj[b] = y;
-	 *     return cont(obj);
-	 *   });
-	 * });
-	 */
-	function trulyYours(cont, spec, thisArg, acc) {
-		acc = acc || {};
-		return (spec.length === 0) ? cont(acc) : (function () {
-			debug.info('TRULY YOURS', 'Calling #%s() to set property .%s', spec[0].fn, spec[0].prop);
-			return (thisArg[spec[0].fn].bind(thisArg))(function (y) {
-				acc[spec[0].prop] = (spec[0].conv || I)(y);
-				return trulyYours(cont, spec.slice(1), thisArg, acc);
-			});
-		})();
-	}
-
-	/**
-	 * Partial application of a function.  Returns a new function that is a version of the argument
-	 * with some parameters already bound.  Also called Schönfinkelization.
-	 *
-	 * @param {function} f The function to curry.
-	 * @param {...any} args Arguments to bind in `f`.
-	 *
-	 * @returns {function} A function with free parameters corresponding to the parameters of `f`
-	 * which weren't bound by `args`.
-	 */
-
-	function curry() {
-		var args = Array.prototype.slice.call(arguments);
-		var fn = args.shift();
-
-		return function() {
-			return fn.apply(this, args.concat(Array.prototype.slice.call(arguments)));
-		};
-	}
-
-	function curryCtor() {
-		var args = Array.prototype.slice.call(arguments)
-			, result = curry.apply(null, args);
-		result.prototype = args[0].prototype;
-		return result;
-	}
-
-	function either() {
-		var args = Array.prototype.slice.call(arguments);
-		for (var i = 0; i < args.length; i += 1) {
-			if (args[i] !== undefined) {
-				return args[i];
-			}
+		if (typeof fn !== 'function') {
+			return fnArgs;
 		}
-		return undefined;
+
+		fnArgs = fn.apply(null, fnArgs);
 	}
 
-	function car(a) {
-		return a[0];
-	}
+	return fnArgs;
+}
 
-	function cdr(a) {
-		return a.slice(1);
+/**
+ * Build a function that invokes a chain of function calls, where each function consumes as its
+ * arguments the result of the previous call (converting an array into separate arguments).  The
+ * arguments of the function thus produced are the arguments for the first function in the chain.
+ *
+ * @param {function} ... The functions to chain together.
+ *
+ * @returns {function} A function that takes any number of arguments; these are passed to the first
+ * function in the chain.  The result of the last function of the chain is the return value.
+ */
+
+function makeChain() {
+	var fns = Array.prototype.slice.call(arguments);
+	return function () {
+		var args = Array.prototype.slice.call(arguments);
+		return chain.apply(null, Array.prototype.concat.call([args], fns));
+	};
+}
+
+function makeArray() {
+	return Array.prototype.slice.call(arguments);
+}
+
+/**
+ * Call methods on an object, and build an object from the values which are passed to callbacks by
+ * those methods.  In other words, it's a way to get results from multiple callback-taking methods
+ * at the same time.
+ *
+ * @param {Function} cont
+ * @param {Array.<Object.<fn:string, prop:string>>} spec
+ * @param {Object} thisArg
+ * @param {?Object} acc
+ *
+ * @example
+ * trulyYours(cont, [{prop: a, fn: alpha}, {prop: b, fn: bravo}], target) =>
+ *
+ * var obj = {};
+ * return target.alpha(function (x) {
+ *   obj[a] = x;
+ *   return target.bravo(function (y) {
+ *     obj[b] = y;
+ *     return cont(obj);
+ *   });
+ * });
+ */
+function trulyYours(cont, spec, thisArg, acc) {
+	acc = acc || {};
+	return (spec.length === 0) ? cont(acc) : (function () {
+		debug.info('TRULY YOURS', 'Calling #%s() to set property .%s', spec[0].fn, spec[0].prop);
+		return (thisArg[spec[0].fn].bind(thisArg))(function (y) {
+			acc[spec[0].prop] = (spec[0].conv || I)(y);
+			return trulyYours(cont, spec.slice(1), thisArg, acc);
+		});
+	})();
+}
+
+/**
+ * Partial application of a function.  Returns a new function that is a version of the argument
+ * with some parameters already bound.  Also called Schönfinkelization.
+ *
+ * @param {function} f The function to curry.
+ * @param {...any} args Arguments to bind in `f`.
+ *
+ * @returns {function} A function with free parameters corresponding to the parameters of `f`
+ * which weren't bound by `args`.
+ */
+
+function curry() {
+	var args = Array.prototype.slice.call(arguments);
+	var fn = args.shift();
+
+	return function() {
+		return fn.apply(this, args.concat(Array.prototype.slice.call(arguments)));
+	};
+}
+
+function curryCtor() {
+	var args = Array.prototype.slice.call(arguments)
+		, result = curry.apply(null, args);
+	result.prototype = args[0].prototype;
+	return result;
+}
+
+function either() {
+	var args = Array.prototype.slice.call(arguments);
+	for (var i = 0; i < args.length; i += 1) {
+		if (args[i] !== undefined) {
+			return args[i];
+		}
 	}
+	return undefined;
+}
+
+function car(a) {
+	return a[0];
+}
+
+function cdr(a) {
+	return a.slice(1);
+}
 
 // Conversion {{{1
 
@@ -310,91 +310,91 @@ function tryFloatConvert(x) {
 	return isFloat(x) ? toFloat(x) : 0.0;
 }
 
-	// Data Structures {{{1
+// Data Structures {{{1
 
-	/**
-	 * Calls a function on each element in a list until a certain value is returned.
-	 *
-	 * @param {array} l List to iterate over.
-	 * @param {function} f Function to invoke on each element.  Called like: f(item, index).
-	 * @param {any} r Return value that causes the iteration to abort.
-	 *
-	 * @returns {void} Nothing.
-	 */
+/**
+ * Calls a function on each element in a list until a certain value is returned.
+ *
+ * @param {array} l List to iterate over.
+ * @param {function} f Function to invoke on each element.  Called like: f(item, index).
+ * @param {any} r Return value that causes the iteration to abort.
+ *
+ * @returns {void} Nothing.
+ */
 
-	function eachUntil(l, f, r) {
-		var i;
-		for (i = 0; i < l.length; i += 1) {
-			if (f(l[i], i) === r) {
-				return;
-			}
+function eachUntil(l, f, r) {
+	var i;
+	for (i = 0; i < l.length; i += 1) {
+		if (f(l[i], i) === r) {
+			return;
+		}
+	}
+}
+
+function eachUntilObj(o, f, r, extra) {
+	for (k in o) {
+		if (o.hasOwnProperty(k) && f(o[k], k, extra) === r) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Create a deep copy of an object.
+ *
+ * @param object o The thing to copy.
+ *
+ * @return object A clean copy of the argument.
+ */
+
+function deepCopy(o) {
+	return jQuery.extend(true, {}, o);
+}
+
+/**
+ * Deep copy an array.
+ */
+
+function arrayCopy(a) {
+	var result = [];
+
+	for (var i = 0; i < a.length; i += 1) {
+		if (_.isArray(a[i])) {
+			result[i] = arrayCopy(a[i]);
+		}
+		else if (_.isObject(a[i])) {
+			result[i] = deepCopy(a[i]);
+		}
+		else {
+			result[i] = a[i];
 		}
 	}
 
-	function eachUntilObj(o, f, r, extra) {
-		for (k in o) {
-			if (o.hasOwnProperty(k) && f(o[k], k, extra) === r) {
-				return false;
-			}
-		}
-		return true;
-	}
+	return result;
+}
 
-	/**
-	 * Create a deep copy of an object.
-	 *
-	 * @param object o The thing to copy.
-	 *
-	 * @return object A clean copy of the argument.
-	 */
+/**
+ * Returns true if the argument is null or undefined.
+ */
 
-	function deepCopy(o) {
-		return jQuery.extend(true, {}, o);
-	}
+function isNothing(x) {
+	return x === undefined || x === null;
+}
 
-	/**
-	 * Deep copy an array.
-	 */
+/**
+ * Returns true if the object doesn't have any properties.
+ */
 
-	function arrayCopy(a) {
-		var result = [];
+function isEmpty(o) {
+	var numProps = 0;
 
-		for (var i = 0; i < a.length; i += 1) {
-			if (_.isArray(a[i])) {
-				result[i] = arrayCopy(a[i]);
-			}
-			else if (_.isObject(a[i])) {
-				result[i] = deepCopy(a[i]);
-			}
-			else {
-				result[i] = a[i];
-			}
-		}
+	_.each(o, function () {
+		numProps += 1;
+	});
 
-		return result;
-	}
-
-	/**
-	 * Returns true if the argument is null or undefined.
-	 */
-
-	function isNothing(x) {
-		return x === undefined || x === null;
-	}
-
-	/**
-	 * Returns true if the object doesn't have any properties.
-	 */
-
-	function isEmpty(o) {
-		var numProps = 0;
-
-		_.each(o, function () {
-			numProps += 1;
-		});
-
-		return numProps === 0;
-	}
+	return numProps === 0;
+}
 
 function deepDefaults() {
 	var args = Array.prototype.slice.call(arguments)
@@ -418,117 +418,117 @@ function deepDefaults() {
 	return base;
 }
 
-	/**
-	 * Safely get the value of a property path in an object, even if some properties in the path don't
-	 * exist.  Returns the value of the last property in the path, or undefined if some elements in
-	 * the path don't exist in the object.
-	 *
-	 * @param {object} obj The object to search for the property path.
-	 * @param {...(string|number)} prop Property path to traverse.
-	 *
-	 * @returns {any} The value of the property found at the end of the provided path, or undefined if
-	 * the path cannot be traversed at any step of the way.
-	 *
-	 * @example
-	 * var obj = {a: {b: 2}};
-	 *
-	 * getProp(obj, 'a', 'b');  // 2
-	 * getProp(obj, 'a');		  // {b: 2}
-	 * getProp(obj, 'a', 'x');  // undefined
-	 * getProp(obj, 'x');		  // undefined
-	 */
+/**
+ * Safely get the value of a property path in an object, even if some properties in the path don't
+ * exist.  Returns the value of the last property in the path, or undefined if some elements in
+ * the path don't exist in the object.
+ *
+ * @param {object} obj The object to search for the property path.
+ * @param {...(string|number)} prop Property path to traverse.
+ *
+ * @returns {any} The value of the property found at the end of the provided path, or undefined if
+ * the path cannot be traversed at any step of the way.
+ *
+ * @example
+ * var obj = {a: {b: 2}};
+ *
+ * getProp(obj, 'a', 'b');  // 2
+ * getProp(obj, 'a');		  // {b: 2}
+ * getProp(obj, 'a', 'x');  // undefined
+ * getProp(obj, 'x');		  // undefined
+ */
 
-	function getProp() {
+function getProp() {
 	var args = Array.prototype.slice.call(arguments)
 		, o = args.shift()
 		, i;
 
 	for (i = 0; o !== undefined && o !== null && i < args.length; i += 1) {
 		o = o[args[i]];
-		}
+	}
 
 	return i < args.length ? undefined : o;
-	}
+}
 
-	/**
-	 * Safely get the value of a property path in an object, even if some properties in the path don't
-	 * exist.  Returns the value of the last property in the path, or a default value if some elements
-	 * in the path don't exist in the object.
-	 *
-	 * @param {any} value The default value to return if the property doesn't exist.
-	 * @param {object} obj The object to search for the property within.
-	 * @param {...(string|number)} prop Property path to traverse.
-	 *
-	 * @example
-	 * var obj = {a: {b: 2}};
-	 *
-	 * getPropDef(1, obj, 'a', 'b');		// 2
-	 * getPropDef(1, obj, 'a', 'b', 'c'); // 1
-	 * getPropDef(1, obj, 'a', 'x');		// 1
-	 * getPropDef(1, obj, 'x');			// 1
-	 */
+/**
+ * Safely get the value of a property path in an object, even if some properties in the path don't
+ * exist.  Returns the value of the last property in the path, or a default value if some elements
+ * in the path don't exist in the object.
+ *
+ * @param {any} value The default value to return if the property doesn't exist.
+ * @param {object} obj The object to search for the property within.
+ * @param {...(string|number)} prop Property path to traverse.
+ *
+ * @example
+ * var obj = {a: {b: 2}};
+ *
+ * getPropDef(1, obj, 'a', 'b');		// 2
+ * getPropDef(1, obj, 'a', 'b', 'c'); // 1
+ * getPropDef(1, obj, 'a', 'x');		// 1
+ * getPropDef(1, obj, 'x');			// 1
+ */
 
-	function getPropDef() {
-		var args = Array.prototype.slice.call(arguments);
-		var d = args.shift();
-		var p = getProp.apply(undefined, args);
-		return p !== undefined ? p : d;
-	}
+function getPropDef() {
+	var args = Array.prototype.slice.call(arguments);
+	var d = args.shift();
+	var p = getProp.apply(undefined, args);
+	return p !== undefined ? p : d;
+}
 
-	/**
-	 * Set a value for a property path in an object.
-	 *
-	 * @param {any} value The value to set for the property.
-	 * @param {object} obj The object to set the property within.
-	 * @param {...(string|number)} prop Property path to traverse before setting the value.
-	 *
-	 * @example
-	 * var obj = {};
-	 * setProp(42, obj, 'a', 'b', 'c');
-	 * obj.a.b.c === 42;
-	 */
+/**
+ * Set a value for a property path in an object.
+ *
+ * @param {any} value The value to set for the property.
+ * @param {object} obj The object to set the property within.
+ * @param {...(string|number)} prop Property path to traverse before setting the value.
+ *
+ * @example
+ * var obj = {};
+ * setProp(42, obj, 'a', 'b', 'c');
+ * obj.a.b.c === 42;
+ */
 
-	function setProp() {
-		var args = Array.prototype.slice.call(arguments);
-		var x = args.shift();
-		var o = args.shift();
+function setProp() {
+	var args = Array.prototype.slice.call(arguments);
+	var x = args.shift();
+	var o = args.shift();
 
-		for (var i = 0; i < args.length - 1; i += 1) {
-			if (o[args[i]] === undefined) {
-				o[args[i]] = {};
-			}
-			o = o[args[i]];
+	for (var i = 0; i < args.length - 1; i += 1) {
+		if (o[args[i]] === undefined) {
+			o[args[i]] = {};
 		}
+		o = o[args[i]];
+	}
 
+	o[args[args.length - 1]] = x;
+}
+
+function setPropDef() {
+	var args = Array.prototype.slice.call(arguments);
+	var x = args.shift();
+	var o = args.shift();
+
+	for (var i = 0; i < args.length - 1; i += 1) {
+		if (o[args[i]] === undefined) {
+			o[args[i]] = {};
+		}
+		o = o[args[i]];
+	}
+
+	if (o[args[args.length - 1]] === undefined) {
 		o[args[args.length - 1]] = x;
 	}
+};
 
-	function setPropDef() {
-		var args = Array.prototype.slice.call(arguments);
-		var x = args.shift();
-		var o = args.shift();
+/**
+ * Throw an exception if a property is missing.
+ *
+ * @param {function} exn Constructor used to instantiate an exception if an error arises.
+ * @param {object} obj Target object to search within.
+ * @param {...(string|number)} prop Property path.
+ */
 
-		for (var i = 0; i < args.length - 1; i += 1) {
-			if (o[args[i]] === undefined) {
-				o[args[i]] = {};
-			}
-			o = o[args[i]];
-		}
-
-		if (o[args[args.length - 1]] === undefined) {
-			o[args[args.length - 1]] = x;
-		}
-	};
-
-	/**
-	 * Throw an exception if a property is missing.
-	 *
-	 * @param {function} exn Constructor used to instantiate an exception if an error arises.
-	 * @param {object} obj Target object to search within.
-	 * @param {...(string|number)} prop Property path.
-	 */
-
-	function needProp() {
+function needProp() {
 	var args = Array.prototype.slice.call(arguments)
 		, exn = args.shift()
 		, prop = getProp.apply(this, args);
@@ -538,18 +538,18 @@ function deepDefaults() {
 	}
 
 	return prop;
-	}
+}
 
-	/**
-	 * Throw an exception if a property is missing or not a member of a set.
-	 *
-	 * @param {function} exn Constructor used to instantiate an exception if an error arises.
-	 * @param {object} obj Target object to search within.
-	 * @param {...(string|number)} prop Property path.
-	 * @param {array} arr Set of values which the property must be in.
-	 */
+/**
+ * Throw an exception if a property is missing or not a member of a set.
+ *
+ * @param {function} exn Constructor used to instantiate an exception if an error arises.
+ * @param {object} obj Target object to search within.
+ * @param {...(string|number)} prop Property path.
+ * @param {array} arr Set of values which the property must be in.
+ */
 
-	function needPropIn() {
+function needPropIn() {
 	var args = Array.prototype.slice.call(arguments)
 		, set = args.pop()
 		, prop = needProp.apply(this, args);
@@ -559,17 +559,17 @@ function deepDefaults() {
 	}
 
 	return prop;
-	}
+}
 
-	/**
-	 * Throw an exception if a property is missing or not an array.
-	 *
-	 * @param {function} exn Constructor used to instantiate an exception if an error arises.
-	 * @param {object} obj Target object to search within.
-	 * @param {...(string|number)} prop Property path.
-	 */
+/**
+ * Throw an exception if a property is missing or not an array.
+ *
+ * @param {function} exn Constructor used to instantiate an exception if an error arises.
+ * @param {object} obj Target object to search within.
+ * @param {...(string|number)} prop Property path.
+ */
 
-	function needPropArr() {
+function needPropArr() {
 	var args = Array.prototype.slice.call(arguments)
 		, exn = args[0]
 		, prop = needProp.apply(this, args);
@@ -579,17 +579,17 @@ function deepDefaults() {
 	}
 
 	return prop;
-	}
+}
 
-	/**
-	 * Throw an exception if a property is missing or not an object.
-	 *
-	 * @param {function} exn Constructor used to instantiate an exception if an error arises.
-	 * @param {object} obj Target object to search within.
-	 * @param {...(string|number)} prop Property path.
-	 */
+/**
+ * Throw an exception if a property is missing or not an object.
+ *
+ * @param {function} exn Constructor used to instantiate an exception if an error arises.
+ * @param {object} obj Target object to search within.
+ * @param {...(string|number)} prop Property path.
+ */
 
-	function needPropObj() {
+function needPropObj() {
 	var args = Array.prototype.slice.call(arguments)
 		, exn = args[0]
 		, prop = needProp.apply(this, args);
@@ -599,18 +599,18 @@ function deepDefaults() {
 	}
 
 	return prop;
-	}
+}
 
-	/**
-	 * Throw an exception if a property is missing or not an instance of a class.
-	 *
-	 * @param {function} exn Constructor used to instantiate an exception if an error arises.
-	 * @param {object} obj Target object to search within.
-	 * @param {...string|number} prop Property path.
-	 * @param {function} cls Class which the property must be an instance of.
-	 */
+/**
+ * Throw an exception if a property is missing or not an instance of a class.
+ *
+ * @param {function} exn Constructor used to instantiate an exception if an error arises.
+ * @param {object} obj Target object to search within.
+ * @param {...string|number} prop Property path.
+ * @param {function} cls Class which the property must be an instance of.
+ */
 
-	function needPropInst() {
+function needPropInst() {
 	var args = Array.prototype.slice.call(arguments)
 		, exn = args[0]
 		, cls = args.pop()
@@ -621,7 +621,7 @@ function deepDefaults() {
 	}
 
 	return prop;
-	}
+}
 
 function needArgInst(val, varName, cls) {
 	needArg(val, varName);
@@ -645,157 +645,157 @@ function needArg(val, varName) {
 	return val;
 }
 
-	/**
-	 * Prune a subtree in an object.  This means to prune the leaf, and then if there are no other
-	 * leaves on that branch, prune the branch, and so on all the way up.
-	 *
-	 * @example pruneTree(OBJECT, PATH...)
-	 */
+/**
+ * Prune a subtree in an object.  This means to prune the leaf, and then if there are no other
+ * leaves on that branch, prune the branch, and so on all the way up.
+ *
+ * @example pruneTree(OBJECT, PATH...)
+ */
 
-	function pruneTree() {
-		var args = Array.prototype.slice.call(arguments);
-		var o = args.shift();
-		var deleteFrom = [];
-		var i;
+function pruneTree() {
+	var args = Array.prototype.slice.call(arguments);
+	var o = args.shift();
+	var deleteFrom = [];
+	var i;
 
-		for (i = 0; i < args.length; i += 1) {
-			if (o[args[i]] !== undefined) {
-				deleteFrom.push(o);
-				if (_.isObject(o[args[i]])) {
-					o = o[args[i]];
-					continue;
-				}
+	for (i = 0; i < args.length; i += 1) {
+		if (o[args[i]] !== undefined) {
+			deleteFrom.push(o);
+			if (_.isObject(o[args[i]])) {
+				o = o[args[i]];
+				continue;
 			}
+		}
 
+		break;
+	}
+
+	for (i = deleteFrom.length - 1; i >= 0; i -= 1) {
+		delete deleteFrom[i][args[i]];
+		if (!isEmpty(deleteFrom[i])) {
 			break;
 		}
-
-		for (i = deleteFrom.length - 1; i >= 0; i -= 1) {
-			delete deleteFrom[i][args[i]];
-			if (!isEmpty(deleteFrom[i])) {
-				break;
-			}
-		}
 	}
+}
 
-	/**
-	 * Stable sort algorithm that allows for responsive browser UI.
-	 */
+/**
+ * Stable sort algorithm that allows for responsive browser UI.
+ */
 
-	function mergeSort(data, cmp, cont) {
-		cmp = cmp || universalCmp;
-		return Y(function (recur) {
-			return function (data, cont) {
-				function merge(left, right, cont) {
-					var result = [];
-					while (left.length !== 0 && right.length !== 0) {
-						var cmpResult = cmp(left[0], right[0]);
-						if (!_.isNumber(cmpResult)) {
-							throw 'comparison result returned non-number';
-						}
-						result.push(cmpResult <= 0 ? left.shift() : right.shift());
+function mergeSort(data, cmp, cont) {
+	cmp = cmp || universalCmp;
+	return Y(function (recur) {
+		return function (data, cont) {
+			function merge(left, right, cont) {
+				var result = [];
+				while (left.length !== 0 && right.length !== 0) {
+					var cmpResult = cmp(left[0], right[0]);
+					if (!_.isNumber(cmpResult)) {
+						throw 'comparison result returned non-number';
 					}
-					window.setTimeout(function () {
-						cont(result.concat(left.length > 0 ? left : right));
-					}, 0);
+					result.push(cmpResult <= 0 ? left.shift() : right.shift());
 				}
-				if (data.length <= 1) {
-					window.setTimeout(function () {
-						cont(data);
-					}, 0);
-				}
-				else {
-					var pivot = Math.floor(data.length / 2);
-					window.setTimeout(function () {
-						recur(data.slice(0, pivot), function (left) {
-							window.setTimeout(function () {
-								recur(data.slice(pivot), function (right) {
-									window.setTimeout(function () {
-										merge(left, right, cont);
-									}, 0);
-								});
-							}, 0);
-						});
-					}, 0);
-				}
-			};
-		})(data, cont);
-	}
-
-	function mergeSort2(data, cmp) {
-		cmp = cmp || function (a, b) { return a < b };
-
-		var merge = function (left, right) {
-			var result = []
-				, leftLen = left.length
-				, leftIdx = 0
-				, rightLen = right.length
-				, rightIdx = 0;
-			while (leftIdx < leftLen && rightIdx < rightLen) {
-				var cmpResult = cmp(left[leftIdx], right[rightIdx]);
-				result.push(cmpResult ? left[leftIdx++] : right[rightIdx++]);
+				window.setTimeout(function () {
+					cont(result.concat(left.length > 0 ? left : right));
+				}, 0);
 			}
-			return result.concat(leftIdx < leftLen ? left.slice(leftIdx) : right.slice(rightIdx));
-		};
-
-		if (data.length <= 1) {
-			return data;
-		}
-		else {
-			var pivot = Math.floor(data.length / 2)
-				, left = mergeSort2(data.slice(0, pivot), cmp)
-				, right = mergeSort2(data.slice(pivot), cmp);
-			return merge(left, right);
-		}
-	}
-
-	function mergeSort3(data, cmp, cont, update) {
-		cmp = cmp || function (a, b) { return a < b };
-		var size = data.length;
-		var step = 0;
-		var stepsBeforeUpdate = Math.min(data.length / 50, 500);
-
-		function merge(left, right) {
-			var result = []
-				, leftLen = left.length
-				, leftIdx = 0
-				, rightLen = right.length
-				, rightIdx = 0;
-			while (leftIdx < leftLen && rightIdx < rightLen) {
-				var cmpResult = cmp(left[leftIdx], right[rightIdx]);
-				result.push(cmpResult ? left[leftIdx++] : right[rightIdx++]);
-			}
-			return result.concat(leftIdx < leftLen ? left.slice(leftIdx) : right.slice(rightIdx));
-		}
-
-		function sort(data, cont) {
 			if (data.length <= 1) {
-				return cont(data);
+				window.setTimeout(function () {
+					cont(data);
+				}, 0);
 			}
 			else {
 				var pivot = Math.floor(data.length / 2);
-				return sort(data.slice(0, pivot), function (left) {
-					return sort(data.slice(pivot), function (right) {
-						var fn = function () {
-							return cont(merge(left, right, cont));
-						};
-						step += 1;
-						if (step % stepsBeforeUpdate === 0) {
-							if (typeof update === 'function') {
-								update(step, size);
-							}
-							return window.setTimeout(fn);
-						}
-						else {
-							return fn();
-						}
+				window.setTimeout(function () {
+					recur(data.slice(0, pivot), function (left) {
+						window.setTimeout(function () {
+							recur(data.slice(pivot), function (right) {
+								window.setTimeout(function () {
+									merge(left, right, cont);
+								}, 0);
+							});
+						}, 0);
 					});
-				});
+				}, 0);
 			}
-		}
+		};
+	})(data, cont);
+}
 
-		return sort(data, cont);
+function mergeSort2(data, cmp) {
+	cmp = cmp || function (a, b) { return a < b };
+
+	var merge = function (left, right) {
+		var result = []
+			, leftLen = left.length
+			, leftIdx = 0
+			, rightLen = right.length
+			, rightIdx = 0;
+		while (leftIdx < leftLen && rightIdx < rightLen) {
+			var cmpResult = cmp(left[leftIdx], right[rightIdx]);
+			result.push(cmpResult ? left[leftIdx++] : right[rightIdx++]);
+		}
+		return result.concat(leftIdx < leftLen ? left.slice(leftIdx) : right.slice(rightIdx));
+	};
+
+	if (data.length <= 1) {
+		return data;
 	}
+	else {
+		var pivot = Math.floor(data.length / 2)
+			, left = mergeSort2(data.slice(0, pivot), cmp)
+			, right = mergeSort2(data.slice(pivot), cmp);
+		return merge(left, right);
+	}
+}
+
+function mergeSort3(data, cmp, cont, update) {
+	cmp = cmp || function (a, b) { return a < b };
+	var size = data.length;
+	var step = 0;
+	var stepsBeforeUpdate = Math.min(data.length / 50, 500);
+
+	function merge(left, right) {
+		var result = []
+			, leftLen = left.length
+			, leftIdx = 0
+			, rightLen = right.length
+			, rightIdx = 0;
+		while (leftIdx < leftLen && rightIdx < rightLen) {
+			var cmpResult = cmp(left[leftIdx], right[rightIdx]);
+			result.push(cmpResult ? left[leftIdx++] : right[rightIdx++]);
+		}
+		return result.concat(leftIdx < leftLen ? left.slice(leftIdx) : right.slice(rightIdx));
+	}
+
+	function sort(data, cont) {
+		if (data.length <= 1) {
+			return cont(data);
+		}
+		else {
+			var pivot = Math.floor(data.length / 2);
+			return sort(data.slice(0, pivot), function (left) {
+				return sort(data.slice(pivot), function (right) {
+					var fn = function () {
+						return cont(merge(left, right, cont));
+					};
+					step += 1;
+					if (step % stepsBeforeUpdate === 0) {
+						if (typeof update === 'function') {
+							update(step, size);
+						}
+						return window.setTimeout(fn);
+					}
+					else {
+						return fn();
+					}
+				});
+			});
+		}
+	}
+
+	return sort(data, cont);
+}
 
 /**
  * Non-recursive merge sort, mostly taken from: https://stackoverflow.com/questions/1557894/
@@ -854,56 +854,56 @@ var mergeSort4 = function (data, cmp, cont, update) {
 	sortWindow(1);
 };
 
-	function objGetPath(obj, fieldPath) {
-		var i, len = fieldPath.length;
-		for (i = 0; i < len && obj !== undefined; i += 1) {
-			obj = obj[fieldPath[i]];
-		}
-		return obj;
+function objGetPath(obj, fieldPath) {
+	var i, len = fieldPath.length;
+	for (i = 0; i < len && obj !== undefined; i += 1) {
+		obj = obj[fieldPath[i]];
 	}
+	return obj;
+}
 
-	function cmpObjField(fieldPath, cmp) {
-		cmp = cmp || universalCmp;
-		return function (a, b) {
-			a = objGetPath(a, fieldPath);
-			b = objGetPath(b, fieldPath);
-			if (!_.isString(a) && !_.isNumber(a) && !_.isDate(a)) {
-				throw 'object "a" doesn\'t contain field path: ' + fieldPath.toString();
-			}
-			if (!_.isString(b) && !_.isNumber(b) && !_.isDate(b)) {
-				throw 'object "b" doesn\'t contain field path: ' + fieldPath.toString();
-			}
-			return cmp(a, b);
-		};
-	}
-
-	/**
-	 * Compare two arrays against each other, deeply. There is no function built into JavaScript to do
-	 * this, of course.
-	 *
-	 * @param {array} a First operand.
-	 * @param {array} b Second operand.
-	 *
-	 * @returns {boolean} True if both arrays contain the exact same elements.  Elements which are
-	 * arrays are compared deeply; elements which are objects are not.
-	 */
-
-	function arrayCompare(a, b) {
-		if (!_.isArray(a) || !_.isArray(b) || a.length !== b.length) {
-			return false;
+function cmpObjField(fieldPath, cmp) {
+	cmp = cmp || universalCmp;
+	return function (a, b) {
+		a = objGetPath(a, fieldPath);
+		b = objGetPath(b, fieldPath);
+		if (!_.isString(a) && !_.isNumber(a) && !_.isDate(a)) {
+			throw 'object "a" doesn\'t contain field path: ' + fieldPath.toString();
 		}
-		for (var i = 0; i < a.length; i++) {
-			if (_.isArray(a[i]) && _.isArray(b[i])) {
-				if (!arrayCompare(a[i], b[i])) {
-					return false;
-				}
-			}
-			else if (a[i] !== b[i]) {
+		if (!_.isString(b) && !_.isNumber(b) && !_.isDate(b)) {
+			throw 'object "b" doesn\'t contain field path: ' + fieldPath.toString();
+		}
+		return cmp(a, b);
+	};
+}
+
+/**
+ * Compare two arrays against each other, deeply. There is no function built into JavaScript to do
+ * this, of course.
+ *
+ * @param {array} a First operand.
+ * @param {array} b Second operand.
+ *
+ * @returns {boolean} True if both arrays contain the exact same elements.  Elements which are
+ * arrays are compared deeply; elements which are objects are not.
+ */
+
+function arrayCompare(a, b) {
+	if (!_.isArray(a) || !_.isArray(b) || a.length !== b.length) {
+		return false;
+	}
+	for (var i = 0; i < a.length; i++) {
+		if (_.isArray(a[i]) && _.isArray(b[i])) {
+			if (!arrayCompare(a[i], b[i])) {
 				return false;
 			}
 		}
-		return true;
+		else if (a[i] !== b[i]) {
+			return false;
+		}
 	}
+	return true;
+}
 
 function objFromArray(a) {
 	return _.reduce(a, function (o, x) {
@@ -912,41 +912,41 @@ function objFromArray(a) {
 	}, {});
 }
 
-	/**
-	 * Treating an object like a tree, descends through object values until it hits a non-object, then
-	 * calls the given function.
-	 *
-	 * @param object o The root of the tree.
-	 *
-	 * @param function f Callback to invoke, applied to the leaf and the path of keys taken to arrive
-	 * at that leaf.
-	 *
-	 * @param array acc Accumulator of the key path.
-	 */
+/**
+ * Treating an object like a tree, descends through object values until it hits a non-object, then
+ * calls the given function.
+ *
+ * @param object o The root of the tree.
+ *
+ * @param function f Callback to invoke, applied to the leaf and the path of keys taken to arrive
+ * at that leaf.
+ *
+ * @param array acc Accumulator of the key path.
+ */
 
-	function walkObj(o, f, acc) {
-		if (acc === undefined) {
-			acc = [];
-		}
-		if (_.isUndefined(acc)) {
-			walkObj(o, f, []);
-		}
-		else if (!_.isArray(acc)) {
-			throw 'accumulator is not an array';
-		}
-		else {
-			_.each(o, function (v, k) {
-				var newAcc = acc.slice();
-				newAcc.push(k);
-				if (!_.isObject(v) || _.isArray(v)) {
-					f(v, newAcc);
-				}
-				else if (_.isObject(v)) {
-					walkObj(v, f, newAcc);
-				}
-			});
-		}
+function walkObj(o, f, acc) {
+	if (acc === undefined) {
+		acc = [];
 	}
+	if (_.isUndefined(acc)) {
+		walkObj(o, f, []);
+	}
+	else if (!_.isArray(acc)) {
+		throw 'accumulator is not an array';
+	}
+	else {
+		_.each(o, function (v, k) {
+			var newAcc = acc.slice();
+			newAcc.push(k);
+			if (!_.isObject(v) || _.isArray(v)) {
+				f(v, newAcc);
+			}
+			else if (_.isObject(v)) {
+				walkObj(v, f, newAcc);
+			}
+		});
+	}
+}
 
 // Object Orientation {{{1
 
@@ -977,35 +977,35 @@ var makeSuper = function (me, parent) {
 	return sup;
 };
 
-	// HTML {{{1
+// HTML {{{1
 
-	/**
-	 * Returns the HTML used to construct the argument.
-	 */
+/**
+ * Returns the HTML used to construct the argument.
+ */
 
-	function outerHtml(elt) {
-		return $('<div>').append(elt).html();
-	}
+function outerHtml(elt) {
+	return $('<div>').append(elt).html();
+}
 
-	/**
-	 * Get all the next nodes which are direct children of the specified nodes.
-	 *
-	 * @param selector jQuery selector used to search for nodes containing text
-	 * children.
-	 *
-	 * @return An array of strings, each element being the text of a node matched
-	 * by the specified selector.
-	 */
+/**
+ * Get all the next nodes which are direct children of the specified nodes.
+ *
+ * @param selector jQuery selector used to search for nodes containing text
+ * children.
+ *
+ * @return An array of strings, each element being the text of a node matched
+ * by the specified selector.
+ */
 
-	function getText(selector) {
-		return jQuery(selector).map(function (i, x) {
-			return jQuery(x).text();
-		});
-	}
+function getText(selector) {
+	return jQuery(selector).map(function (i, x) {
+		return jQuery(x).text();
+	});
+}
 
-	function isVisible(elt) {
-		return elt.css('display') !== 'none' && elt.css('visibility') === 'visible';
-	}
+function isVisible(elt) {
+	return elt.css('display') !== 'none' && elt.css('visibility') === 'visible';
+}
 
 /*
  * Taken from --
@@ -1096,99 +1096,99 @@ function makeToggleCheckbox(rootObj, path, startChecked, text, parent, after) {
 	}, text, parent);
 };
 
-	// Input / Output {{{1
+// Input / Output {{{1
 
-	function valueInfo(value) {
-		if (_.isNumber(value)) {
-			return [value, ': Number'];
-		}
-		else if (_.isString(value)) {
-			return ['"' + value + '"', ': String'];
-		}
-		else if (_.isArray(value)) {
-			return [value, ': Array'];
-		}
-		else if (_.isObject(value)) {
-			return [value, ': Object'];
-		}
-		else {
-			return [value, ': Unknown'];
-		}
+function valueInfo(value) {
+	if (_.isNumber(value)) {
+		return [value, ': Number'];
 	}
-
-	function addSrcInfo(srcIndex, field) {
-		return ':' + srcIndex + ':' + field;
+	else if (_.isString(value)) {
+		return ['"' + value + '"', ': String'];
 	}
-
-	/**
-	 * Logging wrappers.
-	 */
-
-	var log = {
-		info: Function.prototype.bind.call(window.console.log, window.console),
-		warn: Function.prototype.bind.call(window.console.warn, window.console),
-		error: Function.prototype.bind.call(window.console.error, window.console)
-	};
-
-	/**
-	 * More logging wrappers.
-	 */
-
-	var concatLog = {
-		info: function () {
-			log.info.apply(window.console, _.flatten(arguments, true));
-		},
-		warn: function () {
-			log.warn.apply(window.console, _.flatten(arguments, true));
-		},
-		error: function () {
-			log.error.apply(window.console, _.flatten(arguments, true));
-		}
-	};
-
-	/**
-	 * Debug logging.
-	 */
-
-	var debug = {
-		info: function (tag) {
-			var rest = Array.prototype.slice.call(arguments, 1);
-			var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
-
-			if (!MIE.DEBUGGING) {
-				return;
-			}
-
-			return log.info.apply(null, args);
-		},
-		warn: function (tag) {
-			var rest = Array.prototype.slice.call(arguments, 1);
-			var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
-
-			if (!MIE.DEBUGGING) {
-				return;
-			}
-
-			return log.warn.apply(null, args);
-		}
-	};
-
-	/**
-	 * Issue a warning about deprecated usage.  This also sends an email at the warning level, so that
-	 * we can see any systems which are using deprecated features.
-	 *
-	 * @param {object} defn The grid definition.
-	 * @param {string} msg The explanatory message.
-	 * @param {string} ref Section in the wiki that describes this deprecated usage.
-	 *
-	 * @example
-	 * deprecated(defn, 'Usage of [showColumns] and [hideColumns] is deprecated.', 'Showing_.26_Hiding_Columns');
-	 */
-
-	function deprecated(defn, msg, ref) {
-		var output = msg + ' See https://miewiki.med-web.com/wiki/index.php/Advanced_Reports:_Filtering,_Graphing,_Comparing#' + ref + ' for more information.';
-		emailWarning(defn, output);
+	else if (_.isArray(value)) {
+		return [value, ': Array'];
 	}
+	else if (_.isObject(value)) {
+		return [value, ': Object'];
+	}
+	else {
+		return [value, ': Unknown'];
+	}
+}
+
+function addSrcInfo(srcIndex, field) {
+	return ':' + srcIndex + ':' + field;
+}
+
+/**
+ * Logging wrappers.
+ */
+
+var log = {
+	info: Function.prototype.bind.call(window.console.log, window.console),
+	warn: Function.prototype.bind.call(window.console.warn, window.console),
+	error: Function.prototype.bind.call(window.console.error, window.console)
+};
+
+/**
+ * More logging wrappers.
+ */
+
+var concatLog = {
+	info: function () {
+		log.info.apply(window.console, _.flatten(arguments, true));
+	},
+	warn: function () {
+		log.warn.apply(window.console, _.flatten(arguments, true));
+	},
+	error: function () {
+		log.error.apply(window.console, _.flatten(arguments, true));
+	}
+};
+
+/**
+ * Debug logging.
+ */
+
+var debug = {
+	info: function (tag) {
+		var rest = Array.prototype.slice.call(arguments, 1);
+		var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
+
+		if (!MIE.DEBUGGING) {
+			return;
+		}
+
+		return log.info.apply(null, args);
+	},
+	warn: function (tag) {
+		var rest = Array.prototype.slice.call(arguments, 1);
+		var args = Array.prototype.concat.call(['[DEBUG // ' + tag + '] ' + rest[0]], rest.slice(1));
+
+		if (!MIE.DEBUGGING) {
+			return;
+		}
+
+		return log.warn.apply(null, args);
+	}
+};
+
+/**
+ * Issue a warning about deprecated usage.  This also sends an email at the warning level, so that
+ * we can see any systems which are using deprecated features.
+ *
+ * @param {object} defn The grid definition.
+ * @param {string} msg The explanatory message.
+ * @param {string} ref Section in the wiki that describes this deprecated usage.
+ *
+ * @example
+ * deprecated(defn, 'Usage of [showColumns] and [hideColumns] is deprecated.', 'Showing_.26_Hiding_Columns');
+ */
+
+function deprecated(defn, msg, ref) {
+	var output = msg + ' See https://miewiki.med-web.com/wiki/index.php/Advanced_Reports:_Filtering,_Graphing,_Comparing#' + ref + ' for more information.';
+	emailWarning(defn, output);
+}
 
 /**
  * Correctly format a value according to its type and user specification.
@@ -1300,323 +1300,323 @@ function format(colConfig, typeInfo, cell, opts) {
 	return cell.cachedRender;
 };
 
-	// Date and Time Formatting {{{1
+// Date and Time Formatting {{{1
 
-	// Initialize date and time format strings from user preferences.  There doesn't seem to be a
-	// builtin way to convert the magick numbers into format strings, but since they're stored in the
-	// database it seems safe to assume that they won't change.
+// Initialize date and time format strings from user preferences.  There doesn't seem to be a
+// builtin way to convert the magick numbers into format strings, but since they're stored in the
+// database it seems safe to assume that they won't change.
 
-	var dateFormatString = 'yyyy-MM-dd';
-	var timeFormatString = 'HH:mm:ss';
+var dateFormatString = 'yyyy-MM-dd';
+var timeFormatString = 'HH:mm:ss';
 
-	/**
-	 * Initialization function to grab things we need before doing anything else (e.g. user
-	 * preferences).  This function is asynchronous and requires that you pass it a continuation.
-	 */
+/**
+ * Initialization function to grab things we need before doing anything else (e.g. user
+ * preferences).  This function is asynchronous and requires that you pass it a continuation.
+ */
 
-	function init(cont) {
-		switch (miecgictrl.dateformat) {
-		case 1:
-			dateFormatString = 'MM-dd-yyyy';
-			break;
-		case 2:
-			dateFormatString = 'dd-MM-yyyy';
-			break;
-		case 3:
-			dateFormatString = 'yyyy-MM-dd';
-			break;
-		default:
-			dateFormatString = 'yyyy-MM-dd';
+function init(cont) {
+	switch (miecgictrl.dateformat) {
+	case 1:
+		dateFormatString = 'MM-dd-yyyy';
+		break;
+	case 2:
+		dateFormatString = 'dd-MM-yyyy';
+		break;
+	case 3:
+		dateFormatString = 'yyyy-MM-dd';
+		break;
+	default:
+		dateFormatString = 'yyyy-MM-dd';
+	}
+	timeFormatString = miecgictrl.militaryTime ? 'HH:mm:ss' : 'hh:mm:ss tt';
+	cont();
+}
+
+/**
+ * Format a Date object according to the user's date formatting preferences.  To be accurate, you
+ * need to call the init() function first.
+ *
+ * @param {Date} d The date to format.
+ * @returns {string} The date formatted according to the user's preference.
+ */
+
+function formatDate(d) {
+	var convert = {
+		'MM': function (x) {
+			var m = x.getMonth() + 1;
+			return m > 9 ? m : '0' + m;
+		},
+		'dd': function (x) {
+			var d = x.getDate();
+			return d > 9 ? d : '0' + d;
+		},
+		'yyyy': function (x) {
+			return x.getFullYear();
 		}
-		timeFormatString = miecgictrl.militaryTime ? 'HH:mm:ss' : 'hh:mm:ss tt';
-		cont();
-	}
-
-	/**
-	 * Format a Date object according to the user's date formatting preferences.  To be accurate, you
-	 * need to call the init() function first.
-	 *
-	 * @param {Date} d The date to format.
-	 * @returns {string} The date formatted according to the user's preference.
-	 */
-
-	function formatDate(d) {
-		var convert = {
-			'MM': function (x) {
-				var m = x.getMonth() + 1;
-				return m > 9 ? m : '0' + m;
-			},
-			'dd': function (x) {
-				var d = x.getDate();
-				return d > 9 ? d : '0' + d;
-			},
-			'yyyy': function (x) {
-				return x.getFullYear();
-			}
-		};
-		return _.map(dateFormatString.split('-'), function (fmt) {
-			if (convert[fmt]) {
-				return convert[fmt](d);
-			}
-			else {
-				return '[UNKNOWN]';
-			}
-		}).join('-');
-	}
-
-	/**
-	 * Format a Date object according to the user's time formatting preferences.  To be accurate, you
-	 * need to call the init() function first.
-	 *
-	 * @param {Date} t The time to format.
-	 * @returns {string} The time formatted according to the user's preference.
-	 */
-
-	function formatTime(t) {
-		var convert = {
-			'HH': function (x) {
-				var h = x.getHours();
-				return h > 9 ? h : '0' + h;
-			},
-			'hh': function (x) {
-				var h = x.getHours();
-				if (h === 0) {
-					h = 12;
-				}
-				else if (h > 12) {
-					h = h - 12;
-				}
-				return h > 9 ? h : '0' + h;
-			},
-			'mm': function (x) {
-				var m = x.getMinutes();
-				return m > 9 ? m : '0' + m;
-			},
-			'ss': function (x) {
-				var s = x.getSeconds();
-				return s > 9 ? s : '0' + s;
-			},
-			'tt': function (x) {
-				var h = x.getHours();
-				return h < 12 ? 'AM' : 'PM';
-			}
-		};
-		return timeFormatString.replace(/[A-Za-z]+/g, function (fmt) {
-			if (convert[fmt]) {
-				return convert[fmt](t);
-			}
-		});
-	}
-
-	/**
-	 */
-
-	function formatDateTime(d) {
-		return formatDate(d) + ' ' + formatTime(d);
-	}
-
-	/**
-	 */
-
-	function formatDateString(s) {
-		if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
-			return '[UNKNOWN]';
-		}
-		return formatDate(new Date(s));
-	}
-
-	/**
-	 */
-
-	function formatTimeString(s) {
-		if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
-			return '[UNKNOWN]';
-		}
-		return formatTime(new Date(s));
-	}
-
-	/**
-	 */
-
-	function formatDateTimeString(s) {
-		if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
-			return '[UNKNOWN]';
-		}
-		formatDateTime(new Date(s));
-	}
-
-	/**
-	 */
-
-	function removeZeroDates(x) {
-		return x === '0000-00-00' ? '' : x;
-	}
-
-	/**
-	 */
-
-	function removeZeroDateTimes(x) {
-		return x === '0000-00-00 00:00:00' ? '' : x;
-	}
-
-	var DATE_ONLY_REGEXP = /^\d\d\d\d-\d\d-\d\d$/;
-
-	/**
-	 */
-
-	function addTimeComponent(x) {
-		return (typeof x === 'string' && DATE_ONLY_REGEXP.test(x)) ? x + ' 00:00:00' : x;
-	}
-
-
-	// Exceptions {{{1
-
-	/**
-	 * Exception used when a parameter required by a report has not been provided through the user
-	 * interface.
-	 */
-
-	function MissingRequiredParameterError(name) {
-		this.name = 'MissingRequiredParameterError';
-		this.stack = (new Error()).stack;
-		this.message = 'Missing required parameter: ' + name;
-	}
-
-	MissingRequiredParameterError.prototype = Object.create(Error.prototype);
-	MissingRequiredParameterError.prototype.constructor = MissingRequiredParameterError;
-
-	/**
-	 * Internal exception used when the developer requests a feature that has not been implemented.
-	 */
-
-	function NotImplementedError(msg) {
-		this.name = 'NotImplementedError';
-		this.stack = (new Error()).stack;
-		this.message = msg || 'Not Implemented';
-	}
-
-	NotImplementedError.prototype = Object.create(Error.prototype);
-	NotImplementedError.prototype.constructor = NotImplementedError;
-
-	/**
-	 * Exception used when an error has occurred while attempting to run a system report.
-	 */
-
-	function ReportRunError(msg) {
-		this.name = 'ReportRunError';
-		this.stack = (new Error()).stack;
-		this.message = msg;
-	}
-
-	ReportRunError.prototype = Object.create(Error.prototype);
-	ReportRunError.prototype.constructor = ReportRunError;
-
-	/**
-	 * Internal exception used when the developer has used a grid definition which is invalid in some
-	 * way (e.g. missing or incorrect property value).
-	 */
-
-	function InvalidReportDefinitionError(field, value, msg) {
-		this.name = 'InvalidReportDefinitionError';
-		this.stack = (new Error()).stack;
-
-		window.console.log(msg);
-		window.console.log(field);
-		window.console.log(value);
-
-		if (isNothing(field) && isNothing(value)) {
-			this.message = msg;
+	};
+	return _.map(dateFormatString.split('-'), function (fmt) {
+		if (convert[fmt]) {
+			return convert[fmt](d);
 		}
 		else {
-			this.message = 'Invalid report definition: [' + field + '] = "' + value + '", ' + msg;
+			return '[UNKNOWN]';
 		}
+	}).join('-');
+}
+
+/**
+ * Format a Date object according to the user's time formatting preferences.  To be accurate, you
+ * need to call the init() function first.
+ *
+ * @param {Date} t The time to format.
+ * @returns {string} The time formatted according to the user's preference.
+ */
+
+function formatTime(t) {
+	var convert = {
+		'HH': function (x) {
+			var h = x.getHours();
+			return h > 9 ? h : '0' + h;
+		},
+		'hh': function (x) {
+			var h = x.getHours();
+			if (h === 0) {
+				h = 12;
+			}
+			else if (h > 12) {
+				h = h - 12;
+			}
+			return h > 9 ? h : '0' + h;
+		},
+		'mm': function (x) {
+			var m = x.getMinutes();
+			return m > 9 ? m : '0' + m;
+		},
+		'ss': function (x) {
+			var s = x.getSeconds();
+			return s > 9 ? s : '0' + s;
+		},
+		'tt': function (x) {
+			var h = x.getHours();
+			return h < 12 ? 'AM' : 'PM';
+		}
+	};
+	return timeFormatString.replace(/[A-Za-z]+/g, function (fmt) {
+		if (convert[fmt]) {
+			return convert[fmt](t);
+		}
+	});
+}
+
+/**
+*/
+
+function formatDateTime(d) {
+	return formatDate(d) + ' ' + formatTime(d);
+}
+
+/**
+*/
+
+function formatDateString(s) {
+	if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
+		return '[UNKNOWN]';
 	}
+	return formatDate(new Date(s));
+}
 
-	InvalidReportDefinitionError.prototype = Object.create(Error.prototype);
-	InvalidReportDefinitionError.prototype.constructor = InvalidReportDefinitionError;
+/**
+*/
 
-	/**
-	 * Internal exception used when the developer has created or specified an invalid source.
-	 */
+function formatTimeString(s) {
+	if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
+		return '[UNKNOWN]';
+	}
+	return formatTime(new Date(s));
+}
 
-	function InvalidSourceError(msg) {
-		this.name = 'InvalidSourceError';
-		this.stack = (new Error()).stack;
+/**
+*/
+
+function formatDateTimeString(s) {
+	if (s === '' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
+		return '[UNKNOWN]';
+	}
+	formatDateTime(new Date(s));
+}
+
+/**
+*/
+
+function removeZeroDates(x) {
+	return x === '0000-00-00' ? '' : x;
+}
+
+/**
+*/
+
+function removeZeroDateTimes(x) {
+	return x === '0000-00-00 00:00:00' ? '' : x;
+}
+
+var DATE_ONLY_REGEXP = /^\d\d\d\d-\d\d-\d\d$/;
+
+/**
+*/
+
+function addTimeComponent(x) {
+	return (typeof x === 'string' && DATE_ONLY_REGEXP.test(x)) ? x + ' 00:00:00' : x;
+}
+
+
+// Exceptions {{{1
+
+/**
+ * Exception used when a parameter required by a report has not been provided through the user
+ * interface.
+ */
+
+function MissingRequiredParameterError(name) {
+	this.name = 'MissingRequiredParameterError';
+	this.stack = (new Error()).stack;
+	this.message = 'Missing required parameter: ' + name;
+}
+
+MissingRequiredParameterError.prototype = Object.create(Error.prototype);
+MissingRequiredParameterError.prototype.constructor = MissingRequiredParameterError;
+
+/**
+ * Internal exception used when the developer requests a feature that has not been implemented.
+ */
+
+function NotImplementedError(msg) {
+	this.name = 'NotImplementedError';
+	this.stack = (new Error()).stack;
+	this.message = msg || 'Not Implemented';
+}
+
+NotImplementedError.prototype = Object.create(Error.prototype);
+NotImplementedError.prototype.constructor = NotImplementedError;
+
+/**
+ * Exception used when an error has occurred while attempting to run a system report.
+ */
+
+function ReportRunError(msg) {
+	this.name = 'ReportRunError';
+	this.stack = (new Error()).stack;
+	this.message = msg;
+}
+
+ReportRunError.prototype = Object.create(Error.prototype);
+ReportRunError.prototype.constructor = ReportRunError;
+
+/**
+ * Internal exception used when the developer has used a grid definition which is invalid in some
+ * way (e.g. missing or incorrect property value).
+ */
+
+function InvalidReportDefinitionError(field, value, msg) {
+	this.name = 'InvalidReportDefinitionError';
+	this.stack = (new Error()).stack;
+
+	window.console.log(msg);
+	window.console.log(field);
+	window.console.log(value);
+
+	if (isNothing(field) && isNothing(value)) {
 		this.message = msg;
 	}
+	else {
+		this.message = 'Invalid report definition: [' + field + '] = "' + value + '", ' + msg;
+	}
+}
 
-	InvalidSourceError.prototype = Object.create(Error.prototype);
-	InvalidSourceError.prototype.constructor = InvalidSourceError;
+InvalidReportDefinitionError.prototype = Object.create(Error.prototype);
+InvalidReportDefinitionError.prototype.constructor = InvalidReportDefinitionError;
 
-	/**
-	 * Internal exception used when the developer has called a function with an invalid argument.
-	 */
+/**
+ * Internal exception used when the developer has created or specified an invalid source.
+ */
 
-	function InvalidCallError(msg) {
-		this.name = 'InvalidCallError';
-		this.stack = (new Error()).stack;
-		this.message = msg;
+function InvalidSourceError(msg) {
+	this.name = 'InvalidSourceError';
+	this.stack = (new Error()).stack;
+	this.message = msg;
+}
+
+InvalidSourceError.prototype = Object.create(Error.prototype);
+InvalidSourceError.prototype.constructor = InvalidSourceError;
+
+/**
+ * Internal exception used when the developer has called a function with an invalid argument.
+ */
+
+function InvalidCallError(msg) {
+	this.name = 'InvalidCallError';
+	this.stack = (new Error()).stack;
+	this.message = msg;
+}
+
+InvalidCallError.prototype = Object.create(Error.prototype);
+InvalidCallError.prototype.constructor = InvalidCallError;
+
+
+// Locking {{{1
+
+/**
+ * Locks exist because we may have multiple asynchronous chunks of JavaScript running at the same
+ * time which interfere with each other.
+ *
+ * A really good example is preferences: loading them into the jQWidgets grid fires the event
+ * handlers associated with changing all the items in the prefs.  The preferences contain column
+ * widths, so loading them causes all the column resize event handlers to fire.  So we have a lock
+ * for preferences.  We engage it when load the preferences, then the event handlers find the lock
+ * engaged, so they don't try to save the preferences.  When the preferences are done loading, we
+ * disengage the lock, and event handlers are free to save prefs again.
+ */
+
+/**
+ * Engage the lock with the given name.
+ */
+
+function lock(defn, name) {
+	if (defn.locks === undefined) {
+		defn.locks = {};
 	}
 
-	InvalidCallError.prototype = Object.create(Error.prototype);
-	InvalidCallError.prototype.constructor = InvalidCallError;
-
-
-	// Locking {{{1
-
-	/**
-	 * Locks exist because we may have multiple asynchronous chunks of JavaScript running at the same
-	 * time which interfere with each other.
-	 *
-	 * A really good example is preferences: loading them into the jQWidgets grid fires the event
-	 * handlers associated with changing all the items in the prefs.  The preferences contain column
-	 * widths, so loading them causes all the column resize event handlers to fire.  So we have a lock
-	 * for preferences.  We engage it when load the preferences, then the event handlers find the lock
-	 * engaged, so they don't try to save the preferences.  When the preferences are done loading, we
-	 * disengage the lock, and event handlers are free to save prefs again.
-	 */
-
-	/**
-	 * Engage the lock with the given name.
-	 */
-
-	function lock(defn, name) {
-		if (defn.locks === undefined) {
-			defn.locks = {};
-		}
-
-		if (defn.locks[name] === undefined) {
-			defn.locks[name] = 0;
-		}
-
-		defn.locks[name] += 1;
-		debug.info('LOCK', 'Locking ' + name + ' - ' + defn.locks[name]);
+	if (defn.locks[name] === undefined) {
+		defn.locks[name] = 0;
 	}
 
-	/**
-	 * Disengage the lock with the given name.
-	 */
+	defn.locks[name] += 1;
+	debug.info('LOCK', 'Locking ' + name + ' - ' + defn.locks[name]);
+}
 
-	function unlock(defn, name) {
-		if (defn.locks === undefined) {
-			defn.locks = {};
-		}
+/**
+ * Disengage the lock with the given name.
+ */
 
-		if (defn.locks[name] === undefined) {
-			defn.locks[name] = 1;
-		}
-
-		defn.locks[name] -= 1;
-		debug.info('LOCK', 'Unlocking ' + name + ' - ' + defn.locks[name]);
+function unlock(defn, name) {
+	if (defn.locks === undefined) {
+		defn.locks = {};
 	}
 
-	/**
-	 * Check to see if the lock with the given name is engaged or not.
-	 */
-
-	function isLocked(defn, name) {
-		return defn.locks && !!defn.locks[name];
+	if (defn.locks[name] === undefined) {
+		defn.locks[name] = 1;
 	}
+
+	defn.locks[name] -= 1;
+	debug.info('LOCK', 'Unlocking ' + name + ' - ' + defn.locks[name]);
+}
+
+/**
+ * Check to see if the lock with the given name is engaged or not.
+ */
+
+function isLocked(defn, name) {
+	return defn.locks && !!defn.locks[name];
+}
 
 /**
  * An implementation of a counting semaphore for JavaScript.
@@ -1713,43 +1713,100 @@ Lock.prototype.isLocked = function () {
 
 Lock.prototype.onUnlock = function (f, info) {
 	this._onUnlock.push({
-		f: f,
-		info: info
+											f: f,
+											info: info
 	});
 };
 
-	// Blocking {{{1
+// Blocking {{{1
 
-	var BLOCK_CONFIG = {
-		message: null,
-		overlayCSS: {
-			opacity: 0.9,
-			backgroundColor: '#FFF'
+var BLOCK_CONFIG = {
+	message: null,
+	overlayCSS: {
+		opacity: 0.9,
+		backgroundColor: '#FFF'
+	}
+};
+
+/**
+ * Block the grid.  If the grid has already been blocked, then nothing happens.
+ *
+ * @param {object} defn The definition of the report that created the grid to block.
+ * @param {function} fn If present, that function will be used as BlockUI's onBlock event handler.
+ * @param {string} info Message that can be logged when blocking.
+ */
+
+function blockGrid(defn, fn, info) {
+	var grid;
+	var blockConfig;
+	var output;
+
+	if (defn.table.blockCount === undefined) {
+		defn.table.blockCount = 0;
+	}
+
+	defn.table.blockCount += 1;
+
+	debug.info('BLOCKING // PUSH', '> COUNT =', defn.table.blockCount, '> INFO =', info);
+
+	if (defn.table.blockCount === 1) {
+		output = getProp(defn, 'table', 'output', 'method');
+
+		switch (output) {
+		case 'jqwidgets':
+			grid = jQuery(document.getElementById(defn.table.id)).children('div [role="grid"]');
+			break;
+		case 'pivot':
+			grid = jQuery(document.getElementById(defn.table.id));
+			break;
+		default:
+			grid = null;
 		}
-	};
 
-	/**
-	 * Block the grid.  If the grid has already been blocked, then nothing happens.
-	 *
-	 * @param {object} defn The definition of the report that created the grid to block.
-	 * @param {function} fn If present, that function will be used as BlockUI's onBlock event handler.
-	 * @param {string} info Message that can be logged when blocking.
-	 */
+		if (grid !== null) {
+			blockConfig = {
+				message: null,
+				overlayCSS: {
+					opacity: 0.9,
+					backgroundColor: '#FFF'
+				}
+			};
 
-	function blockGrid(defn, fn, info) {
-		var grid;
-		var blockConfig;
-		var output;
+			if (typeof fn === 'function') {
+				blockConfig.onBlock = fn;
+			}
 
-		if (defn.table.blockCount === undefined) {
-			defn.table.blockCount = 0;
+			grid.block(blockConfig);
 		}
+		else {
+			fn();
+		}
+	}
+	else if (typeof fn === 'function') {
+		fn();
+	}
+}
 
-		defn.table.blockCount += 1;
+/**
+ * Unblock the grid.  If the grid has been blocked by more events then it has been unblocked by,
+ * then the block will remain.
+ *
+ * @param {object} defn The definition of the report that created the grid to block.
+ * @param {string} info Message that can be logged when unblocking.
+ */
 
-		debug.info('BLOCKING // PUSH', '> COUNT =', defn.table.blockCount, '> INFO =', info);
+function unblockGrid(defn, info) {
+	var grid;
+	var output;
 
-		if (defn.table.blockCount === 1) {
+	if (defn.table.blockCount === undefined) {
+		defn.table.blockCount = 0;
+	}
+
+	if (defn.table.blockCount > 0) {
+		defn.table.blockCount -= 1;
+		debug.info('BLOCKING // POP', ' > COUNT =', defn.table.blockCount, '> INFO =', info);
+		if (defn.table.blockCount === 0) {
 			output = getProp(defn, 'table', 'output', 'method');
 
 			switch (output) {
@@ -1764,110 +1821,53 @@ Lock.prototype.onUnlock = function (f, info) {
 			}
 
 			if (grid !== null) {
-				blockConfig = {
-					message: null,
-					overlayCSS: {
-						opacity: 0.9,
-						backgroundColor: '#FFF'
-					}
-				};
-
-				if (typeof fn === 'function') {
-					blockConfig.onBlock = fn;
-				}
-
-				grid.block(blockConfig);
-			}
-			else {
-				fn();
+				grid.unblock();
 			}
 		}
-		else if (typeof fn === 'function') {
+	}
+}
+
+/**
+ * Check to see if a grid is blocked.
+ *
+ * @param {object} defn The definition of the report that created the grid we want to check.
+ *
+ * @return {boolean} True if the grid is blocked, false if it is not.
+ */
+
+function gridIsBlocked(defn) {
+	return defn.table.blockCount > 0;
+}
+
+/**
+ * Wrap a function to execute while the grid is blocked.  Blocks the grid, calls the function, and
+ * unblocks immediately afterward.  You probably only want to use this is the function you provide
+ * is not asynchronous (otherwise the grid will unblock "early" when the function returns).
+ *
+ * @param {object} defn The definition of the report that created the grid to block.
+ *
+ * @param {function} fn A zero-arity function to call after the grid has been blocked.  After this
+ * function returns, the grid is unblocked.
+ *
+ * @param {string} info Message that can be logged when blocking/unblocking.
+ */
+
+function withGridBlock(defn, fn, info) {
+	if (typeof fn !== 'function') {
+		throw InvalidCallError('Argument <fn> must be a function.');
+	}
+
+	blockGrid(defn, function () {
+		// This shouldn't be necessary because we're doing it in BlockUI's onBlock event handler, but
+		// for whatever reason it doesn't always work... oftentimes, when fn() executes, the element
+		// is not visually blocked.  This seems to be much more consistent in how it looks.
+
+		window.setTimeout(function () {
 			fn();
-		}
-	}
-
-	/**
-	 * Unblock the grid.  If the grid has been blocked by more events then it has been unblocked by,
-	 * then the block will remain.
-	 *
-	 * @param {object} defn The definition of the report that created the grid to block.
-	 * @param {string} info Message that can be logged when unblocking.
-	 */
-
-	function unblockGrid(defn, info) {
-		var grid;
-		var output;
-
-		if (defn.table.blockCount === undefined) {
-			defn.table.blockCount = 0;
-		}
-
-		if (defn.table.blockCount > 0) {
-			defn.table.blockCount -= 1;
-			debug.info('BLOCKING // POP', ' > COUNT =', defn.table.blockCount, '> INFO =', info);
-			if (defn.table.blockCount === 0) {
-				output = getProp(defn, 'table', 'output', 'method');
-
-				switch (output) {
-				case 'jqwidgets':
-					grid = jQuery(document.getElementById(defn.table.id)).children('div [role="grid"]');
-					break;
-				case 'pivot':
-					grid = jQuery(document.getElementById(defn.table.id));
-					break;
-				default:
-					grid = null;
-				}
-
-				if (grid !== null) {
-					grid.unblock();
-				}
-			}
-		}
-	}
-
-	/**
-	 * Check to see if a grid is blocked.
-	 *
-	 * @param {object} defn The definition of the report that created the grid we want to check.
-	 *
-	 * @return {boolean} True if the grid is blocked, false if it is not.
-	 */
-
-	function gridIsBlocked(defn) {
-		return defn.table.blockCount > 0;
-	}
-
-	/**
-	 * Wrap a function to execute while the grid is blocked.  Blocks the grid, calls the function, and
-	 * unblocks immediately afterward.  You probably only want to use this is the function you provide
-	 * is not asynchronous (otherwise the grid will unblock "early" when the function returns).
-	 *
-	 * @param {object} defn The definition of the report that created the grid to block.
-	 *
-	 * @param {function} fn A zero-arity function to call after the grid has been blocked.  After this
-	 * function returns, the grid is unblocked.
-	 *
-	 * @param {string} info Message that can be logged when blocking/unblocking.
-	 */
-
-	function withGridBlock(defn, fn, info) {
-		if (typeof fn !== 'function') {
-			throw InvalidCallError('Argument <fn> must be a function.');
-		}
-
-		blockGrid(defn, function () {
-			// This shouldn't be necessary because we're doing it in BlockUI's onBlock event handler, but
-			// for whatever reason it doesn't always work... oftentimes, when fn() executes, the element
-			// is not visually blocked.  This seems to be much more consistent in how it looks.
-
-			window.setTimeout(function () {
-				fn();
-				unblockGrid(defn, info);
-			}, $.blockUI.defaults.fadeIn);
-		}, info);
-	}
+			unblockGrid(defn, info);
+		}, $.blockUI.defaults.fadeIn);
+	}, info);
+}
 
 // Timing {{{1
 
@@ -2001,9 +2001,9 @@ function mixinEventHandling(obj, name, events) {
 		}
 
 		self.eventHandlers[evt].push({
-			who: opts.who,
-			cb: cb,
-			limit: opts.limit
+																 who: opts.who,
+																 cb: cb,
+																 limit: opts.limit
 		});
 
 		return self;
@@ -2088,8 +2088,8 @@ function mixinEventHandling(obj, name, events) {
 			}
 
 			handlers.push({
-				handler: handler,
-				index: i
+										handler: handler,
+										index: i
 			});
 		}
 
