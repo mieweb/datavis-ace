@@ -954,20 +954,20 @@ var makeSubclass = function (parent, ctor) {
 	var subclass = function () {
 		var self = this;
 
-		self.super = makeSuper(self);
+		if (parent !== Object) {
+			self.super = makeSuper(self, parent);
+		}
+
 		ctor.apply(self, arguments);
 	};
 
 	subclass.prototype = Object.create(parent.prototype);
 	subclass.prototype.constructor = subclass;
-	subclass.prototype.superclass = parent;
 
 	return subclass;
 };
 
 var makeSuper = function (me, parent) {
-	parent = parent || me.superclass;
-
 	var sup = _.mapObject(parent.prototype, function (v, k) {
 		return _.bind(v, me);
 	});
