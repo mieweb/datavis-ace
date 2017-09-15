@@ -1473,9 +1473,6 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		});
 	})(groupIds, []);
 
-	console.log(groupIds);
-	console.log(_.map(revGroupIds, function (x) { return x !== undefined && data.rowVals[x]; }));
-
 	var lastRowVal = [];
 
 	var render = function (groupNum, placeAfter) {
@@ -1540,9 +1537,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	var toggleGroup = function () {
 		var toggle = function (groupId, show, tr) {
-			console.log('TOGGLING GROUP: ' + groupId);
 			if (show && revGroupIds[groupId] !== undefined && !isRendered[groupId]) {
-				console.log('RENDERING GROUP: ' + groupId);
 				render(revGroupIds[groupId], tr);
 				isRendered[groupId] = true;
 			}
@@ -1553,7 +1548,6 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				})
 				.each(function (i, elt) {
 					if (elt.dataset.wcdvTogglesGroup) {
-						console.log(elt);
 						toggle(elt.dataset.wcdvTogglesGroup, show && elt.dataset.wcdvCollapsed === '0', jQuery(elt));
 					}
 					if (show) {
@@ -1602,9 +1596,9 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				return;
 			}
 
-			console.log(rowVal.slice(0, rowValIdx + 1).join(', ')
-									+ ' { group = ' + getProp(groupIds, rowVal.slice(0, rowValIdx), '_groupId')
-									+ ' ; toggles = ' + getProp(groupIds, rowVal.slice(0, rowValIdx + 1), '_groupId') + ' }');
+			//console.log(rowVal.slice(0, rowValIdx + 1).join(', ')
+			//						+ ' { group = ' + getProp(groupIds, rowVal.slice(0, rowValIdx), '_groupId')
+			//						+ ' ; toggles = ' + getProp(groupIds, rowVal.slice(0, rowValIdx + 1), '_groupId') + ' }');
 
 			tr = jQuery('<tr>')
 				.attr('data-wcdv-group', getProp(groupIds, rowVal.slice(0, rowValIdx), '_groupId'))
@@ -1637,11 +1631,22 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				.appendTo(tr)
 			;
 
+			var infoText = ' (';
+
+			if (rowValIdx < data.groupFields.length - 1) {
+				infoText += '' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_children') + ' groups';
+				infoText += ', ';
+			}
+
+			infoText += '' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_count') + ' rows';
+
+			infoText += ')';
+
 			jQuery('<td>')
 				.addClass('wcdv_group_value')
 				.attr('colspan', columns.length - rowValIdx)
 				.append(jQuery('<span>').addClass('wcdv_group_value').text(rowValElt))
-				.append(' (' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_count') + ' rows)')
+				.append(infoText)
 				.appendTo(tr)
 			;
 

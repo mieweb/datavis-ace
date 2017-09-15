@@ -110,7 +110,7 @@ var View = function (source, name, opts) {
 		self.fire(View.events.dataUpdated);
 	});
 
-	self.name = name || gensym();
+	self.name = name || source.getName() || gensym();
 
 	self.eventHandlers = {};
 	_.each(_.keys(View.events), function (evt) {
@@ -863,6 +863,7 @@ View.prototype.group = function () {
 			if (fieldNames.length > 1) {
 				tmp[value] = RECUR(cdr(fieldNames), groupedRows, metadata[value]);
 			};
+			metadata[value]._children = _.keys(tmp[value]).length;
 		});
 
 		return tmp;

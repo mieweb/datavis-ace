@@ -902,6 +902,14 @@ LocalSource.prototype.clearCachedData = function () {
 	self.cache = null;
 };
 
+// #getName {{{2
+
+LocalSource.prototype.getName = function () {
+	var self = this;
+
+	return self.varName;
+};
+
 // HttpSource {{{1
 
 var HttpSource = function (spec, params, userTypeInfo) {
@@ -1271,6 +1279,16 @@ Source.sources = {
 // .converters {{{2
 
 Source.converters = {};
+
+// #getName {{{2
+
+Source.prototype.getName = function () {
+	var self = this;
+
+	if (typeof self.origin.getName === 'function') {
+		return self.origin.getName();
+	}
+};
 
 // #getData {{{2
 
