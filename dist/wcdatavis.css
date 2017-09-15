@@ -6,12 +6,7 @@
 
 .wcdv_expand_button {
 	display: inline-block;
-	padding-right: 0.25em;
 	vertical-align: middle;
-}
-
-.wcdv_group_col_spacer {
-	width: 0.5em;
 }
 
 .wcdv_grid {
@@ -258,6 +253,22 @@
 	border-bottom: solid 1px #666;
 	flex: 1 1;
 }
+
+.wcdv_grid_table .wcdv_group_col_spacer {
+	width: 1em;
+	padding-right: 0px;
+}
+
+td.wcdv_group_col_spacer,
+td.wcdv_group_value {
+	background-color: #EEE;
+}
+
+/*
+td.wcdv_group_value > span.wcdv_group_value {
+	font-weight: bold;
+}
+*/
 
 tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 	text-transform: none;

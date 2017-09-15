@@ -1369,7 +1369,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// Add spacers for the previous group fields.
 
-		for (var i = 0; i < fieldIdx; i += 1) {
+		for (var i = 0; i < fieldIdx + 1; i += 1) {
 			jQuery('<th>')
 				.addClass('wcdv_group_col_spacer')
 				.appendTo(headingTr)
@@ -1402,7 +1402,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 	// Add spacers for all the group fields.
 
-	for (var i = 0; i < data.groupFields.length; i += 1) {
+	for (var i = 0; i < data.groupFields.length + 1; i += 1) {
 		jQuery('<th>')
 			.addClass('wcdv_group_col_spacer')
 			.appendTo(headingTr)
@@ -1455,27 +1455,97 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	}
 
 	var groupIds = {};
+	var revGroupIds = [];
+	var isRendered = [];
 	var groupId = 0;
-	_.each(data.rowVals, function (rowVal) {
+	_.each(data.rowVals, function (rowVal, rowValIdx) {
 		setProp(0, groupIds, rowVal, '_groupId');
+		setProp(rowValIdx, groupIds, rowVal, '_rowValIdx');
 	});
 
 	(function RECUR(o) {
 		_.each(o, function (v, k) {
 			if (typeof v === 'object') {
 				v._groupId = groupId++;
+				revGroupIds[v._groupId] = v._rowValIdx;
 				RECUR(v);
 			}
 		});
-	})(groupIds);
+	})(groupIds, []);
 
 	console.log(groupIds);
+	console.log(_.map(revGroupIds, function (x) { return x !== undefined && data.rowVals[x]; }));
 
 	var lastRowVal = [];
 
+	var render = function (groupNum, placeAfter) {
+		var rowGroup = data.data[groupNum];
+		var rowVal = data.rowVals[groupNum];
+		var tr;
+
+		// Create the cells that show the rows in this group.
+		//
+		// EXAMPLE
+		// -------
+		//
+		// <tr>
+		//   <td colspan="2"></td>
+		//   ... row[col] | col ∉ groupFields ...
+		// </tr>
+
+		_.each(rowGroup, function (row, rowNum) {
+			tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum})
+				.attr('data-wcdv-group', getProp(groupIds, rowVal, '_groupId'))
+				.hide()
+				.append(jQuery('<td>', { colspan: data.groupFields.length + 1 }))
+			;
+
+			// Create the data cells.
+
+			_.each(columns, function (field, colIndex) {
+				if (data.groupFields.indexOf(field) >= 0) {
+					return;
+				}
+
+				var colConfig = getPropDef({}, self.defn, 'table', 'columns', colIndex);
+				var cell = row.rowData[field];
+
+				var td = jQuery('<td>');
+				var value = format(colConfig, typeInfo.get(field), cell);
+
+				if (value instanceof Element || value instanceof jQuery) {
+					td.append(value);
+				}
+				else if (colConfig.allowHtml && typeInfo.get(field).type === 'string') {
+					td.html(value);
+				}
+				else {
+					td.text(value);
+				}
+
+				self.setCss(td, field);
+				self.setAlignment(td, colConfig, typeInfo, field);
+
+				tr.append(td);
+			});
+
+			self.ui.tr[rowNum] = tr;
+			placeAfter.after(tr);
+		});
+
+		if (self.features.tabletool && window.TableTool !== undefined) {
+			TableTool.update();
+		}
+	};
+
 	var toggleGroup = function () {
-		var toggle = function (groupId, show) {
+		var toggle = function (groupId, show, tr) {
 			console.log('TOGGLING GROUP: ' + groupId);
+			if (show && revGroupIds[groupId] !== undefined && !isRendered[groupId]) {
+				console.log('RENDERING GROUP: ' + groupId);
+				render(revGroupIds[groupId], tr);
+				isRendered[groupId] = true;
+			}
 			self.ui.tbody
 				.find('tr')
 				.filter(function (i, elt) {
@@ -1484,7 +1554,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				.each(function (i, elt) {
 					if (elt.dataset.wcdvTogglesGroup) {
 						console.log(elt);
-						toggle(elt.dataset.wcdvTogglesGroup, show && elt.dataset.wcdvCollapsed === '0');
+						toggle(elt.dataset.wcdvTogglesGroup, show && elt.dataset.wcdvCollapsed === '0', jQuery(elt));
 					}
 					if (show) {
 						jQuery(elt).show();
@@ -1499,7 +1569,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		var tr = elt.closest('tr');
 		var wasCollapsed = tr.attr('data-wcdv-collapsed');
 
-		toggle(tr.attr('data-wcdv-toggles-group'), wasCollapsed === '1');
+		toggle(tr.attr('data-wcdv-toggles-group'), wasCollapsed === '1', tr);
 
 		tr.attr('data-wcdv-collapsed', wasCollapsed === '1' ? '0' : '1');
 		elt.html(fontAwesome(wasCollapsed === '1' ? 'F147' : 'F196'));
@@ -1549,7 +1619,10 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			// Insert spacer columns for previous group fields.
 
 			for (var i = 0; i < rowValIdx; i += 1) {
-				tr.append('<td>');
+				jQuery('<td>')
+					.addClass('wcdv_group_col_spacer')
+					.appendTo(tr)
+				;
 			}
 
 			var expandBtn = jQuery('<div>')
@@ -1558,10 +1631,17 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				.on('click', toggleGroup)
 			;
 
-			jQuery('<th>')
-				.attr('colspan', columns.length - rowValIdx)
+			jQuery('<td>')
 				.append(expandBtn)
-				.append(rowValElt + ' (' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_count') + ' rows)')
+				.addClass('wcdv_group_col_spacer')
+				.appendTo(tr)
+			;
+
+			jQuery('<td>')
+				.addClass('wcdv_group_value')
+				.attr('colspan', columns.length - rowValIdx)
+				.append(jQuery('<span>').addClass('wcdv_group_value').text(rowValElt))
+				.append(' (' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_count') + ' rows)')
 				.appendTo(tr)
 			;
 
@@ -1569,56 +1649,6 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		});
 
 		lastRowVal = arrayCopy(rowVal);
-
-		// Create the cells that show the rows in this group.
-		//
-		// EXAMPLE
-		// -------
-		//
-		// <tr>
-		//   <td colspan="2"></td>
-		//   ... row[col] | col ∉ groupFields ...
-		// </tr>
-
-		_.each(rowGroup, function (row, rowNum) {
-			tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum})
-				.attr('data-wcdv-group', getProp(groupIds, rowVal, '_groupId'))
-				.hide()
-				.append(jQuery('<td>', { colspan: data.groupFields.length }))
-			;
-
-			// Create the data cells.
-
-			_.each(columns, function (field, colIndex) {
-				if (data.groupFields.indexOf(field) >= 0) {
-					return;
-				}
-
-				var colConfig = getPropDef({}, self.defn, 'table', 'columns', colIndex);
-				var cell = row.rowData[field];
-
-				var td = jQuery('<td>');
-				var value = format(colConfig, typeInfo.get(field), cell);
-
-				if (value instanceof Element || value instanceof jQuery) {
-					td.append(value);
-				}
-				else if (colConfig.allowHtml && typeInfo.get(field).type === 'string') {
-					td.html(value);
-				}
-				else {
-					td.text(value);
-				}
-
-				self.setCss(td, field);
-				self.setAlignment(td, colConfig, typeInfo, field);
-
-				tr.append(td);
-			});
-
-			self.ui.tr[rowNum] = tr;
-			self.ui.tbody.append(tr);
-		});
 	});
 
 	if (self.features.tabletool && window.TableTool !== undefined) {
