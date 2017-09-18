@@ -403,7 +403,7 @@ function deepDefaults() {
 	var f = function (a, b) {
 		_.each(b, function (v, k) {
 			if (a[k] === undefined) {
-				a[k] = deepCopy(v);
+				a[k] = typeof v === 'object' ? deepCopy(v) : v;
 			}
 			else if (_.isObject(a[k]) && _.isObject(v)) {
 				f(a[k], v);

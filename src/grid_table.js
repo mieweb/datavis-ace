@@ -1613,7 +1613,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			// Insert spacer columns for previous group fields.
 
 			for (var i = 0; i < rowValIdx; i += 1) {
-				jQuery('<td>')
+				jQuery('<th>')
 					.addClass('wcdv_group_col_spacer')
 					.appendTo(tr)
 				;
@@ -1625,7 +1625,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				.on('click', toggleGroup)
 			;
 
-			jQuery('<td>')
+			jQuery('<th>')
 				.append(expandBtn)
 				.addClass('wcdv_group_col_spacer')
 				.appendTo(tr)
@@ -1634,7 +1634,8 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var infoText = ' (';
 
 			if (rowValIdx < data.groupFields.length - 1) {
-				infoText += '' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_children') + ' groups';
+				var numSubGroups = getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_children');
+				infoText += '' + numSubGroups + ' group' + (numSubGroups > 1 ? 's' : '');
 				infoText += ', ';
 			}
 
@@ -1642,7 +1643,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			infoText += ')';
 
-			jQuery('<td>')
+			jQuery('<th>')
 				.addClass('wcdv_group_value')
 				.attr('colspan', columns.length - rowValIdx)
 				.append(jQuery('<span>').addClass('wcdv_group_value').text(rowValElt))

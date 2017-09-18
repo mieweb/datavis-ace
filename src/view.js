@@ -95,7 +95,7 @@ var View = function (source, name, opts) {
 	var self = this;
 
 	opts = deepDefaults(opts, {
-		saveViewConfig: true
+		saveViewConfig: false
 	});
 
 	self.opts = opts;
