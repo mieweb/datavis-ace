@@ -1090,7 +1090,6 @@ function makeCheckbox(startChecked, onChange, text, parent) {
 }
 
 function makeToggleCheckbox(rootObj, path, startChecked, text, parent, after) {
-	console.log('Setting %O [%O] checked = %s', rootObj, path, startChecked);
 	setPropDef(startChecked, rootObj, path);
 
 	return makeCheckbox(getProp(rootObj, path), function () {

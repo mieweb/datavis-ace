@@ -1213,7 +1213,7 @@ View.prototype.getData = function (cont) {
 
 	self.fire(View.events.workBegin);
 	return self.source.getData(function (data) {
-		return self.source.getTypeInfo(function (typeInfo) {
+		return self.getTypeInfo(function (typeInfo) {
 			self.typeInfo = typeInfo;
 
 			if (self.opts.saveViewConfig && !self.prefsLoaded) {
