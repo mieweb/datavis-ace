@@ -95,7 +95,8 @@ var View = function (source, name, opts) {
 	var self = this;
 
 	opts = deepDefaults(opts, {
-		saveViewConfig: false
+		saveViewConfig: false,
+		groupIsPivot: false
 	});
 
 	self.opts = opts;
@@ -290,11 +291,17 @@ View.prototype.sort = function (cont) {
 	// us to sort by.
 
 	if (fti === undefined) {
-		throw new Error('Unable to sort by field "' + self.sortSpec.col + '" - no type information available');
+		log.error('Unable to sort by field "%s" - no type information available',
+							self.sortSpec.col);
+		self.clearSort(true);
+		return cont(false);
 	}
 
 	if (fti.type === undefined) {
-		throw new Error('Unable to sort by field "' + self.sortSpec.col + '" - type is not provided');
+		log.error('Unable to sort by field "%s" - type is not provided',
+							self.sortSpec.col);
+		self.clearSort(true);
+		return cont(false);
 	}
 
 	// Check to see if values of that field need to be type-decoded.  If they do, perform
@@ -332,11 +339,19 @@ View.prototype.sort = function (cont) {
 	// domain of the type of the field that the user wants us to sort by.
 
 	if (cmp === undefined) {
-		throw new Error('Unable to sort by field "' + self.sortSpec.col + '" - no function registered to compare values of type "' + fti.type + '"');
+		log.error('Unable to sort by field "%s" - '
+							+ 'no function registered to compare values of type "%s"',
+							self.sortSpec.col, fti.type);
+		self.clearSort(true);
+		return cont(false);
 	}
 
 	if (typeof cmp !== 'function') {
-		throw new Error('Unable to sort by field "' + self.sortSpec.col + '" - function registered to compare values of type "' + fti.type + '" is not actually a function');
+		log.error('Unable to sort by field "%s" - '
+							+ 'function registered to compare values of type "%s" is not actually a function',
+							self.sortSpec.col, fti.type);
+		self.clearSort(true);
+		return cont(false);
 	}
 
 	var makeFinishCb = function (next) {
@@ -1064,81 +1079,104 @@ View.prototype.pivot = function () {
 		, colVals     // Array of all possible column value combinations.
 	;
 
-	if (isNothing(self.pivotSpec)) {
-		return false;
-	}
+	var buildColValsTree = function (pivotFields) {
+		var colValsTree = {};
 
-	pivotFields = self.pivotSpec.fieldNames;
-	colValsTree = {};
-	colVals = [];
+		_.each(self.data.data, function (groupedRows) {
+			(function RECUR(fieldNames, data, tree) {
+				var field = car(fieldNames)
+					, tmp = {};
 
-	_.each(self.data.data, function (groupedRows) {
-		(function RECUR(fieldNames, data, tree) {
-			var field = car(fieldNames)
-				, tmp = {};
+				_.each(data, function (row) {
+					var value = row.rowData[field].orig || row.rowData[field].value;
 
-			_.each(data, function (row) {
-				var value = row.rowData[field].orig || row.rowData[field].value;
+					if (tree[value] === undefined) {
+						tree[value] = fieldNames.length > 1 ? {} : true;
+					}
 
-				if (tree[value] === undefined) {
-					tree[value] = fieldNames.length > 1 ? {} : true;
+					if (tmp[value] === undefined) {
+						tmp[value] = [];
+					}
+
+					tmp[value].push(row);
+				});
+
+				if (fieldNames.length > 1) {
+					_.each(tmp, function (pivottedRows, value) {
+						RECUR(cdr(fieldNames), pivottedRows, tree[value]);
+					});
 				}
+			})(pivotFields, groupedRows, colValsTree);
+		});
 
-				if (tmp[value] === undefined) {
-					tmp[value] = [];
-				}
+		return colValsTree;
+	};
 
-				tmp[value].push(row);
-			});
+	var buildColVals = function (colValsTree) {
+		var colVals = [];
 
-			if (fieldNames.length > 1) {
-				_.each(tmp, function (pivottedRows, value) {
-					RECUR(cdr(fieldNames), pivottedRows, tree[value]);
+		(function RECUR(tree, level, path) {
+			if (level === self.pivotSpec.fieldNames.length) {
+				_.each(_.keys(tree).sort(), function (value) {
+					colVals.push(path.concat([value]));
 				});
 			}
-		})(pivotFields, groupedRows, colValsTree);
-	});
+			else {
+				_.each(tree, function (subtree, value) {
+					RECUR(subtree, level + 1, path.concat([value]));
+				});
+			}
+		})(colValsTree, 1, []);
 
-	// Construct the array of column value combinations from the tree form.
+		return colVals;
+	};
 
-	(function RECUR(tree, level, path) {
-		if (level === self.pivotSpec.fieldNames.length) {
-			_.each(_.keys(tree).sort(), function (value) {
-				colVals.push(path.concat([value]));
+	var buildData = function (data) {
+		var result = [];
+
+		_.each(data, function (groupedRows, groupNum) {
+			var newData = [];
+			_.each(colVals, function (colVal) {
+				var tmp = [];
+				_.each(groupedRows, function (row) {
+					if (_.every(colVal, function (colValElt, colValNum) {
+						var pivotField = pivotFields[colValNum];
+						return colValElt === (row.rowData[pivotField].orig || row.rowData[pivotField].value);
+					})) {
+						tmp.push(row);
+					}
+				});
+				newData.push(tmp);
 			});
-		}
-		else {
-			_.each(tree, function (subtree, value) {
-				RECUR(subtree, level + 1, path.concat([value]));
-			});
-		}
-	})(colValsTree, 1, []);
-
-	// Pivot the data using the information obtained above.
-	//
-	// TODO Make this work when the data isn't grouped.
-
-	_.each(self.data.data, function (groupedRows, groupNum) {
-		var newData = [];
-		_.each(colVals, function (colVal) {
-			var tmp = [];
-			_.each(groupedRows, function (row) {
-				if (_.every(colVal, function (colValElt, colValNum) {
-					var pivotField = pivotFields[colValNum];
-					return colValElt === (row.rowData[pivotField].orig || row.rowData[pivotField].value);
-				})) {
-					tmp.push(row);
-				}
-			});
-			newData.push(tmp);
+			result.push(newData);
 		});
-		self.data.data[groupNum] = newData;
-	});
+
+		return result;
+	};
+
+	if (!isNothing(self.pivotSpec)) {
+		pivotFields = self.pivotSpec.fieldNames;
+		colValsTree = buildColValsTree(pivotFields);
+		colVals = buildColVals(colValsTree);
+		self.data.data = buildData(self.data.data, colVals);
+	}
+	else if (self.data.isGroup && self.opts.groupIsPivot) {
+		pivotFields = [];
+		colValsTree = {};
+		colVals = [];
+		_.each(self.data.data, function (group, groupNum) {
+			self.data.data[groupNum] = [group];
+		});
+	}
+	else {
+		return false;
+	}
 
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals Tree: %O', colValsTree);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals: %O', colVals);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'New Data: %O', self.data);
 
+	self.data.isPlain = false;
 	self.data.isGroup = false;
 	self.data.isPivot = true;
 	self.data.pivotFields = pivotFields;

@@ -1273,7 +1273,7 @@ GridTablePlain.prototype.addWorkHandler = function () {
 			// so that our Grid instance can replace us with a GridTableGroup or GridTablePivot instance
 			// which can render the data.
 
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire(GridTable.events.unableToRender);
 			return;
 		}
 
@@ -1678,7 +1678,7 @@ GridTableGroup.prototype.addWorkHandler = function () {
 		debug.info('GRID TABLE - GROUP // HANDLER (View.workEnd)', 'View has finished doing work');
 
 		if (!ops.group || ops.pivot) {
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire(GridTable.events.unableToRender);
 			return;
 		}
 
@@ -1749,7 +1749,6 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		'vertical-align': 'top'
 	};
 
-
 	// This produces separate rows in the header for each pivot field.  That's what allows you to
 	// see the combinations of column values, like this:
 	//
@@ -1768,6 +1767,47 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 	var pivotFieldNum, colValNum;
 	var colVal;
+
+	if (data.pivotFields.length === 0) {
+		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
+
+		_.each(data.groupFields, function (field) {
+			headingSpan = jQuery('<span>').text(field);
+
+			headingTh = jQuery('<th>')
+				.attr('data-wcdv-field', field)
+				.css(headingThCss)
+				.append(headingSpan)
+				._makeDraggableField();
+
+			self._addSortingToHeader(field, headingSpan, headingTh);
+
+			self.setCss(headingTh, field);
+
+			self.ui.thMap[field] = headingTh;
+			headingTr.append(headingTh);
+		});
+
+		// Render the user's custom-defined additional columns at the end of the first row of pivot
+		// field column values.
+
+		if (self.opts.addCols) {
+			_.each(self.opts.addCols, function (addCol) {
+				headingSpan = jQuery('<span>')
+					.text(addCol.name);
+				headingTh = jQuery('<th>')
+					.css(headingThCss)
+					.append(headingSpan)
+					.appendTo(headingTr);
+				if (getProp(opts, 'pivotConfig', 'aggField')) {
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+				}
+			});
+		}
+
+		// Add the row for this pivot field to the THEAD.
+		self.ui.thead.append(headingTr);
+	}
 
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
 		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
@@ -1935,19 +1975,22 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var aggType = agg.type;
 			var aggResult = aggFun(colGroup);
 			rowAgg.push(aggResult);
-			var text = format(pivotAggColConfig, pivotAggColTypeInfo, aggResult, {
-				alwaysFormat: true,
-				overrideType: aggType
-			});
-			var td = jQuery('<td>').text(text);
-			// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
-			// self.setCss(td, col);
-			
-			if (getProp(opts, 'pivotConfig', 'aggField')) {
-				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
-			}
 
-			td.appendTo(tr);
+			if (data.pivotFields.length > 0) {
+				var text = format(pivotAggColConfig, pivotAggColTypeInfo, aggResult, {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+				var td = jQuery('<td>').text(text);
+				// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
+				// self.setCss(td, col);
+
+				if (getProp(opts, 'pivotConfig', 'aggField')) {
+					self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+				}
+
+				td.appendTo(tr);
+			}
 		});
 
 		// Generate the user's custom-defined additional columns.  If the `value` function returns an
@@ -1990,6 +2033,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		return cont();
 	}
 };
+
 // #addWorkHandler {{{2
 
 GridTablePivot.prototype.addWorkHandler = function () {

@@ -52,7 +52,8 @@ $(document).ready(function () {
 		type: 'string'
 	}]);
 	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink', {
-		saveViewConfig: true
+		saveViewConfig: true,
+		groupIsPivot: true
 	});
 	new MIE.WC_DataVis.Grid('grid', view, {
 		id: 'grid',

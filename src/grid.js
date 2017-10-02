@@ -1111,21 +1111,31 @@ Grid.prototype.redraw = function () {
 	}
 
 	if (self.groupControl === undefined) {
-		self.groupControl = new GroupControl(self.defn, self.view, self.features, self.timing);
+		self.groupControl = new GroupControl(self, self.defn, self.view, self.features, self.timing);
+		if (self.view.opts.groupIsPivot) {
+			self.groupControl.on(GridControl.events.fieldAdded, function (field) {
+				console.log('!!! FIELD ADDED: ' + field + ' - SHOWING PIVOT AGG CONTAINER');
+				self.pivotControl.showPivotAggContainer();
+			});
+			self.groupControl.on(GridControl.events.fieldRemoved, function (field) {
+				console.log('!!! FIELD ADDED: ' + field + ' - HIDING PIVOT AGG CONTAINER');
+				self.pivotControl.hidePivotAggContainer();
+			});
+		}
 		self.ui.groupControl.children().remove();
 		self.groupControl.draw(self.ui.groupControl);
 		self.ui.groupControl.show();
 	}
 
 	if (self.filterControl === undefined) {
-		self.filterControl = new FilterControl(self.defn, self.view, self.features, self.timing);
+		self.filterControl = new FilterControl(self, self.defn, self.view, self.features, self.timing);
 		self.ui.filterControl.children().remove();
 		self.filterControl.draw(self.ui.filterControl);
 		self.ui.filterControl.show();
 	}
 
 	if (self.pivotControl === undefined) {
-		self.pivotControl = new PivotControl(self.defn, self.view, self.features, self.timing, {
+		self.pivotControl = new PivotControl(self, self.defn, self.view, self.features, self.timing, {
 			onAggregateChange: function (aggFun, aggField) {
 				if (!(self.gridTable instanceof GridTablePivot)) {
 					return;
@@ -1166,9 +1176,14 @@ Grid.prototype.redraw = function () {
 
 	var makeGridTable = function () {
 		var gridTableCtor
-			, gridTableOpts;
+			, gridTableOpts
+			, ops = self.view.getLastOps()
 
-		if (self.view.getPivot()) {
+		if (ops) {
+			debug.info('GRID', 'Creating grid table with view opertions: %O', ops);
+		}
+
+		if ((ops && ops.pivot) || self.view.getPivot()) {
 			gridTableCtor = GridTablePivot;
 			gridTableOpts = self.defn.table.whenPivot;
 
@@ -1178,7 +1193,7 @@ Grid.prototype.redraw = function () {
 			self.ui.toolbarGroup.hide();
 			self.ui.toolbarPivot.show();
 		}
-		else if (self.view.getGroup()) {
+		else if ((ops && ops.group) || self.view.getGroup()) {
 			gridTableCtor = GridTableGroup;
 			gridTableOpts = self.defn.table.whenGroup;
 
@@ -1209,7 +1224,7 @@ Grid.prototype.redraw = function () {
 		self.gridTable.draw(self.ui.grid, self.tableDoneCont);
 	};
 
-	makeGridTable(self.view.getLastOps() || {});
+	makeGridTable();
 };
 
 // #refresh {{{2
@@ -1591,9 +1606,16 @@ function GridControl() {
 GridControl.prototype = Object.create(Object.prototype);
 GridControl.prototype.constructor = GridControl;
 
+// Events {{{2
+
+mixinEventHandling(GridControl, 'GridControl', [
+		'fieldAdded'
+	, 'fieldRemoved'
+]);
+
 // #init {{{2
 
-GridControl.prototype.init = function (defn, view, features, timing) {
+GridControl.prototype.init = function (grid, defn, view, features, timing) {
 	var self = this;
 
 	self.defn = defn;
@@ -1669,6 +1691,11 @@ GridControl.prototype.addField = function (field, opts) {
 
 	opts = opts || {};
 
+	_.defaults(opts, {
+		noUpdate: false,
+		silent: false
+	});
+
 	if (isNothing(field) || field === '' || self.fields.indexOf(field) >= 0) {
 		return;
 	}
@@ -1695,6 +1722,10 @@ GridControl.prototype.addField = function (field, opts) {
 
 	if (!opts.noUpdate) {
 		self.updateView();
+	}
+
+	if (!opts.silent) {
+		self.fire(GridControl.events.fieldAdded, null, field);
 	}
 };
 
@@ -1723,6 +1754,7 @@ GridControl.prototype.removeField = function (cf) {
 	}
 
 	self.updateView();
+	self.fire(GridControl.events.fieldRemoved, null, cf.field);
 };
 
 // #clear {{{2
@@ -1792,14 +1824,6 @@ GridControl.prototype.addViewConfigChangeHandler = function (kind) {
 /**
  * Part of the user interface which governs the fields that are part of the group, including
  * filtering.
- *
- * @param {object} defn
- *
- * @param {View} view
- *
- * @param {Grid~Features} features
- *
- * @param {object} timing
  */
 
 function GroupControl() {
@@ -1813,6 +1837,14 @@ GroupControl.prototype = Object.create(GridControl.prototype);
 GroupControl.prototype.constructor = GroupControl;
 
 GroupControl.prototype.controlFieldCtor = GroupControlField;
+
+// #addField {{{2
+
+GroupControl.prototype.addField = function (field, opts) {
+	var self = this;
+
+	self.super.addField(field, opts);
+};
 
 // #draw {{{2
 
@@ -2109,6 +2141,22 @@ PivotControl.prototype.triggerAggChange = function () {
 			self.opts.onAggregateChange(self.ui.aggFunDropdown.val());
 		}
 	}
+};
+
+// #showPivotAggContainer {{{2
+
+PivotControl.prototype.showPivotAggContainer = function () {
+	var self = this;
+
+	self.ui.aggContainer.show();
+};
+
+// #hidePivotAggContainer {{{2
+
+PivotControl.prototype.hidePivotAggContainer = function () {
+	var self = this;
+
+	self.ui.aggContainer.hide();
 };
 
 // FilterControl {{{1
