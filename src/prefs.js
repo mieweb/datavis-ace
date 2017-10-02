@@ -99,18 +99,18 @@ Prefs.prototype.apply = function (prefs, cont) {
 		self.view.setFilter(prefs.filter, null, { notify: true, update: false });
 	}
 
-	if (isNothing(prefs.group)) {
-		self.view.clearGroup(true);
+	if (isNothing(prefs.pivot)) {
+		self.view.clearPivot(true);
 	}
 	else {
-		self.view.setGroup(prefs.group, true);
+		self.view.setPivot(prefs.pivot, true);
 	}
 
-	if (isNothing(prefs.pivot)) {
-		self.view.clearPivot();
+	if (isNothing(prefs.group)) {
+		self.view.clearGroup();
 	}
 	else {
-		self.view.setPivot(prefs.pivot);
+		self.view.setGroup(prefs.group);
 	}
 
 	if (typeof cont === 'function') {
