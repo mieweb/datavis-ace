@@ -49,12 +49,13 @@
 var GridTable = (function () {
 	var UNIQUE_ID = 0;
 
-	return function (defn, view, features, opts, timing, id) {
+	return function (grid, defn, view, features, opts, timing, id) {
 		var self = this;
 
 		self.UNIQUE_ID = UNIQUE_ID++;
 
 		self.id = id;
+		self.grid = grid;
 		self.defn = defn;
 		self.view = view;
 		self.features = deepCopy(features);
@@ -69,6 +70,10 @@ var GridTable = (function () {
 			self.scrollEvents = ['DOMContentLoaded', 'load', 'resize', 'scroll'].map(function (x) {
 				return x + '.wcdv_gt_' + self.UNIQUE_ID;
 			}).join(' ');
+		}
+
+		if (self.features.floatTableHeader) {
+			self._validateFloatTableHeader();
 		}
 
 		self.colConfig = {};
@@ -86,6 +91,53 @@ mixinEventHandling(GridTable, 'GridTable', [
 		'columnResize' // Fired when a column is resized.
 	, 'unableToRender' // Fired when a grid table can't render the data in the view it's bound to.
 ]);
+
+// #_validateLimit {{{2
+
+/**
+ * Make sure the limit configuration is good.  If there's anything wrong, the limit feature is
+ * disabled automatically.
+ */
+
+GridTable.prototype._validateLimit = function () {
+	var self = this;
+
+	if (self.features.limit) {
+		if (self.defn.table.limit.threshold === undefined) {
+			debug.warn('GRID TABLE - PLAIN // DRAW', 'Disabling limit feature because no limit threshold was provided');
+			self.features.limit = false;
+		}
+	}
+};
+
+// #_validateFloatTableHeader {{{2
+
+GridTable.prototype._validateFloatTableHeader = function () {
+	var self = this;
+
+	if (!self.features.floatTableHeader) {
+		return;
+	}
+
+	var config = getPropDef({}, self.defn, 'table', 'floatTableHeader');
+
+	if (config.method === undefined) {
+		if (jQuery.prototype.floatThead) {
+			config.method = 'floatThead';
+		}
+		else if (jQuery.prototype.fixedHeaderTable) {
+			config.method = 'fixedHeaderTable';
+		}
+		else if (window.TableTool) {
+			config.method = 'tabletool';
+		}
+		else {
+			self.features.floatTableHeader = false;
+		}
+	}
+
+	self.defn.table.floatTableHeader = config;
+};
 
 // #toString {{{2
 
@@ -367,8 +419,12 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 						self.ui.tbl.block(blockConfig);
 					}
 				}
-				if (self.features.tabletool) {
-					TableTool.update();
+				if (self.features.floatTableHeader) {
+					switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+					case 'tabletool':
+						TableTool.update();
+						break;
+					}
 				}
 			}, { who: self });
 
@@ -382,8 +438,12 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 						self.ui.tbl.unblock();
 					}
 				}
-				if (self.features.tabletool) {
-					TableTool.update();
+				if (self.features.floatTableHeader) {
+					switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+					case 'tabletool':
+						TableTool.update();
+						break;
+					}
 				}
 			}, { who: self });
 
@@ -449,9 +509,28 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 
 			// Activate TableTool using this attribute, if the user asked for it.
 
-			if (self.features.tabletool) {
-				debug.info('GRID TABLE // DRAW', 'Enabling TableTool');
-				self.ui.tbl.attr('data-tttype', 'sticky');
+			if (self.features.floatTableHeader) {
+				debug.info('GRID TABLE // DRAW', 'Enabling floating table using method "%s"',
+									 getProp(self.defn, 'table', 'floatTableHeader', 'method'));
+				switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+				case 'floatThead':
+					var floatTheadConfig = {};
+					if (self.opts.fixedHeight) {
+						floatTheadConfig.position = 'fixed';
+						floatTheadConfig.scrollContainer = true;
+						self.grid.on(Grid.events.showControls, function () {
+							self.ui.tbl.floatThead('reflow');
+						});
+						self.grid.on(Grid.events.hideControls, function () {
+							self.ui.tbl.floatThead('reflow');
+						});
+					}
+					self.ui.tbl.floatThead(floatTheadConfig);
+					break;
+				case 'tabletool':
+					self.ui.tbl.attr('data-tttype', 'sticky');
+					break;
+				}
 			}
 
 			self.addWorkHandler();
@@ -579,7 +658,7 @@ GridTable.prototype.clearDrawOptions = function () {
  * working.
  */
 
-var GridTablePlain = makeSubclass(GridTable, function (defn, view, features, opts, timing, id) {
+var GridTablePlain = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = deepCopy(features);
@@ -588,27 +667,9 @@ var GridTablePlain = makeSubclass(GridTable, function (defn, view, features, opt
 	debug.info('GRID TABLE - PLAIN', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
-	self.super.ctor(defn, view, features, opts, timing, id);
+	self.super.ctor(grid, defn, view, features, opts, timing, id);
 	self.addFilterHandler();
 });
-
-// #_validateLimit {{{2
-
-/**
- * Make sure the limit configuration is good.  If there's anything wrong, the limit feature is
- * disabled automatically.
- */
-
-GridTablePlain.prototype._validateLimit = function () {
-	var self = this;
-
-	if (self.features.limit) {
-		if (self.defn.table.limit.threshold === undefined) {
-			debug.warn('GRID TABLE - PLAIN // DRAW', 'Disabling limit feature because no limit threshold was provided');
-			self.features.limit = false;
-		}
-	}
-};
 
 // #canRender {{{2
 
@@ -753,7 +814,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					var th = tr.children('th.filter_col_' + colIndex);
 
 					var adjustTableToolHeight = function () {
-						if (self.features.tabletool) {
+						if (self.features.floatTableHeader) {
 							// Update the height of the original, non-floating header to be the same as that of
 							// the floating header.  This is needed because otherwise the floating header will
 							// cover up the first rows of the table body as we add filters.  TableTool does not
@@ -975,8 +1036,12 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			self.ui.tbody.append(tr);
 		}
 
-		if (self.features.tabletool && window.TableTool !== undefined) {
-			TableTool.update();
+		if (self.features.floatTableHeader) {
+			switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+			case 'tabletool':
+				TableTool.update();
+				break;
+			}
 		}
 
 		if (rowNum === data.data.length) {
@@ -1313,7 +1378,7 @@ GridTablePlain.prototype.addWorkHandler = function () {
 // GridTableGroup {{{1
 // Constructor {{{2
 
-var GridTableGroup = makeSubclass(GridTable, function (defn, view, features, opts, timing, id) {
+var GridTableGroup = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = deepCopy(features);
@@ -1323,7 +1388,7 @@ var GridTableGroup = makeSubclass(GridTable, function (defn, view, features, opt
 	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
-	self.super.ctor(defn, view, features, opts, timing, id);
+	self.super.ctor(grid, defn, view, features, opts, timing, id);
 });
 
 // #canRender {{{2
@@ -1533,8 +1598,12 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			placeAfter.after(tr);
 		});
 
-		if (self.features.tabletool && window.TableTool !== undefined) {
-			TableTool.update();
+		if (self.features.floatTableHeader) {
+			switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+			case 'tabletool':
+				TableTool.update();
+				break;
+			}
 		}
 	};
 
@@ -1660,8 +1729,12 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		lastRowVal = arrayCopy(rowVal);
 	});
 
-	if (self.features.tabletool && window.TableTool !== undefined) {
-		TableTool.update();
+	if (self.features.floatTableHeader) {
+		switch (getProp(self.defn, 'table', 'floatTableHeader', 'method')) {
+		case 'tabletool':
+			TableTool.update();
+			break;
+		}
 	}
 
 	if (typeof cont === 'function') {
@@ -1695,7 +1768,7 @@ GridTableGroup.prototype.addWorkHandler = function () {
  * A grid table used for showing data that's been pivotted by the view.
  */
 
-var GridTablePivot = makeSubclass(GridTable, function (defn, view, features, opts, timing, id) {
+var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = deepCopy(features);
@@ -1705,7 +1778,7 @@ var GridTablePivot = makeSubclass(GridTable, function (defn, view, features, opt
 	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
-	self.super.ctor(defn, view, features, opts, timing, id);
+	self.super.ctor(grid, defn, view, features, opts, timing, id);
 });
 
 // #canRender {{{2

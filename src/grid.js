@@ -663,6 +663,13 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 Grid.prototype = Object.create(Object.prototype);
 Grid.prototype.constructor = Grid;
 
+// Events {{{2
+
+mixinEventHandling(Grid, 'Grid', [
+		'showControls'
+	, 'hideControls'
+]);
+
 // #_validateFeatures {{{2
 
 Grid.prototype._validateFeatures = function () {
@@ -682,7 +689,7 @@ Grid.prototype._validateFeatures = function () {
 		'edit',
 		'delete',
 		'limit',
-		'tabletool',
+		'floatTableHeader',
 		'block',
 		'progress'
 	];
@@ -820,6 +827,7 @@ Grid.prototype.addHeaderWidgets = function (header, doingServerFilter, runImmedi
 		.click(function (evt) {
 			evt.stopPropagation();
 			jQuery(this).parents('.wcdv_grid').find('.buttons').toggle();
+			self.fire(Grid.events.showControls);
 		})
 		.appendTo(header);
 };
@@ -876,7 +884,7 @@ Grid.prototype.addPlainButtons = function (parent) {
 		jQuery('<button>')
 			.on('click', function (evt) {
 				self.gridTable.updateFeatures({
-					'blockUI': true,
+					'block': true,
 					'progress': true,
 					'limit': false
 				});
@@ -1204,7 +1212,7 @@ Grid.prototype.redraw = function () {
 
 		if ((ops && ops.pivot) || self.view.getPivot()) {
 			gridTableCtor = GridTablePivot;
-			gridTableOpts = self.defn.table.whenPivot;
+			gridTableOpts = deepCopy(self.defn.table.whenPivot);
 
 			debug.info('GRID', 'Creating pivot grid table');
 
@@ -1214,7 +1222,7 @@ Grid.prototype.redraw = function () {
 		}
 		else if ((ops && ops.group) || self.view.getGroup()) {
 			gridTableCtor = GridTableGroup;
-			gridTableOpts = self.defn.table.whenGroup;
+			gridTableOpts = deepCopy(self.defn.table.whenGroup);
 
 			debug.info('GRID', 'Creating group grid table');
 
@@ -1238,7 +1246,9 @@ Grid.prototype.redraw = function () {
 			self.gridTable.clear();
 		}
 
-		self.gridTable = new gridTableCtor(self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
+		gridTableOpts.fixedHeight = self.rootHasFixedHeight;
+
+		self.gridTable = new gridTableCtor(self, self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
 		self.gridTable.on(GridTable.events.unableToRender, makeGridTable);
 		self.gridTable.draw(self.ui.grid, self.tableDoneCont);
 	};
