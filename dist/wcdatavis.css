@@ -281,6 +281,7 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 }
 
 .wcdv_drag_handle.ui-draggable-dragging {
+	visibility: visible;
 	border: solid 1px #888;
 	background-color: #EEE;
 	padding: 4px;
