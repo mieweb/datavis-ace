@@ -899,7 +899,7 @@ Grid.prototype.addPlainButtons = function (parent) {
 Grid.prototype.addGroupButtons = function (parent) {
 	var self = this;
 
-	makeRadioButtons(self.view, ['opts', 'groupIsPivot'], 'Details', null, 'groupOutput', [{label: 'Summary', value: true}, {label: 'Details', value: false}], function (x) { return x === 'true' ? true : false }, function () { self.view.clearCache(); self.redraw() }, parent);
+	makeRadioButtons(self.defn, ['table', 'groupMode'], 'detail', null, 'groupOutput', [{label: 'Summary', value: 'summary'}, {label: 'Detail', value: 'detail'}], null, function () { self.redraw() }, parent);
 };
 
 // #addPivotButtons {{{2
@@ -1217,11 +1217,19 @@ Grid.prototype.redraw = function () {
 			debug.info('GRID', 'Creating pivot grid table');
 
 			self.ui.toolbarPlain.hide();
-			self.ui.toolbarGroup.show();
+			self.ui.toolbarGroup.hide();
 			self.ui.toolbarPivot.show();
 		}
 		else if ((ops && ops.group) || self.view.getGroup()) {
-			gridTableCtor = GridTableGroup;
+			switch (self.defn.table.groupMode) {
+			case 'summary':
+				gridTableCtor = GridTableGroupSummary;
+				break;
+			case 'detail':
+				gridTableCtor = GridTableGroupDetail;
+				break;
+			}
+
 			gridTableOpts = deepCopy(self.defn.table.whenGroup);
 
 			debug.info('GRID', 'Creating group grid table');
@@ -1522,7 +1530,7 @@ Grid.prototype.togglePivot = function () {
 	self.redraw();
 };
 
-// normalize {{{2
+// #normalize {{{2
 
 /**
  * The point of "normalizing" a definition is to expand shortcut configurations.  For example, lots
@@ -1543,6 +1551,12 @@ Grid.prototype.normalize = function (defn) {
 	}
 
 	defn.normalized = true;
+
+	deepDefaults(defn, {
+		table: {
+			groupMode: 'detail'
+		}
+	});
 
 	self.normalizeLimit(defn);
 	self.normalizeColumns(defn);

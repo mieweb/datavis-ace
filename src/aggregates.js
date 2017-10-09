@@ -245,6 +245,7 @@ var AGGREGATES = {};
 // .count {{{1
 
 AGGREGATES.count = {
+	name: 'Count',
 	fun: function (opts) {
 		opts = opts || {};
 		return function (data) {
@@ -260,6 +261,7 @@ AGGREGATES.count = {
 // .countDistinct {{{1
 
 AGGREGATES.countDistinct = {
+	name: 'Count Distinct',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -287,6 +289,7 @@ AGGREGATES.countDistinct = {
 // .sum {{{1
 
 AGGREGATES.sum = {
+	name: 'Sum',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -337,6 +340,7 @@ AGGREGATES.sum = {
 // .average {{{1
 
 AGGREGATES.average = {
+	name: 'Average',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -355,6 +359,7 @@ AGGREGATES.average = {
 // .groupConcat {{{1
 
 AGGREGATES.groupConcat = {
+	name: 'Show Values',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -384,6 +389,7 @@ AGGREGATES.groupConcat = {
 // .groupConcatDistinct {{{1
 
 AGGREGATES.groupConcatDistinct = {
+	name: 'Show Distinct Values',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -419,6 +425,7 @@ AGGREGATES.groupConcatDistinct = {
 // .first {{{1
 
 AGGREGATES.first = {
+	name: 'First',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -437,6 +444,7 @@ AGGREGATES.first = {
 // .last {{{1
 
 AGGREGATES.last = {
+	name: 'Last',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -455,6 +463,7 @@ AGGREGATES.last = {
 // .nth {{{1
 
 AGGREGATES.nth = {
+	name: 'Nth',
 	fun: function (opts) {
 		opts = opts || {};
 		if (_.isUndefined(opts.field)) {
@@ -478,6 +487,7 @@ AGGREGATES.nth = {
 // .min {{{1
 
 AGGREGATES.min = {
+	name: 'Minimum',
 	fun: function (opts) {
 		opts = _.defaults(opts || {}, {
 			type: 'string'
@@ -515,6 +525,7 @@ AGGREGATES.min = {
 // .max {{{1
 
 AGGREGATES.max = {
+	name: 'Maximum',
 	fun: function (opts) {
 		opts = _.defaults(opts || {}, {
 			type: 'string'

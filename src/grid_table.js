@@ -172,12 +172,13 @@ GridTable.prototype.setCss = function (elt, colName) {
 
 // #setAlignment {{{2
 
-GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo, field) {
+GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo) {
+	colConfig = colConfig || {};
+	typeInfo = typeInfo || {};
+
 	var alignment = colConfig && colConfig.cellAlignment;
 
-	if (alignment === undefined
-			&& (typeInfo.get(field).type === 'number'
-					|| typeInfo.get(field).type === 'currency')) {
+	if (alignment === undefined && (typeInfo.type === 'number' || typeInfo.type === 'currency')) {
 		alignment = 'right';
 	}
 
@@ -845,7 +846,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		}
 
 		self.setCss(headingTh, field);
-		self.setAlignment(headingTh, colConfig, typeInfo, field);
+		self.setAlignment(headingTh, colConfig, typeInfo.get(field));
 
 		self.ui.thMap[field] = headingTh;
 		headingTr.append(headingTh);
@@ -1020,7 +1021,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					}
 
 					self.setCss(td, field);
-					self.setAlignment(td, colConfig, typeInfo, field);
+					self.setAlignment(td, colConfig, typeInfo.get(field));
 
 					tr.append(td);
 				});
@@ -1135,7 +1136,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 			, footerVal;
 
 		self.setCss(td, field);
-		self.setAlignment(td, colConfig, typeInfo, field);
+		self.setAlignment(td, colConfig, typeInfo.get(field));
 
 		if (footerConfig !== undefined) {
 			debug.info('GRID TABLE - PLAIN // FOOTER { field = "' + field + '" }', 'Creating footer using config: %O', footerConfig);
@@ -1375,17 +1376,17 @@ GridTablePlain.prototype.addWorkHandler = function () {
 	}, { who: self });
 };
 
-// GridTableGroup {{{1
+// GridTableGroupDetail {{{1
 // Constructor {{{2
 
-var GridTableGroup = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+var GridTableGroupDetail = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	features = deepCopy(features);
 	features.limit = false;
 	features.footer = false;
 
-	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
+	debug.info('GRID TABLE - GROUP - DETAIL', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
@@ -1403,7 +1404,7 @@ var GridTableGroup = makeSubclass(GridTable, function (grid, defn, view, feature
  * True if this grid table can render that kind of data, false if it can't.
  */
 
-GridTableGroup.prototype.canRender = function (what) {
+GridTableGroupDetail.prototype.canRender = function (what) {
 	switch (what) {
 	case 'group':
 		return true;
@@ -1415,7 +1416,7 @@ GridTableGroup.prototype.canRender = function (what) {
 
 // #drawHeader {{{2
 
-GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
+GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
 	var headingTr, headingSpan, headingTh;
@@ -1499,7 +1500,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		self._addSortingToHeader(field, headingSpan, headingTh);
 
 		self.setCss(headingTh, field);
-		self.setAlignment(headingTh, colConfig, typeInfo, field);
+		self.setAlignment(headingTh, colConfig, typeInfo.get(field));
 
 		self.ui.thMap[field] = headingTh;
 		headingTr.append(headingTh);
@@ -1510,7 +1511,7 @@ GridTableGroup.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 // #drawBody {{{2
 
-GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opts) {
+GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, cont, opts) {
 	var self = this;
 
 	if (!data.isGroup) {
@@ -1589,7 +1590,7 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				}
 
 				self.setCss(td, field);
-				self.setAlignment(td, colConfig, typeInfo, field);
+				self.setAlignment(td, colConfig, typeInfo.get(field));
 
 				tr.append(td);
 			});
@@ -1744,18 +1745,247 @@ GridTableGroup.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 // #addWorkHandler {{{2
 
-GridTableGroup.prototype.addWorkHandler = function () {
+GridTableGroupDetail.prototype.addWorkHandler = function () {
 	var self = this;
 
 	self.view.on(View.events.workEnd, function (info, ops) {
-		debug.info('GRID TABLE - GROUP // HANDLER (View.workEnd)', 'View has finished doing work');
+		debug.info('GRID TABLE - GROUP - DETAIL // HANDLER (View.workEnd)', 'View has finished doing work');
 
 		if (!ops.group || ops.pivot) {
 			self.fire(GridTable.events.unableToRender);
 			return;
 		}
 
-		debug.info('GRID TABLE - GROUP // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
+		debug.info('GRID TABLE - GROUP - DETAIL // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
+		self.clear();
+		self.draw(self.root);
+	}, { who: self });
+};
+
+// GridTableGroupSummary {{{1
+// Constructor {{{2
+
+var GridTableGroupSummary = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+	var self = this;
+
+	features = deepCopy(features);
+	features.limit = false;
+	features.footer = false;
+
+	debug.info('GRID TABLE - GROUP - SUMMARY', 'Constructing grid table; features = %O', features);
+
+	self.super = makeSuper(self, GridTable);
+	self.super.ctor(grid, defn, view, features, opts, timing, id);
+});
+
+// #canRender {{{2
+
+/**
+ * Responds whether or not this grid table can render the type of data requested.
+ *
+ * @param {string} what
+ * The kind of data the caller wants us to show.  Must be one of: plain, group, or pivot.
+ *
+ * @return {boolean}
+ * True if this grid table can render that kind of data, false if it can't.
+ */
+
+GridTableGroupSummary.prototype.canRender = function (what) {
+	switch (what) {
+	case 'group':
+		return true;
+	case 'plain':
+	case 'pivot':
+		return false;
+	}
+};
+
+// #drawHeader {{{2
+
+GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, opts) {
+	var self = this;
+
+	var headingTr, headingSpan, headingTh;
+
+	var headingThCss = {
+		'white-space': 'nowrap',
+		'padding-bottom': 0
+	};
+
+	var filterThCss = {
+		'white-space': 'nowrap',
+		'padding-top': 4,
+		'padding-bottom': 0,
+		'vertical-align': 'top'
+	};
+
+	headingTr = jQuery('<tr>');
+
+	_.each(data.groupFields, function (field) {
+		headingSpan = jQuery('<span>').text(field);
+
+		headingTh = jQuery('<th>')
+			.attr('data-wcdv-field', field)
+			.css(headingThCss)
+			.append(headingSpan)
+			._makeDraggableField();
+
+		self._addSortingToHeader(field, headingSpan, headingTh);
+
+		self.setCss(headingTh, field);
+
+		self.ui.thMap[field] = headingTh;
+		headingTr.append(headingTh);
+	});
+
+	// Add columns for the aggregate functions in the group.
+
+	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg) {
+		headingSpan = jQuery('<span>')
+			.text(agg.name || agg.aggDefn.name);
+		headingTh = jQuery('<th>')
+			.css(headingThCss)
+			.append(headingSpan)
+			.appendTo(headingTr);
+		self.setAlignment(headingTh, data.agg.info.group.colConfig, data.agg.info.group.typeInfo);
+	});
+
+	// Add columns for the additional columns.
+
+	if (self.opts.addCols) {
+		_.each(self.opts.addCols, function (addCol) {
+			headingSpan = jQuery('<span>')
+				.text(addCol.name);
+			headingTh = jQuery('<th>')
+				.css(headingThCss)
+				.append(headingSpan)
+				.appendTo(headingTr);
+			if (getProp(opts, 'pivotConfig', 'aggField')) {
+				self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+			}
+		});
+	}
+
+	// Add the row for this pivot field to the THEAD.
+	self.ui.thead.append(headingTr);
+};
+
+// #drawBody {{{2
+
+GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, cont, opts) {
+	var self = this;
+
+	_.each(data.data, function (rowGroup, groupNum) {
+		var tr = jQuery('<tr>');
+		var td;
+		var rowVal = data.rowVals[groupNum];
+
+		_.each(rowVal, function (rowValElt, rowValIdx) {
+			jQuery('<th>')
+				.addClass('wcdv_group_value')
+				.append(jQuery('<span>').addClass('wcdv_group_value').text(rowValElt))
+				.appendTo(tr)
+			;
+		});
+
+		if (data.agg && data.agg.group) {
+			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg, aggNum) {
+				var aggType = agg.aggDefn.type || agg.typeInfo.type;
+				var aggResult = data.agg.group[aggNum][groupNum];
+				console.log(aggResult);
+				var text;
+
+				if (agg.aggDefn.inheritFormatting) {
+					text = format(agg.colConfig, agg.typeInfo, aggResult, {
+						alwaysFormat: true,
+						overrideType: aggType
+					});
+				}
+				else {
+					text = format(null, null, aggResult, {
+						alwaysFormat: true,
+						overrideType: aggType
+					});
+				}
+
+				td = jQuery('<td>').text(text);
+				self.setAlignment(td, agg.colConfig, agg.typeInfo);
+				td.appendTo(tr);
+			});
+		}
+
+		// Generate the user's custom-defined additional columns.  If the `value` function returns an
+		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
+		// returns a string or number) we format it according to the type of the field that the pivot
+		// function was operating on.
+		//
+		// EXAMPLE:
+		//
+		// Aggregate Function = sum
+		// Aggregate Field    = Amount : number -> $0,0.00
+		//
+		// If the `value` function adds up the sums, yielding a grand total of them all, then we format
+		// that using Numeral exactly as specified for the "Amount" field.
+
+		_.each(self.opts.addCols, function (addCol) {
+			var addColResult = addCol.value(data.data, groupNum, rowAgg, aggType);
+
+			if (addColResult instanceof Element || addColResult instanceof jQuery) {
+				var td = jQuery('<td>').append(addColResult);
+			}
+			else {
+				var addColText;
+
+				if (agg.inheritFormatting) {
+					addColText = format(pivotAggColConfig, pivotAggColTypeInfo, addColResult, {
+						alwaysFormat: true
+					});
+				}
+				else {
+					addColText = format(null, null, addColResult, {
+						alwaysFormat: true
+					});
+				}
+				var td = jQuery('<td>').text(addColText);
+			}
+
+			if (getProp(opts, 'pivotConfig', 'aggField')) {
+				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+			}
+
+			td.appendTo(tr);
+		});
+
+		self.ui.tbody.append(tr);
+	});
+
+	if (self.features.floatingHeader) {
+		switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
+		case 'tabletool':
+			TableTool.update();
+			break;
+		}
+	}
+
+	if (typeof cont === 'function') {
+		return cont();
+	}
+};
+
+// #addWorkHandler {{{2
+
+GridTableGroupSummary.prototype.addWorkHandler = function () {
+	var self = this;
+
+	self.view.on(View.events.workEnd, function (info, ops) {
+		debug.info('GRID TABLE - GROUP - SUMMARY // HANDLER (View.workEnd)', 'View has finished doing work');
+
+		if (!ops.group || ops.pivot) {
+			self.fire(GridTable.events.unableToRender);
+			return;
+		}
+
+		debug.info('GRID TABLE - GROUP - SUMMARY // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
 		self.clear();
 		self.draw(self.root);
 	}, { who: self });
@@ -1775,7 +2005,7 @@ var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, feature
 	features.limit = false;
 	features.footer = false;
 
-	debug.info('GRID TABLE - GROUP', 'Constructing grid table; features = %O', features);
+	debug.info('GRID TABLE - PIVOT', 'Constructing grid table; features = %O', features);
 
 	self.super = makeSuper(self, GridTable);
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
@@ -1873,7 +2103,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					.append(headingSpan)
 					.appendTo(headingTr);
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 				}
 			});
 		}
@@ -1950,7 +2180,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				self._addSortingToHeader(colVal, headingSpan, headingTh);
 
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 				}
 			}
 			else {
@@ -1975,7 +2205,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					.append(headingSpan)
 					.appendTo(headingTr);
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 				}
 			});
 		}
@@ -2080,7 +2310,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				// self.setCss(td, col);
 
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+					self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 				}
 
 				td.appendTo(tr);
@@ -2123,7 +2353,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			}
 
 			if (getProp(opts, 'pivotConfig', 'aggField')) {
-				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo, opts.pivotConfig.aggField);
+				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 			}
 
 			td.appendTo(tr);

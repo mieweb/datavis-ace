@@ -125,6 +125,13 @@ var View = function (source, name, opts) {
 	if (self.opts.saveViewConfig) {
 		self.prefs = new LocalStoragePrefs(self);
 	}
+
+	self.aggregateSpec = {
+		group: [{
+			fun: 'count',
+			name: '# Rows'
+		}]
+	};
 };
 
 View.prototype = Object.create(Object.prototype);
@@ -1185,6 +1192,163 @@ View.prototype.pivot = function () {
 	return true;
 };
 
+// #setAggregate {{{2
+
+View.prototype.setAggregate = function (spec, opts) {
+	var self = this;
+
+	opts = opts || {};
+	_.defaults(opts, {
+		sendEvent: true,
+		dontSendEventTo: [],
+		updateData: true
+	});
+
+	if (self.lock.isLocked()) {
+		self.lock.onUnlock(function () {
+			self.setAggregate.apply(self, args);
+		}, 'Waiting to set aggregate: ' + JSON.stringify(spec));
+		return false;
+	}
+
+	if (!self.aggregateSpec) {
+		self.aggregateSpec = {};
+	}
+
+	_.extend(self.aggregateSpec, spec);
+
+	if (opts.sendEvent) {
+		self.fire(View.events.aggregateSet, {
+			notTo: opts.dontSendEventTo
+		}, spec);
+	}
+
+	if (!opts.updateData) {
+		return true;
+	}
+
+	self.clearCache();
+	self.getData();
+
+	return true;
+};
+
+// #getAggregate {{{2
+
+View.prototype.getAggregate = function () {
+	var self = this;
+
+	return self.aggregateSpec;
+};
+
+// #clearAggregate {{{2
+
+View.prototype.clearAggregate = function (opts) {
+	var self = this;
+
+	return self.setAggregate(null, opts);
+};
+
+// #aggregate {{{2
+
+View.prototype.aggregate = function (cont) {
+	var self = this;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	if (!self.aggregateSpec || !self.data.isGroup) {
+		cont(false);
+	}
+
+	debug.info('VIEW // AGGREGATE', 'Computing group aggregate functions: %s',
+						 _.pluck(getProp(self, 'aggregateSpec', 'group'), 'fun').join(', '));
+	debug.info('VIEW // AGGREGATE', 'Computing pivot aggregate functions: %s',
+						 _.pluck(getProp(self, 'aggregateSpec', 'pivot'), 'fun').join(', '));
+
+	var groupResults = []; // groupResults[i][n] -> agg over rows w/ rowval[n]
+	var pivotResults = []; // pivotResults[i][n][m] -> agg over rows w/ rowval[n] -AND- colval[m]
+	var info = {
+		group: [],
+		pivot: []
+	};
+
+	_.each(self.aggregateSpec.group, function (spec, specNum) {
+		info.group[specNum] = {
+			colConfig: {},
+			typeInfo: {}
+		};
+		info.group[specNum].aggDefn = AGGREGATES[spec.fun];
+		info.group[specNum].name = spec.name;
+		if (spec.field) {
+			info.group[specNum].colConfig = self.colConfig[spec.field];
+			info.group[specNum].typeInfo = typeInfo.get(spec.field);
+		}
+	});
+
+	_.each(self.aggregateSpec.pivot, function (spec, specNum) {
+		info.group[specNum] = {
+			colConfig: {},
+			typeInfo: {}
+		};
+		info.pivot[specNum].aggDefn = AGGREGATES[spec.fun];
+		info.pivot[specNum].name = spec.name;
+		if (spec.field) {
+			info.pivot[specNum].colConfig = self.colConfig[spec.field];
+			info.pivot[specNum].typeInfo = typeInfo.get(spec.field);
+		}
+	});
+
+	_.each(self.data.data, function (group, groupNum) {
+		_.each(self.aggregateSpec.group, function (spec, specNum) {
+			if (groupResults[specNum] === undefined) {
+				groupResults[specNum] = [];
+			}
+			var aggFun = info.group[specNum].aggDefn.fun({
+				field: spec.field,
+				type: info.group[specNum].typeInfo.type,
+				colConfig: info.group[specNum].colConfig
+			});
+			var aggResult = aggFun(_.flatten(group));
+			groupResults[specNum][groupNum] = aggResult;
+			debug.info('VIEW // AGGREGATE', 'Aggregate [%d] (%s -> %s) : Group [%d] = %O',
+								 specNum,
+								 info.group[specNum].aggDefn.name,
+								 info.group[specNum].name,
+								 groupNum,
+								 aggResult);
+		});
+
+		if (self.data.isPivot) {
+			_.each(self.aggregateSpec.pivot, function (spec, specNum) {
+				if (pivotResults[specNum] === undefined) {
+					pivotResults[specNum] = [];
+				}
+				pivotResults[specNum][groupNum] = [];
+
+				_.each(group, function (pivot, pivotNum) {
+					var aggFun = info.pivot.aggDefn.fun({
+						field: spec.field,
+						type: info.pivot[specNum].typeInfo.type,
+						colConfig: info.pivot[specNum].colConfig
+					});
+
+					pivotResults[specNum][groupNum][pivotNum] = aggFun(pivot);
+				});
+			});
+		}
+	});
+
+	self.data.agg = {
+		info: info,
+		group: groupResults,
+		pivot: pivotResults
+	};
+
+	cont(true);
+};
+
 // #getData {{{2
 
 /**
@@ -1250,38 +1414,40 @@ View.prototype.getData = function (cont) {
 				ops.pivot = self.pivot();
 				return self.sort(function (didSort) {
 					ops.sort = didSort;
+					return self.aggregate(function () {
 
-					var workEndObj = {
-						isPlain: self.data.isPlain,
-						isGroup: self.data.isGroup,
-						isPivot: self.data.isPivot
-					};
+						var workEndObj = {
+							isPlain: self.data.isPlain,
+							isGroup: self.data.isGroup,
+							isPivot: self.data.isPivot
+						};
 
-					if (self.data.isPlain) {
-						workEndObj.numRows = self.getRowCount();
-						if (self.isFiltered()) {
-							workEndObj.totalRows = self.getTotalRowCount();
+						if (self.data.isPlain) {
+							workEndObj.numRows = self.getRowCount();
+							if (self.isFiltered()) {
+								workEndObj.totalRows = self.getTotalRowCount();
+							}
 						}
-					}
-					else if (self.data.isGroup) {
-						workEndObj.numGroups = self.data.data.length;
-					}
-					else if (self.data.isPivot) {
-						workEndObj.numPivots = 0;
-					}
+						else if (self.data.isGroup) {
+							workEndObj.numGroups = self.data.data.length;
+						}
+						else if (self.data.isPivot) {
+							workEndObj.numPivots = 0;
+						}
 
-					if (self.opts.saveViewConfig) {
-						self.prefs.save();
-					}
+						if (self.opts.saveViewConfig) {
+							self.prefs.save();
+						}
 
-					self.lastOps = ops;
-					self.fire(View.events.workEnd, null, workEndObj, ops);
+						self.lastOps = ops;
+						self.fire(View.events.workEnd, null, workEndObj, ops);
 
-					self.lock.unlock();
-					debug.info('VIEW (' + self.name + ')', 'Got new data: %O', self.data);
-					if (typeof cont === 'function') {
-						return cont(self.data);
-					}
+						self.lock.unlock();
+						debug.info('VIEW (' + self.name + ')', 'Got new data: %O', self.data);
+						if (typeof cont === 'function') {
+							return cont(self.data);
+						}
+					});
 				});
 			});
 		});
