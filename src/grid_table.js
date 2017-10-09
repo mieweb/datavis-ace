@@ -539,6 +539,40 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	});
 };
 
+// #drawHeader_aggregates {{{2
+
+GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
+	var self = this;
+
+	_.each(getPropDef([], data, 'agg', 'info', what), function (agg) {
+		var span = jQuery('<span>')
+			.text(agg.name || agg.aggDefn.name);
+		var th = jQuery('<th>')
+			.append(span)
+			.appendTo(tr);
+		self.setAlignment(th, data.agg.info[what].colConfig, data.agg.info[what].typeInfo);
+	});
+};
+
+// #drawHeader_addCols {{{2
+
+GridTable.prototype.drawHeader_addCols = function (tr, opts) {
+	var self = this;
+
+	if (self.opts.addCols) {
+		_.each(self.opts.addCols, function (addCol) {
+			span = jQuery('<span>')
+				.text(addCol.name);
+			th = jQuery('<th>')
+				.append(span)
+				.appendTo(tr);
+			if (getProp(opts, 'pivotConfig', 'aggField')) {
+				self.setAlignment(th, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+			}
+		});
+	}
+};
+
 // #clear {{{2
 
 /**
@@ -1805,69 +1839,31 @@ GridTableGroupSummary.prototype.canRender = function (what) {
 GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
-	var headingTr, headingSpan, headingTh;
-
-	var headingThCss = {
-		'white-space': 'nowrap',
-		'padding-bottom': 0
-	};
-
-	var filterThCss = {
-		'white-space': 'nowrap',
-		'padding-top': 4,
-		'padding-bottom': 0,
-		'vertical-align': 'top'
-	};
-
-	headingTr = jQuery('<tr>');
+	var tr = jQuery('<tr>')
+		, span
+		, th;
 
 	_.each(data.groupFields, function (field) {
-		headingSpan = jQuery('<span>').text(field);
+		span = jQuery('<span>').text(field);
 
-		headingTh = jQuery('<th>')
+		th = jQuery('<th>')
 			.attr('data-wcdv-field', field)
-			.css(headingThCss)
-			.append(headingSpan)
+			.append(span)
 			._makeDraggableField();
 
-		self._addSortingToHeader(field, headingSpan, headingTh);
+		self._addSortingToHeader(field, span, th);
 
-		self.setCss(headingTh, field);
+		self.setCss(th, field);
 
-		self.ui.thMap[field] = headingTh;
-		headingTr.append(headingTh);
+		self.ui.thMap[field] = th;
+		tr.append(th);
 	});
 
-	// Add columns for the aggregate functions in the group.
-
-	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg) {
-		headingSpan = jQuery('<span>')
-			.text(agg.name || agg.aggDefn.name);
-		headingTh = jQuery('<th>')
-			.css(headingThCss)
-			.append(headingSpan)
-			.appendTo(headingTr);
-		self.setAlignment(headingTh, data.agg.info.group.colConfig, data.agg.info.group.typeInfo);
-	});
-
-	// Add columns for the additional columns.
-
-	if (self.opts.addCols) {
-		_.each(self.opts.addCols, function (addCol) {
-			headingSpan = jQuery('<span>')
-				.text(addCol.name);
-			headingTh = jQuery('<th>')
-				.css(headingThCss)
-				.append(headingSpan)
-				.appendTo(headingTr);
-			if (getProp(opts, 'pivotConfig', 'aggField')) {
-				self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
-			}
-		});
-	}
+	self.drawHeader_aggregates(data, 'group', tr);
+	self.drawHeader_addCols(tr, opts);
 
 	// Add the row for this pivot field to the THEAD.
-	self.ui.thead.append(headingTr);
+	self.ui.thead.append(tr);
 };
 
 // #drawBody {{{2
@@ -1888,31 +1884,28 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 			;
 		});
 
-		if (data.agg && data.agg.group) {
-			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg, aggNum) {
-				var aggType = agg.aggDefn.type || agg.typeInfo.type;
-				var aggResult = data.agg.group[aggNum][groupNum];
-				console.log(aggResult);
-				var text;
+		_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg, aggNum) {
+			var aggType = agg.aggDefn.type || agg.typeInfo.type;
+			var aggResult = data.agg.group[aggNum][groupNum];
+			var text;
 
-				if (agg.aggDefn.inheritFormatting) {
-					text = format(agg.colConfig, agg.typeInfo, aggResult, {
-						alwaysFormat: true,
-						overrideType: aggType
-					});
-				}
-				else {
-					text = format(null, null, aggResult, {
-						alwaysFormat: true,
-						overrideType: aggType
-					});
-				}
+			if (agg.aggDefn.inheritFormatting) {
+				text = format(agg.colConfig, agg.typeInfo, aggResult, {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+			}
+			else {
+				text = format(null, null, aggResult, {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+			}
 
-				td = jQuery('<td>').text(text);
-				self.setAlignment(td, agg.colConfig, agg.typeInfo);
-				td.appendTo(tr);
-			});
-		}
+			td = jQuery('<td>').text(text);
+			self.setAlignment(td, agg.colConfig, agg.typeInfo);
+			td.appendTo(tr);
+		});
 
 		// Generate the user's custom-defined additional columns.  If the `value` function returns an
 		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
@@ -2038,19 +2031,7 @@ GridTablePivot.prototype.canRender = function (what) {
 GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
 
-	var headingTr, headingSpan, headingTh;
-
-	var headingThCss = {
-		'white-space': 'nowrap',
-		'padding-bottom': 0
-	};
-
-	var filterThCss = {
-		'white-space': 'nowrap',
-		'padding-top': 4,
-		'padding-bottom': 0,
-		'vertical-align': 'top'
-	};
+	var tr, span, th;
 
 	// This produces separate rows in the header for each pivot field.  That's what allows you to
 	// see the combinations of column values, like this:
@@ -2071,49 +2052,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var pivotFieldNum, colValNum;
 	var colVal;
 
-	if (data.pivotFields.length === 0) {
-		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
-
-		_.each(data.groupFields, function (field) {
-			headingSpan = jQuery('<span>').text(field);
-
-			headingTh = jQuery('<th>')
-				.attr('data-wcdv-field', field)
-				.css(headingThCss)
-				.append(headingSpan)
-				._makeDraggableField();
-
-			self._addSortingToHeader(field, headingSpan, headingTh);
-
-			self.setCss(headingTh, field);
-
-			self.ui.thMap[field] = headingTh;
-			headingTr.append(headingTh);
-		});
-
-		// Render the user's custom-defined additional columns at the end of the first row of pivot
-		// field column values.
-
-		if (self.opts.addCols) {
-			_.each(self.opts.addCols, function (addCol) {
-				headingSpan = jQuery('<span>')
-					.text(addCol.name);
-				headingTh = jQuery('<th>')
-					.css(headingThCss)
-					.append(headingSpan)
-					.appendTo(headingTr);
-				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
-				}
-			});
-		}
-
-		// Add the row for this pivot field to the THEAD.
-		self.ui.thead.append(headingTr);
-	}
-
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
-		headingTr = jQuery('<tr>'); // Create the row for the pivot field.
+		tr = jQuery('<tr>'); // Create the row for the pivot field.
 
 		// Create headers for the fields that we've grouped by.  The headers are the names of those
 		// fields.  We only do this for the last row of the header, i.e. the final pivot field.
@@ -2126,24 +2066,23 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		if (pivotFieldNum === data.pivotFields.length - 1) {
 			_.each(data.groupFields, function (field) {
-				headingSpan = jQuery('<span>').text(field);
+				span = jQuery('<span>').text(field);
 
-				headingTh = jQuery('<th>')
+				th = jQuery('<th>')
 					.attr('data-wcdv-field', field)
-					.css(headingThCss)
-					.append(headingSpan)
+					.append(span)
 					._makeDraggableField();
 
-				self._addSortingToHeader(field, headingSpan, headingTh);
+				self._addSortingToHeader(field, span, th);
 
-				self.setCss(headingTh, field);
+				self.setCss(th, field);
 
-				self.ui.thMap[field] = headingTh;
-				headingTr.append(headingTh);
+				self.ui.thMap[field] = th;
+				tr.append(th);
 			});
 		}
 		else {
-			headingTr.append(jQuery('<th>', { colspan: data.groupFields.length }));
+			tr.append(jQuery('<th>', { colspan: data.groupFields.length }));
 		}
 
 		// Create headers for the fields that we've pivotted by.  The headers are the column values for
@@ -2160,8 +2099,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					// determine the column span.  In the above example, there are three "Kennedy" and two
 					// "Roosevelt" so those are the colspans that we would set.
 
-					headingTh.attr('colspan', lastColValCount);
-					headingTr.append(headingTh);
+					th.attr('colspan', lastColValCount);
+					tr.append(th);
 				}
 
 				// Update the tracking information and reset the counter to one.
@@ -2169,18 +2108,17 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				lastColVal = colVal;
 				lastColValCount = 1;
 
-				headingSpan = jQuery('<span>').text(colVal);
+				span = jQuery('<span>').text(colVal);
 
-				headingTh = jQuery('<th>')
-					.css(headingThCss)
-					.append(headingSpan);
+				th = jQuery('<th>')
+					.append(span);
 
-				self.setCss(headingTh, colVal);
+				self.setCss(th, colVal);
 
-				self._addSortingToHeader(colVal, headingSpan, headingTh);
+				self._addSortingToHeader(colVal, span, th);
 
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+					self.setAlignment(th, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
 				}
 			}
 			else {
@@ -2190,28 +2128,19 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// Same logic as when the colVal changes.
 
-		headingTh.attr('colspan', lastColValCount);
-		headingTr.append(headingTh);
+		th.attr('colspan', lastColValCount);
+		tr.append(th);
 
 		// Render the user's custom-defined additional columns at the end of the first row of pivot
 		// field column values.
 
-		if (pivotFieldNum === 0 && self.opts.addCols) {
-			_.each(self.opts.addCols, function (addCol) {
-				headingSpan = jQuery('<span>')
-					.text(addCol.name);
-				headingTh = jQuery('<th>')
-					.css(headingThCss)
-					.append(headingSpan)
-					.appendTo(headingTr);
-				if (getProp(opts, 'pivotConfig', 'aggField')) {
-					self.setAlignment(headingTh, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
-				}
-			});
+		if (pivotFieldNum === 0) {
+			self.drawHeader_aggregates(data, 'group', tr);
+			self.drawHeader_addCols(tr, opts);
 		}
 
 		// Add the row for this pivot field to the THEAD.
-		self.ui.thead.append(headingTr);
+		self.ui.thead.append(tr);
 	}
 };
 
@@ -2316,6 +2245,30 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				td.appendTo(tr);
 			}
 		});
+
+		_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg, aggNum) {
+			var aggType = agg.aggDefn.type || agg.typeInfo.type;
+			var aggResult = data.agg.group[aggNum][groupNum];
+			var text;
+
+			if (agg.aggDefn.inheritFormatting) {
+				text = format(agg.colConfig, agg.typeInfo, aggResult, {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+			}
+			else {
+				text = format(null, null, aggResult, {
+					alwaysFormat: true,
+					overrideType: aggType
+				});
+			}
+
+			var td = jQuery('<td>').text(text);
+			self.setAlignment(td, agg.colConfig, agg.typeInfo);
+			td.appendTo(tr);
+		});
+
 
 		// Generate the user's custom-defined additional columns.  If the `value` function returns an
 		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it

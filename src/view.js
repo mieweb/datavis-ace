@@ -1253,7 +1253,7 @@ View.prototype.aggregate = function (cont) {
 		throw new Error('Call Error: `cont` must be a function');
 	}
 
-	if (!self.aggregateSpec || !self.data.isGroup) {
+	if (!(self.aggregateSpec && (self.data.isGroup || self.data.isPivot))) {
 		return cont(false);
 	}
 
