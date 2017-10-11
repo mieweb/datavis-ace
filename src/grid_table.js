@@ -2082,6 +2082,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var colVal;
 
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
+		var lastPivotField = pivotFieldNum === data.pivotFields.length - 1;
+
 		tr = jQuery('<tr>'); // Create the row for the pivot field.
 
 		// Create headers for the fields that we've grouped by.  The headers are the names of those
@@ -2116,13 +2118,26 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// Create headers for the fields that we've pivotted by.  The headers are the column values for
 		// those fields.
+		//
+		// +--------------------------------------------------+----------------+
+		// | PIVOT COLVAL 1                                   | PIVOT COLVAL 2 | < PIVOT FIELD #1
+		// +----------------+----------------+----------------+----------------+
+		// | PIVOT COLVAL A | PIVOT COLVAL B | PIVOT COLVAL C | PIVOT COLVAL A | < PIVOT FIELD #2
+		// +----------------+----------------+----------------+----------------+
+		//
+		// Col Vals = [[1,A], [1,B], [2,A]]
+		//
+		// When rendering the headers for Pivot Field #1, we go through the col vals and find that "1"
+		// is repeated three times.  We don't make a cell for each one, instead we just increment
+		// lastColValCount.  When the col val changes to "2", we set the colspan on the previous cell to
+		// be however many of that col val we found.
 
 		var lastColVal = null;
 		var lastColValCount = 0;
 
 		for (colValNum = 0; colValNum < data.colVals.length; colValNum += 1) {
 			colVal = data.colVals[colValNum][pivotFieldNum];
-			if (colVal !== lastColVal || pivotFieldNum === data.pivotFields.length - 1) {
+			if (colVal !== lastColVal || lastPivotField) {
 				if (lastColVal !== null) {
 					// The we've hit a different colVal so count up how many of the last one we had to
 					// determine the column span.  In the above example, there are three "Kennedy" and two
@@ -2144,7 +2159,9 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 				self.setCss(th, colVal);
 
-				self._addSortingToHeader(colVal, span, th);
+				if (lastPivotField) {
+					self._addSortingToHeader(colVal, span, th);
+				}
 
 				if (getProp(opts, 'pivotConfig', 'aggField')) {
 					self.setAlignment(th, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
@@ -2157,13 +2174,22 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// Same logic as when the colVal changes.
 
-		th.attr('colspan', lastColValCount);
+		if (!lastPivotField) {
+			th.attr('colspan',
+							lastColValCount
+							+ getPropDef(0, data, 'agg', 'info', 'group', 'length')
+							+ getPropDef(0, opts, 'addCols', 'length'));
+		}
+		else {
+			th.attr('colspan', lastColValCount);
+		}
+
 		tr.append(th);
 
-		// Render the user's custom-defined additional columns at the end of the first row of pivot
-		// field column values.
+		// Render the user's custom-defined additional columns at the end of the last row of pivot field
+		// column values.
 
-		if (pivotFieldNum === 0) {
+		if (lastPivotField) {
 			self.drawHeader_aggregates(data, 'group', tr);
 			self.drawHeader_addCols(tr, typeInfo, opts);
 		}
