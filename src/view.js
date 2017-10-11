@@ -390,10 +390,6 @@ View.prototype.sort = function (cont) {
 				self.sortProgress.end();
 			}
 
-			// Store the sorted data.
-
-			self.data.data = sorted;
-
 			// Fire the event for finishing the sort.
 
 			self.fire(View.events.sortEnd);
@@ -406,6 +402,9 @@ View.prototype.sort = function (cont) {
 
 			if (typeof next === 'function') {
 				next(sorted);
+			}
+			else {
+				self.data.data = sorted;
 			}
 
 			return cont(true);
@@ -448,20 +447,57 @@ View.prototype.sort = function (cont) {
 
 		var sortIdx = _.map(self.data.colVals, function (x) { return x[0]; }).indexOf(self.sortSpec.col);
 		if (sortIdx >= 0) {
+			var aggType = self.data.agg.info.cell[0].aggDefn.type;
+			var fieldType = self.data.agg.info.cell[0].typeInfo.type;
+			var cmp = getComparisonFn.byType(aggType || fieldType);
+
 			var comparison = function (a, b) {
-				return !!(cmp(a[1][sortIdx].length, b[1][sortIdx].length)
+				var result = !!(cmp(a.sortSource, b.sortSource) ^ (self.sortSpec.dir === 'DESC'));
+				console.log('%s %s %s', a.sortSource, result ? '<' : '>', b.sortSource);
+				return !!(cmp(a.sortSource, b.sortSource)
 									^ (self.sortSpec.dir === 'DESC'));
 			};
 
-			var zippedData = _.zip(self.data.rowVals, self.data.data);
+			var bundle = [];
+			for (var i = 0; i < self.data.rowVals.length; i += 1) {
+				bundle[i] = {
+					oldIndex: i,
+					sortSource: self.data.agg.results.cell[0][i][sortIdx]
+				};
+			}
 
-			var finish = function () {
-				var x = _.unzip(self.data.data);
-				self.data.rowVals = x[0];
-				self.data.data = x[1];
+			var finish = function (sorted) {
+				var origData = self.data.data;
+				var origRowVals = self.data.rowVals;
+				var origCellAgg = self.data.agg.results.cell;
+				var origGroupAgg = self.data.agg.results.group;
+
+				self.data.data = [];
+				self.data.rowVals = [];
+				self.data.agg.results.cell = [];
+				self.data.agg.results.group = [];
+
+				_.each(sorted, function (s, newIndex) {
+					self.data.data[newIndex] = origData[s.oldIndex];
+					self.data.rowVals[newIndex] = origRowVals[s.oldIndex];
+				});
+
+				for (var i = 0; i < origCellAgg.length; i += 1) {
+					self.data.agg.results.cell[i] = [];
+					_.each(sorted, function (s, newIndex) {
+						self.data.agg.results.cell[i][newIndex] = origCellAgg[i][s.oldIndex];
+					});
+				}
+
+				for (var i = 0; i < origGroupAgg.length; i += 1) {
+					self.data.agg.results.group[i] = [];
+					_.each(sorted, function (s, newIndex) {
+						self.data.agg.results.group[i][newIndex] = origGroupAgg[i][s.oldIndex];
+					});
+				}
 			};
 
-			return mergeSort4(zippedData, comparison, makeFinishCb(finish), self.sortProgress && self.sortProgress.update);
+			return mergeSort4(bundle, comparison, makeFinishCb(finish), self.sortProgress && self.sortProgress.update);
 		}
 		else {
 			var sortIdx = self.data.groupFields.indexOf(self.sortSpec.col);

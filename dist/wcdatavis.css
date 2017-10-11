@@ -254,6 +254,10 @@
 	flex: 1 1;
 }
 
+.wcdv_grid_table th {
+	white-space: nowrap;
+}
+
 .wcdv_grid_table .wcdv_group_col_spacer {
 	width: 1em;
 	padding-right: 0px;
