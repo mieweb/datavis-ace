@@ -537,7 +537,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 			.appendTo(self.ui.root)
 			.droppable({
 				over: function (evt, ui) {
-					self.ui.gridControl.show();
+					self.ui.controls.show();
 
 					// Need to recalculate the position of the droppable targets, because they are now
 					// guaranteed to be visible (they may have been hidden within the grid control before).
@@ -1186,6 +1186,10 @@ Grid.prototype.redraw = function () {
 				self.ui.aggregateControl.hide();
 			}
 		});
+		self.groupControl.on(GridControl.events.cleared, function () {
+			self.ui.pivotControl.hide();
+			self.ui.aggregateControl.hide();
+		});
 		self.ui.groupControl.children().remove();
 		self.groupControl.draw(self.ui.groupControl);
 		self.ui.groupControl.show();
@@ -1673,6 +1677,7 @@ GridControl.prototype.constructor = GridControl;
 mixinEventHandling(GridControl, 'GridControl', [
 		'fieldAdded'
 	, 'fieldRemoved'
+	, 'cleared'
 ]);
 
 // #init {{{2
@@ -1840,6 +1845,8 @@ GridControl.prototype.clear = function (opts) {
 	if (!opts.noUpdate) {
 		self.updateView();
 	}
+
+	self.fire(GridControl.events.cleared);
 };
 
 // #destroy {{{2
