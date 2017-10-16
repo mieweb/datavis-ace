@@ -587,8 +587,9 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	self.ui.gridControl = jQuery('<div>', { 'class': 'wcdv_grid_control' });
 	self.ui.groupControl = jQuery('<div>', { 'class': 'wcdv_group_control' });
-	self.ui.filterControl = jQuery('<div>', { 'class': 'wcdv_filter_control' });
 	self.ui.pivotControl = jQuery('<div>', { 'class': 'wcdv_pivot_control' });
+	self.ui.aggregateControl = jQuery('<div>', { 'class': 'wcdv_aggregate_control' });
+	self.ui.filterControl = jQuery('<div>', { 'class': 'wcdv_filter_control' });
 	self.ui.grid = jQuery('<div>', { 'id': defn.table.id, 'class': 'wcdv_grid_table' });
 
 	// The user has fixed the height of the containing grid, so we will need to have the browser put
@@ -600,8 +601,9 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	self.ui.gridControl
 		.append(self.ui.groupControl)
-		.append(self.ui.filterControl)
 		.append(self.ui.pivotControl)
+		.append(self.ui.aggregateControl)
+		.append(self.ui.filterControl)
 		.appendTo(self.ui.gridToolBarButtons);
 
 	self.ui.grid.appendTo(self.ui.root);
@@ -1173,15 +1175,24 @@ Grid.prototype.redraw = function () {
 		self.groupControl = new GroupControl(self, self.defn, self.view, self.features, self.timing);
 		self.groupControl.on(GridControl.events.fieldAdded, function (fieldAdded, fields) {
 			self.ui.pivotControl.show();
+			self.ui.aggregateControl.show();
 		});
 		self.groupControl.on(GridControl.events.fieldRemoved, function (fieldRemoved, fields) {
 			if (fields.length === 0) {
 				self.ui.pivotControl.hide();
+				self.ui.aggregateControl.hide();
 			}
 		});
 		self.ui.groupControl.children().remove();
 		self.groupControl.draw(self.ui.groupControl);
 		self.ui.groupControl.show();
+	}
+
+	if (self.aggregateControl === undefined) {
+		self.aggregateControl = new AggregateControl(self.view, self.defn);
+		self.ui.aggregateControl.children().remove();
+		self.aggregateControl.draw(self.ui.aggregateControl);
+		self.ui.aggregateControl.hide();
 	}
 
 	if (self.filterControl === undefined) {
@@ -1968,21 +1979,6 @@ GroupControl.prototype.updateView = function () {
 // Constructor {{{2
 
 /**
- * Used to inform other parties of the aggregate function configuration.  For example, it can be
- * used to have the grid table redraw its contents (rendering cells with the new aggregate function
- * and field).
- *
- * @callback PivotControl~onAggregateChange
- *
- * @param {string} aggFun
- * Name of the aggregate function to use.
- *
- * @param {string} aggField
- * Name of the field to apply the function on (if applicable; decided by the `needsField` property
- * of the aggregate object).
- */
-
-/**
  * Part of the user interface which governs: (1) the fields that are part of the pivot, including
  * filtering; (2) the aggregate function [and potentially its arguments] that produces the values in
  * the pivot table.
@@ -1992,24 +1988,16 @@ GroupControl.prototype.updateView = function () {
  * @property {GridControl} super
  * Proxy to call prototype ("superclass") methods even if we override them.
  *
- * @property {object} opts
- *
- * @property {PivotControl~onAggregateChange} opts.onAggregateChange
- * If set, this function will be called when the aggregate configuration is changed.  It is
- * currently used to redraw the grid table with the new aggregate function results in its cells.
- *
  * @property {string[]} fields
  * Names of the fields
  */
 
 function PivotControl() {
 	var self = this
-		, args = Array.prototype.slice.call(arguments)
-		, opts = args.pop();
+		, args = Array.prototype.slice.call(arguments);
 
 	self.super = makeSuper(self, GridControl);
 	self.super.init.apply(self, args);
-	self.opts = opts;
 }
 
 PivotControl.prototype = Object.create(GridControl.prototype);
@@ -2029,71 +2017,32 @@ PivotControl.prototype.controlFieldCtor = PivotControlField;
 PivotControl.prototype.draw = function (parent) {
 	var self = this;
 
-	self.ui.root = jQuery('<div>').appendTo(parent);
+	parent.droppable({
+		classes: {
+			'ui-droppable-hover': 'wcdv_drop_target_hover'
+		},
+		drop: function (evt, ui) {
+			// Turn this off for the sake of efficiency.
+			ui.draggable.draggable('option', 'refreshPositions', false);
 
-	self.ui.aggContainer = jQuery('<div>', { 'class': 'wcdv_aggregate_container' }).appendTo(self.ui.root).hide();
-	self.ui.aggregateTitle = jQuery('<div>')
-		.addClass('wcdv_control_title_bar')
-		.appendTo(self.ui.aggContainer);
-	jQuery('<span>')
-		.addClass('wcdv_control_title')
-		.text('Pivot Aggregate')
-		.appendTo(self.ui.aggregateTitle);
-	self.ui.aggFun = jQuery('<div>').css({'margin-top': '7px'}).appendTo(self.ui.aggContainer);
-	jQuery('<label>').text('Function:').appendTo(self.ui.aggFun);
-	self.ui.aggFunDropdown = jQuery('<select>')
-		.appendTo(self.ui.aggFun)
-		.on('change', function () {
-			self.triggerAggChange();
-		})
-	;
-
-	_.each(AGGREGATES, function (aggObj, aggFunName) {
-		if (aggObj.canBePivotCell) {
-			jQuery('<option>', {
-				value: aggFunName
-			})
-				.text(aggObj.name || aggFunName)
-				.appendTo(self.ui.aggFunDropdown);
+			self.addField(ui.draggable.attr('data-wcdv-field'));
 		}
 	});
 
-	self.ui.aggField = jQuery('<div>').css({'margin-top': '4px'}).appendTo(self.ui.aggContainer).hide();
-	jQuery('<label>').text('Field:').appendTo(self.ui.aggField);
-	self.ui.aggFieldDropdown = jQuery('<select>')
-		.appendTo(self.ui.aggField)
-		.on('change', function () {
-			self.triggerAggChange();
-		})
-	;
-
-	self.ui.fieldsContainer = jQuery('<div>')
-		.droppable({
-			classes: {
-				'ui-droppable-hover': 'wcdv_drop_target_hover'
-			},
-			drop: function (evt, ui) {
-				// Turn this off for the sake of efficiency.
-				ui.draggable.draggable('option', 'refreshPositions', false);
-
-				self.addField(ui.draggable.attr('data-wcdv-field'));
-			}
-		})
-		.addClass('wcdv_pivot_fields_container')
-		.appendTo(self.ui.root);
-	self.ui.fieldsTitle = jQuery('<div>')
+	self.ui.root = jQuery('<div>').appendTo(parent);
+	self.ui.title = jQuery('<div>')
 		.addClass('wcdv_control_title_bar')
-		.appendTo(self.ui.fieldsContainer);
+		.appendTo(self.ui.root);
 	jQuery('<span>')
 		.addClass('wcdv_control_title')
 		.text('Pivot Fields')
-		.appendTo(self.ui.fieldsTitle);
-	self.ui.clearBtn = self.makeClearButton(self.ui.fieldsTitle);
+		.appendTo(self.ui.title);
+	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>')
 		.data('isHorizontal', true)
-		.appendTo(self.ui.fieldsContainer);
+		.appendTo(self.ui.root);
 
-	var dropdownContainer = jQuery('<div>').appendTo(self.ui.fieldsContainer);
+	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
 	self.makeAddButton(dropdownContainer);
 
@@ -2104,31 +2053,11 @@ PivotControl.prototype.draw = function (parent) {
 	self.view.on('getTypeInfo', function (typeInfo) {
 		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
-			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.aggFieldDropdown);
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
 	}, { limit: 1 });
 
 	self.addViewConfigChangeHandler('pivot');
-
-	var syncAgg = function (spec) {
-		if (getProp(spec, 'cell', 0, 'fun')) {
-			self.ui.aggFunDropdown.val(spec.cell[0].fun);
-			if (AGGREGATES[spec.cell[0].fun].needsField) {
-				self.ui.aggField.show();
-			}
-		}
-		if (getProp(spec, 'cell', 0, 'field')) {
-			self.ui.aggFieldDropdown.val(spec.cell[0].field);
-		}
-
-		debug.info('GRID // AGGREGATE CONTROL',
-							 'View set aggregate to: ' + JSON.stringify(spec));
-	};
-
-	self.view.on(View.events.aggregateSet, function (spec) {
-		syncAgg(spec)
-	}, { who: self });
 
 	return self.ui.root;
 };
@@ -2138,7 +2067,6 @@ PivotControl.prototype.draw = function (parent) {
 PivotControl.prototype.addField = function (field, opts) {
 	var self = this;
 
-	self.ui.aggContainer.show();
 	self.super.addField(field, opts);
 };
 
@@ -2148,9 +2076,6 @@ PivotControl.prototype.removeField = function (cf) {
 	var self = this;
 
 	self.super.removeField(cf);
-	if (self.fields.length === 0) {
-		self.ui.aggContainer.hide();
-	}
 };
 
 // #clear {{{2
@@ -2159,7 +2084,6 @@ PivotControl.prototype.clear = function (opts) {
 	var self = this;
 
 	self.super.clear(opts);
-	self.ui.aggContainer.hide();
 };
 
 // #updateView {{{2
@@ -2185,58 +2109,136 @@ PivotControl.prototype.updateView = function () {
 	}
 };
 
+// AggregateControl {{{1
+
+// Constructor {{{2
+
+/**
+ * Part of the user interface which governs the aggregate function (and potentially its arguments)
+ * that produces the values in (1) group summary columns, (2) pivot cells.
+ *
+ * @class
+ *
+ * @property {string[]} fields
+ * Names of the fields
+ */
+
+var AggregateControl = makeSubclass(Object, function (view, defn) {
+	var self = this;
+
+	self.view = view;
+	self.defn = defn;
+
+	self.ui = {};
+});
+
+// #draw {{{2
+
+/**
+ * Create a DIV element that can be placed within the Grid instance to hold the user interface for
+ * the AggregateControl.  The caller must add the result to the DOM somewhere.
+ *
+ * @returns {jQuery} The DIV element that holds the entire UI.
+ */
+
+AggregateControl.prototype.draw = function (parent) {
+	var self = this;
+
+	self.ui.root = jQuery('<div>').appendTo(parent);
+
+	self.ui.title = jQuery('<div>')
+		.addClass('wcdv_control_title_bar')
+		.appendTo(self.ui.root);
+	jQuery('<span>')
+		.addClass('wcdv_control_title')
+		.text('Aggregate')
+		.appendTo(self.ui.title);
+	self.ui.fun = jQuery('<div>').css({'margin-top': '7px'}).appendTo(self.ui.root);
+	jQuery('<label>').text('Function:').appendTo(self.ui.fun);
+	self.ui.funDropdown = jQuery('<select>')
+		.appendTo(self.ui.fun)
+		.on('change', function () {
+			self.triggerAggChange();
+		})
+	;
+
+	_.each(AGGREGATES, function (aggObj, aggFunName) {
+		if (aggObj.canBePivotCell) {
+			jQuery('<option>', {
+				value: aggFunName
+			})
+				.text(aggObj.name || aggFunName)
+				.appendTo(self.ui.funDropdown);
+		}
+	});
+
+	self.ui.field = jQuery('<div>').css({'margin-top': '4px'}).appendTo(self.ui.root).hide();
+	jQuery('<label>').text('Field:').appendTo(self.ui.field);
+	self.ui.fieldDropdown = jQuery('<select>')
+		.appendTo(self.ui.field)
+		.on('change', function () {
+			self.triggerAggChange();
+		})
+	;
+
+	self.view.on('getTypeInfo', function (typeInfo) {
+		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
+			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
+			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.fieldDropdown);
+		});
+	}, { limit: 1 });
+
+	var syncAgg = function (spec) {
+		if (getProp(spec, 'cell', 0, 'fun')) {
+			self.ui.funDropdown.val(spec.cell[0].fun);
+			if (AGGREGATES[spec.cell[0].fun].needsField) {
+				self.ui.field.show();
+			}
+		}
+		if (getProp(spec, 'cell', 0, 'field')) {
+			self.ui.fieldDropdown.val(spec.cell[0].field);
+		}
+
+		debug.info('GRID // AGGREGATE CONTROL',
+							 'View set aggregate to: ' + JSON.stringify(spec));
+	};
+
+	self.view.on(View.events.aggregateSet, function (spec) {
+		syncAgg(spec)
+	}, { who: self });
+
+	return self.ui.root;
+};
+
 // #triggerAggChange {{{2
 
 /**
  * Perform necessary actions when the aggregate function is changed.
  *
  *   - Update the UI to show/hide field argument.
- *   - Invoke the `onAggregateChange` function.
  */
 
-PivotControl.prototype.triggerAggChange = function () {
+AggregateControl.prototype.triggerAggChange = function () {
 	var self = this;
-	var agg = AGGREGATES[self.ui.aggFunDropdown.val()];
-	var aggText = (agg.name || self.ui.aggFunDropdown.val())
-		+ (agg.needsField ? (' of ' + self.ui.aggFieldDropdown.val()) : '');
+	var agg = AGGREGATES[self.ui.funDropdown.val()];
+	var aggText = (agg.name || self.ui.funDropdown.val())
+		+ (agg.needsField ? (' of ' + self.ui.fieldDropdown.val()) : '');
 	var aggSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{
-		fun: self.ui.aggFunDropdown.val(),
-		field: agg.needsField && self.ui.aggFieldDropdown.val(),
+		fun: self.ui.funDropdown.val(),
+		field: agg.needsField && self.ui.fieldDropdown.val(),
 		name: aggText
 	}]]);
 
 	if (agg.needsField) {
-		self.ui.aggField.show();
-		if (typeof self.opts.onAggregateChange === 'function') {
-			self.opts.onAggregateChange(self.ui.aggFunDropdown.val(), self.ui.aggFieldDropdown.val());
-		}
+		self.ui.field.show();
 	}
 	else {
-		self.ui.aggField.hide();
-		if (typeof self.opts.onAggregateChange === 'function') {
-			self.opts.onAggregateChange(self.ui.aggFunDropdown.val());
-		}
+		self.ui.field.hide();
 	}
 
 	self.view.setAggregate(aggSpec, {
 		dontSendEventTo: self
 	});
-};
-
-// #show {{{2
-
-PivotControl.prototype.show = function () {
-	var self = this;
-
-	self.ui.root.show();
-};
-
-// #hide {{{2
-
-PivotControl.prototype.hide = function () {
-	var self = this;
-
-	self.ui.root.hide();
 };
 
 // FilterControl {{{1
