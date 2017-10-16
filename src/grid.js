@@ -1171,16 +1171,14 @@ Grid.prototype.redraw = function () {
 
 	if (self.groupControl === undefined) {
 		self.groupControl = new GroupControl(self, self.defn, self.view, self.features, self.timing);
-		if (self.view.opts.groupIsPivot) {
-			self.groupControl.on(GridControl.events.fieldAdded, function (field) {
-				console.log('!!! FIELD ADDED: ' + field + ' - SHOWING PIVOT AGG CONTAINER');
-				self.pivotControl.showPivotAggContainer();
-			});
-			self.groupControl.on(GridControl.events.fieldRemoved, function (field) {
-				console.log('!!! FIELD ADDED: ' + field + ' - HIDING PIVOT AGG CONTAINER');
-				self.pivotControl.hidePivotAggContainer();
-			});
-		}
+		self.groupControl.on(GridControl.events.fieldAdded, function (fieldAdded, fields) {
+			self.ui.pivotControl.show();
+		});
+		self.groupControl.on(GridControl.events.fieldRemoved, function (fieldRemoved, fields) {
+			if (fields.length === 0) {
+				self.ui.pivotControl.hide();
+			}
+		});
 		self.ui.groupControl.children().remove();
 		self.groupControl.draw(self.ui.groupControl);
 		self.ui.groupControl.show();
@@ -1194,46 +1192,11 @@ Grid.prototype.redraw = function () {
 	}
 
 	if (self.pivotControl === undefined) {
-		self.pivotControl = new PivotControl(self, self.defn, self.view, self.features, self.timing, {
-			/*
-			onAggregateChange: function (aggFun, aggField) {
-				if (!(self.gridTable instanceof GridTablePivot)) {
-					return;
-				}
-
-				debug.info('GRID // ON AGGREGATE CHANGE', 'Redrawing pivot table: { aggFun = "%s", aggField = "%s" }', aggFun, aggField);
-
-				self.gridTable.setDrawOptions({
-					pivotConfig: {
-						aggFun: aggFun,
-						aggField: aggField
-					}
-				});
-
-				self.gridTable.clear();
-				self.gridTable.draw(self.ui.grid, self.tableDoneCont);
-			}
-			*/
-		});
+		self.pivotControl = new PivotControl(self, self.defn, self.view, self.features, self.timing);
 		self.ui.pivotControl.children().remove();
 		self.pivotControl.draw(self.ui.pivotControl);
-		self.ui.pivotControl.show();
+		self.ui.pivotControl.hide();
 	}
-
-	/*
-	if (self.features.pivot) {
-		debug.info('GRID', 'Creating GridTablePivot for pivot table output');
-		self.gridTable = new GridTablePivot(self.defn, self.view, self.features, self.timing, self.id);
-	}
-	else if (self.features.group) {
-		debug.info('GRID', 'Creating GridTableGroup for group table output');
-		self.gridTable = new GridTableGroup(self.defn, self.view, self.features, self.timing, self.id);
-	}
-	else {
-		debug.info('GRID', 'Creating GridTablePlain for plain table output');
-		self.gridTable = new GridTablePlain(self.defn, self.view, self.features, self.timing, self.id);
-	}
-	*/
 
 	var makeGridTable = function () {
 		var gridTableCtor
@@ -1808,7 +1771,7 @@ GridControl.prototype.addField = function (field, opts) {
 	}
 
 	if (!opts.silent) {
-		self.fire(GridControl.events.fieldAdded, null, field);
+		self.fire(GridControl.events.fieldAdded, null, field, self.fields);
 	}
 };
 
@@ -1837,7 +1800,7 @@ GridControl.prototype.removeField = function (cf) {
 	}
 
 	self.updateView();
-	self.fire(GridControl.events.fieldRemoved, null, cf.field);
+	self.fire(GridControl.events.fieldRemoved, null, cf.field, self.fields);
 };
 
 // #clear {{{2
@@ -2260,20 +2223,20 @@ PivotControl.prototype.triggerAggChange = function () {
 	});
 };
 
-// #showPivotAggContainer {{{2
+// #show {{{2
 
-PivotControl.prototype.showPivotAggContainer = function () {
+PivotControl.prototype.show = function () {
 	var self = this;
 
-	self.ui.aggContainer.show();
+	self.ui.root.show();
 };
 
-// #hidePivotAggContainer {{{2
+// #hide {{{2
 
-PivotControl.prototype.hidePivotAggContainer = function () {
+PivotControl.prototype.hide = function () {
 	var self = this;
 
-	self.ui.aggContainer.hide();
+	self.ui.root.hide();
 };
 
 // FilterControl {{{1

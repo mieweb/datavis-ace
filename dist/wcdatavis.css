@@ -121,9 +121,14 @@
 
 .wcdv_grid_control {
 	padding-top: 4px;
+	/*
+	 * Flexible display of group/filter/pivot controls.
+	 */
+	/*
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
+	*/
 }
 
 /*
@@ -186,6 +191,7 @@
 .wcdv_pivot_control {
 	display: inline-block;
 	margin-bottom: 4px;
+	margin-right: 4px;
 }
 
 .wcdv_group_control ul li, /* HORIZONTAL */
