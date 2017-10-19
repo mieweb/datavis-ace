@@ -94,7 +94,7 @@ Prefs.prototype.apply = function (prefs, cont) {
 		self.view.clearSort(true);
 	}
 	else {
-		self.view.setSort(prefs.sort.col, prefs.sort.dir, null, true);
+		self.view.setSort(prefs.sort, null, true);
 	}
 
 	if (isNothing(prefs.filter)) {

@@ -70,10 +70,6 @@ var DATA_VIEW_ID = 1;
  *
  * @property {Object} sortSpec
  *
- * @property {string} sortSpec.col The name of the column to sort by.
- *
- * @property {string} sortSpec.dir The direction of the sort, either "ASC" or "DESC."
- *
  * @property {Object} groupSpec
  *
  * @property {Array.<string>} groupSpec.fieldNames
@@ -223,30 +219,22 @@ View.prototype.getTotalRowCount = function () {
  * @param {GridTable~Progress} progress
  */
 
-View.prototype.setSort = function (col, dir, progress, noUpdate, dontTell) {
+View.prototype.setSort = function (spec, progress, noUpdate, dontTell) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
 			self.setSort.apply(self, args);
-		}, 'Waiting to set sort: ' + col + ' (' + dir + ')');
+		}, 'Waiting to set sort: ' + JSON.stringify(spec));
 	}
 
-	if (isNothing(col) || isNothing(dir)) {
-		self.sortSpec = null;
-	}
-	else {
-		self.sortSpec = {
-			col: col,
-			dir: dir
-		};
-		self.sortProgress = progress;
-	}
+	self.sortSpec = spec;
+	self.sortProgress = progress;
 
 	self.fire(View.events.sortSet, {
 		notTo: dontTell
-	}, col, dir);
+	}, spec);
 
 	if (noUpdate) {
 		return true;
@@ -273,7 +261,7 @@ View.prototype.getSort = function () {
  */
 
 View.prototype.clearSort = function (noUpdate, dontTell) {
-	return this.setSort(null, null, null, noUpdate, dontTell);
+	return this.setSort(null, null, noUpdate, dontTell);
 };
 
 // #sort {{{2
@@ -288,89 +276,229 @@ View.prototype.clearSort = function (noUpdate, dontTell) {
 View.prototype.sort = function (cont) {
 	var self = this
 		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Sorting']
-		, conv = I;
+		, conv = I
+		, aggInfo = getProp(self.data, 'agg', 'info');
 
-	if (isNothing(self.sortSpec)) {
-		return cont(false, self.data.data);
-	}
+	debug.info('VIEW (' + self.name + ') // SORT', 'Beginning sort: %s', JSON.stringify(self.sortSpec));
 
-	debug.info('VIEW (' + self.name + ') // SORT',
-						 'Beginning sort: { field = "%s", direction = "%s" }',
-						 self.sortSpec.col, self.sortSpec.dir);
+	var determineCmp = function (spec, fti) {
+		var cmp;
 
-	var fti = self.data.isPlain ? self.typeInfo.get(self.sortSpec.col)
-		: self.data.isGroup ? self.typeInfo.get(self.sortSpec.col)
-		: self.data.isPivot ? self.typeInfo.get(self.data.pivotFields[0])
-		: undefined;
-
-	// Check to make sure we have enough information about the type of the field that the user wants
-	// us to sort by.
-
-	if (fti === undefined) {
-		log.error('Unable to sort by field "%s" - no type information available',
-							self.sortSpec.col);
-		self.clearSort(true);
-		return cont(false);
-	}
-
-	if (fti.type === undefined) {
-		log.error('Unable to sort by field "%s" - type is not provided',
-							self.sortSpec.col);
-		self.clearSort(true);
-		return cont(false);
-	}
-
-	// Check to see if values of that field need to be type-decoded.  If they do, perform
-	// type-decoding for all rows in the data set.
-
-	if (fti.needsDecoding) {
-		debug.info('VIEW (' + self.name + ') // SORT',
-							 'Decoding data before sorting: { field = "%s", type = "%s" }',
-							 fti.field, fti.type);
-		if (self.data.isPlain) {
-			self.source.convertAll(self.data.data, fti.field);
+		if (fti == null) {
+			log.error('Unable to sort: no type information {spec = %O}', spec);
+			return null;
 		}
-		else if (self.data.isGroup) {
-			_.each(self.data.data, function (groupedRows) {
-				self.source.convertAll(groupedRows, fti.field);
-			});
+
+		if (typeof fti === 'string' || fti instanceof String) {
+			cmp = getComparisonFn.byType(fti);
 		}
-		else if (self.data.isPivot) {
-			_.each(self.data.data, function (groupedRows) {
-				_.each(groupedRows, function (pivottedRows) {
-					self.source.convertAll(pivottedRows, fti.field);
+		else if (typeof fti === 'object') {
+			if (fti.type == null) {
+				log.error('Unable to sort: type unknown {spec = %O, fti = %O}', spec, fti.asMap());
+				return null;
+			}
+
+			cmp = getComparisonFn.byType(fti.type);
+		}
+		else {
+			log.error('Unable to sort: invalid type information {spec = %O, fti = %O}', spec, fti);
+			return null;
+		}
+
+		if (cmp == null) {
+			log.error('Unable to sort: no comparison function for type {spec = %O, type = %s}', spec, fti.type);
+			return null;
+		}
+
+		if (typeof cmp !== 'function') {
+			log.error('Unable to sort: invalid comparison function for type {spec = %O, type = %s}', spec, fti.type);
+			return null;
+		}
+
+		if (fti instanceof MIE.OrdMap && fti.needsDecoding) {
+			if (!fti.field) {
+				log.error('Unable to sort: cannot decode unknown field {spec = %O, typeInfo = %O}', spec, fti.asMap());
+				return null;
+			}
+
+			debug.info('VIEW (' + self.name + ') // SORT', 'Decoding data before sorting: %O', spec);
+
+			if (self.data.isPlain) {
+				self.source.convertAll(self.data, fti.field);
+			}
+			else {
+				_.each(self.data.data, function (groupedRows) {
+					if (self.data.isGroup) {
+						self.source.convertAll(groupedRows, fti.field);
+					}
+					else {
+						_.each(groupedRows, function (pivottedRows) {
+							self.source.convertAll(pivottedRows, fti.field);
+						});
+					}
 				});
-			});
+			}
+
+			fti.deferDecoding = false;
+			fti.needsDecoding = false;
 		}
 
-		fti.deferDecoding = false;
-		fti.needsDecoding = false;
-	}
+		return cmp;
+	};
 
-	// Get the standard comparison function for comparing values of that type.
 
-	var cmp = getComparisonFn.byType(fti.type);
 
-	// Check to make sure that we have a valid function registered to use for comparing values in the
-	// domain of the type of the field that the user wants us to sort by.
+	var packBundle = function (spec, orientation, sortSourceFn) {
+		var bundle, len;
 
-	if (cmp === undefined) {
-		log.error('Unable to sort by field "%s" - '
-							+ 'no function registered to compare values of type "%s"',
-							self.sortSpec.col, fti.type);
-		self.clearSort(true);
-		return cont(false);
-	}
+		if (sortSourceFn == null) {
+			log.error('Unable to sort: no sort source function given {spec = %O}', spec);
+			return null;
+		}
 
-	if (typeof cmp !== 'function') {
-		log.error('Unable to sort by field "%s" - '
-							+ 'function registered to compare values of type "%s" is not actually a function',
-							self.sortSpec.col, fti.type);
-		self.clearSort(true);
-		return cont(false);
-	}
+		switch (orientation) {
+		case 'vertical':
+			len = self.data.isPlain ? self.data.data.length : self.data.rowVals.length;
+			break;
+		case 'horizontal':
+			len = self.data.isPlain ? self.data.data.length : self.data.colVals.length;
+			break;
+		default:
+			return null;
+		}
 
-	var makeFinishCb = function (next) {
+		bundle = new Array(len);
+
+		for (var i = 0; i < len; i += 1) {
+			bundle[i] = {
+				oldIndex: i,
+				sortSource: sortSourceFn(i)
+			};
+		}
+
+		return bundle;
+	};
+
+
+
+	/*
+	 * Unpack the sorted "bundle" that comes back from mergesort.  We use that to reconstruct the
+	 * data, row/col values, and aggregate results in the new sorted order.
+	 */
+
+	var unpackBundle = function (orientation) {
+		return function (sorted) {
+			debug.info('VIEW (' + self.name + ') // SORT // UNPACK',
+								 'Unpacking bundle of %d sorted chunks in %s orientation',
+								 sorted.length, orientation);
+
+			var origData = self.data.data;
+			var origRowVals = getProp(self.data, 'rowVals');
+			var origColVals = getProp(self.data, 'colVals');
+			var origCellAgg = getProp(self.data, 'agg', 'results', 'cell');
+			var origGroupAgg = getProp(self.data, 'agg', 'results', 'group');
+			var origPivotAgg = getProp(self.data, 'agg', 'results', 'pivot');
+
+			var ai // Aggregate Index
+				, rvi // Row Value Index
+			;
+
+			switch (orientation) {
+			case 'vertical':
+				self.data.data = [];
+
+				if (origRowVals != null) {
+					self.data.rowVals = [];
+				}
+
+				if (origCellAgg != null) {
+					self.data.agg.results.cell = [];
+				}
+
+				if (origGroupAgg != null) {
+					self.data.agg.results.group = [];
+				}
+
+				_.each(sorted, function (s, newIndex) {
+					self.data.data[newIndex] = origData[s.oldIndex];
+					if (origRowVals != null) {
+						self.data.rowVals[newIndex] = origRowVals[s.oldIndex];
+					}
+				});
+
+				if (origCellAgg != null) {
+					for (ai = 0; ai < origCellAgg.length; ai += 1) {
+						self.data.agg.results.cell[ai] = [];
+						_.each(sorted, function (s, newIndex) {
+							self.data.agg.results.cell[ai][newIndex] = origCellAgg[ai][s.oldIndex];
+						});
+					}
+				}
+
+				if (origGroupAgg != null) {
+					for (ai = 0; ai < origGroupAgg.length; ai += 1) {
+						self.data.agg.results.group[ai] = [];
+						_.each(sorted, function (s, newIndex) {
+							self.data.agg.results.group[ai][newIndex] = origGroupAgg[ai][s.oldIndex];
+						});
+					}
+				}
+
+				break;
+			case 'horizontal':
+				self.data.data = [];
+
+				if (origColVals != null) {
+					self.data.colVals = [];
+				}
+
+				if (origCellAgg != null) {
+					self.data.agg.results.cell = [];
+				}
+
+				if (origPivotAgg != null) {
+					self.data.agg.results.pivot = [];
+				}
+
+				_.each(sorted, function (s, newIndex) {
+					self.data.colVals[newIndex] = origColVals[s.oldIndex];
+					if (origColVals != null) {
+						for (var rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
+							if (self.data.data[rvi] === undefined) {
+								self.data.data[rvi] = [];
+							}
+							self.data.data[rvi][newIndex] = origData[rvi][s.oldIndex];
+						}
+					}
+				});
+
+				if (origCellAgg != null) {
+					for (ai = 0; ai < origCellAgg.length; ai += 1) {
+						self.data.agg.results.cell[ai] = new Array(self.data.rowVals.length);
+						for (rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
+							self.data.agg.results.cell[ai][rvi] = new Array(self.data.colVals.length);
+							_.each(sorted, function (s, newIndex) {
+								self.data.agg.results.cell[ai][rvi][newIndex] = origCellAgg[ai][rvi][s.oldIndex];
+							});
+						}
+					}
+				}
+
+				if (origPivotAgg != null) {
+					for (var ai = 0; ai < origPivotAgg.length; ai += 1) {
+						self.data.agg.results.pivot[ai] = new Array(self.data.colVals.length);
+						_.each(sorted, function (s, newIndex) {
+							self.data.agg.results.pivot[ai][newIndex] = origPivotAgg[ai][s.oldIndex];
+						});
+					}
+				}
+
+				break;
+			}
+		};
+	};
+
+	var makeFinishCb = function (postProcess, next) {
 		return function (sorted) {
 			// For plain output, fire the "sort" event so that the rows (if the grid table is showing all
 			// of them) can just be shuffled around, and the table doesn't have to be recreated.
@@ -383,150 +511,222 @@ View.prototype.sort = function (cont) {
 				});
 			}
 
-			// If there's a progress callback, perform its done event.
-
-			if (self.sortProgress
-					&& typeof self.sortProgress.end === 'function') {
-				self.sortProgress.end();
-			}
-
-			// Fire the event for finishing the sort.
-
-			self.fire(View.events.sortEnd);
-
-			// Stop the timer for the sort.
-
-			self.timing.stop(timingEvt);
-
 			// Run any function that might've been specified to manipulate the data after the fact.
 
-			if (typeof next === 'function') {
-				next(sorted);
+			if (typeof postProcess === 'function') {
+				postProcess(sorted);
 			}
 			else {
 				self.data.data = sorted;
 			}
 
-			return cont(true);
+			return next(true);
 		};
 	};
 
-	// Start the timer for the sort.
 
+
+	var performSort = function (orientation, next) {
+		var fti
+			, sortSourceFn
+			, spec = deepCopy(getProp(self, 'sortSpec', orientation));
+
+		var rvi, cvi;
+
+		if (spec == null) {
+			return next(false);
+		}
+
+		if (self.data.isPlain) {
+			if (spec.field) {
+				fti = self.typeInfo.get(spec.field);
+				sortSourceFn = function (i) {
+					return self.data.data[i].rowData[spec.field].value;
+				};
+			}
+		}
+		else if (self.data.isGroup) {
+			if (spec.groupFieldIndex != null) {
+				if (spec.groupFieldIndex < 0 || spec.groupFieldIndex >= self.data.groupFields.length) {
+					log.error('Unable to sort: groupFieldIndex out of range {spec = %O, range = [0,%d]}',
+										spec, self.data.groupFields.length);
+					return next(false);
+				}
+				fti = self.typeInfo.get(self.data.groupFields[spec.groupFieldIndex]);
+				sortSourceFn = function (i) {
+					return self.data.rowVals[i][spec.groupFieldIndex];
+				};
+			}
+			else if (spec.aggType === 'group' && spec.aggNum != null) {
+				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.group.length) {
+					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
+										spec, aggInfo.group.length);
+					return next(false);
+				}
+				fti = aggInfo.group[spec.aggNum].aggDefn.type || aggInfo.group[spec.aggNum].typeInfo;
+				sortSourceFn = function (i) {
+					return self.data.agg.results.group[spec.aggNum][i];
+				};
+			}
+		}
+		else if (self.data.isPivot) {
+			if (spec.groupFieldIndex != null) { // #1
+				if (spec.groupFieldIndex < 0 || spec.groupFieldIndex >= self.data.groupFields.length) {
+					log.error('Unable to sort: groupFieldIndex out of range {spec = %O, range = [0,%d]}',
+										spec, self.data.groupFields.length);
+					return next(false);
+				}
+				fti = self.typeInfo.get(self.data.groupFields[spec.groupFieldIndex]);
+				sortSourceFn = function (i) {
+					return self.data.rowVals[i][spec.groupFieldIndex];
+				};
+			}
+			else if ((spec.rowVal || spec.rowValIndex != null) && spec.aggNum != null) { // #2
+				if (spec.rowVal) {
+					spec.rowValIndex = -1;
+					for (rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
+						if (_.isEqual(self.data.rowVals[rvi], spec.rowVal)) {
+							spec.rowValIndex = rvi;
+							break;
+						}
+					}
+					if (spec.rowValIndex === -1) {
+						log.error('Unable to sort: invalid rowVal {spec = %O}', spec);
+						return next(false);
+					}
+				}
+				if (spec.rowValIndex < 0 || spec.rowValIndex >= self.data.rowVals.length) {
+					log.error('Unable to sort: rowValIndex out of range {spec = %O, range = [0,%d]}',
+										spec, self.data.rowVals.length);
+					return next(false);
+				}
+				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.cell.length) {
+					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
+										spec, aggInfo.cells.length);
+					return next(false);
+				}
+				fti = aggInfo.cell[spec.aggNum].aggDefn.type || aggInfo.cell[spec.aggNum].typeInfo;
+				sortSourceFn = function (i) {
+					return self.data.agg.results.cell[spec.aggNum][spec.rowValIndex][i];
+				};
+			}
+			else if (spec.pivotFieldIndex != null) { // #3
+				if (spec.pivotFieldIndex < 0 || spec.pivotFieldIndex >= self.data.pivotFields.length) {
+					log.error('Unable to sort: pivotFieldIndex out of range {spec = %O, range = [0,%d]}',
+										spec, self.data.pivotFields.length);
+					return next(false);
+				}
+				fti = self.typeInfo.get(self.data.pivotFields[spec.pivotFieldIndex]);
+				sortSourceFn = function (i) {
+					return self.data.rowVals[i][spec.pivotFieldIndex];
+				};
+			}
+			else if ((spec.colVal || spec.colValIndex != null) && spec.aggNum != null) { // #4
+				if (spec.colVal) {
+					spec.colValIndex = -1;
+					for (cvi = 0; cvi < self.data.colVals.length; cvi += 1) {
+						if (_.isEqual(self.data.colVals[cvi], spec.colVal)) {
+							spec.colValIndex = cvi;
+							break;
+						}
+					}
+					if (spec.colValIndex === -1) {
+						log.error('Unable to sort: invalid colVal {spec = %O}', spec);
+						return next(false);
+					}
+				}
+				if (spec.colValIndex < 0 || spec.colValIndex >= self.data.colVals.length) {
+					log.error('Unable to sort: colValIndex out of range {spec = %O, range = [0,%d]}',
+										spec, self.data.colVals.length);
+					return next(false);
+				}
+				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.cell.length) {
+					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
+										spec, aggInfo.cell.length);
+					return next(false);
+				}
+				fti = aggInfo.cell[spec.aggNum].aggDefn.type || aggInfo.cell[spec.aggNum].typeInfo;
+				sortSourceFn = function (i) {
+					return self.data.agg.results.cell[spec.aggNum][i][spec.colValIndex];
+				};
+			}
+			else if (spec.aggType === 'pivot' && spec.aggNum != null) { // #5
+				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.pivot.length) {
+					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
+										spec, aggInfo.pivot.length);
+					return next(false);
+				}
+				fti = aggInfo.pivot[spec.aggNum].aggDefn.type || aggInfo.pivot[spec.aggNum].typeInfo;
+				sortSourceFn = function (i) {
+					return self.data.agg.results.pivot[spec.aggNum][i];
+				};
+			}
+			else if (spec.aggType === 'group' && spec.aggNum != null) { // #6
+				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.group.length) {
+					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
+										spec, aggInfo.group.length);
+					return next(false);
+				}
+				fti = aggInfo.group[spec.aggNum].aggDefn.type || aggInfo.group[spec.aggNum].typeInfo;
+				sortSourceFn = function (i) {
+					return self.data.agg.results.group[spec.aggNum][i];
+				};
+			}
+			else {
+				log.error('Invalid sort spec for pivotted data: ' + JSON.stringify(spec));
+				return next(false);
+			}
+		}
+
+		//console.log(self.typeInfo.asMap());
+		//console.log(self.data.agg);
+
+		var cmp = determineCmp(spec, fti);
+		if (cmp == null) {
+			return next(false);
+		}
+
+		var bundle = packBundle(spec, orientation, sortSourceFn);
+		if (bundle == null) {
+			return next(false);
+		}
+
+		//console.log(fti);
+		//console.log(cmp);
+		//console.log(bundle);
+
+		var comparison = function (a, b) {
+			return !!(cmp(a.sortSource, b.sortSource) ^ (spec.dir === 'DESC'));
+		};
+
+		var finish = makeFinishCb(unpackBundle(orientation), next);
+
+		return mergeSort4(bundle, comparison, finish, self.sortProgress && self.sortProgress.update);
+	};
+
+
+
+	self.fire(View.events.sortBegin);
 	self.timing.start(timingEvt);
-
-	// If there's a progress callback, perform its start event.
 
 	if (self.sortProgress
 			&& typeof self.sortProgress.begin === 'function') {
 		self.sortProgress.begin();
 	}
 
-	// Fire the event for starting the sort.
-
-	self.fire(View.events.sortBegin);
-
-	if (self.data.isPlain) {
-		var comparison = function (a, b) {
-			return !!(cmp(a.rowData[self.sortSpec.col].value, b.rowData[self.sortSpec.col].value)
-								^ (self.sortSpec.dir === 'DESC'));
-		};
-
-		mergeSort4(self.data.data, comparison, makeFinishCb());
-	}
-	else if (self.data.isGroup) {
-		// There are two ways to sort grouped data: by a field that is part of the group (changes the
-		// ordering of the groups), and by a field that isn't part of the group (changes the ordering of
-		// the rows within each group).
-
-		return cont(false);
-	}
-	else if (self.data.isPivot) {
-		// There are two ways to sort pivot data, vertically (re-arranging by the group val) and
-		// horizontally (re-arranging by the pivot val).
-
-		var sortIdx = _.map(self.data.colVals, function (x) { return x[0]; }).indexOf(self.sortSpec.col);
-		if (sortIdx >= 0) {
-			var aggType = self.data.agg.info.cell[0].aggDefn.type;
-			var fieldType = self.data.agg.info.cell[0].typeInfo.type;
-			var cmp = getComparisonFn.byType(aggType || fieldType);
-
-			var comparison = function (a, b) {
-				var result = !!(cmp(a.sortSource, b.sortSource) ^ (self.sortSpec.dir === 'DESC'));
-				return !!(cmp(a.sortSource, b.sortSource)
-									^ (self.sortSpec.dir === 'DESC'));
-			};
-
-			var bundle = [];
-			for (var i = 0; i < self.data.rowVals.length; i += 1) {
-				bundle[i] = {
-					oldIndex: i,
-					sortSource: self.data.agg.results.cell[0][i][sortIdx]
-				};
+	performSort('horizontal', function (didHorizontal) {
+		performSort('vertical', function (didVertical) {
+			if (self.sortProgress
+					&& typeof self.sortProgress.end === 'function') {
+				self.sortProgress.end();
 			}
 
-			var finish = function (sorted) {
-				var origData = self.data.data;
-				var origRowVals = self.data.rowVals;
-				var origCellAgg = self.data.agg.results.cell;
-				var origGroupAgg = self.data.agg.results.group;
+			self.timing.stop(timingEvt);
+			self.fire(View.events.sortEnd);
 
-				self.data.data = [];
-				self.data.rowVals = [];
-				self.data.agg.results.cell = [];
-				self.data.agg.results.group = [];
-
-				_.each(sorted, function (s, newIndex) {
-					self.data.data[newIndex] = origData[s.oldIndex];
-					self.data.rowVals[newIndex] = origRowVals[s.oldIndex];
-				});
-
-				for (var i = 0; i < origCellAgg.length; i += 1) {
-					self.data.agg.results.cell[i] = [];
-					_.each(sorted, function (s, newIndex) {
-						self.data.agg.results.cell[i][newIndex] = origCellAgg[i][s.oldIndex];
-					});
-				}
-
-				for (var i = 0; i < origGroupAgg.length; i += 1) {
-					self.data.agg.results.group[i] = [];
-					_.each(sorted, function (s, newIndex) {
-						self.data.agg.results.group[i][newIndex] = origGroupAgg[i][s.oldIndex];
-					});
-				}
-			};
-
-			return mergeSort4(bundle, comparison, makeFinishCb(finish), self.sortProgress && self.sortProgress.update);
-		}
-		else {
-			var sortIdx = self.data.groupFields.indexOf(self.sortSpec.col);
-			if (sortIdx >= 0) {
-				var comparison = function (a, b) {
-					return !!(cmp(a[0][sortIdx], b[0][sortIdx])
-										^ (self.sortSpec.dir === 'DESC'));
-				};
-
-				var zippedData = _.zip(self.data.rowVals, self.data.data);
-
-				var finish = function () {
-					var x = _.unzip(self.data.data);
-					self.data.rowVals = x[0];
-					self.data.data = x[1];
-				};
-
-				return mergeSort4(zippedData, comparison, makeFinishCb(finish), self.sortProgress && self.sortProgress.update);
-			}
-			else {
-				log.error('Tried to sort pivotted data by a pivot column value "%s" which does not exist '
-									+ '(i.e. there is no row having "%s" = "%s"); colVals = %O',
-									self.sortSpec.col, self.data.pivotFields[0], self.sortSpec.col, self.data.colVals);
-				log.error('Tried to sort pivotted data by a group field "%s" which does not exist; rowVals = %O',
-									self.sortSpec.col, self.data.groupFields);
-
-				return cont(false);
-			}
-		}
-	}
+			return cont(didHorizontal || didVertical);
+		});
+	});
 };
 
 // #setFilter {{{2

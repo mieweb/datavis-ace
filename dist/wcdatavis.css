@@ -271,6 +271,18 @@
 	border-top: double black;
 }
 
+.wcdv_sort_indicator {
+	cursor: pointer;
+}
+
+.wcdv_sort_indicator_vertical {
+	margin-right: 0.5ex;
+}
+
+.wcdv_sort_indicator_horizontal {
+	margin-left: 0.5ex;
+}
+
 /*
 td.wcdv_group_col_spacer,
 td.wcdv_group_value {

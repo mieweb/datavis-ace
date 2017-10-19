@@ -225,52 +225,75 @@ GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo, overrideT
 
 // #_addSortingToHeader {{{2
 
-GridTable.prototype._addSortingToHeader = function (colName, headingSpan, headingTh) {
+GridTable.prototype._addSortingToHeader = function (orientation, spec, headingSpan) {
 	var self = this;
 
 	if (!self.features.sort) {
 		return;
 	}
 
-	var sortSpan = jQuery('<span>').css({'font-size': '1.2em'});
+	var sortIndicatorClass = 'wcdv_sort_indicator_' + orientation;
+	var sortSpan = jQuery('<span>');
+
+	var getIconCode = function (dir) {
+		return orientation === 'vertical'
+			? (dir === 'ASC' ? 'F0AB' : 'F0AA')
+			: (dir === 'ASC' ? 'F0A9' : 'F0A8');
+	};
 
 	var onClick = function () {
-		var cloneSortSpan = $(this).siblings('span.sort_indicator');
-		jQuery('span.sort_indicator').hide();
+		var cloneSortSpan = $(this).siblings('span.' + sortIndicatorClass);
+		jQuery('span.' + sortIndicatorClass).hide();
 		cloneSortSpan.show();
 
-		var sortSpec = self.view.sortSpec || {};
+		var sortSpec = self.view.getSort() || {};
 
 		// Save the sort spec.  If we're resorting a column (i.e. we just sorted it) then
 		// reverse the sort direction.  Otherwise, start in ascending order.
 
-		sortSpec.dir = sortSpec.col !== colName ? 'ASC' : sortSpec.dir === 'ASC' ? 'DESC' : 'ASC';
-		sortSpec.col = colName;
+		var currentDir
+			, newDir = 'ASC';
 
-		debug.info('GRID TABLE // SORT',
-							 'Setting to sort by "%s" (%s)', sortSpec.col, sortSpec.dir);
+		if (sortSpec[orientation]) {
+			currentDir = sortSpec[orientation].dir;
+			delete sortSpec[orientation].dir;
 
-		cloneSortSpan.html(fontAwesome(sortSpec.dir === 'ASC' ? 'F0D7' : 'F0D8'));
+			newDir = !_.isEqual(sortSpec[orientation], spec) ? 'ASC'
+				: (currentDir === 'ASC' ? 'DESC' : 'ASC');
+		}
 
-		self.view.setSort(sortSpec.col,
-											sortSpec.dir,
-											self.makeProgress('Sort'));
+		sortSpec[orientation] = deepCopy(spec);
+		sortSpec[orientation].dir = newDir;
+
+		cloneSortSpan.html(fontAwesome(getIconCode(newDir)));
+
+		self.view.setSort(sortSpec, self.makeProgress('Sort'));
 	};
 
-	self.ui.sortArrow[colName] = sortSpan;
-
-	sortSpan.addClass('sort_indicator');
-	sortSpan.css({'cursor': 'pointer', 'margin-right': '0.5ex'});
+	sortSpan.addClass(sortIndicatorClass);
+	sortSpan.addClass('wcdv_sort_indicator');
 	sortSpan.on('click', onClick);
 
-	if (self.view.sortSpec && self.view.sortSpec.col === colName) {
-		sortSpan.html(fontAwesome(self.view.sortSpec.dir === 'ASC' ? 'F0D7' : 'F0D8'));
+	var sortSpec = deepCopy(self.view.getSort());
+
+	if (sortSpec[orientation]) {
+		var currentDir = sortSpec[orientation].dir;
+		delete sortSpec[orientation].dir;
+
+		if (_.isEqual(sortSpec[orientation], spec)) {
+			sortSpan.html(fontAwesome(getIconCode(currentDir)));
+		}
 	}
 
 	headingSpan.css({'cursor': 'pointer'});
 	headingSpan.on('click', onClick);
 
-	headingTh.prepend(sortSpan);
+	if (orientation === 'vertical') {
+		headingSpan.before(sortSpan);
+	}
+	else {
+		headingSpan.after(sortSpan);
+	}
 };
 
 // #addSortHandler {{{2
@@ -407,8 +430,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				tfoot: jQuery('<tfoot>'),
 				thMap: {},
 				tr: {},
-				progress: jQuery('<div>'),
-				sortArrow: {}
+				progress: jQuery('<div>')
 			};
 
 			if (self.features.block) {
@@ -557,15 +579,28 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 
 // #drawHeader_aggregates {{{2
 
+/**
+ * Add TH elements for all the aggregates to the specified TR.
+ *
+ * @param {Object} data
+ *
+ * @param {string} what
+ * What kind of aggregate to draw, either "group" or "pivot".
+ *
+ * @param {Element} tr
+ * Where to put the TH elements.
+ */
+
 GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 	var self = this;
 
-	_.each(getPropDef([], data, 'agg', 'info', what), function (agg) {
+	_.each(getPropDef([], data, 'agg', 'info', what), function (agg, aggNum) {
 		var span = jQuery('<span>')
 			.text(agg.name || agg.aggDefn.name);
 		var th = jQuery('<th>')
 			.append(span)
 			.appendTo(tr);
+		self._addSortingToHeader('vertical', {aggType: what, aggNum: aggNum}, span);
 		self.setAlignment(th, agg.colConfig, agg.typeInfo, agg.aggDefn.type);
 	});
 };
@@ -855,7 +890,9 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			.css(headingThCss)
 			.append(headingSpan);
 
-		self._addSortingToHeader(field, headingSpan, headingTh);
+		// In the plain grid table output, the only way to sort is vertically by field.
+
+		self._addSortingToHeader('vertical', {field: field}, headingSpan);
 
 		/*
 		 * Configure filtering for this column.  This mainly involves creating a button, which when
@@ -1536,7 +1573,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.append(headingSpan)
 		;
 
-		self._addSortingToHeader(fieldName, headingSpan, headingTh);
+		self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, headingSpan);
 
 		self.setCss(headingTh, fieldName);
 
@@ -1576,7 +1613,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.css(headingThCss)
 			.append(headingSpan);
 
-		self._addSortingToHeader(field, headingSpan, headingTh);
+		self._addSortingToHeader('vertical', {field: field}, headingSpan);
 
 		self.setCss(headingTh, field);
 		self.setAlignment(headingTh, colConfig, typeInfo.get(field));
@@ -1888,7 +1925,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 		, span
 		, th;
 
-	_.each(data.groupFields, function (field) {
+	_.each(data.groupFields, function (field, fieldIdx) {
 		span = jQuery('<span>').text(field);
 
 		th = jQuery('<th>')
@@ -1896,7 +1933,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 			.append(span)
 			._makeDraggableField();
 
-		self._addSortingToHeader(field, span, th);
+		self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, span);
 
 		self.setCss(th, field);
 
@@ -2075,10 +2112,11 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// | John | Robert | Ted | Franklin | Teddy |
 	// +------+--------+-----+----------+-------+
 
-	var pivotFieldNum, colValNum;
+	var pivotFieldNum, colValIndex;
 	var colVal;
 
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
+		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
 		var lastPivotField = pivotFieldNum === data.pivotFields.length - 1;
 
 		tr = jQuery('<tr>'); // Create the row for the pivot field.
@@ -2092,8 +2130,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		// | GROUP FIELD | GROUP FIELD | PIVOT COLVAL A | PIVOT COLVAL B | PIVOT COLVAL A |
 		// +-------------+-------------+----------------+----------------+----------------+
 
-		if (pivotFieldNum === data.pivotFields.length - 1) {
-			_.each(data.groupFields, function (field) {
+		if (lastPivotField) {
+			_.each(data.groupFields, function (field, fieldIdx) {
 				span = jQuery('<span>').text(field);
 
 				th = jQuery('<th>')
@@ -2101,7 +2139,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					.append(span)
 					._makeDraggableField();
 
-				self._addSortingToHeader(field, span, th);
+				self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, span);
 
 				self.setCss(th, field);
 
@@ -2132,8 +2170,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		var lastColVal = null;
 		var lastColValCount = 0;
 
-		for (colValNum = 0; colValNum < data.colVals.length; colValNum += 1) {
-			colVal = data.colVals[colValNum][pivotFieldNum];
+		for (colValIndex = 0; colValIndex < data.colVals.length; colValIndex += 1) {
+			colVal = data.colVals[colValIndex][pivotFieldNum];
 			if (colVal !== lastColVal || lastPivotField) {
 				if (lastColVal !== null) {
 					// The we've hit a different colVal so count up how many of the last one we had to
@@ -2156,8 +2194,10 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 				self.setCss(th, colVal);
 
+				// We only allow sorting on the final 
+
 				if (lastPivotField) {
-					self._addSortingToHeader(colVal, span, th);
+					self._addSortingToHeader('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, span);
 				}
 
 				self.setAlignment(th, aggInfo.colConfig, aggInfo.typeInfo, aggType);
@@ -2231,8 +2271,24 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		//   ... row[col] | col ∉ groupFields ...
 		// </tr>
 
-		_.each(data.rowVals[groupNum], function (rowVal) {
-			jQuery('<th>').text(rowVal).appendTo(tr);
+		_.each(data.rowVals[groupNum], function (rowVal, rowValIndex) {
+			var th = jQuery('<th>');
+			var span = jQuery('<span>');
+			if (rowVal instanceof Element || rowVal instanceof jQuery) {
+				span.append(rowVal);
+			}
+			else if (self.colConfig[data.groupFields[rowValIndex]].allowHtml) {
+				span.innerHtml(rowVal);
+			}
+			else {
+				span.text(rowVal);
+			}
+			span.appendTo(th);
+			th.appendTo(tr);
+
+			if (rowValIndex === data.groupFields.length - 1) {
+				self._addSortingToHeader('horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, span);
+			}
 		});
 
 		var rowAgg = [];
@@ -2329,6 +2385,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (agg, aggNum) {
 		var aggType = agg.aggDefn.type || agg.typeInfo.type;
+		var span;
 		var text;
 
 		tr = jQuery('<tr>');
@@ -2344,9 +2401,13 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			;
 		}
 
-		th = jQuery('<th>')
-			.text(agg.name || agg.aggDefn.name)
-			.appendTo(tr);
+		th = jQuery('<th>');
+		span = jQuery('<span>').text(agg.name || agg.aggDefn.name);
+
+		span.appendTo(th);
+		th.appendTo(tr);
+
+		self._addSortingToHeader('horizontal', {aggType: 'pivot', aggNum: 0}, span);
 
 		_.each(data.colVals, function (colVal, colValIdx) {
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
