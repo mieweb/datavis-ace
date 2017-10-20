@@ -290,20 +290,17 @@ View.prototype.sort = function (cont) {
 		}
 
 		if (typeof fti === 'string' || fti instanceof String) {
-			cmp = getComparisonFn.byType(fti);
+			fti = {
+				type: fti
+			};
 		}
-		else if (typeof fti === 'object') {
-			if (fti.type == null) {
-				log.error('Unable to sort: type unknown {spec = %O, fti = %O}', spec, fti.asMap());
-				return null;
-			}
 
-			cmp = getComparisonFn.byType(fti.type);
-		}
-		else {
-			log.error('Unable to sort: invalid type information {spec = %O, fti = %O}', spec, fti);
+		if (fti.type == null) {
+			log.error('Unable to sort: type unknown {spec = %O, fti = %O}', spec, fti.asMap());
 			return null;
 		}
+
+		cmp = getComparisonFn.byType(fti.type);
 
 		if (cmp == null) {
 			log.error('Unable to sort: no comparison function for type {spec = %O, type = %s}', spec, fti.type);
@@ -315,7 +312,7 @@ View.prototype.sort = function (cont) {
 			return null;
 		}
 
-		if (fti instanceof MIE.OrdMap && fti.needsDecoding) {
+		if (fti.needsDecoding) {
 			if (!fti.field) {
 				log.error('Unable to sort: cannot decode unknown field {spec = %O, typeInfo = %O}', spec, fti.asMap());
 				return null;
@@ -324,7 +321,7 @@ View.prototype.sort = function (cont) {
 			debug.info('VIEW (' + self.name + ') // SORT', 'Decoding data before sorting: %O', spec);
 
 			if (self.data.isPlain) {
-				self.source.convertAll(self.data, fti.field);
+				self.source.convertAll(self.data.data, fti.field);
 			}
 			else {
 				_.each(self.data.data, function (groupedRows) {
@@ -420,6 +417,15 @@ View.prototype.sort = function (cont) {
 				}
 
 				_.each(sorted, function (s, newIndex) {
+					// For plain output, fire the "sort" event so that the rows (if the grid table is showing
+					// all of them) can just be shuffled around, and the table doesn't have to be recreated.
+
+					if (self.data.isPlain) {
+						self.fire(View.events.sort, {
+							silent: true
+						}, origData[s.oldIndex].rowNum, newIndex);
+					};
+
 					self.data.data[newIndex] = origData[s.oldIndex];
 					if (origRowVals != null) {
 						self.data.rowVals[newIndex] = origRowVals[s.oldIndex];
@@ -500,17 +506,6 @@ View.prototype.sort = function (cont) {
 
 	var makeFinishCb = function (postProcess, next) {
 		return function (sorted) {
-			// For plain output, fire the "sort" event so that the rows (if the grid table is showing all
-			// of them) can just be shuffled around, and the table doesn't have to be recreated.
-
-			if (self.data.isPlain) {
-				_.each(sorted, function (row, position) {
-					self.fire(View.events.sort, {
-						silent: true
-					}, row.rowNum, position);
-				});
-			}
-
 			// Run any function that might've been specified to manipulate the data after the fact.
 
 			if (typeof postProcess === 'function') {
@@ -875,7 +870,7 @@ View.prototype.filter = function (cont) {
 		}
 
 		if (fti.needsDecoding) {
-			debug.info('VIEW (' + self.name + ') // SORT',
+			debug.info('VIEW (' + self.name + ') // FILTER',
 								 'Decoding data before filtering: { field = "%s", type = "%s" }',
 								 fti.field, fti.type);
 			self.source.convertAll(self.data.data, fti.field);
