@@ -1,3 +1,53 @@
+// Csv {{{1
+
+var Csv = makeSubclass(Object, function (opts) {
+	var self = this;
+
+	self.opts = opts || {};
+
+	_.defaults(self.opts, {
+		separator: ','
+	});
+
+	self.data = [];
+});
+
+// #addRow {{{2
+
+Csv.prototype.addRow = function () {
+	var self = this;
+
+	self.lastRow = [];
+	self.data.push(self.lastRow);
+};
+
+// #addCol {{{2
+
+Csv.prototype.addCol = function (x) {
+	var self = this;
+
+	self.lastRow.push(x);
+};
+
+// #toString {{{2
+
+Csv.prototype.toString = function () {
+	var self = this;
+
+	var s = '';
+	var sep = '"' + self.opts.separator + '"';
+	for (var i = 0; i < self.data.length; i += 1) {
+		if (i > 0) {
+			s += '\r\n';
+		}
+		s += '"' + self.data[i].map(function (s) {
+			return s.replace('"', '""');
+		}).join(sep) + '"';
+	}
+
+	return s;
+};
+
 // GridTable {{{1
 // Constructor {{{2
 
@@ -423,6 +473,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			var tr
 				, srcIndex = 0;
 
+			self.csv = new Csv();
+
 			self.ui = {
 				tbl: jQuery('<table>'),
 				thead: jQuery('<thead>'),
@@ -573,6 +625,10 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			}
 
 			self.addWorkHandler();
+
+			if (typeof tableDoneCont === 'function') {
+				return tableDoneCont();
+			}
 		});
 	});
 };
@@ -742,6 +798,14 @@ GridTable.prototype.clearDrawOptions = function () {
 	delete self.drawOpts;
 };
 
+// #getCsv {{{2
+
+GridTable.prototype.getCsv = function () {
+	var self = this;
+
+	return self.csv.toString();
+};
+
 // GridTablePlain {{{1
 // Constructor {{{2
 
@@ -843,6 +907,8 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		'class': 'wcdv_grid_filterrow'
 	});
 
+	self.csv.addRow();
+
 	/*
 	 * Create the checkbox that allows the user to select all rows.
 	 */
@@ -881,10 +947,14 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			colIndex += 1; // Add a column for the row selection checkbox.
 		}
 
+		var headingText = colConfig.displayText || field;
+
 		var headingSpan = jQuery('<span>')
 			.attr('data-wcdv-field', field)
-			.text(colConfig.displayText || field)
+			.text(headingText)
 			._makeDraggableField();
+
+		self.csv.addCol(headingText);
 
 		var headingTh = jQuery('<th>', { id: gensym() })
 			.css(headingThCss)
@@ -1105,6 +1175,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			}
 			else {
 				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum});
+				self.csv.addRow();
 
 				// Create the check box which selects the row.
 
@@ -1136,6 +1207,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 						td.text(value);
 					}
 
+					self.csv.addCol(td.text());
 					self.setCss(td, field);
 					self.setAlignment(td, colConfig, typeInfo.get(field));
 

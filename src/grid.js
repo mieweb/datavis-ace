@@ -634,7 +634,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	var initialRender = true;
 
 	self.tableDoneCont = function (grid, srcIndex) {
-		self.grid = grid;
+		debug.info('GRID', 'Finished drawing grid table!');
 
 		// This just makes sure that we populate the "views" dropdown.  It's only needed the very
 		// first time that we show the grid.  Subsequent refreshes may call this code again, but
@@ -648,7 +648,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		// people want to start manipulating the grid from JS right away.
 
 		if (typeof cb === 'function') {
-			cb(self.grid);
+			cb();
 		}
 	};
 
@@ -857,9 +857,17 @@ Grid.prototype.addCommonButtons = function (toolbar) {
 
 	self.ui.refreshLink = jQuery('<button>')
 		.append(fontAwesome('F021'))
-		.text('Refresh')
+		.append('Refresh')
 		.on('click', function () {
 			self.refresh();
+		})
+		.appendTo(toolbar);
+
+	self.ui.exportBtn = jQuery('<button>', {'disabled': true})
+		.append(fontAwesome('F14C'))
+		.append('Export')
+		.on('click', function () {
+			self.export();
 		})
 		.appendTo(toolbar);
 
@@ -1271,9 +1279,13 @@ Grid.prototype.redraw = function () {
 
 		gridTableOpts.fixedHeight = self.rootHasFixedHeight;
 
+		self.ui.exportBtn.attr('disabled', true);
 		self.gridTable = new gridTableCtor(self, self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
 		self.gridTable.on(GridTable.events.unableToRender, makeGridTable);
-		self.gridTable.draw(self.ui.grid, self.tableDoneCont);
+		self.gridTable.draw(self.ui.grid, function () {
+			self.ui.exportBtn.attr('disabled', false);
+			self.tableDoneCont();
+		});
 	};
 
 	makeGridTable();
@@ -1636,6 +1648,21 @@ Grid.prototype.normalizeColumns = function (defn) {
 	_.each(defn.table.columns, function (col) {
 		self.colConfig[col.field] = col;
 	});
+};
+
+// #export {{{2
+
+Grid.prototype.export = function () {
+	var self = this;
+
+	var csv = self.gridTable.getCsv();
+	var form = jQuery('<form>', {'method': 'POST', 'action': 'grid-export.php'}).appendTo(document.body);
+	jQuery('<input>', {'type': 'hidden', 'name': 'format'}).val('csv').appendTo(form);
+	jQuery('<input>', {'type': 'hidden', 'name': 'filename'}).val(self.id).appendTo(form);
+	jQuery('<input>', {'type': 'hidden', 'name': 'content'}).val(csv).appendTo(form);
+
+	form.submit();
+	form.remove();
 };
 
 // GridControl {{{1
