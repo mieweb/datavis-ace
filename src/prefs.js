@@ -139,6 +139,14 @@ Prefs.prototype.apply = function (prefs, cont) {
 	self.view.fire(View.events.dataUpdated);
 };
 
+// #reset {{{2
+
+Prefs.prototype.reset = function () {
+	var self = this;
+
+	self.view.reset();
+};
+
 // LocalStoragePrefs {{{1
 
 var LocalStoragePrefs = makeSubclass(Prefs, function () {
@@ -331,4 +339,20 @@ LocalStoragePrefs.prototype.deletePerspective = function (perspective) {
 		}
 		self.load();
 	}
+};
+
+// #reset {{{2
+
+LocalStoragePrefs.prototype.reset = function () {
+	var self = this;
+
+	debug.info('PREFS // LOCAL - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Resetting perspectives');
+
+	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
+	delete storedPrefData[self.view.name];
+	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
+
+	self.setCurrentPerspective('Main');
+	self.super.reset();
 };

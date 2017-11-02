@@ -54,25 +54,10 @@ $(document).ready(function () {
 		field: 'Country',
 		type: 'string'
 	}]);
-	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink', {
-		saveViewConfig: true
-	});
+	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink');
 	new MIE.WC_DataVis.Grid('grid', view, {
 		id: 'grid',
 		table: {
-			features: {
-				sort: true,
-				filter: true,
-				group: true,
-				pivot: true,
-				limit: true,
-				rowSelect: true,
-				floatTableHeader: true
-			},
-			limit: {
-				threshold: 100,
-				chunkSize: 50
-			},
 			columns: [{
 				field: 'Order ID'
 			}, {
@@ -90,8 +75,7 @@ $(document).ready(function () {
 		},
 		source: source
 	}, {
-		title: 'Fruit Sales',
-		runImmediately: true
+		title: 'Fruit Sales'
 	});
 
 	jQuery('#feature_header').on('click', function () {

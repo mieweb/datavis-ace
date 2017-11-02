@@ -1884,10 +1884,14 @@ View.prototype.clearCache = function () {
 View.prototype.reset = function (noUpdate) {
 	var self = this;
 
-	self.clearSort(true);
+	self.clearSort(true, true);
 	self.clearFilter({ update: false });
-	self.clearGroup(true);
-	self.clearPivot(true);
+	self.clearGroup(true, true);
+	self.clearPivot(true, true);
+	self.clearAggregate({
+		sendEvent: false,
+		updateData: false
+	});
 
 	if (noUpdate) {
 		delete self.lastOps;

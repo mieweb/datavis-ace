@@ -504,11 +504,9 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		throw new GridError('The `view` argument must be an instance of MIE.View');
 	}
 
-	if (tagOpts === undefined) {
-		tagOpts = jQuery.extend(true, {}, {
-			runImmediately: true
-		});
-	}
+	deepDefaults(true, tagOpts, {
+		runImmediately: true
+	});
 
 	self.defn = defn; // Definition used to retrieve data and output grid.
 	self.tagOpts = tagOpts; // Other tag options, not related to the grid.
@@ -1119,7 +1117,20 @@ Grid.prototype.addPrefsButtons = function (parent) {
 					return elt.value === toDelete;
 				}).remove();
 				dropdown.val(self.view.prefs.getCurrentPerspective());
+				showHideBtns();
 			}
+		})
+		.appendTo(div)
+	;
+
+	var resetBtn = jQuery(fontAwesome('F0E2', 'wcdv_button', 'Reset'))
+		.on('click', function () {
+			self.view.prefs.reset();
+			dropdown.children().filter(function (i, elt) {
+				return elt.value !== self.view.prefs.getCurrentPerspective() && elt.value !== 'NEW';
+			}).remove();
+			dropdown.val(self.view.prefs.getCurrentPerspective());
+			showHideBtns();
 		})
 		.appendTo(div)
 	;
