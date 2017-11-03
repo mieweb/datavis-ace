@@ -1145,6 +1145,35 @@ FileSource.prototype.setToolbar = function (toolbar) {
 		.appendTo(toolbar);
 };
 
+// #setFile {{{2
+
+FileSource.prototype.setFiles = function (files) {
+	var self = this;
+
+	if (!(files instanceof FileList)) {
+		return;
+	}
+
+	Papa.parse(files.item(0), {
+		header: true,
+		skipEmptyLines: true,
+		complete: function (results, file) {
+			console.log(results);
+
+			self.cache.data = results.data;
+			self.cache.typeInfo = new OrdMap();
+
+			_.each(results.meta.fields, function (field) {
+				self.cache.typeInfo.set(field, {
+					'type': 'string'
+				});
+			});
+
+			self.source.clearCachedData();
+		}
+	});
+};
+
 // #getData {{{2
 
 FileSource.prototype.getData = function (params, cont) {

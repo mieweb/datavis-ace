@@ -534,6 +534,12 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		self.rootHasFixedHeight = true;
 	}
 
+	if (self.view.source.origin instanceof FileSource) {
+		self.ui.root._onFileDrop(function (files) {
+			self.view.source.origin.setFiles(files);
+		});
+	}
+
 	if (tagOpts.title) {
 		if (!_.isString(tagOpts.title)) {
 			throw '<tagOpts.title> is not a string';

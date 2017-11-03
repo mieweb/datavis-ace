@@ -16,5 +16,22 @@ jQuery.fn.extend({
 				revert: true,
 				revertDuration: 0
 			});
+	},
+	_onFileDrop: function (cb) {
+		// https://www.html5rocks.com/en/tutorials/file/dndfiles/
+		function handleFileSelect(evt) {
+			evt.stopPropagation();
+			evt.preventDefault();
+			cb(evt.dataTransfer.files);
+		}
+
+		function handleDragOver(evt) {
+			evt.stopPropagation();
+			evt.preventDefault();
+			evt.dataTransfer.dropEffect = 'copy';
+		}
+
+		this.get(0).addEventListener('dragover', handleDragOver, false);
+		this.get(0).addEventListener('drop', handleFileSelect, false);
 	}
 });
