@@ -1363,6 +1363,7 @@ Source.prototype.constructor = Source;
 
 mixinEventHandling(Source, 'Source', [
 		'dataUpdated'
+	, 'getTypeInfo'
 ]);
 
 // .sources {{{2
@@ -1523,6 +1524,8 @@ Source.prototype.getTypeInfo = function (cont) {
 
 		self.cache.typeInfo = typeInfoClone;
 		debug.info('SOURCE // GET TYPE INFO', 'Type Info = %O', deepCopy(self.cache.typeInfo.asMap()));
+
+		self.fire(Source.events.getTypeInfo, null, self.cache.typeInfo, self);
 		return cont(self.cache.typeInfo);
 	});
 };
