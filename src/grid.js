@@ -618,8 +618,12 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 			.addClass('wcdv_button pull-right')
 			.attr('title', MIE.trans('SHOWHIDEOPTS'))
 			.click(function (evt) {
-				self.ui.controls.slideToggle();
-				self.fire(Grid.events.showControls);
+				self.ui.controls.toggle({
+					duration: 0,
+					complete: function () {
+						self.fire(Grid.events.showControls);
+					}
+				});
 			})
 			.appendTo(self.ui.gridToolBarButtons);
 	}
