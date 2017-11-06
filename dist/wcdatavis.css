@@ -21,7 +21,7 @@
 
 .wcdv_grid_toolbar {
 	border: solid 1px #666;
-	flex: 0 0;
+	flex: 0 0 0;
 }
 
 .wcdv_grid_toolbar .buttons {
@@ -156,7 +156,7 @@
 	font-weight: bold;
 	border-bottom: solid 1px #888;
 	display: inline-block;
-	flex: 1 0;
+	flex: 1 0 0;
 }
 
 .wcdv_control_title_button {
@@ -233,7 +233,7 @@
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container {
 	margin-left: 1ex;
-	flex: 1 1;
+	flex: 1 1 0;
 }
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div {
@@ -244,7 +244,16 @@
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div > input,
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div > div.SumoSelect {
-	flex: 1 1;
+	flex: 1 1 0;
+}
+
+/*
+ * If we don't set this here, then floatThead will cover up the Sumo Select dropdown.  The
+ * floatThead z-index is 1001.
+ */
+
+div.SumoSelect > div.optWrapper {
+	z-index: 1002;
 }
 
 .wcdv_filter_control_filter_container {
@@ -255,7 +264,7 @@
 	border-left: solid 1px #666;
 	border-right: solid 1px #666;
 	border-bottom: solid 1px #666;
-	flex: 1 1;
+	flex: 1 1 0;
 }
 
 .wcdv_grid_table th {
