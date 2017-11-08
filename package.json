@@ -6,6 +6,10 @@
   "devDependencies": {
     "eslint": "latest",
     "ink-docstrap": "latest",
-    "jsdoc": "latest"
+    "jsdoc": "latest",
+    "jshint": "latest"
+  },
+  "scripts": {
+    "lint": "eslint ."
   }
 }

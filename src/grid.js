@@ -338,17 +338,6 @@ function configureRowReordering(defn, tbody) {
 	});
 }
 
-// Row Selection {{{1
-
-function rowSelect_checkAll(evt, elt) {
-	elt.tbl.parents('div.tabletool').find('input[name="checkAll"]').prop('checked', this.checked);
-	elt.tbody
-		.find('input[type="checkbox"]:visible')
-		.prop('checked', this.checked)
-		.trigger('change');
-}
-
-
 // GridError {{{1
 
 /**
@@ -720,6 +709,10 @@ mixinEventHandling(Grid, 'Grid', [
 		'showControls'
 	, 'hideControls'
 ]);
+
+// Delegate {{{2
+
+delegate(Grid, 'gridTable', ['setSelection', 'getSelection', 'select', 'unselect', 'isSelected']);
 
 // #_validateFeatures {{{2
 

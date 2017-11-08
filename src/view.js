@@ -1786,13 +1786,18 @@ View.prototype.getData = function (cont) {
 				isPlain: true,
 				isGroup: false,
 				isPivot: false,
-				data: _.map(data, function (rowData, rowNum) {
-					return {
-						rowNum: rowNum,
-						rowData: rowData
-					};
-				})
+				data: [],
+				dataByRowId: []
 			};
+
+			_.each(data, function (rowData, rowNum) {
+				self.data.data.push({
+					rowNum: rowNum,
+					rowData: rowData
+				});
+				self.data.dataByRowId[rowNum] = rowData;
+			});
+
 			return self.filter(function (didFilter, filteredData) {
 				ops.filter = didFilter;
 				self.data.data = filteredData;

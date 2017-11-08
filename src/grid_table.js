@@ -125,6 +125,7 @@ var GridTable = (function () {
 		self.features = deepCopy(features);
 		self.opts = opts;
 		self.timing = timing;
+		self.selection = [];
 
 		self.needsRedraw = false;
 
@@ -832,6 +833,142 @@ GridTable.prototype.getCsv = function () {
 	return self.csv.toString();
 };
 
+// #getSelection {{{2
+
+/**
+ * @method
+ */
+
+GridTable.prototype.getSelection = function () {
+	var self = this;
+
+	return {
+		rowIds: self.selection,
+		rows: _.map(self.selection, function (rowId) {
+			return self.data.dataByRowId[rowId];
+		})
+	};
+};
+
+// #setSelection {{{2
+
+/**
+ * @method
+ */
+
+GridTable.prototype.setSelection = function (what) {
+	var self = this;
+
+	if (!self.data.isPlain) {
+		log.error('GridTable#select(): Only works for plain data');
+		return;
+	}
+
+	if (what == null) {
+		self.selection = [];
+	}
+	else if (_.isArray(what)) {
+		self.selection = what;
+	}
+	else {
+		log.error('GridTable#setSelection(): parameter `what` must be null/undef or an array');
+		return false;
+	}
+
+	self._updateSelectionGui();
+};
+
+// #select {{{2
+
+/**
+ * Adds to the current selection.
+ *
+ * @method
+ */
+
+GridTable.prototype.select = function (what) {
+	var self = this;
+
+	if (!self.data.isPlain) {
+		log.error('GridTable#select(): Only works for plain data');
+		return;
+	}
+
+	if (what == null) {
+		// Select all.
+		self.selection = _.pluck(self.data.data, 'rowNum');
+	}
+	else if (_.isArray(what)) {
+		// Add elements to the selection.
+		self.selection = _.intersection(self.selection, what);
+	}
+	else if (typeof what === 'function') {
+		// Add passing rows to the selection.
+		var passing = _.filter(self.data.data, function (d) {
+			return what(d.rowData);
+		});
+		self.selection = _.union(self.selection, _.pluck(passing, 'rowNum'));
+	}
+	else if (!_.contains(self.selection, what)) {
+		// Add item to ths selection.
+		self.selection.push(what);
+	}
+
+	self._updateSelectionGui();
+};
+
+// #unselect {{{2
+
+/**
+ * Removes from the current selection.
+ *
+ * @method
+ */
+
+GridTable.prototype.unselect = function (what) {
+	var self = this;
+
+	if (!self.data.isPlain) {
+		log.error('GridTable#unselect(): Only works for plain data');
+		return;
+	}
+
+	if (what == null) {
+		// Unselect all.
+		self.selection = [];
+	}
+	else if (_.isArray(what)) {
+		// Remove elements from the selection.
+		self.selection = _.difference(self.selection, what);
+	}
+	else if (typeof what === 'function') {
+		// Remove passing elements from the selection.
+		self.selection = _.reject(self.selection, function (x) {
+			return what(self.data.dataByRowId[x]);
+		});
+	}
+	else {
+		// Remove item from the selection.
+		self.selection = _.without(self.selection, what);
+	}
+
+	self._updateSelectionGui();
+};
+
+// #isSelected {{{2
+
+GridTable.prototype.isSelected = function (what) {
+	var self = this;
+
+	return self.selection.indexOf(what) >= 0;
+};
+
+// #_updateSelectionGui {{{2
+
+GridTable.prototype._updateSelectionGui = function () {
+	log.error('GridTable#_updateSelectionGui(): Must be implemented by subclass');
+}
+
 // GridTablePlain {{{1
 // Constructor {{{2
 
@@ -942,7 +1079,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	if (self.features.rowSelect) {
 		self.ui.checkAll_thead = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
 			.on('change', function (evt) {
-				rowSelect_checkAll.call(this, evt, self.ui);
+				self.checkAll(evt);
 			});
 		headingTr.append(jQuery('<th>').append(self.ui.checkAll_thead));
 		if (self.features.filter) {
@@ -1200,17 +1337,23 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				tr.append(td);
 			}
 			else {
-				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum});
+				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': rowNum});
 				self.csv.addRow();
 
 				// Create the check box which selects the row.
 
 				if (self.features.rowSelect) {
-					var checkbox = jQuery('<input>', {
-						'type': 'checkbox',
-						'data-row-num': rowNum
-					})
-						.on('change', check_handler);
+					td = jQuery('<td>');
+					
+					var checkbox = jQuery('<input>', { 'type': 'checkbox', 'data-row-num': rowNum })
+						.on('change', function () {
+							if (this.checked) {
+								self.select(+this.dataset.rowNum);
+							}
+							else {
+								self.unselect(+this.dataset.rowNum);
+							}
+						});
 					tr.append(jQuery('<td>').append(checkbox));
 				}
 
@@ -1250,6 +1393,8 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			self.ui.tr[rowNum] = tr;
 			self.ui.tbody.append(tr);
 		}
+
+		self._updateSelectionGui();
 
 		if (self.features.floatingHeader) {
 			switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
@@ -1334,7 +1479,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 	if (self.features.rowSelect) {
 		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
 			.on('change', function (evt) {
-				rowSelect_checkAll.call(this, evt, self.ui);
+				self.checkAll(evt);
 			});
 		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
@@ -1637,6 +1782,68 @@ GridTablePlain.prototype.getCsv = function () {
 
 	return self.csv.toString();
 };
+
+// #_updateSelectionGui {{{2
+
+/**
+ * Update the checkboxes in the grid table to match what the current selection is.
+ */
+
+GridTablePlain.prototype._updateSelectionGui = function () {
+	var self = this;
+	var isAllChecked = self.selection.length === self.data.data.length;
+	var isIndeterminate = !isAllChecked && self.selection.length > 0;
+
+	var updateCheckboxState = function (elt) {
+		elt.prop('checked', isAllChecked);
+		elt.prop('indeterminate', isIndeterminate);
+	};
+
+	self.root.find('tbody td.wcdv_selected_row').removeClass('wcdv_selected_row');
+	self.root.find('tbody td:first-child input[type="checkbox"]').prop('checked', false);
+	var trs = self.root.find('tbody tr').filter(function (_idx, elt) {
+		return self.selection.indexOf(+elt.dataset.rowNum) >= 0;
+	});
+
+	// Set the "check all" input in the header.
+	if (self.ui.checkAll_thead) {
+		updateCheckboxState(self.ui.checkAll_thead);
+		updateCheckboxState(self.ui.checkAll_thead.parents('div.tabletool').find('input[name="checkAll"]'));
+	}
+
+	// Set the "check all" input in the footer.
+	if (self.ui.checkAll_tfoot) {
+		updateCheckboxState(self.ui.checkAll_tfoot);
+		updateCheckboxState(self.ui.checkAll_tfoot.parents('div.tabletool').find('input[name="checkAll"]'));
+	}
+
+	trs.children('td').addClass('wcdv_selected_row');
+	trs.find('td:first-child input[type="checkbox"]').prop('checked', true);
+};
+
+// #checkAll {{{2
+
+/**
+ * Event handler for using the "check all" checkbox.
+ *
+ * @param {Event} evt
+ * The event generated by the browser when the checkbox is changed.
+ */
+
+GridTablePlain.prototype.checkAll = function (evt) {
+	var self = this;
+
+	// Synchronize with floating header clone.
+	jQuery(evt.target).parents('div.tabletool').find('input[name="checkAll"]').prop('checked', evt.target.checked);
+
+	// Either select or unselect all rows.
+	if (evt.target.checked) {
+		self.select();
+	}
+	else {
+		self.unselect();
+	}
+}
 
 // GridTableGroupDetail {{{1
 // Constructor {{{2

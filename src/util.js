@@ -2211,6 +2211,17 @@ function mixinEventHandling(obj, name, events) {
 	};
 }
 
+// Delegate {{{1
+
+function delegate(from, to, methods) {
+	_.each(methods, function (m) {
+		from.prototype[m] = function () {
+			var args = Array.prototype.slice.call(arguments);
+			return this[to][m].apply(this[to], args);
+		};
+	});
+}
+
 // CGI {{{1
 
 // https://stackoverflow.com/questions/901115/
