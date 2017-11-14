@@ -1,3 +1,4 @@
+// Utility Functions {{{1
 /* ===============================================================================================
  *  Aggregates
  * ===============================================================================================
@@ -105,7 +106,168 @@ function invokeAggregate(data, aggregate, init) {
 	return acc;
 }
 
-function getRealValue(cell) {
+
+
+/**
+ * Make sure a user-specified aggregate conforms to the required data structure.
+ */
+
+function checkAggregate(defn, agg, source) {
+	if (!_.isObject(agg)) {
+		throw defn.error(new InvalidReportDefinitionError(source, agg, 'must be an object'));
+	}
+	// INPUT VALIDATION: [fun]
+	if (_.isUndefined(agg.fun)) {
+		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be present'));
+	}
+	if (!_.isString(agg.fun)) {
+		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a string'));
+	}
+	if (!AGGREGATES.get(agg.fun)) {
+		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a valid builtin aggregate function'));
+	}
+	// INPUT VALIDATION: [displayText]
+	if (_.isUndefined(agg.displayText)) {
+		agg.displayText = agg.fun;
+	}
+	if (!_.isString(agg.displayText)) {
+		throw defn.error(new InvalidReportDefinitionError(source + '.displayText', agg.displayText, 'must be a string'));
+	}
+}
+
+// Aggregate {{{1
+
+/**
+ * @property {string} name
+ * Name of the aggregate function used in the dropdown menu by the grid.
+ *
+ * @property {boolean} [canBePivotCell=true]
+ * If true, then the aggregate function will be shown in the user interface.  Typically used to
+ * indicate that no other parameters are required beyond a field.
+ *
+ * @property {int} [fieldCount=0]
+ * Number of fields required.  Usually zero or one.
+ *
+ * @property {string} type
+ * Fixed type of the result of this aggregate function.  Undefined indicates that the type depends
+ * on the field(s) used.
+ *
+ * @property {boolean} [inheritFormatting=false]
+ * If true, then the result should be formatted according to the formatting of the field(s).
+ *
+ * @property {any} [bottomValue]
+ * The value returned when an error occurs.
+ *
+ * @property {function|any} [init]
+ * The value used as the initial seed of the result calculation (which is a reduction/fold over the
+ * data).  If a function, that function is invoked with no arguments to get the value.  When not
+ * provided, the bottom value is used.
+ */
+
+var Aggregate = makeSubclass(Object, function (opts) {
+	var self = this;
+
+	self.opts = opts;
+}, {
+	canBePivotCell: true,
+	fieldCount: 0,
+	inheritFormatting: false
+});
+
+// #calculate {{{2
+
+Aggregate.prototype.calculate = function (data) {
+	var self = this;
+	var i, i0, len, acc;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
+	}
+
+	len = data.length;
+
+	// Determine the initial value of the accumulator.  When there's an `init` property, prefer it.
+	// Fall back to the `bottomValue` property.
+
+	acc = typeof self.init === 'function' ? self.init()
+		: self.init != null ? self.init
+		: self.bottomValue;
+	i0 = 0;
+
+	// When there's no data, bail with the initial value.
+
+	if (len === 0) {
+		if (typeof self.calculateDone === 'function') {
+			return self.calculateDone(acc);
+		}
+		return acc;
+	}
+
+	// If there's no initial value for the accumulator, use the first value from the data.
+
+	if (acc == null) {
+		acc = data[0].rowData;
+		if (self.opts.fields && self.opts.fields.length > 0) {
+			acc = self.getRealValue(acc[self.opts.fields[0]]);
+		}
+		i0 = 1;
+	}
+
+	// Loop through the rest of the data and call the `calculateStep` function.  This is basically
+	// like calling fold/reduce.
+
+	for (i = i0; i < len; i += 1) {
+		try {
+			acc = self.calculateStep(acc, data[i].rowData, data, i);
+		}
+		catch (e) {
+			log.error('Aggregate ' + self.name + ': Error occurred at data index [' + i + ']: ' + e.toString());
+			return self.bottomValue;
+		}
+	}
+
+	return self.calculateDone != null ? self.calculateDone(acc) : acc;
+};
+
+// #checkOpts {{{2
+
+Aggregate.prototype.checkOpts = function () {
+	var self = this;
+
+	if (self.fieldCount > 0) {
+		if (self.opts.fields == null) {
+			log.error('Aggregate ' + self.name + ': Missing `opts.fields`');
+			return false;
+		}
+		else if (!_.isArray(self.opts.fields)) {
+			log.error('Aggregate ' + self.name + ': `opts.fields` must be an array');
+			return false;
+		}
+		else if (self.opts.fields.length !== self.fieldCount) {
+			log.error('Aggregate ' + self.name + ': `opts.fields` must include ' + self.fieldCount + ' elements');
+			return false;
+		}
+	}
+
+	return true;
+};
+
+// #checkData {{{2
+
+Aggregate.prototype.checkData = function (data) {
+	var self = this;
+
+	if (!_.isArray(data)) {
+		log.error('Aggregate ' + self.name + ': `data` must be an array');
+		return false;
+	}
+
+	return true;
+};
+
+// #getRealValue {{{2
+
+Aggregate.prototype.getRealValue = function (cell) {
 	if (_.isString(cell)) {
 		return cell;
 	}
@@ -123,21 +285,538 @@ function getRealValue(cell) {
 			throw new Error('Unable to get real value of cell');
 		}
 	}
-}
+};
 
-function getRealValueAsKey(cell) {
-	var val = getRealValue(cell);
+// #getRealValueAsString {{{2
 
-	if (window.numeral && window.numeral.isNumeral(val)) {
-		return val.value();
+Aggregate.prototype.getRealValueAsString = function (cell) {
+	var self = this;
+	var val = self.getRealValue(cell);
+	var colConfig = self.opts.colConfig ? self.opts.colConfig[0] : null;
+	var typeInfo = self.opts.typeInfo ? self.opts.typeInfo[0] : null;
+
+	return format(colConfig, typeInfo, cell);
+};
+
+// Count {{{1
+
+var CountAggregate = makeSubclass(Aggregate, null, {
+	name: 'Count',
+	canBePivotCell: true,
+	fieldCount: 0,
+	type: 'number',
+	inheritFormatting: false,
+	bottomValue: 0
+});
+
+// #calculate {{{2
+
+CountAggregate.prototype.calculate = function (data) {
+	var self = this;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
 	}
-	else if (window.moment && window.moment.isMoment(val)) {
-		return val.unix();
+
+	return (data && data.length) || self.bottomValue;
+};
+
+// Count Distinct {{{1
+
+var CountDistinctAggregate = makeSubclass(Aggregate, function () {
+	var self = this;
+
+	self.set = {};
+	self.super.ctor.apply(self, arguments);
+}, {
+	name: 'Count Distinct',
+	canBePivotCell: true,
+	fieldCount: 1,
+	type: 'number',
+	inheritFormatting: false,
+	bottomValue: 0,
+	init: function () {
+		return {
+			set: {},
+			count: 0
+		};
+	}
+});
+
+// #calculateStep {{{2
+
+CountDistinctAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	var key = self.getRealValueAsString(next[self.opts.fields[0]]);
+	if (acc.set[key] == null) {
+		acc.set[key] = true;
+		acc.count += 1;
+	}
+	return acc;
+};
+
+// #calculateDone {{{2
+
+CountDistinctAggregate.prototype.calculateDone = function (obj) {
+	return obj.count;
+};
+
+// Values {{{1
+
+ValuesAggregate = makeSubclass(Aggregate, null, {
+	name: 'Values',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: false,
+	type: 'string',
+	init: function () {
+		return [];
+	}
+});
+
+// #calculateStep {{{2
+
+ValuesAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	acc.push(self.getRealValue(next[self.opts.fields[0]]));
+	return acc;
+};
+
+// #calculateDone {{{2
+
+ValuesAggregate.prototype.calculateDone = function (acc) {
+	var self = this;
+
+	return acc.join(self.opts.separator || ', ');
+};
+
+// Values w/ Counts {{{1
+
+ValuesWithCountsAggregate = makeSubclass(Aggregate, null, {
+	name: 'Values w/ Counts',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: false,
+	type: 'string',
+	init: function () {
+		return new OrdMap();
+	}
+});
+
+// #calculateStep {{{2
+
+ValuesWithCountsAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+	var key = self.getRealValueAsString(next[self.opts.fields[0]]);
+
+	if (acc.isSet(key)) {
+		acc.set(key, acc.get(key) + 1);
 	}
 	else {
-		return val;
+		acc.set(key, 1);
 	}
-}
+
+	return acc;
+};
+
+// #calculateDone {{{2
+
+ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
+	var self = this;
+	var a = [];
+
+	acc.each(function (v, k) {
+		a.push(k + ' (' + v + ')');
+	});
+
+	return a.join(self.opts.separator || ', ');
+};
+
+// Distinct Values {{{1
+
+DistinctValuesAggregate = makeSubclass(Aggregate, null, {
+	name: 'Distinct Values',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: false,
+	type: 'string',
+	init: function () {
+		return {
+			a: [],
+			m: {}
+		}
+	}
+});
+
+// #calculateStep {{{2
+
+DistinctValuesAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	var key = self.getRealValueAsString(next[self.opts.fields[0]]);
+
+	if (!acc.m[key]) {
+		acc.m[key] = true;
+		acc.a.push(format(self.opts.colConfig[0], self.opts.typeInfo[0], self.getRealValue(next[self.opts.fields[0]])));
+	}
+
+	return acc;
+};
+
+// #calculateDone {{{2
+
+DistinctValuesAggregate.prototype.calculateDone = function (acc) {
+	var self = this;
+
+	return acc.a.join(self.opts.separator || ', ');
+};
+
+// Sum {{{1
+
+var SumAggregate = makeSubclass(Aggregate, null, {
+	name: 'Sum',
+	canBePivotCell: true,
+	fieldCount: 1,
+	type: 'number',
+	inheritFormatting: true,
+	bottomValue: 0
+});
+
+// #calculateStep {{{2
+
+SumAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+	var val = self.getRealValue(next[self.opts.fields[0]]);
+
+	if (window.numeral && window.numeral.isNumeral(val)) {
+		// Check to see if this is a plain number, or a number wrapped by the Numeral library.  It
+		// should always be the latter, but we check anyway, because there's no reason not to.
+
+		val = val.value();
+	}
+	else if (_.isString(val)) {
+		// We can also handle when it's a number represented as a string.  We'll try to convert it
+		// either to an integer or a float.
+
+		if (isInt(val)) {
+			val = toInt(val);
+		}
+		else if (isFloat(val)) {
+			val = toFloat(val);
+		}
+		else {
+			//log.error('Unable to interpret value as a number: { field = "%s", value = "%s" }', opts.field, JSON.stringify(val));
+			val = 0;
+		}
+	}
+
+	if (!_.isNumber(val)) {
+		log.error('Unable to interpret value as a number: { field = "%s", value = "%s" }', self.opts.fields[0], JSON.stringify(val));
+	}
+
+	return acc + val;
+};
+
+// Average {{{1
+
+var AverageAggregate = makeSubclass(Aggregate, function (opts) {
+	var self = this;
+
+	self.sumAgg = new SumAggregate(opts);
+	self.super.ctor.apply(self, arguments);
+}, {
+	name: 'Average',
+	canBePivotCell: true,
+	fieldCount: 1,
+	type: 'number',
+	inheritFormatting: true,
+	bottomValue: 0
+});
+
+// #calculate {{{2
+
+AverageAggregate.prototype.calculate = function (data) {
+	var self = this;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
+	}
+
+
+	return self.sumAgg.calculate(data) / data.length;
+};
+
+// Min {{{1
+
+MinAggregate = makeSubclass(Aggregate, null, {
+	name: 'Min',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: true
+});
+
+// #checkOpts {{{2
+
+MinAggregate.prototype.checkOpts = function () {
+	var self = this;
+
+	if (self.opts.typeInfo == null) {
+		log.error('Aggregate ' + self.name + ': Missing `opts.typeInfo`');
+		return false;
+	}
+
+	if (self.opts.compare == null) {
+		self.opts.compare = getComparisonFn.byType(self.opts.typeInfo[0].type);
+	}
+
+	if (typeof self.opts.compare !== 'function') {
+		log.error('Aggregate ' + self.name + ': Missing `opts.compare`');
+		return false;
+	}
+
+	return self.super.checkOpts();
+};
+
+// #calculateStep {{{2
+
+MinAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	var val = self.getRealValue(next[self.opts.fields[0]]);
+	return self.opts.compare(acc, val) ? acc : val;
+};
+
+// Max {{{1
+
+MaxAggregate = makeSubclass(Aggregate, null, {
+	name: 'Max',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: true
+});
+
+// #checkOpts {{{2
+
+MaxAggregate.prototype.checkOpts = function () {
+	var self = this;
+
+	if (self.opts.typeInfo == null) {
+		log.error('Aggregate ' + self.name + ': Missing `opts.typeInfo`');
+		return false;
+	}
+
+	if (self.opts.compare == null) {
+		self.opts.compare = getComparisonFn.byType(self.opts.typeInfo[0].type);
+	}
+
+	if (typeof self.opts.compare !== 'function') {
+		log.error('Aggregate ' + self.name + ': Missing `opts.compare`');
+		return false;
+	}
+
+	return self.super.checkOpts();
+};
+
+// #calculateStep {{{2
+
+MaxAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	var val = self.getRealValue(next[self.opts.fields[0]]);
+	return self.opts.compare(acc, val) ? val : acc;
+};
+
+// First {{{1
+
+FirstAggregate = makeSubclass(Aggregate, null, {
+	name: 'First',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: true
+});
+
+// #checkData {{{2
+
+FirstAggregate.prototype.checkData = function (data) {
+	var self = this;
+
+	if (data.length === 0) {
+		log.error('Aggregate ' + self.name + ': `data` has no elements');
+		return false;
+	}
+
+	return self.super.checkData(data);
+};
+
+// #calculate {{{2
+
+FirstAggregate.prototype.calculate = function (data) {
+	var self = this;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
+	}
+
+	return self.getRealValue(data[0].rowData[self.opts.fields[0]]);
+};
+
+// Last {{{1
+
+LastAggregate = makeSubclass(Aggregate, null, {
+	name: 'Last',
+	canBePivotCell: true,
+	fieldCount: 1,
+	inheritFormatting: true
+});
+
+// #checkData {{{2
+
+FirstAggregate.prototype.checkData = function (data) {
+	var self = this;
+
+	if (data.length === 0) {
+		log.error('Aggregate ' + self.name + ': `data` has no elements');
+		return false;
+	}
+
+	return self.super.checkData(data);
+};
+
+// #calculate {{{2
+
+LastAggregate.prototype.calculate = function (data) {
+	var self = this;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
+	}
+
+	return self.getRealValue(data[data.length - 1].rowData[self.opts.fields[0]]);
+};
+
+// Nth {{{1
+
+NthAggregate = makeSubclass(Aggregate, null, {
+	name: 'Nth',
+	canBePivotCell: false,
+	fieldCount: 1,
+	inheritFormatting: true
+});
+
+// #checkOpts {{{2
+
+NthAggregate.prototype.checkOpts = function () {
+	var self = this;
+
+	if (self.opts.index == null) {
+		log.error('Aggregate ' + self.name + ': Missing `opts.index`');
+		return false;
+	}
+
+	if (!_.isNumber(self.opts.index)) {
+		log.error('Aggregate ' + self.name + ': `opts.index` must be a number');
+		return false;
+	}
+
+	return self.super.checkOpts();
+};
+
+// #checkData {{{2
+
+FirstAggregate.prototype.checkData = function (data) {
+	var self = this;
+
+	if (data.length === 0) {
+		log.error('Aggregate ' + self.name + ': `data` has no elements');
+		return false;
+	}
+
+	if (data.length <= self.opts.index) {
+		log.error('Aggregate ' + self.name + ': `data` has insufficient number of elements');
+		return self.bottomValue;
+	}
+
+	return self.super.checkData(data);
+};
+
+// #calculate {{{2
+
+NthAggregate.prototype.calculate = function (data) {
+	var self = this;
+
+	if (!self.checkOpts() || !self.checkData(data)) {
+		return self.bottomValue;
+	}
+
+	return data[data.length - 1];
+};
+
+// Sum / Sum {{{1
+
+SumOverSumAggregate = makeSubclass(Aggregate, null, {
+	name: 'Sum/Sum',
+	canBePivotCell: true,
+	fieldCount: 2,
+	type: 'number',
+	inheritFormatting: false,
+	bottomValue: 0,
+	init: function () {
+		return { a: 0, b: 0 };
+	}
+});
+
+// #getNumber {{{2
+
+SumOverSumAggregate.prototype.getNumber = function (x) {
+	if (window.numeral && window.numeral.isNumeral(x)) {
+		// Check to see if this is a plain number, or a number wrapped by the Numeral library.  It
+		// should always be the latter, but we check anyway, because there's no reason not to.
+
+		return x.value();
+	}
+	else if (_.isString(x)) {
+		// We can also handle when it's a number represented as a string.  We'll try to convert it
+		// either to an integer or a float.
+
+		if (isInt(x)) {
+			return toInt(x);
+		}
+		else if (isFloat(x)) {
+			return toFloat(x);
+		}
+		else {
+			return 0;
+		}
+	}
+};
+
+// #calculateStep {{{2
+
+SumOverSumAggregate.prototype.calculateStep = function (acc, next) {
+	acc.a += self.getNumber(next[opts.fields[0]].value);
+	acc.b += self.getNumber(next[opts.fields[1]].value);
+
+	return acc;
+};
+
+// #calculateDone {{{2
+
+SumOverSumAggregate.prototype.calculateDone = function (obj) {
+	return obj.a / obj.b;
+};
+
+// Count / Count {{{1
+
+CountOverCountAggregate = makeSubclass(Aggregate, null, {
+	name: 'Count/Count',
+	canBePivotCell: true,
+	fieldCount: 2,
+	type: 'number',
+	inheritFormatting: false,
+	bottomValue: 0
+});
 
 /**
  * @typedef {Object} Aggregate
@@ -242,347 +921,19 @@ function getRealValueAsKey(cell) {
  */
 var AGGREGATES = {};
 
-// .count {{{1
+// Aggregate Dictionary {{{1
 
-AGGREGATES.count = {
-	name: 'Count',
-	fun: function (opts) {
-		opts = opts || {};
-		return function (data) {
-			return numeral(data.length);
-		};
-	},
-	canBePivotCell: true,
-	needsField: false,
-	type: 'number',
-	inheritFormatting: false
-};
-
-// .countDistinct {{{1
-
-AGGREGATES.countDistinct = {
-	name: 'Count Distinct',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'countDistinct aggregate: missing [field] argument';
-		}
-		return function (data) {
-			return invokeAggregate(data, makeAggregate({}, function (acc, next, _1, _2, set) {
-				var key = getRealValueAsKey(next[opts.field].value);
-				if (set[key]) {
-					return acc;
-				}
-				else {
-					set[key] = true;
-					return acc.add(1);
-				}
-			}), numeral(0));
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: 'number',
-	inheritFormatting: false
-};
-
-// .sum {{{1
-
-AGGREGATES.sum = {
-	name: 'Sum',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'sum aggregate: missing [field] property';
-		}
-		return function (data) {
-			var result = invokeAggregate(data, function (acc, next) {
-				var val = next[opts.field].value;
-
-				if (window.numeral && window.numeral.isNumeral(val)) {
-					// Check to see if this is a plain number, or a number wrapped by the Numeral library.  It
-					// should always be the latter, but we check anyway, because there's no reason not to.
-
-					val = val.value();
-				}
-				else if (_.isString(val)) {
-					// We can also handle when it's a number represented as a string.  We'll try to convert it
-					// either to an integer or a float.
-
-					if (isInt(val)) {
-						val = toInt(val);
-					}
-					else if (isFloat(val)) {
-						val = toFloat(val);
-					}
-					else {
-						//log.error('Unable to interpret value as a number: { field = "%s", value = "%s" }', opts.field, JSON.stringify(val));
-						val = 0;
-					}
-				}
-
-				if (!_.isNumber(val)) {
-					log.error('Unable to interpret value as a number: { field = "%s", value = "%s" }', opts.field, JSON.stringify(val));
-				}
-
-				return acc.add(val);
-			}, numeral(0));
-
-			return result;
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: 'number',
-	inheritFormatting: true
-};
-
-// .average {{{1
-
-AGGREGATES.average = {
-	name: 'Average',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'average aggregate: missing [field] property';
-		}
-		return function (data) {
-			return numeral(AGGREGATES.sum.fun(opts)(data).value() / data.length);
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: 'number',
-	inheritFormatting: true
-};
-
-// .groupConcat {{{1
-
-AGGREGATES.groupConcat = {
-	name: 'Values',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'groupConcat aggregate: missing [field] property';
-		}
-		if (_.isUndefined(opts.separator)) {
-			opts.separator = ', ';
-		}
-		if (!_.isString(opts.separator)) {
-			throw 'groupConcat aggregate separator must be a string';
-		}
-		return function (data) {
-			return invokeAggregate(data, function (acc, next) {
-				var str = format(opts.colConfig, null, next[opts.field], {
-					alwaysFormat: true,
-					overrideType: opts.type
-				});
-				return acc === '' ? str : acc + opts.separator + str;
-			}, '');
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: 'string'
-};
-
-// .groupConcatDistinct {{{1
-
-AGGREGATES.groupConcatDistinct = {
-	name: 'Distinct Values',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'groupConcatDistinct aggregate: missing [field] property';
-		}
-		if (_.isUndefined(opts.separator)) {
-			opts.separator = ', ';
-		}
-		if (!_.isString(opts.separator)) {
-			throw 'groupConcat aggregate separator must be a string';
-		}
-		return function (data) {
-			return invokeAggregate(data, makeAggregate({}, function (acc, next, _1, _2, set) {
-				var str = format(opts.colConfig, null, next[opts.field], {
-					alwaysFormat: true,
-					overrideType: opts.type
-				});
-				if (set[str]) {
-					return acc;
-				}
-				else {
-					set[str] = true;
-					return acc === '' ? str : acc + opts.separator + str;
-				}
-			}), '');
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: 'string'
-};
-
-// .first {{{1
-
-AGGREGATES.first = {
-	name: 'First',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'first aggregate: missing [field] property';
-		}
-		return function (data) {
-			return data.length > 0 ? getRealValue(data[0].rowData[opts.field]) : '';
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: undefined,
-	inheritFormatting: true
-};
-
-// .last {{{1
-
-AGGREGATES.last = {
-	name: 'Last',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'last aggregate: missing [field] property';
-		}
-		return function (data) {
-			return data.length > 0 ? getRealValue(data[data.length - 1].rowData[opts.field]) : '';
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: undefined,
-	inheritFormatting: true
-};
-
-// .nth {{{1
-
-AGGREGATES.nth = {
-	name: 'Nth',
-	fun: function (opts) {
-		opts = opts || {};
-		if (_.isUndefined(opts.field)) {
-			throw 'nth aggregate: missing [field] property';
-		}
-		if (_.isUndefined(opts.index)) {
-			throw 'nth aggregate: missing [index] property';
-		}
-		else if (parseInt(opts.index, 10) !== opts.index) {
-			throw 'nth aggregate: [index] property must be an interger';
-		}
-		return function (data) {
-			return opts.index >= data.length ? (opts.nonExistent || '[ERROR:OUT-OF-RANGE]') : getRealValue(data[opts.index].rowData[opts.field]);
-		};
-	},
-	needsField: true,
-	type: undefined,
-	inheritFormatting: true
-};
-
-// .min {{{1
-
-AGGREGATES.min = {
-	name: 'Minimum',
-	fun: function (opts) {
-		opts = _.defaults(opts || {}, {
-			type: 'string'
-		});
-
-		if (opts.field === undefined) {
-			throw 'min aggregate: missing [field] property';
-		}
-
-		if (typeof opts.type !== 'string') {
-			throw 'min aggregate: [type] property must be a string';
-		}
-
-		if (opts.compare === undefined) {
-			opts.compare = getComparisonFn.byType(opts.type);
-		}
-
-		if (typeof opts.compare !== 'function') {
-			throw 'min aggregate: [compare] property must be a function';
-		}
-
-		return function (data) {
-			return invokeAggregate(data, function (acc, next) {
-				var n = getRealValue(next[opts.field]);
-				return opts.compare(n, acc) ? n : acc;
-			}, data.length > 0 ? getRealValue(data[0].rowData[opts.field]) : '');
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: undefined,
-	inheritFormatting: true
-};
-
-// .max {{{1
-
-AGGREGATES.max = {
-	name: 'Maximum',
-	fun: function (opts) {
-		opts = _.defaults(opts || {}, {
-			type: 'string'
-		});
-
-		if (opts.field === undefined) {
-			throw 'max aggregate: missing [field] property';
-		}
-
-		if (typeof opts.type !== 'string') {
-			throw 'max aggregate: [type] property must be a string';
-		}
-
-		if (opts.compare === undefined) {
-			opts.compare = getComparisonFn.byType(opts.type);
-		}
-
-		if (typeof opts.compare !== 'function') {
-			throw 'max aggregate: [compare] property must be a function';
-		}
-
-		return function (data) {
-			return invokeAggregate(data, function (acc, next) {
-				var n = getRealValue(next[opts.field]);
-				return opts.compare(n, acc) ? acc : n;
-			}, data.length > 0 ? getRealValue(data[0].rowData[opts.field]) : '');
-		};
-	},
-	canBePivotCell: true,
-	needsField: true,
-	type: undefined,
-	inheritFormatting: true
-};
-
-/**
- * Make sure a user-specified aggregate conforms to the required data structure.
- */
-
-function checkAggregate(defn, agg, source) {
-	if (!_.isObject(agg)) {
-		throw defn.error(new InvalidReportDefinitionError(source, agg, 'must be an object'));
-	}
-	// INPUT VALIDATION: [fun]
-	if (_.isUndefined(agg.fun)) {
-		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be present'));
-	}
-	if (!_.isString(agg.fun)) {
-		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a string'));
-	}
-	if (!AGGREGATES[agg.fun]) {
-		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a valid builtin aggregate function'));
-	}
-	// INPUT VALIDATION: [displayText]
-	if (_.isUndefined(agg.displayText)) {
-		agg.displayText = agg.fun;
-	}
-	if (!_.isString(agg.displayText)) {
-		throw defn.error(new InvalidReportDefinitionError(source + '.displayText', agg.displayText, 'must be a string'));
-	}
-}
+AGGREGATES = new OrdMap();
+AGGREGATES.set('count', CountAggregate);
+AGGREGATES.set('countDistinct', CountDistinctAggregate);
+AGGREGATES.set('values', ValuesAggregate);
+AGGREGATES.set('valuesWithCounts', ValuesWithCountsAggregate);
+AGGREGATES.set('distinctValues', DistinctValuesAggregate);
+AGGREGATES.set('sum', SumAggregate);
+AGGREGATES.set('average', AverageAggregate);
+AGGREGATES.set('min', MinAggregate);
+AGGREGATES.set('max', MaxAggregate);
+AGGREGATES.set('first', FirstAggregate);
+AGGREGATES.set('last', LastAggregate);
+AGGREGATES.set('nth', NthAggregate);
+AGGREGATES.set('sumOverSum', SumOverSumAggregate);

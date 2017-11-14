@@ -296,7 +296,7 @@ View.prototype.sort = function (cont) {
 		}
 
 		if (fti.type == null) {
-			log.error('Unable to sort: type unknown {spec = %O, fti = %O}', spec, fti.asMap());
+			log.error('Unable to sort: type unknown {spec = %O, fti = %O}', spec, fti);
 			return null;
 		}
 
@@ -558,7 +558,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.group.length);
 					return next(false);
 				}
-				fti = aggInfo.group[spec.aggNum].aggDefn.type || aggInfo.group[spec.aggNum].typeInfo;
+				fti = aggInfo_type(aggInfo.group[spec.aggNum]);
 				sortSourceFn = function (i) {
 					return self.data.agg.results.group[spec.aggNum][i];
 				};
@@ -600,7 +600,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.cells.length);
 					return next(false);
 				}
-				fti = aggInfo.cell[spec.aggNum].aggDefn.type || aggInfo.cell[spec.aggNum].typeInfo;
+				fti = aggInfo_type(aggInfo.cell[spec.aggNum]);
 				sortSourceFn = function (i) {
 					return self.data.agg.results.cell[spec.aggNum][spec.rowValIndex][i];
 				};
@@ -640,7 +640,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.cell.length);
 					return next(false);
 				}
-				fti = aggInfo.cell[spec.aggNum].aggDefn.type || aggInfo.cell[spec.aggNum].typeInfo;
+				fti = aggInfo_type(aggInfo.cell[spec.aggNum]);
 				sortSourceFn = function (i) {
 					return self.data.agg.results.cell[spec.aggNum][i][spec.colValIndex];
 				};
@@ -651,7 +651,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.pivot.length);
 					return next(false);
 				}
-				fti = aggInfo.pivot[spec.aggNum].aggDefn.type || aggInfo.pivot[spec.aggNum].typeInfo;
+				fti = aggInfo_type(aggInfo.pivot[spec.aggNum]);
 				sortSourceFn = function (i) {
 					return self.data.agg.results.pivot[spec.aggNum][i];
 				};
@@ -662,7 +662,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.group.length);
 					return next(false);
 				}
-				fti = aggInfo.group[spec.aggNum].aggDefn.type || aggInfo.group[spec.aggNum].typeInfo;
+				fti = aggInfo_type(aggInfo.group[spec.aggNum]);
 				sortSourceFn = function (i) {
 					return self.data.agg.results.group[spec.aggNum][i];
 				};
@@ -1544,7 +1544,7 @@ View.prototype.setAggregate = function (spec, opts) {
 	_.each(spec, function (aggSpec, aggType) {
 		aggSpec = _.filter(aggSpec, function(agg) {
 			if (agg.needsField && agg.field != null && self.typeInfo.get(agg.field) == null) {
-				log.error('Ignoring aggregate "' + (agg.name || (agg.aggDefn && agg.aggDefn.name)) + '" on field "' + agg.field + '" because it doesn\'t exist in the data');
+				log.error('Ignoring aggregate "' + (agg.name || (agg.instance && agg.instance.name)) + '" on field "' + agg.field + '" because it doesn\'t exist in the data');
 				return false;
 			}
 			return true;
@@ -1605,10 +1605,13 @@ View.prototype.aggregate = function (cont) {
 							 _.pluck(getProp(self, 'aggregateSpec', what), 'fun').join(', '));
 	});
 
+	// Data structures for storing aggregate function results.
+
 	var groupResults = []; // groupResults[i][n] -> agg over rows w/ rowval[n]
 	var pivotResults = []; // pivotResults[i][m] -> agg over columns w/ colval[m]
 	var cellResults = []; // cellResults[i][n][m] -> agg over cells w/ rowval[n] -AND- colval[m]
 	var allResults = []; // allResults[i] -> agg over all cells
+
 	var info = {
 		group: [],
 		pivot: [],
@@ -1616,25 +1619,73 @@ View.prototype.aggregate = function (cont) {
 		all: []
 	};
 
+	// Initialize the informational data structures.
+
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		_.each(self.aggregateSpec[what], function (spec, aggNum) {
-			info[what][aggNum] = {
-				colConfig: {},
-				typeInfo: {}
-			};
-			info[what][aggNum].aggDefn = AGGREGATES[spec.fun];
-			info[what][aggNum].name = spec.name;
-
-			if (info[what][aggNum].aggDefn === undefined) {
+			if (AGGREGATES.get(spec.fun) == null) {
 				throw new Error('No such aggregate function: "' + spec.fun + '"' +
-												(spec.name ? ' (output name = "' + spec.name + '")' : ''));
+					(spec.name ? ' (output name = "' + spec.name + '")' : ''));
 			}
 
-			if (spec.field) {
-				info[what][aggNum].field = spec.field;
-				info[what][aggNum].colConfig = self.colConfig[spec.field];
-				info[what][aggNum].typeInfo = self.typeInfo.get(spec.field);
+			info[what][aggNum] = {
+				name: spec.name,
+				fields: [],
+				colConfig: [],
+				typeInfo: []
+			};
+
+			var ctorOpts = {};
+
+			if (spec.fields) {
+				info[what][aggNum].fields = spec.fields;
+				info[what][aggNum].colConfig = _.map(spec.fields, function (f) {
+					return self.colConfig[f];
+				});
+				info[what][aggNum].typeInfo = _.map(spec.fields, function (f) {
+					return self.typeInfo.get(f);
+				});
+
+				// Perform type decoding if needed, before we calculate the aggregate results.  This is
+				// needed when doing aggregates like "values" and "distinct values" to make sure they're
+				// formatted right by the aggregate function itself.
+
+				_.each(info[what][aggNum].typeInfo, function (fti) {
+					if (fti.needsDecoding) {
+						if (!fti.field) {
+							log.error('Unable to sort: cannot decode unknown field {typeInfo = %O}', fti);
+							return;
+						}
+
+						debug.info('VIEW (' + self.name + ') // AGGREGATE', 'Decoding data {typeInfo = %O}', fti);
+
+						if (self.data.isPlain) {
+							self.source.convertAll(self.data.data, fti.field);
+						}
+						else {
+							_.each(self.data.data, function (groupedRows) {
+								if (self.data.isGroup) {
+									self.source.convertAll(groupedRows, fti.field);
+								}
+								else {
+									_.each(groupedRows, function (pivottedRows) {
+										self.source.convertAll(pivottedRows, fti.field);
+									});
+								}
+							});
+						}
+
+						fti.deferDecoding = false;
+						fti.needsDecoding = false;
+					}
+				});
+
+				ctorOpts.fields = info[what][aggNum].fields;
+				ctorOpts.colConfig = info[what][aggNum].colConfig;
+				ctorOpts.typeInfo = info[what][aggNum].typeInfo;
 			}
+
+			info[what][aggNum].instance = new (AGGREGATES.get(spec.fun))(ctorOpts);
 		});
 	});
 
@@ -1643,18 +1694,13 @@ View.prototype.aggregate = function (cont) {
 			if (groupResults[aggNum] === undefined) {
 				groupResults[aggNum] = [];
 			}
-			var aggFun = info.group[aggNum].aggDefn.fun({
-				field: spec.field,
-				type: info.group[aggNum].typeInfo.type,
-				colConfig: info.group[aggNum].colConfig
-			});
-			var aggResult = aggFun(_.flatten(self.data.data[rowValIdx]));
+			var aggResult = info.group[aggNum].instance.calculate(_.flatten(self.data.data[rowValIdx]));
 			groupResults[aggNum][rowValIdx] = aggResult;
-			//debug.info('VIEW // AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %O',
-			//					 aggNum,
-			//					 info.group[aggNum].aggDefn.name + (info.group[aggNum].name ? ' -> ' + info.group[aggNum].name : ''),
-			//					 rowVal.join(', '),
-			//					 aggResult);
+			debug.info('VIEW // AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %O',
+				aggNum,
+				info.group[aggNum].instance.name + (info.group[aggNum].name ? ' -> ' + info.group[aggNum].name : ''),
+				rowVal.join(', '),
+				aggResult);
 		});
 
 		if (self.data.isPivot) {
@@ -1665,20 +1711,14 @@ View.prototype.aggregate = function (cont) {
 				cellResults[aggNum][rowValIdx] = [];
 
 				_.each(self.data.colVals, function (colVal, colValIdx) {
-					var aggFun = info.cell[aggNum].aggDefn.fun({
-						field: spec.field,
-						type: info.cell[aggNum].typeInfo.type,
-						colConfig: info.cell[aggNum].colConfig
-					});
+					var aggResult = info.cell[aggNum].instance.calculate(self.data.data[rowValIdx][colValIdx]);
 
-					var aggResult = aggFun(self.data.data[rowValIdx][colValIdx]);
-
-					//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Cell [%s ; %s] = %O',
-					//					 aggNum,
-					//					 info.cell[aggNum].aggDefn.name + (info.cell[aggNum].name ? ' -> ' + info.cell[aggNum].name : ''),
-					//					 rowVal.join(', '),
-					//					 colVal.join(', '),
-					//					 aggResult);
+					debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Cell [%s ; %s] = %O',
+						aggNum,
+						info.cell[aggNum].instance.name + (info.cell[aggNum].name ? ' -> ' + info.cell[aggNum].name : ''),
+						rowVal.join(', '),
+						colVal.join(', '),
+						aggResult);
 
 					cellResults[aggNum][rowValIdx][colValIdx] = aggResult;
 				});
@@ -1691,34 +1731,24 @@ View.prototype.aggregate = function (cont) {
 			pivotResults[aggNum] = [];
 
 			_.each(self.data.colVals, function (colVal, colValIdx) {
-				var aggFun = info.pivot[aggNum].aggDefn.fun({
-					field: spec.field,
-					type: info.pivot[aggNum].typeInfo.type,
-					colConfig: info.pivot[aggNum].colConfig
-				});
-				var aggResult = aggFun(_.flatten(_.pluck(self.data.data, colValIdx)));
+				var aggResult = info.pivot[aggNum].instance.calculate(_.flatten(_.pluck(self.data.data, colValIdx)));
 				pivotResults[aggNum][colValIdx] = aggResult;
-				//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %O',
-				//					 aggNum,
-				//					 info.pivot[aggNum].aggDefn.name + (info.pivot[aggNum].name ? ' -> ' + info.pivot[aggNum].name : ''),
-				//					 colVal.join(', '),
-				//					 aggResult);
+				debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %O',
+					aggNum,
+					info.pivot[aggNum].instance.name + (info.pivot[aggNum].name ? ' -> ' + info.pivot[aggNum].name : ''),
+					colVal.join(', '),
+					aggResult);
 			});
 		});
 	}
 
 	if (self.data.isPivot && self.aggregateSpec.all) {
 		_.each(self.aggregateSpec.all, function (spec, aggNum) {
-			var aggFun = info.all[aggNum].aggDefn.fun({
-				field: spec.field,
-				type: info.all[aggNum].typeInfo.type,
-				colConfig: info.all[aggNum].colConfig
-			});
-			var aggResult = aggFun(_.flatten(self.data.data));
-			//debug.info('VIEW // AGGREGATE', 'All aggregate [%d] (%s) = %O',
-			//					 aggNum,
-			//					 info.all[aggNum].aggDefn.name + (info.all[aggNum].name ? ' -> ' + info.all[aggNum].name : ''),
-			//					 aggResult);
+			var aggResult = info.all[aggNum].instance.calculate(_.flatten(self.data.data));
+			debug.info('VIEW // AGGREGATE', 'All aggregate [%d] (%s) = %O',
+				aggNum,
+				info.all[aggNum].instance.name + (info.all[aggNum].name ? ' -> ' + info.all[aggNum].name : ''),
+				aggResult);
 			allResults[aggNum] = aggResult;
 		});
 	}
@@ -1921,3 +1951,33 @@ View.prototype.getLastOps = function () {
 
 	return self.lastOps;
 };
+
+// Utilities {{{1
+
+function aggInfo_type(aggInfo) {
+	var aggType;
+	
+	// Set the type of the aggregate result.  Sometimes this is fixed (e.g. count is always a number).
+	// If that's the case, it's given by the Aggregate instance itself.
+
+	aggType = aggInfo.instance.type;
+
+	// When the Aggregate instance doesn't specify, then it's considered to be the type of the field
+	// (e.g. min, max, first, last all just reuse a value so the type of the aggregate function is
+	// just whatever the type of the value is).  Since we now support multiple fields, this logic only
+	// works when there's only one field.
+	//
+	// XXX Should we fix this?  Maybe allow it if all fields have the same type?
+	
+	if (aggType == null && aggInfo.fields.length === 1) {
+		aggType = aggInfo.instance.opts.typeInfo[0].type;
+	}
+
+	// Default to a string type.
+	
+	if (aggType == null) {
+		aggType = 'string';
+	}
+
+	return aggType;
+}

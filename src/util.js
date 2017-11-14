@@ -966,26 +966,40 @@ function walkObj(o, f, acc) {
 
 // Object Orientation {{{1
 
-var makeSubclass = function (parent, ctor) {
-	var subclass = function () {
-		var self = this;
+var makeSubclass = function (parent, ctor, ptype) {
+	// Default constructor just calls the super constructor.
 
+	if (ctor == null && parent !== Object) {
+		ctor = function () {
+			this.super.ctor.apply(this, arguments);
+		};
+	}
+
+	var subclass = function () {
 		if (parent !== Object) {
-			self.super = makeSuper(self, parent);
+			this.super = makeSuper(this, parent);
 		}
 
-		ctor.apply(self, arguments);
+		if (ctor != null) {
+			ctor.apply(this, arguments);
+		}
 	};
 
 	subclass.prototype = Object.create(parent.prototype);
 	subclass.prototype.constructor = subclass;
+
+	_.each(ptype, function (v, k) {
+		subclass.prototype[k] = v;
+	});
 
 	return subclass;
 };
 
 var makeSuper = function (me, parent) {
 	var sup = _.mapObject(parent.prototype, function (v, k) {
-		return _.bind(v, me);
+		if (typeof v === 'function') {
+			return _.bind(v, me);
+		}
 	});
 
 	sup.ctor = _.bind(parent, me);
@@ -1286,13 +1300,39 @@ function deprecated(defn, msg, ref) {
  *
  * @param {Cell} cell The true value, as used by the View to perform sorting and
  * filtering.
+ *
+ * @param {object} opts
+ * Additional options.
+ *
+ * @param {boolean} [opts.debug=false]
+ * If true, some debugging output is produced.  Turned off by default because it tends to be noisy
+ * and thus slow down the browser.
+ *
+ * @param {string} [opts.overrideType]
+ * If true, the type of the data is assumed to be that specified, instead of what's in `typeInfo`.
+ * This is often used when outputting aggregate function results that have a different type from the
+ * type of the field they're applied on (e.g. "distinct values" always produces a string, even if
+ * it's applied over a field that contains dates or currency).
  */
 
 function format(colConfig, typeInfo, cell, opts) {
-	//console.log('RENDERING: { colConfig = %O, typeInfo = %O, cell = %O, opts = %O }', colConfig, typeInfo, cell, opts);
-
 	colConfig = colConfig || {};
 	typeInfo = typeInfo || {};
+
+	opts = opts || {};
+
+	_.defaults(opts, {
+		debug: false,
+		overrideType: null
+	});
+
+	if (opts.debug) {
+		debug.info('FORMAT', 'typeInfo = %O ; colConfig = %O ; cell = %O', typeInfo, colConfig, cell);
+	}
+
+	// When we just receive a value instead of a proper data cell, convert it so that code below can
+	// be simplified.  These cells are just "pretend" and anything stored in them is going to be
+	// discarded when this function is done.
 
 	if ((window.moment && window.moment.isMoment(cell))
 			|| (window.numeral && window.numeral.isNumeral(cell))
@@ -1302,30 +1342,26 @@ function format(colConfig, typeInfo, cell, opts) {
 		};
 	}
 
-	if (cell.cachedRender !== undefined) {
+	// When we've already rendered this cell before, just reuse that.
+
+	if (cell.cachedRender != null) {
 		return cell.cachedRender;
 	}
 
 	var result = cell.orig || cell.value;
 
-	opts = opts || {};
-
-	_.defaults(opts, {
-		alwaysFormat: false
-	});
-
 	var t = opts.overrideType || typeInfo.type;
-	var updatedValue;
+
+	// Handle zero dates like Webchart uses all the time.  Turn them into the empty string, otherwise
+	// Moment will say "Invalid Date".
 
 	if (['date', 'datetime'].indexOf(t) >= 0
 			&& ((window.moment && window.moment.isMoment(cell.value) && !cell.value.isValid())
-					|| (typeof(cell.value) === 'string' && (cell.value === '0000-00-00' || cell.value === '0000-00-00 00:00:00')))) {
-
-		// Invalid dates (like our beloved 0000-00-00) show up as nothing.
-
+					|| (typeof(cell.value) === 'string' && (cell.value === '0000-00-00'
+																									|| cell.value === '0000-00-00 00:00:00')))) {
 		result = '';
 	}
-	else if (colConfig.format !== undefined || opts.alwaysFormat) {
+	else {
 		switch (t) {
 		case 'date':
 		case 'datetime':
@@ -1334,7 +1370,7 @@ function format(colConfig, typeInfo, cell, opts) {
 			}
 
 			if (window.moment && window.moment.isMoment(cell.value)) {
-				result = cell.value.format(colConfig.format);
+				result = cell.value.format(colConfig.format || 'YYYY-MM-DD');
 			}
 			else {
 				result = moment(cell.value).format(colConfig.format);
@@ -1366,7 +1402,7 @@ function format(colConfig, typeInfo, cell, opts) {
 			break;
 		default:
 			log.error('Unable to format - unknown type: { field = "%s", type = "%s", value = "%s" }',
-								typeInfo.field, t, cell.value);
+				typeInfo.field, t, cell.value);
 		}
 	}
 

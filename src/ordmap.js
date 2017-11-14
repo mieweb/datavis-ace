@@ -120,6 +120,21 @@ OrdMap.prototype.keys = function () {
 	return result;
 };
 
+OrdMap.prototype.toString = function () {
+	var s = '';
+	this.each(function (v, k) {
+		v = JSON.stringify(v);
+		if (v == null) {
+			v = 'null';
+		}
+		if (s !== '') {
+			s += ', ';
+		}
+		s += '"' + k + '": ' + v;
+	});
+	return '{' + s + '}';
+};
+
 /**
  * Returns the internal representation of this ordered map as a regular JS object (a map with no
  * way to tell the order).  Changing the return value will change the internal representation of

@@ -616,6 +616,10 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	self.ui.aggregateControl = jQuery('<div>', { 'class': 'wcdv_aggregate_control' });
 	self.ui.grid = jQuery('<div>', { 'id': defn.table.id, 'class': 'wcdv_grid_table' });
 
+	if (!self.tagOpts.showControls) {
+		self.ui.controls.hide();
+	}
+
 	// The user has fixed the height of the containing grid, so we will need to have the browser put
 	// in some scrollbars for the overflow.
 
@@ -2289,12 +2293,17 @@ AggregateControl.prototype.draw = function (parent) {
 		})
 	;
 
-	_.each(AGGREGATES, function (aggObj, aggFunName) {
-		if (aggObj.canBePivotCell) {
+	// Create a dropdown containing all the aggregate functions that are allowed to be used for
+	// calculating pivot cells.  Right now that's everything that needs no external parameters aside
+	// from the field.  The "canBePivotCell" name is a bit outdated, since we also use these for
+	// calculating the values in group summary output, but it's all the same.
+
+	AGGREGATES.each(function (aggClass, aggFunName) {
+		if (aggClass.prototype.canBePivotCell) {
 			jQuery('<option>', {
 				value: aggFunName
 			})
-				.text(aggObj.name || aggFunName)
+				.text(aggClass.prototype.name || aggFunName)
 				.appendTo(self.ui.funDropdown);
 		}
 	});
@@ -2308,6 +2317,10 @@ AggregateControl.prototype.draw = function (parent) {
 		})
 	;
 
+	// When we receive type information, use that to populate the "fields" dropdown.
+	//
+	// TODO This needs to be expanded to the possibility of having multiple fields.
+
 	self.view.on('getTypeInfo', function (typeInfo) {
 		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
@@ -2318,12 +2331,12 @@ AggregateControl.prototype.draw = function (parent) {
 	var syncAgg = function (spec) {
 		if (getProp(spec, 'cell', 0, 'fun')) {
 			self.ui.funDropdown.val(spec.cell[0].fun);
-			if (AGGREGATES[spec.cell[0].fun].needsField) {
+			if (AGGREGATES.get(spec.cell[0].fun).prototype.fieldCount > 0) {
 				self.ui.field.show();
 			}
 		}
-		if (getProp(spec, 'cell', 0, 'field')) {
-			self.ui.fieldDropdown.val(spec.cell[0].field);
+		if (getProp(spec, 'cell', 0, 'fields', 0)) {
+			self.ui.fieldDropdown.val(spec.cell[0].fields[0]);
 		}
 
 		debug.info('GRID // AGGREGATE CONTROL',
@@ -2347,16 +2360,18 @@ AggregateControl.prototype.draw = function (parent) {
 
 AggregateControl.prototype.triggerAggChange = function () {
 	var self = this;
-	var agg = AGGREGATES[self.ui.funDropdown.val()];
-	var aggText = (agg.name || self.ui.funDropdown.val())
-		+ (agg.needsField ? (' of ' + self.ui.fieldDropdown.val()) : '');
+	var agg = AGGREGATES.get(self.ui.funDropdown.val());
+	// TODO Move `aggText` functionality into the Aggregates class (i.e. use `toString()` or something
+	// to produce the name from the fields).
+	var aggText = (agg.prototype.name || self.ui.funDropdown.val())
+		+ (agg.prototype.fieldCount > 0 ? (' of ' + self.ui.fieldDropdown.val()) : '');
 	var aggSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{
 		fun: self.ui.funDropdown.val(),
-		field: agg.needsField && self.ui.fieldDropdown.val(),
+		fields: agg.prototype.fieldCount > 0 && [self.ui.fieldDropdown.val()],
 		name: aggText
 	}]]);
 
-	if (agg.needsField) {
+	if (agg.prototype.fieldCount > 0) {
 		self.ui.field.show();
 	}
 	else {

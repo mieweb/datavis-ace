@@ -673,8 +673,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 	var self = this;
 
-	_.each(getPropDef([], data, 'agg', 'info', what), function (agg, aggNum) {
-		var text = agg.name || agg.aggDefn.name;
+	_.each(getPropDef([], data, 'agg', 'info', what), function (aggInfo, aggNum) {
+		var text = aggInfo.name || aggInfo.instance.name;
 		var span = jQuery('<span>')
 			.text(text);
 		var th = jQuery('<th>')
@@ -682,7 +682,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			.appendTo(tr);
 		self.csv.addCol(text);
 		self._addSortingToHeader('vertical', {aggType: what, aggNum: aggNum}, span);
-		self.setAlignment(th, agg.colConfig, agg.typeInfo, agg.aggDefn.type);
+		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
 	});
 };
 
@@ -711,27 +711,25 @@ GridTable.prototype.drawHeader_addCols = function (tr, typeInfo, opts) {
 GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 	var self = this;
 
-	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (agg, aggNum) {
-		var aggType = agg.aggDefn.type || agg.typeInfo.type;
+	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (aggInfo, aggNum) {
+		var aggType = aggInfo_type(aggInfo);
 		var aggResult = data.agg.results.group[aggNum][groupNum];
 		var text;
 
-		if (agg.aggDefn.inheritFormatting) {
-			text = format(agg.colConfig, agg.typeInfo, aggResult, {
-				alwaysFormat: true,
+		if (aggInfo.instance.inheritFormatting) {
+			text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
 				overrideType: aggType
 			});
 		}
 		else {
 			text = format(null, null, aggResult, {
-				alwaysFormat: true,
 				overrideType: aggType
 			});
 		}
 
 		var td = jQuery('<td>').text(text);
 		self.csv.addCol(text);
-		self.setAlignment(td, agg.colConfig, agg.typeInfo, agg.aggDefn.type);
+		self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
 		td.appendTo(tr);
 	});
 };
@@ -1504,11 +1502,11 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 				agg = footerConfig.aggregate;
 				break;
 			case 'string':
-				if (typeof AGGREGATES[footerConfig.aggregate] === undefined) {
+				if (typeof AGGREGATES.get(footerConfig.aggregate) === undefined) {
 					throw new Error('Footer config for field "' + field + '": requested aggregate function "' + footerConfig.aggregate + '" does not exist; supported aggregates are: ' + JSON.stringify(_.keys(AGGREGATES)));
 				}
 				else {
-					agg = AGGREGATES[footerConfig.aggregate];
+					agg = AGGREGATES.get(footerConfig.aggregate);
 				}
 				break;
 			default:
@@ -1518,7 +1516,6 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 			aggFun = agg.fun({field: field, type: colTypeInfo.type});
 			aggType = agg.type;
 			aggResult = format(colConfig, typeInfo.get(field), aggFun(data.data), {
-				alwaysFormat: true,
 				overrideType: aggType
 			});
 
@@ -2283,8 +2280,8 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 			else {
 				var addColText;
 
-				if (aggInfo.aggDefn.inheritFormatting) {
-					addColText = format(aggInfo.colConfig, aggInfo.typeInfo, addColResult, {
+				if (aggInfo.instance.inheritFormatting) {
+					addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
 						alwaysFormat: true
 					});
 				}
@@ -2388,7 +2385,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 	var tr, span, th;
 	var aggInfo = data.agg.info.cell[0];
-	var aggType = aggInfo.aggDefn.type || aggInfo.typeInfo.type || 'string';
+	var aggType = aggInfo_type(aggInfo);
 
 	// This produces separate rows in the header for each pivot field.  That's what allows you to
 	// see the combinations of column values, like this:
@@ -2504,7 +2501,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					self._addSortingToHeader('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, span);
 				}
 
-				self.setAlignment(th, aggInfo.colConfig, aggInfo.typeInfo, aggType);
+				self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
 			}
 			else {
 				lastColValCount += 1;
@@ -2559,7 +2556,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	}
 
 	var aggInfo = data.agg.info.cell[0];
-	var aggType = aggInfo.aggDefn.type || aggInfo.typeInfo.type || 'string';
+	var aggType = aggInfo_type(aggInfo);
 
 	_.each(data.data, function (rowGroup, groupNum) {
 		var tr = jQuery('<tr>');
@@ -2623,15 +2620,13 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			var text;
 
-			if (aggInfo.aggDefn.inheritFormatting) {
-				text = format(aggInfo.colConfig, aggInfo.typeInfo, aggResult, {
-					alwaysFormat: true,
+			if (aggInfo.instance.inheritFormatting) {
+				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
 					overrideType: aggType
 				});
 			}
 			else {
 				text = format(null, null, aggResult, {
-					alwaysFormat: true,
 					overrideType: aggType
 				});
 			}
@@ -2641,7 +2636,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
 			// self.setCss(td, col);
 
-			self.setAlignment(td, aggInfo.colConfig, aggInfo.typeInfo, aggType);
+			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
 
 			td.appendTo(tr);
 		});
@@ -2670,8 +2665,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			else {
 				var addColText;
 
-				if (aggInfo.aggDefn.inheritFormatting) {
-					addColText = format(aggInfo.colConfig, aggInfo.typeInfo, addColResult, {
+				if (aggInfo.instance.inheritFormatting) {
+					addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
 						alwaysFormat: true
 					});
 				}
@@ -2694,8 +2689,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		self.ui.tbody.append(tr);
 	});
 
-	_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (agg, aggNum) {
-		var aggType = agg.aggDefn.type || agg.typeInfo.type;
+	_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (aggInfo, aggNum) {
+		var aggType = aggInfo_type(aggInfo);
 		var span;
 		var text;
 
@@ -2717,57 +2712,53 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		}
 
 		th = jQuery('<th>');
-		span = jQuery('<span>').text(agg.name || agg.aggDefn.name);
+		span = jQuery('<span>').text(aggInfo.name || aggInfo.instance.name);
 
 		span.appendTo(th);
 		th.appendTo(tr);
 
-		self.csv.addCol(agg.name || agg.aggDefn.name);
+		self.csv.addCol(aggInfo.name || aggInfo.instance.name);
 
 		self._addSortingToHeader('horizontal', {aggType: 'pivot', aggNum: 0}, span);
 
 		_.each(data.colVals, function (colVal, colValIdx) {
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
-			if (agg.aggDefn.inheritFormatting) {
-				text = format(agg.colConfig, agg.typeInfo, aggResult, {
-					alwaysFormat: true,
+			if (aggInfo.instance.inheritFormatting) {
+				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
 					overrideType: aggType
 				});
 			}
 			else {
 				text = format(null, null, aggResult, {
-					alwaysFormat: true,
 					overrideType: aggType
 				});
 			}
 
 			var td = jQuery('<td>').text(text);
 			self.csv.addCol(text);
-			self.setAlignment(td, agg.colConfig, agg.typeInfo, agg.aggDefn.type);
+			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
 			td.appendTo(tr);
 		});
 
 		if (getProp(data, 'agg', 'info', 'all', aggNum)) {
-			agg = data.agg.info.all[aggNum];
-			aggType = agg.aggDefn.type || agg.typeInfo.type;
+			aggInfo = data.agg.info.all[aggNum];
+			aggType = aggInfo_type(aggInfo);
 			aggResult = data.agg.results.all[aggNum];
 
-			if (agg.aggDefn.inheritFormatting) {
-				text = format(agg.colConfig, agg.typeInfo, aggResult, {
-					alwaysFormat: true,
+			if (aggInfo.instance.inheritFormatting) {
+				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
 					overrideType: aggType
 				});
 			}
 			else {
 				text = format(null, null, aggResult, {
-					alwaysFormat: true,
 					overrideType: aggType
 				});
 			}
 
 			td = jQuery('<td>').text(text);
 			self.csv.addCol(text);
-			self.setAlignment(td, agg.colConfig, agg.typeInfo, agg.aggDefn.type);
+			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
 			td.appendTo(tr);
 		}
 
