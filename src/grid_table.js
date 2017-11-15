@@ -674,7 +674,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 	var self = this;
 
 	_.each(getPropDef([], data, 'agg', 'info', what), function (aggInfo, aggNum) {
-		var text = aggInfo.name || aggInfo.instance.name;
+		var text = aggInfo.instance.getFullName();
 		var span = jQuery('<span>')
 			.text(text);
 		var th = jQuery('<th>')
@@ -2712,12 +2712,12 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		}
 
 		th = jQuery('<th>');
-		span = jQuery('<span>').text(aggInfo.name || aggInfo.instance.name);
+		span = jQuery('<span>').text(aggInfo.instance.getFullName());
 
 		span.appendTo(th);
 		th.appendTo(tr);
 
-		self.csv.addCol(aggInfo.name || aggInfo.instance.name);
+		self.csv.addCol(aggInfo.instance.getFullName());
 
 		self._addSortingToHeader('horizontal', {aggType: 'pivot', aggNum: 0}, span);
 

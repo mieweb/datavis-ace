@@ -374,6 +374,14 @@ Aggregate.prototype.getRealValueAsString = function (cell) {
 	return format(colConfig, typeInfo, cell);
 };
 
+// #getFullName {{{2
+
+Aggregate.prototype.getFullName = function () {
+	var self = this;
+
+	return self.name + (self.fieldCount > 0 ? (' of ' + self.opts.fields.join(', ')) : '');
+};
+
 // Count {{{1
 
 var CountAggregate = makeSubclass(Aggregate, null, {
@@ -890,6 +898,14 @@ SumOverSumAggregate.prototype.calculateStep = function (acc, next) {
 SumOverSumAggregate.prototype.calculateDone = function (obj) {
 	console.log(obj);
 	return obj.a / obj.b;
+};
+
+// #getFullName {{{2
+
+SumOverSumAggregate.prototype.getFullName = function () {
+	var self = this;
+
+	return 'Sum(' + self.opts.fields[0] + ') / Sum(' + self.opts.fields[1] + ')';
 };
 
 // Count / Count {{{1

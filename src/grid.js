@@ -2357,18 +2357,11 @@ AggregateControl.prototype.draw = function (parent) {
 AggregateControl.prototype.triggerAggChange = function () {
 	var self = this;
 	var agg = AGGREGATES.get(self.ui.funDropdown.val());
-	// TODO Move `aggText` functionality into the Aggregates class (i.e. use `toString()` or something
-	// to produce the name from the fields).
-	var aggText = (agg.prototype.name || self.ui.funDropdown.val())
-		+ (agg.prototype.fieldCount > 0 ? (' of ' + mapLimit(self.ui.fields, function (f) {
-			return f.dropdown.val();
-		}).join(', ')) : '');
 	var aggSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{
 		fun: self.ui.funDropdown.val(),
 		fields: agg.prototype.fieldCount > 0 && mapLimit(self.ui.fields, function (f) {
 			return f.dropdown.val();
-		}, agg.prototype.fieldCount),
-		name: aggText
+		}, agg.prototype.fieldCount)
 	}]]);
 	var i;
 	var div;
