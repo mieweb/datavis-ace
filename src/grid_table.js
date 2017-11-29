@@ -1502,11 +1502,11 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 				agg = footerConfig.aggregate;
 				break;
 			case 'string':
-				if (typeof AGGREGATES.get(footerConfig.aggregate) === undefined) {
-					throw new Error('Footer config for field "' + field + '": requested aggregate function "' + footerConfig.aggregate + '" does not exist; supported aggregates are: ' + JSON.stringify(_.keys(AGGREGATES)));
+				if (typeof AGGREGATE_REGISTRY.get(footerConfig.aggregate) === undefined) {
+					throw new Error('Footer config for field "' + field + '": requested aggregate function "' + footerConfig.aggregate + '" does not exist; supported aggregates are: ' + JSON.stringify(AGGREGATE_REGISTRY.keys()));
 				}
 				else {
-					agg = AGGREGATES.get(footerConfig.aggregate);
+					agg = AGGREGATE_REGISTRY.get(footerConfig.aggregate);
 				}
 				break;
 			default:

@@ -2297,11 +2297,10 @@ AggregateControl.prototype.draw = function (parent) {
 
 	// Create a dropdown containing all the aggregate functions that are allowed to be used for
 	// calculating pivot cells.  Right now that's everything that needs no external parameters aside
-	// from the field.  The "canBePivotCell" name is a bit outdated, since we also use these for
-	// calculating the values in group summary output, but it's all the same.
+	// from the field.
 
-	AGGREGATES.each(function (aggClass, aggFunName) {
-		if (aggClass.prototype.canBePivotCell) {
+	AGGREGATE_REGISTRY.each(function (aggClass, aggFunName) {
+		if (aggClass.prototype.enabled && aggClass.prototype.enabled) {
 			jQuery('<option>', {
 				value: aggFunName
 			})
@@ -2323,7 +2322,7 @@ AggregateControl.prototype.draw = function (parent) {
 		var agg;
 		if (getProp(spec, 'cell', 0, 'fun')) {
 			self.ui.funDropdown.val(spec.cell[0].fun);
-			agg = AGGREGATES.get(spec.cell[0].fun);
+			agg = AGGREGATE_REGISTRY.get(spec.cell[0].fun);
 			if (agg.prototype.fieldCount >= self.ui.fields.length) {
 				self.addFieldDropdowns(agg);
 			}
@@ -2356,7 +2355,14 @@ AggregateControl.prototype.draw = function (parent) {
 
 AggregateControl.prototype.triggerAggChange = function () {
 	var self = this;
-	var agg = AGGREGATES.get(self.ui.funDropdown.val());
+	var agg = AGGREGATE_REGISTRY.get(self.ui.funDropdown.val());
+
+	if (agg.prototype.fieldCount > self.ui.fields.length) {
+		self.addFieldDropdowns(agg);
+	}
+
+	self.showHideFields(agg);
+
 	var aggSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{
 		fun: self.ui.funDropdown.val(),
 		fields: agg.prototype.fieldCount > 0 && mapLimit(self.ui.fields, function (f) {
@@ -2365,12 +2371,6 @@ AggregateControl.prototype.triggerAggChange = function () {
 	}]]);
 	var i;
 	var div;
-
-	if (agg.prototype.fieldCount > self.ui.fields.length) {
-		self.addFieldDropdowns(agg);
-	}
-
-	self.showHideFields(agg);
 
 	self.view.setAggregate(aggSpec, {
 		dontSendEventTo: self

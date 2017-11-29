@@ -59,7 +59,7 @@ function makeAggregate(userdata, aggregate) {
 
 /**
  * Invoke the core implementation of an aggregate function.  This is used by most aggregate
- * functions (properties of `AGGREGATES`) to perform the data traversal.
+ * functions (properties of `AGGREGATE_REGISTRY`) to perform the data traversal.
  *
  * - The implementation may throw an exception to abort the process at any time (e.g. if an item
  *   doesn't match the expected type or is in some other way borked).
@@ -123,7 +123,7 @@ function checkAggregate(defn, agg, source) {
 	if (!_.isString(agg.fun)) {
 		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a string'));
 	}
-	if (!AGGREGATES.get(agg.fun)) {
+	if (!AGGREGATE_REGISTRY.get(agg.fun)) {
 		throw defn.error(new InvalidReportDefinitionError(source + '.fun', agg.fun, 'must be a valid builtin aggregate function'));
 	}
 	// INPUT VALIDATION: [displayText]
@@ -154,10 +154,6 @@ function checkAggregate(defn, agg, source) {
  * @property {string} name
  * Name of the aggregate function used in the dropdown menu by the grid.
  *
- * @property {boolean} [canBePivotCell=true]
- * If true, then the aggregate function will be shown in the user interface.  Typically used to
- * indicate that no other parameters are required beyond a field.
- *
  * @property {int} [fieldCount=0]
  * Number of fields required.  Usually zero or one.
  *
@@ -176,6 +172,9 @@ function checkAggregate(defn, agg, source) {
  * The value used as the initial seed of the result calculation (which is a reduction/fold over the
  * data).  If a function, that function is invoked with no arguments to get the value.  When not
  * provided, the bottom value is used.
+ *
+ * @property {boolean} [enabled=true]
+ * If false, then the aggregate function will not be shown in the user interface.
  */
 
 var Aggregate = makeSubclass(Object, function (opts) {
@@ -183,7 +182,7 @@ var Aggregate = makeSubclass(Object, function (opts) {
 
 	self.opts = opts;
 }, {
-	canBePivotCell: true,
+	enabled: true,
 	fieldCount: 0,
 	inheritFormatting: false
 });
@@ -386,7 +385,6 @@ Aggregate.prototype.getFullName = function () {
 
 var CountAggregate = makeSubclass(Aggregate, null, {
 	name: 'Count',
-	canBePivotCell: true,
 	fieldCount: 0,
 	type: 'number',
 	inheritFormatting: false,
@@ -414,7 +412,6 @@ var CountDistinctAggregate = makeSubclass(Aggregate, function () {
 	self.super.ctor.apply(self, arguments);
 }, {
 	name: 'Count Distinct',
-	canBePivotCell: true,
 	fieldCount: 1,
 	type: 'number',
 	inheritFormatting: false,
@@ -450,7 +447,6 @@ CountDistinctAggregate.prototype.calculateDone = function (obj) {
 
 ValuesAggregate = makeSubclass(Aggregate, null, {
 	name: 'Values',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: false,
 	type: 'string',
@@ -464,7 +460,7 @@ ValuesAggregate = makeSubclass(Aggregate, null, {
 ValuesAggregate.prototype.calculateStep = function (acc, next) {
 	var self = this;
 
-	acc.push(self.getRealValue(next[self.opts.fields[0]]));
+	acc.push(self.getRealValueAsString(next[self.opts.fields[0]]));
 	return acc;
 };
 
@@ -480,7 +476,6 @@ ValuesAggregate.prototype.calculateDone = function (acc) {
 
 ValuesWithCountsAggregate = makeSubclass(Aggregate, null, {
 	name: 'Values w/ Counts',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: false,
 	type: 'string',
@@ -522,7 +517,6 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 
 DistinctValuesAggregate = makeSubclass(Aggregate, null, {
 	name: 'Distinct Values',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: false,
 	type: 'string',
@@ -561,7 +555,6 @@ DistinctValuesAggregate.prototype.calculateDone = function (acc) {
 
 var SumAggregate = makeSubclass(Aggregate, null, {
 	name: 'Sum',
-	canBePivotCell: true,
 	fieldCount: 1,
 	type: 'number',
 	inheritFormatting: true,
@@ -612,7 +605,6 @@ var AverageAggregate = makeSubclass(Aggregate, function (opts) {
 	self.super.ctor.apply(self, arguments);
 }, {
 	name: 'Average',
-	canBePivotCell: true,
 	fieldCount: 1,
 	type: 'number',
 	inheritFormatting: true,
@@ -636,7 +628,6 @@ AverageAggregate.prototype.calculate = function (data) {
 
 MinAggregate = makeSubclass(Aggregate, null, {
 	name: 'Min',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: true
 });
@@ -676,7 +667,6 @@ MinAggregate.prototype.calculateStep = function (acc, next) {
 
 MaxAggregate = makeSubclass(Aggregate, null, {
 	name: 'Max',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: true
 });
@@ -716,7 +706,6 @@ MaxAggregate.prototype.calculateStep = function (acc, next) {
 
 FirstAggregate = makeSubclass(Aggregate, null, {
 	name: 'First',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: true
 });
@@ -750,7 +739,6 @@ FirstAggregate.prototype.calculate = function (data) {
 
 LastAggregate = makeSubclass(Aggregate, null, {
 	name: 'Last',
-	canBePivotCell: true,
 	fieldCount: 1,
 	inheritFormatting: true
 });
@@ -784,7 +772,7 @@ LastAggregate.prototype.calculate = function (data) {
 
 NthAggregate = makeSubclass(Aggregate, null, {
 	name: 'Nth',
-	canBePivotCell: false,
+	enabled: false,
 	fieldCount: 1,
 	inheritFormatting: true
 });
@@ -841,9 +829,8 @@ NthAggregate.prototype.calculate = function (data) {
 
 SumOverSumAggregate = makeSubclass(Aggregate, null, {
 	name: 'Sum/Sum',
-	canBePivotCell: true,
 	fieldCount: 2,
-	type: 'number',
+	type: 'string',
 	inheritFormatting: false,
 	bottomValue: 0,
 	init: function () {
@@ -896,8 +883,27 @@ SumOverSumAggregate.prototype.calculateStep = function (acc, next) {
 // #calculateDone {{{2
 
 SumOverSumAggregate.prototype.calculateDone = function (obj) {
-	console.log(obj);
-	return obj.a / obj.b;
+	var self = this;
+	var result = (obj.a + 0.0) / (obj.b + 0.0);
+
+	if (window.sprintf) {
+		if (self.opts.format) {
+			return sprintf(self.opts.format, result);
+		}
+		if (result >= 100) {
+			return sprintf('%d', result);
+		}
+		else if (result >= 10) {
+			return sprintf('%3.1f', result);
+		}
+		else if (result >= 1) {
+			return sprintf('%3.2f', result);
+		}
+		else {
+			return sprintf('%3.3f', result);
+		}
+	}
+	return result;
 };
 
 // #getFullName {{{2
@@ -912,26 +918,111 @@ SumOverSumAggregate.prototype.getFullName = function () {
 
 CountOverCountAggregate = makeSubclass(Aggregate, null, {
 	name: 'Count/Count',
-	canBePivotCell: true,
 	fieldCount: 2,
 	type: 'number',
 	inheritFormatting: false,
 	bottomValue: 0
 });
 
+// Max / Min {{{1
+
+MinOverMaxAggregate = makeSubclass(Aggregate, null, {
+	name: 'Min/Max',
+	enabled: false,
+	fieldCount: 2,
+	type: 'string',
+	inheritFormatting: false,
+	bottomValue: 0,
+	init: function () {
+		return { a: null, b: null }
+	}
+});
+
+// #checkOpts {{{2
+
+MinOverMaxAggregate.prototype.checkOpts = function () {
+	var self = this;
+
+	if (self.opts.typeInfo == null) {
+		log.error('Aggregate ' + self.name + ': Missing `opts.typeInfo`');
+		return false;
+	}
+
+	if (self.opts.compare == null) {
+		self.opts.compare = getComparisonFn.byType(self.opts.typeInfo[0].type);
+	}
+
+	if (typeof self.opts.compare !== 'function') {
+		log.error('Aggregate ' + self.name + ': Missing `opts.compare`');
+		return false;
+	}
+
+	return self.super.checkOpts();
+};
+
+// #calculateStep {{{2
+
+MinOverMaxAggregate.prototype.calculateStep = function (acc, next) {
+	var self = this;
+
+	var a = self.getRealValue(next[self.opts.fields[0]]);
+	var b = self.getRealValue(next[self.opts.fields[1]]);
+
+	return {
+		a: acc.a == null ? a : self.opts.compare(acc.a, a) ? acc.a : a,
+		b: acc.b == null ? b : self.opts.compare(acc.b, b) ? b : acc.b
+	};
+};
+
+// #calculateDone {{{2
+
+MinOverMaxAggregate.prototype.calculateDone = function (obj) {
+	var self = this;
+
+	var result = (obj.a + 0.0) / (obj.b + 0.0);
+
+	if (window.sprintf) {
+		if (self.opts.format) {
+			return sprintf(self.opts.format, result);
+		}
+		if (result >= 100) {
+			return sprintf('%d', result);
+		}
+		else if (result >= 10) {
+			return sprintf('%3.1f', result);
+		}
+		else if (result >= 1) {
+			return sprintf('%3.2f', result);
+		}
+		else {
+			return sprintf('%3.3f', result);
+		}
+	}
+	return result;
+};
+
+// #getFullName {{{2
+
+MinOverMaxAggregate.prototype.getFullName = function () {
+	var self = this;
+
+	return 'Min(' + self.opts.fields[0] + ') / Max(' + self.opts.fields[1] + ')';
+};
+
 // Aggregate Dictionary {{{1
 
-AGGREGATES = new OrdMap();
-AGGREGATES.set('count', CountAggregate);
-AGGREGATES.set('countDistinct', CountDistinctAggregate);
-AGGREGATES.set('values', ValuesAggregate);
-AGGREGATES.set('valuesWithCounts', ValuesWithCountsAggregate);
-AGGREGATES.set('distinctValues', DistinctValuesAggregate);
-AGGREGATES.set('sum', SumAggregate);
-AGGREGATES.set('average', AverageAggregate);
-AGGREGATES.set('min', MinAggregate);
-AGGREGATES.set('max', MaxAggregate);
-AGGREGATES.set('first', FirstAggregate);
-AGGREGATES.set('last', LastAggregate);
-AGGREGATES.set('nth', NthAggregate);
-AGGREGATES.set('sumOverSum', SumOverSumAggregate);
+AGGREGATE_REGISTRY = new OrdMap();
+AGGREGATE_REGISTRY.set('count', CountAggregate);
+AGGREGATE_REGISTRY.set('countDistinct', CountDistinctAggregate);
+AGGREGATE_REGISTRY.set('values', ValuesAggregate);
+AGGREGATE_REGISTRY.set('valuesWithCounts', ValuesWithCountsAggregate);
+AGGREGATE_REGISTRY.set('distinctValues', DistinctValuesAggregate);
+AGGREGATE_REGISTRY.set('sum', SumAggregate);
+AGGREGATE_REGISTRY.set('average', AverageAggregate);
+AGGREGATE_REGISTRY.set('min', MinAggregate);
+AGGREGATE_REGISTRY.set('max', MaxAggregate);
+AGGREGATE_REGISTRY.set('first', FirstAggregate);
+AGGREGATE_REGISTRY.set('last', LastAggregate);
+AGGREGATE_REGISTRY.set('nth', NthAggregate);
+AGGREGATE_REGISTRY.set('sumOverSum', SumOverSumAggregate);
+AGGREGATE_REGISTRY.set('minOverMax', MinOverMaxAggregate);

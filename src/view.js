@@ -1543,10 +1543,29 @@ View.prototype.setAggregate = function (spec, opts) {
 
 	_.each(spec, function (aggSpec, aggType) {
 		aggSpec = _.filter(aggSpec, function(agg) {
-			if (agg.needsField && agg.field != null && self.typeInfo.get(agg.field) == null) {
-				log.error('Ignoring aggregate "' + (agg.name || (agg.instance && agg.instance.name)) + '" on field "' + agg.field + '" because it doesn\'t exist in the data');
-				return false;
+			var a = AGGREGATE_REGISTRY.get(agg.fun);
+			if (a == null) {
+					log.error('Ignoring aggregate "' + agg.fun + '" because no such aggregate function exists');
+					return false;
 			}
+			/*
+			if (a.prototype.fieldCount > 0) {
+				if (agg.fields == null) {
+					log.error('Ignoring aggregate "' + agg.fun + '" because no fields have been specified');
+					return false;
+				}
+				if (agg.fields.length < a.prototype.fieldCount) {
+					log.error('Ignoring aggregate "' + agg.fun + '" because there aren\'t enough fields');
+					return false;
+				}
+				for (var i = 0; i < agg.fields.length; i += 1) {
+					if (self.typeInfo.get(agg.fields[i]) == null) {
+						log.error('Ignoring aggregate "' + agg.fun + '" because field "' + agg.fields[i] + '" doesn\'t exist in the data');
+						return false;
+					}
+				}
+			}
+			*/
 			return true;
 		});
 		spec[aggType] = aggSpec;
@@ -1623,7 +1642,7 @@ View.prototype.aggregate = function (cont) {
 
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		_.each(self.aggregateSpec[what], function (spec, aggNum) {
-			if (AGGREGATES.get(spec.fun) == null) {
+			if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
 				throw new Error('No such aggregate function: "' + spec.fun + '"' +
 					(spec.name ? ' (output name = "' + spec.name + '")' : ''));
 			}
@@ -1685,7 +1704,7 @@ View.prototype.aggregate = function (cont) {
 				ctorOpts.typeInfo = info[what][aggNum].typeInfo;
 			}
 
-			info[what][aggNum].instance = new (AGGREGATES.get(spec.fun))(ctorOpts);
+			info[what][aggNum].instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
 		});
 	});
 

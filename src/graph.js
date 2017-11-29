@@ -2169,7 +2169,7 @@ GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt) {
 		}
 		else if (typeof f === 'object') {
 			if (f.aggFun) {
-				agg = AGGREGATES[f.aggFun];
+				agg = AGGREGATE_REGISTRY.get(f.aggFun);
 
 				if (agg.type) {
 					aggType = agg.type;
