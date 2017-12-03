@@ -130,13 +130,6 @@ Prefs.prototype.apply = function (prefs, cont) {
 	}
 
 	return;
-
-	// Now make the view fire the `dataUpdated` event, which will make all the grid tables and graphs
-	// using it try to redraw themselves.  This may cause those grid tables to issue `unableToRender`
-	// events of their own and forcing grids to create a different (plain, group, or pivot) grid table
-	// to handle the view's new configuration.
-
-	self.view.fire(View.events.dataUpdated);
 };
 
 // #reset {{{2
