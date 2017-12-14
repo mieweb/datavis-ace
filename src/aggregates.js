@@ -398,6 +398,22 @@ Aggregate.prototype.getFullName = function () {
 	return self.name + (self.fieldCount > 0 ? (' of ' + self.opts.fields.join(', ')) : '');
 };
 
+// #getComparisonFn {{{2
+
+/**
+ * Get a comparison function for the specified type.
+ *
+ * @param {string} type
+ * The type of the data items that we want to compare.
+ *
+ * @return {function}
+ * A function that can be used to compare two items.
+ */
+
+Aggregate.prototype.getComparisonFn = function (type) {
+	return getComparisonFn.byType(type);
+};
+
 // Count {{{1
 
 var CountAggregate = makeSubclass(Aggregate, null, {
@@ -941,92 +957,7 @@ CountOverCountAggregate = makeSubclass(Aggregate, null, {
 	bottomValue: 0
 });
 
-// Max / Min {{{1
-
-MinOverMaxAggregate = makeSubclass(Aggregate, null, {
-	name: 'Min/Max',
-	enabled: false,
-	fieldCount: 2,
-	type: 'string',
-	inheritFormatting: false,
-	bottomValue: 0,
-	init: function () {
-		return { a: null, b: null }
-	}
-});
-
-// #checkOpts {{{2
-
-MinOverMaxAggregate.prototype.checkOpts = function () {
-	var self = this;
-
-	if (self.opts.typeInfo == null) {
-		log.error('Aggregate ' + self.name + ': Missing `opts.typeInfo`');
-		return false;
-	}
-
-	if (self.opts.compare == null) {
-		self.opts.compare = getComparisonFn.byType(self.opts.typeInfo[0].type);
-	}
-
-	if (typeof self.opts.compare !== 'function') {
-		log.error('Aggregate ' + self.name + ': Missing `opts.compare`');
-		return false;
-	}
-
-	return self.super.checkOpts();
-};
-
-// #calculateStep {{{2
-
-MinOverMaxAggregate.prototype.calculateStep = function (acc, next) {
-	var self = this;
-
-	var a = self.getRealValue(next[self.opts.fields[0]]);
-	var b = self.getRealValue(next[self.opts.fields[1]]);
-
-	return {
-		a: acc.a == null ? a : self.opts.compare(acc.a, a) ? acc.a : a,
-		b: acc.b == null ? b : self.opts.compare(acc.b, b) ? b : acc.b
-	};
-};
-
-// #calculateDone {{{2
-
-MinOverMaxAggregate.prototype.calculateDone = function (obj) {
-	var self = this;
-
-	var result = (obj.a + 0.0) / (obj.b + 0.0);
-
-	if (window.sprintf) {
-		if (self.opts.format) {
-			return sprintf(self.opts.format, result);
-		}
-		if (result >= 100) {
-			return sprintf('%d', result);
-		}
-		else if (result >= 10) {
-			return sprintf('%3.1f', result);
-		}
-		else if (result >= 1) {
-			return sprintf('%3.2f', result);
-		}
-		else {
-			return sprintf('%3.3f', result);
-		}
-	}
-	return result;
-};
-
-// #getFullName {{{2
-
-MinOverMaxAggregate.prototype.getFullName = function () {
-	var self = this;
-
-	return 'Min(' + self.opts.fields[0] + ') / Max(' + self.opts.fields[1] + ')';
-};
-
-// Aggregate Dictionary {{{1
+// Aggregate Registry {{{1
 
 AGGREGATE_REGISTRY = new OrdMap();
 AGGREGATE_REGISTRY.set('count', CountAggregate);
@@ -1042,4 +973,3 @@ AGGREGATE_REGISTRY.set('first', FirstAggregate);
 AGGREGATE_REGISTRY.set('last', LastAggregate);
 AGGREGATE_REGISTRY.set('nth', NthAggregate);
 AGGREGATE_REGISTRY.set('sumOverSum', SumOverSumAggregate);
-AGGREGATE_REGISTRY.set('minOverMax', MinOverMaxAggregate);
