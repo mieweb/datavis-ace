@@ -145,6 +145,14 @@ Prefs.prototype.reset = function () {
 var LocalStoragePrefs = makeSubclass(Prefs, function () {
 	var self = this;
 
+	try {
+		var storage = window.localStorage;
+	}
+	catch (e) {
+		log.error('Access to localStorage is denied; prefs disabled');
+		throw e;
+	}
+
 	self.localStorageKey = 'WC_DataVis_Prefs';
 	self.super.init.apply(self, arguments);
 });
@@ -345,6 +353,203 @@ LocalStoragePrefs.prototype.reset = function () {
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	delete storedPrefData[self.view.name];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
+
+	self.setCurrentPerspective('Main');
+	self.super.reset();
+};
+// TemporaryPrefs {{{1
+
+var TemporaryPrefs = makeSubclass(Prefs, function () {
+	var self = this;
+
+	self.storage = {};
+	self.current = 'Main';
+	self.super.init.apply(self, arguments);
+});
+
+// #save {{{2
+
+TemporaryPrefs.prototype.save = function (opts, cont) {
+	var self = this
+		, prefs = self.getPrefsFromView();
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Saving preferences: %O', prefs);
+
+	setProp(prefs, self.storage, self.view.name, self.perspective);
+
+	if (typeof cont === 'function') {
+		return cont(true);
+	}
+};
+
+// #load {{{2
+
+TemporaryPrefs.prototype.load = function (cont) {
+	var self = this;
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Loading preferences...');
+
+	var prefs = getPropDef({}, self.storage, self.view.name, self.perspective);
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Loaded preferences: %O', prefs);
+
+	self.apply(prefs, cont);
+};
+
+// #getPerspectives {{{2
+
+TemporaryPrefs.prototype.getPerspectives = function (cont) {
+	var self = this;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	var perspectives = _.keys(getPropDef({}, self.storage, self.view.name));
+
+	if (perspectives.length === 0) {
+		perspectives = ['Main'];
+	}
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Found %d perspectives', perspectives.length);
+
+	return cont(perspectives);
+};
+
+// #getInitialPerspective {{{2
+
+TemporaryPrefs.prototype.getInitialPerspective = function (cont) {
+	var self = this;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	var initial = self.current || 'Main';
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Initial perspective is "%s"', initial);
+
+	if (self.initialPerspective === undefined) {
+		self.initialPerspective = initial;
+	}
+
+	return cont(initial);
+};
+
+// #setCurrentPerspective {{{2
+
+TemporaryPrefs.prototype.setCurrentPerspective = function (perspective) {
+	var self = this;
+
+	if (typeof perspective !== 'string') {
+		throw new Error('Call Error: `perspective` must be a string');
+	}
+
+	self.super.setCurrentPerspective(perspective);
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Setting current perspective to "%s"', self.perspective);
+
+	self.current = perspective;
+};
+
+// #renamePerspective {{{2
+
+TemporaryPrefs.prototype.renamePerspective = function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments)
+		, oldName
+		, newName;
+
+	if (args.length === 1) {
+		oldName = self.getCurrentPerspective();
+		newName = args[0];
+	}
+	else if (args.length === 2) {
+		oldName = args[0];
+		newName = args[1];
+	}
+	else {
+		throw new Error('Usage: TemporaryPrefs#renamePerspective([oldName], newName)');
+	}
+
+	if (typeof oldName !== 'string') {
+		throw new Error('Call Error: `oldName` must be a string');
+	}
+
+	if (typeof newName !== 'string') {
+		throw new Error('Call Error: `newName` must be a string');
+	}
+
+	if (oldName === 'Main') {
+		log.error('Not allowed to rename perspective "Main" for view "%s"', self.view.name);
+		return false;
+	}
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Renaming perspective "%s" to "%s"', oldName, newName);
+
+	self.storage[self.view.name][newName] = self.storage[self.view.name][oldName];
+	delete self.storage[self.view.name][oldName];
+
+	if (self.getCurrentPerspective() === oldName) {
+		self.setCurrentPerspective(newName);
+	}
+
+	return true;
+};
+
+// #deletePerspective {{{2
+
+TemporaryPrefs.prototype.deletePerspective = function (perspective) {
+	var self = this;
+
+	if (perspective === undefined) {
+		perspective = self.getCurrentPerspective();
+	}
+
+	if (typeof perspective !== 'string') {
+		throw new Error('Call Error: `perspective` must be a string');
+	}
+
+	if (perspective === 'Main') {
+		log.error('Not allowed to delete perspective "Main" for view "%s"', self.view.name);
+		return;
+	}
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Deleting perspective "%s"', perspective);
+
+	delete self.storage[self.view.name][perspective];
+
+	// When we've deleted the current perspective, we have to fall back to some other perspective.
+	// We'd prefer to use the one that we started with, but if that's not available we use Main.
+
+	if (self.getCurrentPerspective() === perspective) {
+		if (self.initialPerspective && self.initialPerspective !== perspective) {
+			self.setCurrentPerspective(self.initialPerspective);
+		}
+		else {
+			self.setCurrentPerspective('Main');
+		}
+		self.load();
+	}
+};
+
+// #reset {{{2
+
+TemporaryPrefs.prototype.reset = function () {
+	var self = this;
+
+	debug.info('PREFS // TEMPORARY - (' + self.view.name + ' : ' + self.perspective + ')',
+						 'Resetting perspectives');
+
+	delete self.storage[self.view.name];
 
 	self.setCurrentPerspective('Main');
 	self.super.reset();

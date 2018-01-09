@@ -119,7 +119,12 @@ var View = function (source, name, opts) {
 	self.lock = new Lock('View Lock (' + self.name + ')');
 
 	if (self.opts.saveViewConfig) {
-		self.prefs = new LocalStoragePrefs(self);
+		try {
+			self.prefs = new LocalStoragePrefs(self);
+		}
+		catch (e) {
+			self.prefs = new TemporaryPrefs(self);
+		}
 	}
 
 	self.aggregateSpec = {

@@ -2636,6 +2636,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	opts = opts || {};
 	opts.pivotConfig = opts.pivotConfig || {};
+	var numCellAggregates = getPropDef(0, data, 'agg', 'info', 'cell', 'length');
 
 	if (data.groupFields.length === 0) {
 		if (typeof cont === 'function') {
@@ -2702,7 +2703,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
 
 		_.each(rowGroup, function (colGroup, pivotNum) {
-			if (data.agg.info.cell.length === 0) {
+			if (numCellAggregates === 0) {
 				tr.append(document.createElement('td'));
 			}
 			else {
