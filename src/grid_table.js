@@ -251,15 +251,14 @@ GridTable.prototype.setCss = function (elt, colName) {
 
 // #setAlignment {{{2
 
-GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo, overrideType) {
+GridTable.prototype.setAlignment = function (elt, colConfig, typeInfo, overrideType, fallback) {
 	colConfig = colConfig || {};
 	typeInfo = typeInfo || {};
 
 	var type = overrideType || typeInfo.type;
+	var alignment = colConfig.cellAlignment || fallback;
 
-	var alignment = colConfig && colConfig.cellAlignment;
-
-	if (alignment === undefined && (type === 'number' || type === 'currency')) {
+	if (alignment == null && (type === 'number' || type === 'currency')) {
 		alignment = 'right';
 	}
 
@@ -2430,10 +2429,28 @@ GridTablePivot.prototype.canRender = function (what) {
 
 GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var self = this;
+	var aggInfo;
 
 	var tr, span, th;
-	var aggInfo = data.agg.info.cell[0];
-	var aggType = aggInfo_type(aggInfo);
+
+	var addGroupFields = function (tr) {
+		_.each(data.groupFields, function (field, fieldIdx) {
+			span = jQuery('<span>').text(field);
+			self.csv.addCol(field);
+
+			var th = jQuery('<th>')
+				.attr('data-wcdv-field', field)
+				.append(span)
+				._makeDraggableField();
+
+			self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, span);
+
+			self.setCss(th, field);
+
+			self.ui.thMap[field] = th;
+			tr.append(th);
+		});
+	};
 
 	// This produces separate rows in the header for each pivot field.  That's what allows you to
 	// see the combinations of column values, like this:
@@ -2453,6 +2470,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 	var pivotFieldNum, colValIndex;
 	var colVal;
+	var numCellAggregates = getPropDef(0, data, 'agg', 'info', 'cell', 'length');
 
 	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
 		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
@@ -2461,32 +2479,26 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		tr = jQuery('<tr>'); // Create the row for the pivot field.
 		self.csv.addRow();
 
-		// Create headers for the fields that we've grouped by.  The headers are the names of those
-		// fields.  We only do this for the last row of the header, i.e. the final pivot field.
+		// WHEN THERE IS ONLY ONE AGGREGATE FUNCTION:
 		//
-		// +---------------------------+--------------------------------------------------+
-		// | ( not here )              | PIVOT COLVAL 1                  | PIVOT COLVAL 2 |
-		// +-------------+-------------+----------------+----------------+----------------+
-		// | GROUP FIELD | GROUP FIELD | PIVOT COLVAL A | PIVOT COLVAL B | PIVOT COLVAL A |
-		// +-------------+-------------+----------------+----------------+----------------+
+		// +---------------------------+--------------------------------------------------------+
+		// |                           | PIVOT COLVAL 1.1                    | PIVOT COLVAL 1.2 |
+		// +-------------+-------------+------------------+------------------+------------------+
+		// | GROUP FIELD | GROUP FIELD | PIVOT COLVAL 2.1 | PIVOT COLVAL 2.2 | PIVOT COLVAL 2.1 |
+		// +-------------+-------------+-------+----------+-------+----------+------------------+
+		//
+		// WHEN THERE ARE MULTIPLE AGGREGATE FUNCTIONS:
+		//
+		// +---------------------------+--------------------------------------------------------+
+		// |                           | PIVOT COLVAL 1.1                    | PIVOT COLVAL 1.2 |
+		// +---------------------------+------------------+------------------+------------------+
+		// |                           | PIVOT COLVAL 2.1 | PIVOT COLVAL 2.2 | PIVOT COLVAL 2.1 |
+		// +-------------+-------------+-------+----------+-------+----------+------------------+
+		// | GROUP FIELD | GROUP FIELD | AGG 1 | AGG 2    | AGG 1 | AGG 2    | AGG 1 | AGG 2    |
+		// +-------------+-------------+-------+----------+-------+----------+-------+----------+
 
-		if (lastPivotField) {
-			_.each(data.groupFields, function (field, fieldIdx) {
-				span = jQuery('<span>').text(field);
-				self.csv.addCol(field);
-
-				th = jQuery('<th>')
-					.attr('data-wcdv-field', field)
-					.append(span)
-					._makeDraggableField();
-
-				self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, span);
-
-				self.setCss(th, field);
-
-				self.ui.thMap[field] = th;
-				tr.append(th);
-			});
+		if (lastPivotField && numCellAggregates <= 1) {
+			addGroupFields(tr);
 		}
 		else {
 			tr.append(jQuery('<th>', { colspan: data.groupFields.length }));
@@ -2522,10 +2534,16 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					// determine the column span.  In the above example, there are three "Kennedy" and two
 					// "Roosevelt" so those are the colspans that we would set.
 
-					th.attr('colspan', lastColValCount);
+					var colSpan = lastColValCount;
+					
+					if (numCellAggregates >= 2) {
+						colSpan *= numCellAggregates;
+					}
+
+					th.attr('colspan', colSpan);
 					tr.append(th);
 
-					for (var i = 0; i < lastColValCount - 1; i += 1) {
+					for (var i = 0; i < colSpan - 1; i += 1) {
 						self.csv.addCol('');
 					}
 				}
@@ -2549,7 +2567,13 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					self._addSortingToHeader('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, span);
 				}
 
-				self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
+				if (numCellAggregates === 1) {
+					aggInfo = data.agg.info.cell[0];
+					self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo_type(aggInfo));
+				}
+				else if (numCellAggregates >= 2) {
+					self.setAlignment(th, null, null, null, 'center');
+				}
 			}
 			else {
 				lastColValCount += 1;
@@ -2558,12 +2582,20 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// Same logic as when the colVal changes.
 
-		th.attr('colspan', lastColValCount);
+		var colSpan = lastColValCount;
+
+		if (numCellAggregates >= 2) {
+			colSpan *= numCellAggregates;
+		}
+
+		th.attr('colspan', colSpan);
 		tr.append(th);
 
 		for (var i = 0; i < lastColValCount - 1; i += 1) {
 			self.csv.addCol('');
 		}
+
+		// Add space for the extra columns that get inserted off to the right.
 
 		if (!lastPivotField) {
 			var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
@@ -2576,7 +2608,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		// Render the user's custom-defined additional columns at the end of the last row of pivot field
 		// column values.
 
-		if (lastPivotField) {
+		if (lastPivotField/* && numCellAggregates <= 1*/) {
 			self.drawHeader_aggregates(data, 'group', tr);
 			self.drawHeader_addCols(tr, typeInfo, opts);
 		}
@@ -2584,6 +2616,17 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		// Add the row for this pivot field to the THEAD.
 		self.ui.thead.append(tr);
 	}
+
+	/*
+	if (numCellAggregates >= 2) {
+		tr = jQuery('<tr>');
+		self.csv.addRow();
+		addGroupFields(tr);
+		self.drawHeader_aggregates(data, 'group', tr);
+		self.drawHeader_addCols(tr, typeInfo, opts);
+		self.ui.thead.append(tr);
+	}
+	*/
 };
 
 // #drawBody {{{2
@@ -2602,9 +2645,6 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			return;
 		}
 	}
-
-	var aggInfo = data.agg.info.cell[0];
-	var aggType = aggInfo_type(aggInfo);
 
 	_.each(data.data, function (rowGroup, groupNum) {
 		var tr = jQuery('<tr>');
@@ -2662,31 +2702,35 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
 
 		_.each(rowGroup, function (colGroup, pivotNum) {
-			var aggResult = data.agg.results.cell[0][groupNum][pivotNum];
+			_.each(data.agg.results.cell, function (agg, aggNum) {
+				var aggInfo = data.agg.info.cell[aggNum];
+				var aggType = aggInfo_type(aggInfo);
+				var aggResult = agg[groupNum][pivotNum];
 
-			rowAgg.push(aggResult);
+				rowAgg.push(aggResult);
 
-			var text;
+				var text;
 
-			if (aggInfo.instance.inheritFormatting) {
-				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-					overrideType: aggType
-				});
-			}
-			else {
-				text = format(null, null, aggResult, {
-					overrideType: aggType
-				});
-			}
+				if (aggInfo.instance.inheritFormatting) {
+					text = format(aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggResult, {
+						overrideType: aggType
+					});
+				}
+				else {
+					text = format(null, null, aggResult, {
+						overrideType: aggType
+					});
+				}
 
-			var td = jQuery('<td>').text(text);
-			self.csv.addCol(text);
-			// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
-			// self.setCss(td, col);
+				var td = jQuery('<td>').text(text);
+				self.csv.addCol(text);
+				// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
+				// self.setCss(td, col);
 
-			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
+				self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggType);
 
-			td.appendTo(tr);
+				td.appendTo(tr);
+			});
 		});
 
 		self.drawBody_aggregates(data, tr, groupNum);
@@ -2713,7 +2757,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			else {
 				var addColText;
 
-				if (aggInfo.instance.inheritFormatting) {
+				if (false && aggInfo.instance.inheritFormatting) {
 					addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
 						alwaysFormat: true
 					});
@@ -2736,6 +2780,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		self.ui.tbody.append(tr);
 	});
+
+	var numCellAggregates = getPropDef(0, data, 'agg', 'info', 'cell', 'length');
 
 	_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (aggInfo, aggNum) {
 		var aggType = aggInfo_type(aggInfo);
@@ -2767,12 +2813,12 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		self.csv.addCol(aggInfo.instance.getFullName());
 
-		self._addSortingToHeader('horizontal', {aggType: 'pivot', aggNum: 0}, span);
+		self._addSortingToHeader('horizontal', {aggType: 'pivot', aggNum: aggNum}, span);
 
 		_.each(data.colVals, function (colVal, colValIdx) {
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
 			if (aggInfo.instance.inheritFormatting) {
-				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+				text = format(aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggResult, {
 					overrideType: aggType
 				});
 			}
@@ -2783,8 +2829,11 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			}
 
 			var td = jQuery('<td>').text(text);
+			if (numCellAggregates >= 2) {
+				td.attr('colspan', numCellAggregates);
+			}
 			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
+			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.type);
 			td.appendTo(tr);
 		});
 
@@ -2794,7 +2843,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			aggResult = data.agg.results.all[aggNum];
 
 			if (aggInfo.instance.inheritFormatting) {
-				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+				text = format(aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggResult, {
 					overrideType: aggType
 				});
 			}
@@ -2806,7 +2855,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			td = jQuery('<td>').text(text);
 			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
+			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.type);
 			td.appendTo(tr);
 		}
 
