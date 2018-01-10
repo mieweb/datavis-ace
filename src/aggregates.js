@@ -516,6 +516,11 @@ ValuesAggregate = makeSubclass(Aggregate, null, {
 	type: 'string',
 	init: function () {
 		return [];
+	},
+	options: {
+		'separator': {
+			'displayText': 'Separator'
+		}
 	}
 });
 
@@ -545,6 +550,11 @@ ValuesWithCountsAggregate = makeSubclass(Aggregate, null, {
 	type: 'string',
 	init: function () {
 		return new OrdMap();
+	},
+	options: {
+		'separator': {
+			'displayText': 'Separator'
+		}
 	}
 });
 
@@ -588,6 +598,11 @@ DistinctValuesAggregate = makeSubclass(Aggregate, null, {
 		return {
 			a: [],
 			m: {}
+		}
+	},
+	options: {
+		'separator': {
+			'displayText': 'Separator'
 		}
 	}
 });
@@ -899,6 +914,9 @@ SumOverSumAggregate = makeSubclass(Aggregate, null, {
 	bottomValue: 0,
 	init: function () {
 		return { a: 0, b: 0 };
+	},
+	options: {
+		'format': {}
 	}
 });
 

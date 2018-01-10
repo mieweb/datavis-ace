@@ -1767,6 +1767,42 @@ Grid.prototype.export = function () {
 
 // Constructor {{{2
 
+/**
+ * Represents an individual field added to a control.  In an older iteration, this literally
+ * corresponded to a field in the data (e.g. because the control was a filter, group, or pivot).
+ * Now that aggregate functions are also managed through a GridControl subclass, the "field" name is
+ * no longer strictly accurate.
+ *
+ *
+ *
+ * @param {GridControl} control
+ *
+ * @param {string} field
+ *
+ * @param {string} displayText
+ *
+ * @param {object} colConfig
+ *
+ *
+ *
+ * @property {GridControl} control
+ *
+ * @property {string} field
+ *
+ * @property {string} displayText
+ *
+ * @property {object} colConfig
+ *
+ * @property {object} ui
+ * Refers to all user interface constructs that we might need to use later.
+ *
+ * @property {Element} ui.root
+ * The DIV that completely contains the control field.
+ *
+ * @property {Element} ui.removeButton
+ * A button that is used to remove the control field.
+ */
+
 var GridControlField = makeSubclass(Object, function (control, field, displayText, colConfig) {
 	var self = this;
 
@@ -1779,12 +1815,20 @@ var GridControlField = makeSubclass(Object, function (control, field, displayTex
 
 // #draw {{{2
 
+/**
+ * Renders the control field into a DIV.
+ *
+ * @returns {Element}
+ * A newly created DIV that contains everything needed by the control field.
+ */
+
 GridControlField.prototype.draw = function () {
 	var self = this;
 
-	self.ui.removeButton = jQuery(fontAwesome('F146'))
+	self.ui.removeButton = jQuery('<button>')
+		.append(fontAwesome('F146'))
 		.attr('title', 'Remove')
-		.addClass('wcdv_button wcdv_remove')
+		.addClass('wcdv_icon_button wcdv_remove')
 		.on('click', function () {
 			self.control.removeField(self);
 		})
@@ -1800,10 +1844,28 @@ GridControlField.prototype.draw = function () {
 
 // #getElement {{{2
 
+/**
+ * Gets the DIV that contains the UI for this control field.
+ *
+ * @returns {Element}
+ * The DIV that this control field was rendered into.
+ */
+
 GridControlField.prototype.getElement = function () {
 	var self = this;
 
 	return self.ui.root;
+};
+
+// #destroy {{{2
+
+/**
+ * Called when the control field is removed; should be used to clean up resources like DOM nodes and
+ * event handlers.
+ */
+
+GridControlField.prototype.destroy = function () {
+	// DO NOTHING
 };
 
 // GroupControlField {{{1
@@ -1853,17 +1915,26 @@ AggregateControlField.prototype.draw = function () {
 
 	self.super.draw();
 
-	var optButton = jQuery('<button>', {
-		title: 'Edit Options'
-	})
-		.addClass('wcdv_button wcdv_button_left')
-		.append(fontAwesome('F044'))
-		.appendTo(self.ui.root)
-	;
+	var aggDefn = AGGREGATE_REGISTRY.get(self.field);
+
+	if (aggDefn.prototype.options != null) {
+		jQuery('<button>', {
+			title: 'Edit Options'
+		})
+			.addClass('wcdv_icon_button wcdv_button_left')
+			.on('click', function () {
+				self.ui.optionsDialog.dialog('open');
+			})
+			.append(fontAwesome('F044'))
+			.appendTo(self.ui.root)
+		;
+		self._makeOptionsDialog(aggDefn);
+	}
+
 	var fieldList = jQuery('<ul>').appendTo(self.ui.root);
 
-	for (var i = 0; i < AGGREGATE_REGISTRY.get(self.field).prototype.fieldCount; i += 1) {
-		var li = jQuery('<li>').appendTo(fieldList);
+	for (var i = 0; i < aggDefn.prototype.fieldCount; i += 1) {
+		var li = jQuery('<li>').addClass('wcdv_aggregate_field').appendTo(fieldList);
 		var select = jQuery('<select>')
 			.on('change', function () {
 				self.control.updateView();
@@ -1882,6 +1953,82 @@ AggregateControlField.prototype.draw = function () {
 	return self.ui.root;
 };
 
+// #_makeOptionsDialog {{{2
+
+AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
+	var self = this;
+
+	self.ui.optionsDiv = jQuery('<div>')
+		.css('display', 'none')
+		.appendTo(document.body);
+
+	var table = jQuery('<table>').appendTo(self.ui.optionsDiv);
+	var opts = {};
+
+	_.each(aggDefn.prototype.options, function (optConfig, optName) {
+		optConfig = deepDefaults(optConfig, {
+			type: 'string',
+			widget: 'text',
+			displayText: optName
+		});
+		var id = gensym();
+		var input = jQuery('<input>', {
+			'type': 'text',
+			'id': id
+		});
+		opts[optName] = input;
+		var label = jQuery('<label>', {
+			'for': id
+		}).text(optConfig.displayText);
+		jQuery('<tr>')
+			.append(jQuery('<td>').append(label))
+			.append(jQuery('<td>').append(input))
+			.appendTo(table);
+	});
+
+	jQuery('<div>')
+		.css({
+			'text-align': 'center',
+			'margin-top': '1ex'
+		})
+		.append(jQuery('<button>')
+			.append(fontAwesome('F00C'))
+			.append('OK')
+			.on('click', function () {
+				console.log('OK!');
+				self.opts = opts;
+				self.control.updateView();
+				self.ui.optionsDialog.dialog('close');
+			}))
+		.append(jQuery('<button>')
+			.css('margin-left', '1em')
+			.append(fontAwesome('F05E'))
+			.append('Cancel')
+			.on('click', function () {
+				console.log('CANCEL!');
+				self.ui.optionsDialog.dialog('close');
+			}))
+		.appendTo(self.ui.optionsDiv)
+	;
+
+	self.ui.optionsDialog = self.ui.optionsDiv.dialog({
+		autoOpen: false,
+		modal: true,
+		title: aggDefn.prototype.name + ' — Options',
+		minHeight: 0
+	});
+};
+
+// #destroy {{{2
+
+AggregateControlField.prototype.destroy = function () {
+	var self = this;
+
+	self.ui.optionsDialog.dialog('destroy');
+	self.ui.optionsDiv.remove();
+	self.super.destroy();
+};
+
 // #getInfo {{{2
 
 AggregateControlField.prototype.getInfo = function () {
@@ -1893,7 +2040,9 @@ AggregateControlField.prototype.getInfo = function () {
 			return dropdown.val();
 		}),
 		name: null,
-		opts: null
+		opts: _.mapObject(self.opts, function (input, optName) {
+			return input.val();
+		})
 	};
 };
 
@@ -2080,6 +2229,7 @@ GridControl.prototype.removeField = function (cf) {
 	var self = this
 		, controlFieldIndex = self.controlFields.indexOf(cf);
 
+	cf.destroy();
 	cf.getElement().parent('li').remove(); // Remove it from the DOM.
 	self.controlFields.splice(controlFieldIndex, 1);
 

@@ -4,7 +4,7 @@
 	cursor: pointer;
 }
 
-button.wcdv_button {
+button.wcdv_icon_button {
 	border: none;
 	background-color: inherit;
 	padding: 0;
@@ -14,8 +14,22 @@ button.wcdv_button_left {
 	margin-left: 0.5em;
 }
 
-button.wcdv_button span.fa {
+button.wcdv_icon_button span.fa {
+	cursor: pointer;
 	font-size: 120%;
+}
+
+button > span.fa {
+	margin-right: 0.25em;
+}
+
+li.wcdv_aggregate_field:first-child {
+	padding-top: 0.5ex;
+}
+
+li.wcdv_aggregate_field {
+	padding-top: 0.25ex;
+	padding-bottom: 0.25ex;
 }
 
 .wcdv_expand_button {
@@ -364,6 +378,11 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 
 .wcdvgrid_textJustify {
     text-align: justify !important;
+}
+
+.wcdv_centered {
+	margin-left: auto;
+	margin-right: auto;
 }
 
 /*

@@ -1759,6 +1759,8 @@ View.prototype.aggregate = function (cont) {
 				ctorOpts.typeInfo = info[what][aggNum].typeInfo;
 			}
 
+			_.extend(ctorOpts, spec.opts);
+
 			info[what][aggNum].instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
 		});
 	});
