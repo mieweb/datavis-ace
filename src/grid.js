@@ -2103,6 +2103,9 @@ GridControl.prototype.clear = function (opts) {
 	var self = this;
 
 	opts = opts || {};
+	_.defaults(opts, {
+		updateView: true
+	});
 
 	self.fields = [];
 	self.controlFields = [];
