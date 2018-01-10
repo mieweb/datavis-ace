@@ -2024,8 +2024,11 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 AggregateControlField.prototype.destroy = function () {
 	var self = this;
 
-	self.ui.optionsDialog.dialog('destroy');
-	self.ui.optionsDiv.remove();
+	if (self.ui.optionsDiv != null) {
+		self.ui.optionsDialog.dialog('destroy');
+		self.ui.optionsDiv.remove();
+	}
+
 	self.super.destroy();
 };
 
