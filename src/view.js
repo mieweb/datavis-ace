@@ -610,7 +610,7 @@ View.prototype.sort = function (cont) {
 				}
 				if (spec.aggNum < 0 || spec.aggNum >= aggInfo.cell.length) {
 					log.error('Unable to sort: aggNum out of range {spec = %O, range = [0,%d]}',
-										spec, aggInfo.cells.length);
+										spec, aggInfo.cell.length);
 					return next(false);
 				}
 				fti = aggInfo_type(aggInfo.cell[spec.aggNum]);
