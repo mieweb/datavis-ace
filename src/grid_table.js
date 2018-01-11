@@ -406,7 +406,11 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 			}
 		}
 		else {
-			console.log(span);
+			// Set the sort direction in the arrow icon.  The way we do this is by building a single
+			// FontAwesome "stack" from the up and down carets.  Then we can style the one we want.
+			// Unless we've just previously sorted this column, the current icon will be the non-stack,
+			// double-caret "fa-sort" icon: we need to replace it with the stack.
+
 			if (span.hasClass('fa-sort')) {
 				span.removeClass('fa fa-sort');
 				span.addClass('fa-stack');
@@ -421,15 +425,31 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 			(dir.toUpperCase() === 'ASC' ? span.children('.fa-sort-desc') : span.children('.fa-sort-asc'))
 				.addClass('wcdv_sort_arrow_active');
 		}
-
-		// Rotate to match the current orientation.
-
-		//if (orientation === 'horizontal') {
-		//	span.addClass('fa-rotate-270');
-		//}
 	};
 
+	/**
+	 * Set the sorting for the view to the current orientation/spec, on the specified aggregate number
+	 * and in the specified direction.
+	 *
+	 * @param {string} dir
+	 *
+	 * @param {number} [aggNum]
+	 * If missing, no aggregate number is added to the sort spec.  Used when sorting directly by the
+	 * field (e.g. in plain output) or by the group field index (e.g. in group detail output).
+	 */
+
 	var setSort = function (dir, aggNum) {
+		if (!_.isString(dir)) {
+			throw new Error('Call Error: `dir` must be a string');
+		}
+		else if (dir.toUpperCase() !== 'ASC' && dir.toUpperCase() !== 'DESC') {
+			throw new Error('Call Error: `dir` must be either "ASC" or "DESC"');
+		}
+
+		if (aggNum != null && !_.isNumber(aggNum)) {
+			throw new Error('Call Error: `aggNum` must be a number');
+		}
+
 		jQuery('span.' + sortIcon_orientationClass + '.fa-stack').each(function (i, elt) {
 			replaceSortIndicator(elt);
 		});
@@ -452,24 +472,48 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		.addClass('wcdv_sort_icon')
 		.addClass(sortIcon_orientationClass);
 	var sortIcon_menu_items = {};
-	_.each(agg, function (aggInfo, aggNum) {
-		var aggType = aggInfo.instance.getType();
+
+	if (spec.field != null || spec.groupFieldIndex != null) {
 		sortIcon_menu_items[gensym()] = {
-			name: aggInfo.instance.getFullName() + ', Ascending',
+			name: (spec.field || spec.groupFieldIndex) + ', Ascending',
 			icon: 'fa-sort-amount-asc',
 			callback: function () {
-				setSort('asc', aggNum)
+				setSort('asc')
 			}
 		};
 		sortIcon_menu_items[gensym()] = {
-			name: aggInfo.instance.getFullName() + ', Descending',
+			name: (spec.field || spec.groupFieldIndex) + ', Descending',
 			icon: 'fa-sort-amount-desc',
 			callback: function () {
-				setSort('desc', aggNum)
+				setSort('desc')
 			}
 		};
 		sortIcon_menu_items[gensym()] = '----';
-	});
+	}
+	else {
+		_.each(agg, function (aggInfo, aggNum) {
+			var aggType = aggInfo.instance.getType();
+			sortIcon_menu_items[gensym()] = {
+				name: aggInfo.instance.getFullName() + ', Ascending',
+				icon: 'fa-sort-amount-asc',
+				callback: function () {
+					setSort('asc', aggNum)
+				}
+			};
+			sortIcon_menu_items[gensym()] = {
+				name: aggInfo.instance.getFullName() + ', Descending',
+				icon: 'fa-sort-amount-desc',
+				callback: function () {
+					setSort('desc', aggNum)
+				}
+			};
+			sortIcon_menu_items[gensym()] = '----';
+		});
+	}
+
+	// Include an option to reset the sort.  This is just as much to fluff up the all-too-common
+	// two-entry menu as anything else.
+
 	sortIcon_menu_items.reset = {
 		name: 'Reset Sort',
 		icon: 'fa-ban',
@@ -477,6 +521,15 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 			self.view.clearSort();
 		}
 	};
+
+	// Create the context menu.
+	//
+	// TODO The plugin allow the reuse of the menu among multiple targets.  See if we can use that
+	// within the grid.
+	//
+	// TODO Does spawning a bunch of these (i.e. every time the table is redrawn) use a bunch of
+	// memory?  Is there a way to destroy the menu to reclaim it?
+
 	var sortIcon_menu = jQuery.contextMenu({
 		selector: '.' + sortIcon_class,
 		trigger: 'left',
@@ -488,15 +541,24 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 
 	th.append(sortIcon_span);
 
+	// Now check the existing sort specification in the view to see if any of the sort icons that we
+	// just created should be lit up.
+
 	var sortSpec_copy = deepCopy(self.view.getSort());
 	var spec_copy = deepCopy(spec);
 
 	if (sortSpec_copy[orientation]) {
 		var currentDir = sortSpec_copy[orientation].dir;
+
+		// Delete things that would be in the view's spec that aren't in the spec we were provided by
+		// the caller (because they're independent of the user interface reflecting the sort).  This way
+		// we can just do an object-object comparison to see if what we just made corresponds to the
+		// sort that is already set in the view.  Crucially, for grid tables that redraw when the view
+		// is updated, this is the only way you're ever going to see what the sort is.
+
 		delete sortSpec_copy[orientation].dir;
 		delete sortSpec_copy[orientation].aggNum;
 		delete spec_copy.aggNum;
-		console.log('%s(%s):    %O    -VS-    %O', orientation, currentDir, sortSpec_copy[orientation], spec);
 
 		if (_.isEqual(sortSpec_copy[orientation], spec_copy)) {
 			replaceSortIndicator(sortIcon_span, currentDir);
