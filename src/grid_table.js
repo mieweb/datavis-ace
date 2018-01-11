@@ -410,9 +410,9 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		self.view.setSort(sortSpec, self.makeProgress('Sort'));
 	};
 
-	var sortIcon_id = gensym();
+	var sortIcon_class = gensym();
 	var sortIcon_span = fontAwesome('fa-sort', orientation === 'horizontal' ? 'fa-rotate-90' : null)
-		.attr('id', sortIcon_id)
+		.addClass(sortIcon_class)
 		.addClass('wcdv_sort_icon');
 	var sortIcon_menu_items = {};
 	_.each(agg, function (aggInfo, aggNum) {
@@ -441,7 +441,7 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		}
 	};
 	var sortIcon_menu = jQuery.contextMenu({
-		selector: '#' + sortIcon_id,
+		selector: '.' + sortIcon_class,
 		trigger: 'hover',
 		delay: 500,
 		autoHide: true,
