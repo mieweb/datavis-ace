@@ -316,19 +316,19 @@ div.SumoSelect > div.optWrapper {
 	font-size: inherit !important; /* overrides [[ table.newui fa ]] */
 }
 
-.wcdv_sort_indicator {
+.wcdv_sort_icon {
 	cursor: pointer;
 }
 
-.wcdv_sort_indicator_active {
+.wcdv_sort_icon_active {
 	color: #0095D6;
 }
 
-.wcdv_sort_indicator_vertical {
+.wcdv_sort_icon_vertical {
 	margin-right: 0.5ex;
 }
 
-.wcdv_sort_indicator_horizontal {
+.wcdv_sort_icon_horizontal {
 	margin-left: 0.5ex;
 }
 
@@ -353,6 +353,10 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 
 .wcdv_drop_target_hover {
 	background-color: rgb(255, 235, 59) !important;
+}
+
+.wcdv_drag_handle.ui-draggable {
+	cursor: move;
 }
 
 .wcdv_drag_handle.ui-draggable-dragging {
