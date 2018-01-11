@@ -416,7 +416,7 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		.addClass('wcdv_sort_icon');
 	var sortIcon_menu_items = {};
 	_.each(agg, function (aggInfo, aggNum) {
-		var aggType = aggInfo_type(aggInfo);
+		var aggType = aggInfo.instance.getType();
 		sortIcon_menu_items[gensym()] = {
 			name: aggInfo.instance.getFullName() + ', Ascending',
 			icon: 'fa-' + (icons['asc'][aggType] || 'sort-amount-asc'),
@@ -791,7 +791,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			.appendTo(tr);
 		self.csv.addCol(text);
 		self._addSortingToHeader('vertical', {aggType: what, aggNum: aggNum}, span);
-		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
+		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 	});
 };
 
@@ -821,7 +821,7 @@ GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 	var self = this;
 
 	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (aggInfo, aggNum) {
-		var aggType = aggInfo_type(aggInfo);
+		var aggType = aggInfo.instance.getType();
 		var aggResult = data.agg.results.group[aggNum][groupNum];
 		var text;
 
@@ -838,7 +838,7 @@ GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 
 		var td = jQuery('<td>').text(text);
 		self.csv.addCol(text);
-		self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.type);
+		self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 		td.appendTo(tr);
 	});
 };
@@ -2679,7 +2679,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 				if (numCellAggregates === 1) {
 					aggInfo = data.agg.info.cell[0];
-					self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo_type(aggInfo));
+					self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 				}
 				else if (numCellAggregates >= 2) {
 					self.setAlignment(th, null, null, null, 'center');
@@ -2819,7 +2819,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			else {
 				_.each(data.agg.results.cell, function (agg, aggNum) {
 					var aggInfo = data.agg.info.cell[aggNum];
-					var aggType = aggInfo_type(aggInfo);
+					var aggType = aggInfo.instance.getType();
 					var aggResult = agg[groupNum][pivotNum];
 
 					rowAgg.push(aggResult);
@@ -2899,37 +2899,52 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	var numCellAggregates = getPropDef(0, data, 'agg', 'info', 'cell', 'length');
 
+	// ===========================================================================
+	//  PIVOT AGGREGATES
+	// ===========================================================================
+
 	_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (aggInfo, aggNum) {
-		var aggType = aggInfo_type(aggInfo);
+		var aggType = aggInfo.instance.getType();
 		var span;
 		var text;
 
 		tr = jQuery('<tr>');
 		self.csv.addRow();
 
+		// Add a class to the first row so it gets the double-bar outline.
+
 		if (aggNum === 0) {
 			tr.addClass('wcdv_gridtable_agg_pivot');
 		}
+
+		// Insert the name of the aggregate function in the header.  This will take up as many columns
+		// as there are group fields.
 
 		if (data.groupFields.length > 1) {
 			for (var i = 0; i < data.groupFields.length - 1; i += 1) {
 				self.csv.addCol('');
 			}
-			jQuery('<th>')
-				.attr({'colspan': data.groupFields.length - 1})
-				.appendTo(tr)
-			;
 		}
-
-		th = jQuery('<th>');
-		span = jQuery('<span>').text(aggInfo.instance.getFullName());
-
-		span.appendTo(th);
-		th.appendTo(tr);
 
 		self.csv.addCol(aggInfo.instance.getFullName());
 
+		var th = jQuery('<th>')
+			.attr({'colspan': data.groupFields.length})
+			.append(jQuery('<span>')
+				.text(aggInfo.instance.getFullName()))
+			.appendTo(tr)
+		;
+
+		// Add sorting to the header we just created.
+
 		self._addSortingToHeader2('horizontal', {aggType: 'pivot', aggNum: aggNum}, th, data.agg.info.cell);
+
+		// XXX
+
+		console.log('XXX %O', aggInfo.colConfig);
+		console.log('XXX %O', aggInfo.typeInfo);
+
+		// XXX
 
 		_.each(data.colVals, function (colVal, colValIdx) {
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
@@ -2949,13 +2964,17 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				td.attr('colspan', numCellAggregates);
 			}
 			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.type);
+			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.getType());
 			td.appendTo(tr);
 		});
 
+		// =========================================================================
+		//  ALL AGGREGATES
+		// =========================================================================
+
 		if (getProp(data, 'agg', 'info', 'all', aggNum)) {
 			aggInfo = data.agg.info.all[aggNum];
-			aggType = aggInfo_type(aggInfo);
+			aggType = aggInfo.instance.getType();
 			aggResult = data.agg.results.all[aggNum];
 
 			if (aggInfo.instance.inheritFormatting) {
@@ -2971,7 +2990,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			td = jQuery('<td>').text(text);
 			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.type);
+			self.setAlignment(td, aggInfo.colConfig[aggNum], aggInfo.typeInfo[aggNum], aggInfo.instance.getType());
 			td.appendTo(tr);
 		}
 

@@ -571,7 +571,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.group.length);
 					return next(false);
 				}
-				fti = aggInfo_type(aggInfo.group[spec.aggNum]);
+				fti = aggInfo.group[spec.aggNum].instance.getType();
 				sortSourceFn = function (i) {
 					return self.data.agg.results.group[spec.aggNum][i];
 				};
@@ -613,7 +613,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.cell.length);
 					return next(false);
 				}
-				fti = aggInfo_type(aggInfo.cell[spec.aggNum]);
+				fti = aggInfo.cell[spec.aggNum].instance.getType();
 				sortSourceFn = function (i) {
 					return self.data.agg.results.cell[spec.aggNum][spec.rowValIndex][i];
 				};
@@ -653,7 +653,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.cell.length);
 					return next(false);
 				}
-				fti = aggInfo_type(aggInfo.cell[spec.aggNum]);
+				fti = aggInfo.cell[spec.aggNum].instance.getType();
 				sortSourceFn = function (i) {
 					return self.data.agg.results.cell[spec.aggNum][i][spec.colValIndex];
 				};
@@ -664,7 +664,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.pivot.length);
 					return next(false);
 				}
-				fti = aggInfo_type(aggInfo.pivot[spec.aggNum]);
+				fti = aggInfo.pivot[spec.aggNum].instance.getType();
 				sortSourceFn = function (i) {
 					return self.data.agg.results.pivot[spec.aggNum][i];
 				};
@@ -675,7 +675,7 @@ View.prototype.sort = function (cont) {
 										spec, aggInfo.group.length);
 					return next(false);
 				}
-				fti = aggInfo_type(aggInfo.group[spec.aggNum]);
+				fti = aggInfo.group[spec.aggNum].instance.getType();
 				sortSourceFn = function (i) {
 					return self.data.agg.results.group[spec.aggNum][i];
 				};
@@ -2028,32 +2028,3 @@ View.prototype.getLastOps = function () {
 	return self.lastOps;
 };
 
-// Utilities {{{1
-
-function aggInfo_type(aggInfo) {
-	var aggType;
-	
-	// Set the type of the aggregate result.  Sometimes this is fixed (e.g. count is always a number).
-	// If that's the case, it's given by the Aggregate instance itself.
-
-	aggType = aggInfo.instance.type;
-
-	// When the Aggregate instance doesn't specify, then it's considered to be the type of the field
-	// (e.g. min, max, first, last all just reuse a value so the type of the aggregate function is
-	// just whatever the type of the value is).  Since we now support multiple fields, this logic only
-	// works when there's only one field.
-	//
-	// XXX Should we fix this?  Maybe allow it if all fields have the same type?
-	
-	if (aggType == null && aggInfo.fields.length === 1) {
-		aggType = aggInfo.instance.opts.typeInfo[0].type;
-	}
-
-	// Default to a string type.
-	
-	if (aggType == null) {
-		aggType = 'string';
-	}
-
-	return aggType;
-}

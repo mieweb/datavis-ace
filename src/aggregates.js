@@ -445,6 +445,35 @@ Aggregate.prototype.getComparisonFn = function (type) {
 	return getComparisonFn.byType(type);
 };
 
+// #getType {{{2
+
+Aggregate.prototype.getType = function () {
+	var self = this;
+	var t;
+	
+	// Set the type of the aggregate result.  Sometimes this is fixed (e.g. count is always a number).
+	// If that's the case, it's given by the Aggregate instance itself.
+
+	t = self.type;
+
+	// When the Aggregate instance doesn't specify, then it's considered to be the type of the field
+	// (e.g. min, max, first, last all just reuse a value so the type of the aggregate function is
+	// just whatever the type of the value is).  This only works easily if there is one field, so if
+	// there's more than one, the subclass will need to provide their own definition.
+	
+	if (t == null && getProp(self, 'opts', 'fields', 'length') === 1) {
+		t = self.opts.typeInfo[0].type;
+	}
+
+	// Default to a string type.
+	
+	if (t == null) {
+		t = 'string';
+	}
+
+	return t;
+};
+
 // Count {{{1
 
 var CountAggregate = makeSubclass(Aggregate, null, {
