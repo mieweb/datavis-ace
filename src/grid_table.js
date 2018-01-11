@@ -369,64 +369,101 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		return;
 	}
 
-	var sortIndicatorClass = 'wcdv_sort_indicator_' + orientation;
-	var sortSpan = jQuery('<span>');
+	var sortIcon_orientationClass = 'wcdv_sort_icon_' + orientation;
 
-	var getIconCode = function (dir) {
-		return orientation === 'vertical'
-			? (dir === 'ASC' ? 'F0AB' : 'F0AA')
-			: (dir === 'ASC' ? 'F0A9' : 'F0A8');
-	};
+	/**
+	 * @param {Element|jQuery} span
+	 * The sort indicator span to replace.
+	 *
+	 * @param {string} [dir]
+	 * What direction we're sorting by, ascending or descending.
+	 */
 
-	var icons = {
-		'asc': {
-			/*
-			'number': 'sort-numeric-asc',
-			'string': 'sort-alpha-asc'
-			*/
-		},
-		'desc': {
-			/*
-			'number': 'sort-numeric-desc',
-			'string': 'sort-alpha-desc'
-			*/
+	var replaceSortIndicator = function (span, dir) {
+		if (!(span instanceof jQuery || span instanceof Element)) {
+			throw new Error('Call Error: `span` must be either an Element or a jQuery');
 		}
+
+		if (dir != null && !_.isString(dir)) {
+			throw new Error('Call Error: `dir` must be a string');
+		}
+		else if (dir != null && dir.toUpperCase() !== 'ASC' && dir.toUpperCase() !== 'DESC') {
+			throw new Error('Call Error: `dir` must be either "ASC" or "DESC"');
+		}
+
+		if (span instanceof Element) {
+			span = jQuery(span);
+		}
+
+		if (dir == null) {
+			// Revert to the original icon (i.e. "no sort set").  This only needs to be done if we're not
+			// already in that state; we look for the fa-stack class to check.
+
+			if (span.hasClass('fa-stack')) {
+				span.children().remove();
+				span.removeClass('fa-stack');
+				span.addClass('fa fa-sort');
+			}
+		}
+		else {
+			console.log(span);
+			if (span.hasClass('fa-sort')) {
+				span.removeClass('fa fa-sort');
+				span.addClass('fa-stack');
+				var asc = jQuery('<span>').addClass('fa fa-sort-asc fa-stack-1x').appendTo(span);
+				var desc = jQuery('<span>').addClass('fa fa-sort-desc fa-stack-1x').appendTo(span);
+			}
+
+			// Yes, this is backwards.  The FontAwesome icon for "ascending" points upwards, but I want to
+			// color the one that points dowards, indicating that is the direction of increasing values.
+
+			span.children().removeClass('wcdv_sort_arrow_active');
+			(dir.toUpperCase() === 'ASC' ? span.children('.fa-sort-desc') : span.children('.fa-sort-asc'))
+				.addClass('wcdv_sort_arrow_active');
+		}
+
+		// Rotate to match the current orientation.
+
+		//if (orientation === 'horizontal') {
+		//	span.addClass('fa-rotate-270');
+		//}
 	};
 
 	var setSort = function (dir, aggNum) {
-		var cloneSortSpan = jQuery(this).siblings('span.' + sortIndicatorClass);
-		jQuery('span.' + sortIndicatorClass).hide();
-		cloneSortSpan.show();
+		jQuery('span.' + sortIcon_orientationClass + '.fa-stack').each(function (i, elt) {
+			replaceSortIndicator(elt);
+		});
+
+		jQuery('span.' + sortIcon_class).each(function (i, elt) {
+			replaceSortIndicator(elt, dir);
+		});
 
 		spec.aggNum = aggNum;
 		spec.dir = dir;
 
 		var sortSpec = self.view.getSort() || {};
-
 		sortSpec[orientation] = deepCopy(spec);
-
-		cloneSortSpan.html(fontAwesome(getIconCode(dir)));
-
 		self.view.setSort(sortSpec, self.makeProgress('Sort'));
 	};
 
 	var sortIcon_class = gensym();
-	var sortIcon_span = fontAwesome('fa-sort', orientation === 'horizontal' ? 'fa-rotate-90' : null)
+	var sortIcon_span = fontAwesome('fa-sort', orientation === 'horizontal' ? 'fa-rotate-270' : null)
 		.addClass(sortIcon_class)
-		.addClass('wcdv_sort_icon');
+		.addClass('wcdv_sort_icon')
+		.addClass(sortIcon_orientationClass);
 	var sortIcon_menu_items = {};
 	_.each(agg, function (aggInfo, aggNum) {
 		var aggType = aggInfo.instance.getType();
 		sortIcon_menu_items[gensym()] = {
 			name: aggInfo.instance.getFullName() + ', Ascending',
-			icon: 'fa-' + (icons['asc'][aggType] || 'sort-amount-asc'),
+			icon: 'fa-sort-amount-asc',
 			callback: function () {
 				setSort('asc', aggNum)
 			}
 		};
 		sortIcon_menu_items[gensym()] = {
 			name: aggInfo.instance.getFullName() + ', Descending',
-			icon: 'fa-' + (icons['desc'][aggType] || 'sort-amount-desc'),
+			icon: 'fa-sort-amount-desc',
 			callback: function () {
 				setSort('desc', aggNum)
 			}
@@ -442,9 +479,7 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 	};
 	var sortIcon_menu = jQuery.contextMenu({
 		selector: '.' + sortIcon_class,
-		trigger: 'hover',
-		delay: 500,
-		autoHide: true,
+		trigger: 'left',
 		callback: function (itemKey, opt) {
 			console.log(itemKey);
 		},
@@ -453,21 +488,20 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 
 	th.append(sortIcon_span);
 
-	sortSpan.addClass(sortIndicatorClass);
-	sortSpan.addClass('wcdv_sort_indicator');
+	var sortSpec_copy = deepCopy(self.view.getSort());
+	var spec_copy = deepCopy(spec);
 
-	var sortSpec = deepCopy(self.view.getSort());
+	if (sortSpec_copy[orientation]) {
+		var currentDir = sortSpec_copy[orientation].dir;
+		delete sortSpec_copy[orientation].dir;
+		delete sortSpec_copy[orientation].aggNum;
+		delete spec_copy.aggNum;
+		console.log('%s(%s):    %O    -VS-    %O', orientation, currentDir, sortSpec_copy[orientation], spec);
 
-	if (sortSpec[orientation]) {
-		var currentDir = sortSpec[orientation].dir;
-		delete sortSpec[orientation].dir;
-
-		if (_.isEqual(sortSpec[orientation], spec)) {
-			sortSpan.html(fontAwesome(getIconCode(currentDir)));
+		if (_.isEqual(sortSpec_copy[orientation], spec_copy)) {
+			replaceSortIndicator(sortIcon_span, currentDir);
 		}
 	}
-
-	th.prepend(sortSpan);
 };
 
 // #addSortHandler {{{2
@@ -2553,7 +2587,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				.append(span)
 				._makeDraggableField();
 
-			self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, th, data.agg.info.cell);
+			self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
 			self.setCss(th, field);
 
@@ -2674,7 +2708,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				// We only allow sorting on the final 
 
 				if (lastPivotField) {
-					self._addSortingToHeader2('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, data.agg.info.cell);
+					self._addSortingToHeader2('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 				}
 
 				if (numCellAggregates === 1) {
@@ -2792,7 +2826,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			self.csv.addCol(span.text());
 
 			if (rowValIndex === data.groupFields.length - 1) {
-				self._addSortingToHeader2('horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, th, data.agg.info.cell);
+				self._addSortingToHeader2('horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 			}
 		});
 
@@ -2936,7 +2970,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		// Add sorting to the header we just created.
 
-		self._addSortingToHeader2('horizontal', {aggType: 'pivot', aggNum: aggNum}, th, data.agg.info.cell);
+		self._addSortingToHeader2('horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
 		// XXX
 

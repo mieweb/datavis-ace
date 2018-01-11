@@ -320,6 +320,10 @@ div.SumoSelect > div.optWrapper {
 	cursor: pointer;
 }
 
+.wcdv_sort_indicator_active {
+	color: #0095D6;
+}
+
 .wcdv_sort_indicator_vertical {
 	margin-right: 0.5ex;
 }
