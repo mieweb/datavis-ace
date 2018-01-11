@@ -824,7 +824,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			.append(span)
 			.appendTo(tr);
 		self.csv.addCol(text);
-		self._addSortingToHeader('vertical', {aggType: what, aggNum: aggNum}, span);
+		self._addSortingToHeader2('vertical', {aggType: what, aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'group'));
 		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 	});
 };
@@ -1314,7 +1314,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// In the plain grid table output, the only way to sort is vertically by field.
 
-		self._addSortingToHeader('vertical', {field: field}, headingSpan);
+		self._addSortingToHeader2('vertical', {field: field}, headingTh);
 
 		/*
 		 * Configure filtering for this column.  This mainly involves creating a button, which when
@@ -2047,7 +2047,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.append(headingSpan)
 		;
 
-		self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, headingSpan);
+		self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, headingTh);
 
 		self.setCss(headingTh, fieldName);
 
@@ -2087,7 +2087,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.css(headingThCss)
 			.append(headingSpan);
 
-		self._addSortingToHeader('vertical', {field: field}, headingSpan);
+		self._addSortingToHeader2('vertical', {field: field}, headingTh);
 
 		self.setCss(headingTh, field);
 		self.setAlignment(headingTh, colConfig, typeInfo.get(field));
@@ -2411,7 +2411,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 
 		self.csv.addCol(field);
 
-		self._addSortingToHeader('vertical', {groupFieldIndex: fieldIdx}, span);
+		self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, th, getProp(data, 'agg', 'info', 'group'));
 
 		self.setCss(th, field);
 
