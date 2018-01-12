@@ -307,10 +307,6 @@ div.SumoSelect > div.optWrapper {
 	padding-right: 0px;
 }
 
-.wcdv_grid_table .wcdv_gridtable_agg_pivot {
-	border-top: double black;
-}
-
 .wcdv_sort_icon {
 	cursor: pointer;
 	margin-left: 0.5em;
@@ -461,11 +457,15 @@ tr.wcdvgrid_more td {
 	text-align: left;
 }
 
+.wcdv_grid_table table > thead > tr:first-child > th:first-child {
+	border-bottom: none;
+}
 .wcdv_grid_table table > thead > tr > th {
 	border-bottom: solid 2px #D0D0D0;
+	padding: 4px;
 }
 .wcdv_grid_table table > thead > tr:last-child > th {
-	border-bottom: double 3px #808080;
+	border-bottom: double black !important;
 }
 
 .wcdv_grid_table table > tfoot {
@@ -485,11 +485,13 @@ tr.wcdvgrid_more td {
 	background-color: rgba(255, 235, 59, .4);
 }
 
-.wcdv_grid_table table > tbody > tr:first-child > td {
+.wcdv_grid_table table > tbody > tr:first-child > td,
+.wcdv_grid_table table > tbody > tr:first-child > th {
 	padding-top: 4px;
 }
 
-.wcdv_grid_table table td {
+.wcdv_grid_table table td,
+.wcdv_grid_table table th {
 	padding-left: 4px;
 	padding-right: 4px;
 	padding-bottom: 4px;
@@ -497,5 +499,20 @@ tr.wcdvgrid_more td {
 
 .wcdv_grid_table table .wcdv_pivot_colval_boundary {
 	border-left: solid 2px #D0D0D0;
+	padding-left: 4px !important;
 }
 
+.wcdv_grid_table table .wcdv_pivot_colval_boundary ~ td {
+	padding-left: 16px;
+}
+
+.wcdv_grid_table table .wcdv_pivot_aggregate_boundary {
+	border-left: double black;
+	padding-left: 4px !important;
+}
+
+.wcdv_grid_table table .wcdv_gridtable_agg_pivot td,
+.wcdv_grid_table table .wcdv_gridtable_agg_pivot th {
+	border-top: double black;
+	padding-top: 4px;
+}

@@ -889,7 +889,12 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			.append(span)
 			.appendTo(tr);
 		if (data.agg.info.group.length > 1) {
-			th.addClass('wcdv_pivot_colval_boundary');
+			if (what === 'group' && aggNum === 0) {
+				th.addClass('wcdv_pivot_aggregate_boundary');
+			}
+			else {
+				th.addClass('wcdv_pivot_colval_boundary');
+			}
 		}
 		self.csv.addCol(text);
 		self._addSortingToHeader2('vertical', {aggType: what, aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'group'));
@@ -941,7 +946,12 @@ GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 		var td = jQuery('<td>').text(text);
 
 		if (data.agg.info.group.length > 1) {
-			td.addClass('wcdv_pivot_colval_boundary');
+			if (aggNum === 0) {
+				td.addClass('wcdv_pivot_aggregate_boundary');
+			}
+			else {
+				td.addClass('wcdv_pivot_colval_boundary');
+			}
 		}
 
 		self.csv.addCol(text);
@@ -2782,9 +2792,6 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 				if (lastPivotField) {
 					self._addSortingToHeader2('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
-					if (numCellAggregates > 1 && colValIndex > 0) {
-						th.addClass('wcdv_pivot_colval_boundary');
-					}
 				}
 
 				if (numCellAggregates === 1) {
@@ -2793,6 +2800,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				}
 				else if (numCellAggregates > 1) {
 					self.setAlignment(th, null, null, null, 'center');
+					th.addClass('wcdv_pivot_colval_boundary');
 				}
 			}
 			else {
@@ -2821,7 +2829,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
 				+ getPropDef(0, opts, 'addCols', 'length');
 			if (numExtraCols > 0) {
-				jQuery('<th>', { colspan: numExtraCols }).appendTo(tr);
+				jQuery('<th>', { colspan: numExtraCols }).appendTo(tr).addClass('wcdv_pivot_aggregate_boundary');
 			}
 		}
 
@@ -2949,7 +2957,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 					var td = jQuery('<td>').text(text);
 
-					if (numCellAggregates > 1 && aggNum === 0 && pivotNum > 0) {
+					if (numCellAggregates > 1 && aggNum === 0) {
 						td.addClass('wcdv_pivot_colval_boundary');
 					}
 
@@ -3069,9 +3077,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			if (numCellAggregates >= 2) {
 				td.attr('colspan', numCellAggregates);
-				if (colValIdx > 0) {
-					td.addClass('wcdv_pivot_colval_boundary');
-				}
+				td.addClass('wcdv_pivot_colval_boundary');
 			}
 
 			self.csv.addCol(text);
@@ -3101,7 +3107,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td = jQuery('<td>').text(text);
 
 			if (numCellAggregates > 1) {
-				td.addClass('wcdv_pivot_colval_boundary');
+				td.addClass('wcdv_pivot_aggregate_boundary');
 			}
 
 			self.csv.addCol(text);
