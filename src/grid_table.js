@@ -401,14 +401,17 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		}
 
 		span.children().removeClass('wcdv_sort_arrow_active');
+		th.removeClass('wcdv_sort_column_active');
 
 		if (dir != null) {
+			th.addClass('wcdv_sort_column_active');
+
 			// Yes, this is backwards.  The FontAwesome icon for "ascending" points upwards, but I want to
 			// color the one that points dowards, indicating that is the direction of increasing values.
 
 			span.children().removeClass('wcdv_sort_arrow_active');
-			(dir.toUpperCase() === 'ASC' ? span.children('.fa-sort-desc') : span.children('.fa-sort-asc'))
-				.addClass('wcdv_sort_arrow_active');
+			span.children('.fa-sort-desc').addClass('wcdv_sort_arrow_' + (dir.toUpperCase() === 'ASC' ? 'active' : 'inactive'));
+			span.children('.fa-sort-asc').addClass('wcdv_sort_arrow_' + (dir.toUpperCase() === 'DESC' ? 'active' : 'inactive'));
 		}
 	};
 

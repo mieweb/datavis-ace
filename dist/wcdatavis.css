@@ -315,6 +315,9 @@ div.SumoSelect > div.optWrapper {
 .wcdv_sort_arrow_active {
 	color: #FF9800;
 }
+.wcdv_sort_arrow_inactive {
+	color: rgba(127, 127, 127, 0.5);
+}
 
 /*
 td.wcdv_group_col_spacer,
@@ -448,6 +451,9 @@ tr.wcdvgrid_more td {
 	color: #666;
 	font-weight: normal;
 	text-align: left;
+}
+.wcdv_grid_table table th.wcdv_sort_column_active {
+	background-color: rgba(255, 152, 0, 0.2);
 }
 
 .wcdv_grid_table table > thead > tr:first-child > th:first-child {
