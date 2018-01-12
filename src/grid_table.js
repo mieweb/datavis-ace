@@ -136,6 +136,11 @@ var GridTable = (function () {
 		_.each(self.defn.table.columns, function (col) {
 			self.colConfig[col.field] = col;
 		});
+
+		_.defaults(self.opts, {
+			drawInternalBorders: true,
+			zebraStriping: true
+		});
 	};
 })();
 
@@ -797,7 +802,13 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				configureRowReordering(self.defn, self.ui.tbody);
 			}
 
-			//self.ui.tbl.attr('class', 'newui zebra');
+			if (self.opts.zebraStriping) {
+				self.ui.tbl.addClass('zebra');
+			}
+
+			if (getProp(self.opts, 'addClass', 'table')) {
+				self.ui.tbl.addClass(getProp(self.opts, 'addClass', 'table'));
+			}
 
 			self.ui.tbl.append(self.ui.thead);
 
@@ -875,7 +886,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 		var th = jQuery('<th>')
 			.append(span)
 			.appendTo(tr);
-		if (data.agg.info.group.length > 1) {
+		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
 			if (what === 'group' && aggNum === 0) {
 				th.addClass('wcdv_pivot_aggregate_boundary');
 			}
@@ -932,7 +943,7 @@ GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 
 		var td = jQuery('<td>').text(text);
 
-		if (data.agg.info.group.length > 1) {
+		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
 			if (aggNum === 0) {
 				td.addClass('wcdv_pivot_aggregate_boundary');
 			}
@@ -2787,6 +2798,9 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				}
 				else if (numCellAggregates > 1) {
 					self.setAlignment(th, null, null, null, 'center');
+				}
+
+				if (self.opts.drawInternalBorders || numCellAggregates > 1) {
 					th.addClass('wcdv_pivot_colval_boundary');
 				}
 			}
@@ -2944,7 +2958,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 					var td = jQuery('<td>').text(text);
 
-					if (numCellAggregates > 1 && aggNum === 0) {
+					if ((self.opts.drawInternalBorders || numCellAggregates > 1) && aggNum === 0) {
 						td.addClass('wcdv_pivot_colval_boundary');
 					}
 
@@ -3062,8 +3076,11 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			var td = jQuery('<td>').text(text);
 
-			if (numCellAggregates >= 2) {
+			if (numCellAggregates > 1) {
 				td.attr('colspan', numCellAggregates);
+			}
+
+			if (self.opts.drawInternalBorders || numCellAggregates > 1) {
 				td.addClass('wcdv_pivot_colval_boundary');
 			}
 
@@ -3093,7 +3110,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			td = jQuery('<td>').text(text);
 
-			if (numCellAggregates > 1) {
+			if (self.opts.drawInternalBorders || numCellAggregates > 1) {
 				td.addClass('wcdv_pivot_aggregate_boundary');
 			}
 

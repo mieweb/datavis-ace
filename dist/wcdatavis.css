@@ -309,7 +309,7 @@ div.SumoSelect > div.optWrapper {
 
 .wcdv_sort_icon {
 	cursor: pointer;
-	margin: -10px -11px -8px -4px;
+	margin: -10px -4px -8px -0px;
 }
 
 .wcdv_sort_arrow_active {
@@ -440,6 +440,7 @@ tr.wcdvgrid_more td {
 .wcdv_grid_table table {
 	border-collapse: collapse;
 	background-color: #FFFFFF;
+	width: 100%;
 }
 
 .wcdv_grid_table table th {
@@ -466,7 +467,8 @@ tr.wcdvgrid_more td {
 }
 
 .wcdv_grid_table table.zebra > tbody > tr:nth-child(even), .wcdv_grid_table table > tbody > tr.even {
-	background-color: #F6F6F9;
+	/* blue: background-color: #e3f2fd; */
+	background-color: #e8f5e9;
 }
 
 .wcdv_grid_table table.zebra > tbody > tr.odd {
@@ -507,4 +509,12 @@ tr.wcdvgrid_more td {
 .wcdv_grid_table table .wcdv_gridtable_agg_pivot th {
 	border-top: double black;
 	padding-top: 4px;
+}
+
+/*
+ * FONT AWESOME STACK TWEAKS
+ */
+
+.wcdv_grid_table table .fa-stack {
+	width: 1.5em;
 }
