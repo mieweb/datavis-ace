@@ -487,6 +487,10 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 	}
 	else {
 		_.each(agg, function (aggInfo, aggNum) {
+			if (spec.aggType != null && spec.aggNum !== aggNum) {
+				return;
+			}
+
 			var aggType = aggInfo.instance.getType();
 			sortIcon_menu_items[gensym()] = {
 				name: aggInfo.instance.getFullName() + ', Ascending',
@@ -552,8 +556,15 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 		// is updated, this is the only way you're ever going to see what the sort is.
 
 		delete sortSpec_copy[orientation].dir;
-		delete sortSpec_copy[orientation].aggNum;
-		delete spec_copy.aggNum;
+
+		// Note that `aggNum` is an important part of the spec when sorting group or pivot aggregates
+		// (i.e. total rows/columns) because they have their own row/column, and aren't thrown together
+		// like cell aggregates are.
+
+		if (spec.aggType == null) {
+			delete sortSpec_copy[orientation].aggNum;
+			delete spec_copy.aggNum;
+		}
 
 		debug.info('GRID TABLE // ADD SORTING', 'orientation = %s ; spec = %O ; current = %O ; dir = %s',
 			orientation, spec_copy, sortSpec_copy[orientation], currentDir);
@@ -3097,6 +3108,16 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		// =========================================================================
 
 		if (getProp(data, 'agg', 'info', 'all', aggNum)) {
+			for (var i = 0; i < aggNum; i += 1) {
+				td = jQuery('<td><div>&nbsp;</div></td>');
+				if (self.opts.drawInternalBorders || numCellAggregates > 1) {
+					td.addClass(i === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
+				}
+				td.addClass('wcdv_cell_empty');
+				self.csv.addCol('');
+				td.appendTo(tr);
+			}
+
 			aggInfo = data.agg.info.all[aggNum];
 			aggResult = data.agg.results.all[aggNum];
 
@@ -3114,12 +3135,22 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td = jQuery('<td>').text(text);
 
 			if (self.opts.drawInternalBorders || numCellAggregates > 1) {
-				td.addClass('wcdv_pivot_aggregate_boundary');
+				td.addClass(aggNum === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
 			}
 
 			self.csv.addCol(text);
 			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 			td.appendTo(tr);
+
+			for (var i = aggNum + 1; i < getPropDef(0, data, 'agg', 'info', 'all', 'length'); i += 1) {
+				td = jQuery('<td><div>&nbsp;</div></td>');
+				if (self.opts.drawInternalBorders || numCellAggregates > 1) {
+					td.addClass('wcdv_pivot_colval_boundary');
+				}
+				td.addClass('wcdv_cell_empty');
+				self.csv.addCol('');
+				td.appendTo(tr);
+			}
 		}
 
 		self.ui.tbody.append(tr);

@@ -485,16 +485,16 @@ tr.wcdvgrid_more td {
 	background-color: rgba(255, 235, 59, .4);
 }
 
+/*
 .wcdv_grid_table table > tbody > tr:first-child > td,
 .wcdv_grid_table table > tbody > tr:first-child > th {
 	padding-top: 4px;
 }
+*/
 
 .wcdv_grid_table table td,
 .wcdv_grid_table table th {
-	padding-left: 4px;
-	padding-right: 4px;
-	padding-bottom: 4px;
+	padding: 4px;
 }
 
 .wcdv_grid_table table .wcdv_pivot_colval_boundary {
@@ -515,6 +515,10 @@ tr.wcdvgrid_more td {
 .wcdv_grid_table table .wcdv_gridtable_agg_pivot th {
 	border-top: double black;
 	padding-top: 4px;
+}
+
+.wcdv_grid_table table td.wcdv_cell_empty div {
+	background: repeating-linear-gradient(-45deg, rgba(127, 127, 127, 0.5), rgba(127, 127, 127, 0.5) 8px, rgba(0, 0, 0, 0) 8px, rgba(0, 0, 0, 0) 16px);
 }
 
 /*
