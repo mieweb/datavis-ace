@@ -367,7 +367,7 @@ GridTable.prototype._addSortingToHeader = function (orientation, spec, headingSp
 
 // #_addSortingToHeader2 {{{2
 
-GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg) {
+GridTable.prototype._addSortingToHeader2 = function (data, orientation, spec, th, agg) {
 	var self = this;
 
 	if (!self.features.sort) {
@@ -469,15 +469,21 @@ GridTable.prototype._addSortingToHeader2 = function (orientation, spec, th, agg)
 	var sortIcon_menu_items = {};
 
 	if (spec.field != null || spec.groupFieldIndex != null) {
+		var name = spec.field != null
+			? spec.field
+			: spec.groupFieldIndex != null
+			? data.groupFields[spec.groupFieldIndex]
+			: 'Unknown'
+		;
 		sortIcon_menu_items[gensym()] = {
-			name: (spec.field || spec.groupFieldIndex) + ', Ascending',
+			name: name + ', Ascending',
 			icon: 'fa-sort-amount-asc',
 			callback: function () {
 				setSort('asc')
 			}
 		};
 		sortIcon_menu_items[gensym()] = {
-			name: (spec.field || spec.groupFieldIndex) + ', Descending',
+			name: name + ', Descending',
 			icon: 'fa-sort-amount-desc',
 			callback: function () {
 				setSort('desc')
@@ -909,7 +915,7 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			}
 		}
 		self.csv.addCol(text);
-		self._addSortingToHeader2('vertical', {aggType: what, aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'group'));
+		self._addSortingToHeader2(data, 'vertical', {aggType: what, aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'group'));
 		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 	});
 };
@@ -1409,7 +1415,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		// In the plain grid table output, the only way to sort is vertically by field.
 
-		self._addSortingToHeader2('vertical', {field: field}, headingTh);
+		self._addSortingToHeader2(data, 'vertical', {field: field}, headingTh);
 
 		/*
 		 * Configure filtering for this column.  This mainly involves creating a button, which when
@@ -2142,7 +2148,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.append(headingSpan)
 		;
 
-		self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, headingTh);
+		self._addSortingToHeader2(data, 'vertical', {groupFieldIndex: fieldIdx}, headingTh);
 
 		self.setCss(headingTh, fieldName);
 
@@ -2182,7 +2188,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.css(headingThCss)
 			.append(headingSpan);
 
-		self._addSortingToHeader2('vertical', {field: field}, headingTh);
+		self._addSortingToHeader2(data, 'vertical', {field: field}, headingTh);
 
 		self.setCss(headingTh, field);
 		self.setAlignment(headingTh, colConfig, typeInfo.get(field));
@@ -2506,7 +2512,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 
 		self.csv.addCol(field);
 
-		self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, th, getProp(data, 'agg', 'info', 'group'));
+		self._addSortingToHeader2(data, 'vertical', {groupFieldIndex: fieldIdx}, th, getProp(data, 'agg', 'info', 'group'));
 
 		self.setCss(th, field);
 
@@ -2682,7 +2688,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				.append(span)
 				._makeDraggableField();
 
-			self._addSortingToHeader2('vertical', {groupFieldIndex: fieldIdx}, th, getPropDef([], data, 'agg', 'info', 'cell'));
+			self._addSortingToHeader2(data, 'vertical', {groupFieldIndex: fieldIdx}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
 			self.setCss(th, field);
 
@@ -2806,7 +2812,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				// We only allow sorting on the final 
 
 				if (lastPivotField) {
-					self._addSortingToHeader2('vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
+					self._addSortingToHeader2(data, 'vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 				}
 
 				if (numCellAggregates === 1) {
@@ -2928,7 +2934,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			self.csv.addCol(span.text());
 
 			if (rowValIndex === data.groupFields.length - 1) {
-				self._addSortingToHeader2('horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
+				self._addSortingToHeader2(data, 'horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 			}
 		});
 
@@ -3075,7 +3081,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		// Add sorting to the header we just created.
 
-		self._addSortingToHeader2('horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
+		self._addSortingToHeader2(data, 'horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
 		_.each(data.colVals, function (colVal, colValIdx) {
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
