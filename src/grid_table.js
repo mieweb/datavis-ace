@@ -682,7 +682,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	self.root = root;
 
 	if (self.features.limit && self.defn.table.limit.method === 'more') {
-		self.scrollEventElement = self.opts.rootHasFixedHeight ? self.root : window;
+		self.scrollEventElement = self.opts.fixedHeight ? self.root : window;
 		jQuery(self.scrollEventElement).on(self.scrollEvents, function () {
 			if (typeof self.moreVisibleHandler === 'function') {
 				self.moreVisibleHandler();
@@ -851,7 +851,10 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 									 getProp(self.defn, 'table', 'floatingHeader', 'method'));
 				switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
 				case 'floatThead':
-					var floatTheadConfig = {};
+					var floatTheadConfig = {
+						zIndex: 1
+					};
+					console.log(self.opts);
 					if (self.opts.fixedHeight) {
 						floatTheadConfig.position = 'fixed';
 						floatTheadConfig.scrollContainer = true;
@@ -1672,8 +1675,6 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				tr.append(td);
 			}
 			else {
-				self.fire(GridTable.events.unlimited);
-
 				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': rowNum});
 				self.csv.addRow();
 
@@ -1729,6 +1730,10 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			self.ui.tr[rowNum] = tr;
 			self.ui.tbody.append(tr);
+		}
+
+		if (!atLimit) {
+			self.fire(GridTable.events.unlimited);
 		}
 
 		self._updateSelectionGui();

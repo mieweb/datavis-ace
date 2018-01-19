@@ -545,7 +545,9 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	self.addTitleWidgets(self.ui.titlebar, doingServerFilter, !!self.tagOpts.runImmediately, id);
 
-	self.ui.content = jQuery('<div>').appendTo(self.ui.root);
+	self.ui.content = jQuery('<div>', {
+		'class': 'wcdv_grid_content'
+	}).appendTo(self.ui.root);
 
 	self.ui.toolbar = jQuery('<div>')
 		.addClass('wcdv_grid_toolbar')
@@ -1346,7 +1348,6 @@ Grid.prototype.redraw = function () {
 		else {
 			gridTableCtor = GridTablePlain;
 			gridTableOpts = deepCopy(self.defn.table.whenPlain);
-			gridTableOpts.rootHasFixedHeight = self.rootHasFixedHeight;
 
 			debug.info('GRID', 'Creating plain grid table');
 

@@ -55,6 +55,7 @@ li.wcdv_aggregate_field {
 	cursor: pointer;
 	line-height: 29px;
 	padding-left: 0.5em;
+	flex: 0 0 0;
 }
 .wcdv_grid_titlebar strong {
 	font-size: 1.2em;
@@ -81,6 +82,15 @@ li.wcdv_aggregate_field {
 .wcdv_grid_titlebar .showhide:hover,
 .wcdv_grid_titlebar .showhide:active {
 	color: white;
+}
+
+/******************************************************************************/
+
+.wcdv_grid_content {
+	flex: auto;
+
+	display: flex;
+	flex-direction: column;
 }
 
 /******************************************************************************/
