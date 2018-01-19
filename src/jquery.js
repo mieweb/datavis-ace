@@ -6,13 +6,14 @@ jQuery.fn.extend({
 		return jQuery(this).attr('disabled');
 	},
 	_makeDraggableField: function () {
-		return jQuery(this)
+		return this
 			.draggable({
 				classes: {
 					'ui-draggable-handle': 'wcdv_drag_handle'
 				},
 				distance: 8, // FIXME Deprecated [1.12]: replacement will be in 1.13
 				helper: 'clone',
+				appendTo: document.body,
 				revert: true,
 				revertDuration: 0
 			});
