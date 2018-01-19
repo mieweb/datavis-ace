@@ -352,6 +352,7 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 	background-color: #EEE;
 	padding: 4px;
 	border-radius: 4px;
+	z-index: 1;
 
 	/*
 	 * Without negative margin, the extra space in the span causes the table column sizes to be
