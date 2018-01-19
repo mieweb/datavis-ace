@@ -150,8 +150,8 @@ mixinEventHandling(View, function (self) {
 	return 'VIEW (' + self.name + ')';
 }, [
 		'getTypeInfo'  // Type information has been retrieved from the source.
-	, 'workBegin'    // ???
-	, 'workEnd'      // ???
+	, 'workBegin'    // The view has started operating on the data.
+	, 'workEnd'      // The view has finished operating on the data.
 	, 'dataUpdated'  // The data has changed in the source.
 
 	, 'sortSet'      // When the sort has been set.  Args: (field, direction)

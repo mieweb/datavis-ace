@@ -150,6 +150,8 @@ GridTable.prototype.constructor = GridTable;
 mixinEventHandling(GridTable, 'GridTable', [
 		'columnResize' // Fired when a column is resized.
 	, 'unableToRender' // Fired when a grid table can't render the data in the view it's bound to.
+	, 'limited' // Fired when the grid table isn't rendering all possible rows.
+	, 'unlimited' // Fired when the grid table is rendering all possible rows.
 ]);
 
 // #_validateFeatures {{{2
@@ -1626,6 +1628,8 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 				atLimit = true;
 
+				self.fire(GridTable.events.limited);
+
 				tr = jQuery('<tr>').addClass('wcdvgrid_more');
 
 				var colSpan = columns.length
@@ -1668,6 +1672,8 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				tr.append(td);
 			}
 			else {
+				self.fire(GridTable.events.unlimited);
+
 				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': rowNum});
 				self.csv.addRow();
 

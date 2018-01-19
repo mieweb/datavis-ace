@@ -580,11 +580,13 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 			self.addPrefsButtons(self.ui.toolbar_prefs);
 		}
 
-		self.ui.toolbar_plain = jQuery('<div>')
-			.addClass('wcdv_toolbar_section')
-			.hide()
-			.appendTo(self.ui.toolbar);
-		self.addPlainButtons(self.ui.toolbar_plain);
+		if (self.features.limit) {
+			self.ui.toolbar_limit = jQuery('<div>')
+				.addClass('wcdv_toolbar_section')
+				.hide()
+				.appendTo(self.ui.toolbar);
+			self.addLimitButtons(self.ui.toolbar_limit);
+		}
 
 		self.ui.toolbar_group = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
@@ -910,7 +912,7 @@ Grid.prototype.addCommonButtons = function (toolbar) {
 		.appendTo(toolbar);
 };
 
-// #addPlainButtons {{{2
+// #addLimitButtons {{{2
 
 /**
  * Add plain-related controls to the grid's toolbar.
@@ -921,7 +923,7 @@ Grid.prototype.addCommonButtons = function (toolbar) {
  * @method
  */
 
-Grid.prototype.addPlainButtons = function (parent) {
+Grid.prototype.addLimitButtons = function (parent) {
 	var self = this;
 
 	if (self.features.limit) {
@@ -1319,7 +1321,7 @@ Grid.prototype.redraw = function () {
 
 			debug.info('GRID', 'Creating pivot grid table');
 
-			self.ui.toolbar_plain.hide();
+			self.ui.toolbar_limit.hide();
 			self.ui.toolbar_group.hide();
 			self.ui.toolbar_pivot.show();
 		}
@@ -1337,7 +1339,7 @@ Grid.prototype.redraw = function () {
 
 			debug.info('GRID', 'Creating group grid table');
 
-			self.ui.toolbar_plain.hide();
+			self.ui.toolbar_limit.hide();
 			self.ui.toolbar_group.show();
 			self.ui.toolbar_pivot.hide();
 		}
@@ -1348,7 +1350,7 @@ Grid.prototype.redraw = function () {
 
 			debug.info('GRID', 'Creating plain grid table');
 
-			self.ui.toolbar_plain.show();
+			self.ui.toolbar_limit.hide();
 			self.ui.toolbar_group.hide();
 			self.ui.toolbar_pivot.hide();
 		}
@@ -1362,6 +1364,12 @@ Grid.prototype.redraw = function () {
 		self.ui.exportBtn.attr('disabled', true);
 		self.gridTable = new gridTableCtor(self, self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
 		self.gridTable.on(GridTable.events.unableToRender, makeGridTable);
+		self.gridTable.on(GridTable.events.limited, function () {
+			self.ui.toolbar_limit.show();
+		});
+		self.gridTable.on(GridTable.events.unlimited, function () {
+			self.ui.toolbar_limit.hide();
+		});
 		self.gridTable.draw(self.ui.grid, function () {
 			self.ui.exportBtn.attr('disabled', false);
 			self.tableDoneCont();
