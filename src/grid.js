@@ -1763,12 +1763,22 @@ Grid.prototype.export = function () {
 		form.remove();
 	}
 	else {
-		var a = document.createElement('a');
-		a.download = fileName;
-		a.href = URL.createObjectURL(new Blob([csv], {'type': contentType}));
-		jQuery(document.body).append(a);
-		a.click();
-		a.remove();
+		var blob = new Blob([csv], {'type': contentType});
+
+		// IE11 supports Blob, but doesn't allow you to fake a click on the download link.  Fortunately
+		// for us, it has a function which does all of that for you in one step!
+
+		if (window.navigator.msSaveBlob != null) {
+			window.navigator.msSaveBlob(blob, fileName);
+		}
+		else {
+			var a = document.createElement('a');
+			a.download = fileName;
+			a.href = URL.createObjectURL(blob);
+			jQuery(document.body).append(a);
+			a.click();
+			a.remove();
+		}
 	}
 };
 

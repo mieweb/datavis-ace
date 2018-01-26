@@ -353,7 +353,7 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 }
 
 .wcdv_drag_handle.ui-draggable {
-	cursor: move;
+	cursor: pointer;
 }
 
 .wcdv_drag_handle.ui-draggable-dragging {

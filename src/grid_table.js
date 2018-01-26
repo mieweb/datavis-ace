@@ -23,7 +23,7 @@
 var Csv = makeSubclass(Object, function (opts) {
 	var self = this;
 
-	self.lastRowId = -1;
+	self.lastRowId = -2;
 	self.opts = opts || {};
 
 	_.defaults(self.opts, {
@@ -72,6 +72,7 @@ Csv.prototype.clear = function () {
 	self.lastRowId = -1;
 	self.data = [];
 	self.lastRow = null;
+	self.order = null;
 };
 
 // #toString {{{2
@@ -81,11 +82,14 @@ Csv.prototype.toString = function () {
 
 	var s = '';
 	var sep = '"' + self.opts.separator + '"';
-	for (var i = 0; i < self.data.length; i += 1) {
+	var len = self.order != null ? self.order.length : self.data.length;
+
+	for (i = 0; i < len; i += 1) {
+		row = self.order != null ? self.getRowById(self.order[i]) : self.data[i];
 		if (i > 0) {
 			s += '\r\n';
 		}
-		s += '"' + self.data[i].rowData.map(function (s) {
+		s += '"' + row.rowData.map(function (s) {
 			return s.replace('"', '""');
 		}).join(sep) + '"';
 	}
@@ -93,22 +97,37 @@ Csv.prototype.toString = function () {
 	return s;
 };
 
+// #getRowById {{{2
+
+Csv.prototype.getRowById = function (rowId) {
+	var self = this;
+
+	return self.data[rowId].rowId === rowId
+		? self.data[rowId]
+		: _.findWhere(self.data, {rowId: rowId});
+};
+
 // #updateVisibility {{{2
 
 Csv.prototype.updateVisibility = function (rowId, hide) {
 	var self = this;
+	var row = self.getRowById(rowId);
 
-	if (self.data[rowId].rowId === rowId) {
-		self.data[rowId].rowId.hidden = hide;
+	if (row != null) {
+		row.hidden = hide;
 	}
-	else {
-		var matchingRow = _.findWhere(self.data, {
-			rowId: rowId
-		});
-		if (matchingRow != null) {
-			matchingRow.hidden = hide;
-		}
+};
+
+// #setOrder {{{2
+
+Csv.prototype.setOrder = function (rowId, pos) {
+	var self = this;
+
+	if (self.order == null) {
+		self.order = [];
 	}
+
+	self.order[pos] = rowId;
 };
 
 // GridTable {{{1
@@ -651,23 +670,25 @@ GridTable.prototype.addSortHandler = function () {
 	self.view.off('sort');
 
 	if (self.features.sort) {
-		if (self.features.limit) {
+//		if (self.features.limit) {
 			self.view.on('sortEnd', function () {
 				debug.info('GRID TABLE // HANDLER (View.sortEnd)', 'Marking table to be redrawn');
 				self.needsRedraw = true;
 			}, { who: self });
-		}
-		else {
-			self.view.on('sort', function (rowNum, position) {
-				var elt = jQuery(document.getElementById(self.defn.table.id + '_' + rowNum));
-
-				// Add one to the position (which is 0-based) to match the 1-based row number in CSS.
-
-				elt.removeClass('even odd');
-				elt.addClass((position + 1) % 2 === 0 ? 'even' : 'odd');
-				self.ui.tbody.append(elt);
-			}, { who: self });
-		}
+//		}
+//		else {
+//			self.view.on('sort', function (rowNum, position) {
+//				var elt = jQuery(document.getElementById(self.defn.table.id + '_' + rowNum));
+//
+//				// Add one to the position (which is 0-based) to match the 1-based row number in CSS.
+//
+//				elt.removeClass('even odd');
+//				elt.addClass((position + 1) % 2 === 0 ? 'even' : 'odd');
+//				self.ui.tbody.append(elt);
+//
+//				self.csv.setOrder(rowNum, position);
+//			}, { who: self });
+//		}
 	}
 };
 
@@ -691,34 +712,34 @@ GridTable.prototype.addFilterHandler = function () {
 
 	self.view.off('filter');
 
-	if (self.features.limit || self.view.opts.saveViewConfig) {
+//	if (self.features.limit || self.view.opts.saveViewConfig) {
 		self.view.on(View.events.filterEnd, function () {
 			debug.info('GRID TABLE // HANDLER (View.filterEnd)', 'Marking table to be redrawn');
 			self.needsRedraw = true;
 		}, { who: self });
-	}
-	else {
-		var even = false; // Rows are 1-based to match our CSS zebra-striping.
-
-		self.view.on(View.events.filter, function (rowNum, hide) {
-			if (isNothing(self.ui.tr[rowNum])) {
-				debug.info('GRID TABLE // HANDLER (View.filter)', 'We were told to ' + (hide ? 'hide' : 'show') + ' row ' + rowNum + ', but it doesn\'t exist');
-				return;
-			}
-
-			self.ui.tr[rowNum].removeClass('even odd');
-			if (hide) {
-				self.ui.tr[rowNum].hide();
-			}
-			else {
-				self.ui.tr[rowNum].show();
-				self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
-				even = !even;
-			}
-
-			self.csv.updateVisibility(rowNum, hide);
-		}, { who: self });
-	}
+//	}
+//	else {
+//		var even = false; // Rows are 1-based to match our CSS zebra-striping.
+//
+//		self.view.on(View.events.filter, function (rowNum, hide) {
+//			if (isNothing(self.ui.tr[rowNum])) {
+//				debug.info('GRID TABLE // HANDLER (View.filter)', 'We were told to ' + (hide ? 'hide' : 'show') + ' row ' + rowNum + ', but it doesn\'t exist');
+//				return;
+//			}
+//
+//			self.ui.tr[rowNum].removeClass('even odd');
+//			if (hide) {
+//				self.ui.tr[rowNum].hide();
+//			}
+//			else {
+//				self.ui.tr[rowNum].show();
+//				self.ui.tr[rowNum].addClass(even ? 'even' : 'odd');
+//				even = !even;
+//			}
+//
+//			self.csv.updateVisibility(rowNum, hide);
+//		}, { who: self });
+//	}
 };
 
 // #draw {{{2
