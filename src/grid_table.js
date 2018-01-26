@@ -2985,7 +2985,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		th.attr('colspan', colSpan);
 		tr.append(th);
 
-		for (var i = 0; i < lastColValCount - 1; i += 1) {
+		for (var i = 0; i < colSpan - 1; i += 1) {
 			self.csv.addCol('');
 		}
 
@@ -3193,6 +3193,13 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		self._addSortingToHeader2(data, 'horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
 		_.each(data.colVals, function (colVal, colValIdx) {
+			// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
+			// we can't do rowspan in CSV like we can in HTML.
+
+			for (var i = 0; i < aggNum; i += 1) {
+				self.csv.addCol('');
+			}
+
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
 			if (aggInfo.instance.inheritFormatting) {
 				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
@@ -3219,6 +3226,13 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			self.csv.addCol(text);
 			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 			td.appendTo(tr);
+
+			// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
+			// we can't do rowspan in CSV like we can in HTML.
+
+			for (var i = aggNum + 1; i < getPropDef(0, data, 'agg', 'info', 'pivot', 'length'); i += 1) {
+				self.csv.addCol('');
+			}
 		});
 
 		// =========================================================================
