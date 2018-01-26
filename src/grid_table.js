@@ -2669,6 +2669,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 
 	_.each(data.data, function (rowGroup, groupNum) {
 		var tr = jQuery('<tr>');
+		self.csv.addRow();
 
 		self.drawBody_rowVals(data, tr, groupNum);
 		self.drawBody_aggregates(data, tr, groupNum);
