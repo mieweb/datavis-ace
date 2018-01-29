@@ -682,11 +682,18 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		}
 	};
 
+	self.view.on(View.events.fetchDataBegin, function () {
+		self.setSpinner('loading');
+		self.showSpinner();
+	});
+	self.view.on(View.events.fetchDataEnd, function () {
+		self.hideSpinner();
+	});
+
 	self.view.on(View.events.workBegin, function () {
 		self.setSpinner('working');
 		self.showSpinner();
 	});
-
 	self.view.on(View.events.workEnd, function (info, ops) {
 		self.hideSpinner();
 		self.updateRowCount(info, ops);
@@ -1254,11 +1261,9 @@ Grid.prototype.redraw = function () {
 		return;
 	}
 
-	debug.info('GRID', 'Refreshing...');
+	debug.info('GRID', 'Redrawing...');
 
 	if (self.tagOpts.title) {
-		self.setSpinner('loading');
-		self.showSpinner();
 		self.ui.rowCount.text('');
 	}
 
@@ -1422,7 +1427,6 @@ Grid.prototype.updateRowCount = function (info, ops) {
 		, doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
 
 	debug.info('GRID', 'Updating row count');
-	self.setSpinner('working');
 
 	// When there's no titlebar, there's nothing for us to do here.
 

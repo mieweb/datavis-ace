@@ -136,23 +136,25 @@ View.prototype.constructor = View;
 mixinEventHandling(View, function (self) {
 	return 'VIEW (' + self.name + ')';
 }, [
-		'getTypeInfo'  // Type information has been retrieved from the source.
-	, 'workBegin'    // The view has started operating on the data.
-	, 'workEnd'      // The view has finished operating on the data.
-	, 'dataUpdated'  // The data has changed in the source.
+		'fetchDataBegin' // Started fetching data from the source.
+	, 'fetchDataEnd'   // Done fetching data from the source.
+	, 'getTypeInfo'    // Type information has been retrieved from the source.
+	, 'dataUpdated'    // The data has changed in the source.
+	, 'workBegin'      // The view has started operating on the data.
+	, 'workEnd'        // The view has finished operating on the data.
 
-	, 'sortSet'      // When the sort has been set.  Args: (field, direction)
-	, 'filterSet'    // When the filter has been set.  Args: (spec)
-	, 'groupSet'     // When the grouping has been set.  Args: (spec)
-	, 'pivotSet'     // When the pivot config has been set.  Args: (spec)
-	, 'aggregateSet' // When the aggregate config has been set.  Args: (spec)
+	, 'sortSet'        // When the sort has been set.  Args: (field, direction)
+	, 'filterSet'      // When the filter has been set.  Args: (spec)
+	, 'groupSet'       // When the grouping has been set.  Args: (spec)
+	, 'pivotSet'       // When the pivot config has been set.  Args: (spec)
+	, 'aggregateSet'   // When the aggregate config has been set.  Args: (spec)
 
-	, 'sortBegin'    // A sort operation has started.
-	, 'sort'         // Sort information for a row is available.
-	, 'sortEnd'      // A sort operation has finished.
-	, 'filterBegin'  // A filter operation has started.
-	, 'filter'       // Filter information for a row is available.
-	, 'filterEnd'    // A filter operation has finished.
+	, 'sortBegin'      // A sort operation has started.
+	, 'sort'           // Sort information for a row is available.
+	, 'sortEnd'        // A sort operation has finished.
+	, 'filterBegin'    // A filter operation has started.
+	, 'filter'         // Filter information for a row is available.
+	, 'filterEnd'      // A filter operation has finished.
 ]);
 
 // #getRowCount {{{2
@@ -1916,9 +1918,11 @@ View.prototype.getData = function (cont) {
 
 	self.lock.lock();
 
-	self.fire(View.events.workBegin);
+	self.fire(View.events.fetchDataBegin);
 	return self.source.getData(function (data) {
 		return self.getTypeInfo(function (typeInfo) {
+			self.fire(View.events.fetchDataEnd);
+			self.fire(View.events.workBegin);
 			self.typeInfo = typeInfo;
 
 			if (self.opts.saveViewConfig && !self.prefsLoaded) {
