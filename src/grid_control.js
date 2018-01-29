@@ -46,6 +46,8 @@
  *
  * @property {object} colConfig
  *
+ * @property {object} [opts]
+ *
  * @property {object} ui
  * Refers to all user interface constructs that we might need to use later.
  *
@@ -56,13 +58,14 @@
  * A button that is used to remove the control field.
  */
 
-var GridControlField = makeSubclass(Object, function (control, field, displayText, colConfig) {
+var GridControlField = makeSubclass(Object, function (control, field, displayText, colConfig, opts) {
 	var self = this;
 
 	self.control = control;
 	self.field = field;
 	self.displayText = displayText;
 	self.colConfig = colConfig;
+	self.opts = opts;
 	self.ui = {};
 });
 
@@ -154,6 +157,16 @@ FilterControlField.prototype.draw = function () {
 // AggregateControlField {{{1
 // Constructor {{{2
 
+/**
+ * @property {object} [opts]
+ *
+ * @property {string[]} [opts.fields]
+ * List of the fields used by the aggregate function.
+ *
+ * @property {object} [aggFunOpts]
+ * Options passed to the aggregate function.
+ */
+
 var AggregateControlField = makeSubclass(GridControlField, function () {
 	var self = this;
 
@@ -207,9 +220,26 @@ AggregateControlField.prototype.draw = function () {
 
 	_.each(availableFields(self.control.defn, null, self.control.typeInfo), function (fieldName) {
 		var text = getProp(self.control.colConfig, fieldName, 'displayText') || fieldName;
-		_.each(self.fieldDropdowns, function (dropdown) {
+		_.each(self.fieldDropdowns, function (dropdown, i) {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(dropdown);
 		});
+	});
+
+	// For each field dropdown, set its value to whatever we received.  This has the effect of making
+	// the user interface match the internal aggregate configuration.
+
+	_.each(self.fieldDropdowns, function (dropdown, i) {
+		if (getProp(self.opts, 'fields', i)) {
+			var matchingOption = dropdown.children('option').filter(function (eltIndex, elt) {
+				return jQuery(elt).attr('value') === self.opts.fields[i];
+			});
+			if (matchingOption.length === 0) {
+				jQuery('<option>', { 'value': self.opts.fields[i] })
+					.text(self.opts.fields[i] + ' — Invalid')
+					.appendTo(dropdown);
+			}
+			dropdown.val(self.opts.fields[i]);
+		}
 	});
 
 	return self.ui.root;
@@ -258,7 +288,7 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			.append('OK')
 			.on('click', function () {
 				console.log('OK!');
-				self.opts = opts;
+				self.aggFunOpts = opts;
 				self.control.updateView();
 				self.ui.optionsDialog.dialog('close');
 			}))
@@ -305,13 +335,13 @@ AggregateControlField.prototype.getInfo = function () {
 			return dropdown.val();
 		}),
 		name: null,
-		opts: _.mapObject(self.opts, function (input, optName) {
+		opts: _.mapObject(self.aggFunOpts, function (input, optName) {
 			return input.val();
 		})
 	};
 };
 
-// #showError {{{1
+// #showError {{{2
 
 AggregateControlField.prototype.showError = function (errMsg) {
 	var self = this;
@@ -448,7 +478,7 @@ GridControl.prototype.makeClearButton = function (target) {
  * Name of the field to add.
  */
 
-GridControl.prototype.addField = function (field, displayText, opts) {
+GridControl.prototype.addField = function (field, displayText, opts, controlFieldOpts) {
 	var self = this;
 
 	opts = opts || {};
@@ -462,7 +492,7 @@ GridControl.prototype.addField = function (field, displayText, opts) {
 		return;
 	}
 
-	var cf = new self.controlFieldCtor(self, field, displayText, self.useColConfig ? self.colConfig[field] : null);
+	var cf = new self.controlFieldCtor(self, field, displayText, self.useColConfig ? self.colConfig[field] : null, controlFieldOpts);
 	self.controlFields.push(cf);
 
 	self.ui.clearBtn.show();
@@ -1063,7 +1093,9 @@ AggregateControl.prototype.addViewConfigChangeHandler = function () {
 				'View set aggregate to: ' + JSON.stringify(spec.all));
 
 			_.each(spec.all, function (agg) {
-				self.addField(agg.fun, AGGREGATE_REGISTRY.get(agg.fun).prototype.name, { updateView: false });
+				self.addField(agg.fun, AGGREGATE_REGISTRY.get(agg.fun).prototype.name, { updateView: false }, {
+					fields: agg.fields
+				});
 			});
 		}
 	};
