@@ -1,12 +1,10 @@
 // ViewError {{{1
 
-function ViewError(msg) {
-	this.message = msg;
-}
+var ViewError = makeSubclass(DataVisError);
 
-ViewError.prototype = Object.create(Error.prototype);
-ViewError.prototype.name = 'ViewError';
-ViewError.prototype.constructor = ViewError;
+// InvalidAggregateError {{{1
+
+var InvalidAggregateError = makeSubclass(ViewError);
 
 // View {{{1
 // JSDoc Types {{{2
@@ -155,6 +153,8 @@ mixinEventHandling(View, function (self) {
 	, 'filterBegin'    // A filter operation has started.
 	, 'filter'         // Filter information for a row is available.
 	, 'filterEnd'      // A filter operation has finished.
+
+	, 'invalidAggregate'
 ]);
 
 // #getRowCount {{{2
@@ -1743,84 +1743,109 @@ View.prototype.aggregate = function (cont) {
 		all: []
 	};
 
+	var makeAggInfo = function (aggType, spec, aggNum) {
+		var aggInfo = {
+			name: spec.name,
+			fields: [],
+			colConfig: [],
+			typeInfo: []
+		};
+
+		if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
+			throw new Error('No such aggregate function: "' + spec.fun + '"' +
+				(spec.name ? ' (output name = "' + spec.name + '")' : ''));
+		}
+
+		var ctorOpts = {};
+
+		if (spec.fields) {
+			aggInfo.fields = spec.fields;
+			aggInfo.colConfig = _.map(spec.fields, function (f) {
+				return self.colConfig[f];
+			});
+			aggInfo.typeInfo = _.map(spec.fields, function (f) {
+				return self.typeInfo.get(f);
+			});
+
+			// Perform type decoding if needed, before we calculate the aggregate results.  This is
+			// needed when doing aggregates like "values" and "distinct values" to make sure they're
+			// formatted right by the aggregate function itself.
+
+			_.each(aggInfo.typeInfo, function (fti, i) {
+				if (fti == null) {
+					throw new InvalidAggregateError('Aggregate function applied to unknown field: "' + spec.fields[i] + '"');
+				}
+
+				if (fti.needsDecoding) {
+					if (!fti.field) {
+						log.error('Unable to sort: cannot decode unknown field {typeInfo = %O}', fti);
+						return;
+					}
+
+					debug.info('VIEW (' + self.name + ') // AGGREGATE', 'Decoding data {typeInfo = %O}', fti);
+
+					if (self.data.isPlain) {
+						self.source.convertAll(self.data.data, fti.field);
+					}
+					else {
+						_.each(self.data.data, function (groupedRows) {
+							if (self.data.isGroup) {
+								self.source.convertAll(groupedRows, fti.field);
+							}
+							else {
+								_.each(groupedRows, function (pivottedRows) {
+									self.source.convertAll(pivottedRows, fti.field);
+								});
+							}
+						});
+					}
+
+					fti.deferDecoding = false;
+					fti.needsDecoding = false;
+				}
+			});
+
+			ctorOpts.fields = aggInfo.fields;
+			ctorOpts.colConfig = aggInfo.colConfig;
+			ctorOpts.typeInfo = aggInfo.typeInfo;
+		}
+
+		_.extend(ctorOpts, spec.opts);
+
+		aggInfo.instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
+		return aggInfo;
+	};
+
 	// Initialize the informational data structures.
 
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		_.each(self.aggregateSpec[what], function (spec, aggNum) {
-			if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
-				throw new Error('No such aggregate function: "' + spec.fun + '"' +
-					(spec.name ? ' (output name = "' + spec.name + '")' : ''));
+			try {
+				info[what][aggNum] = makeAggInfo(what, spec, aggNum);
 			}
+			catch (e) {
+				if (e instanceof InvalidAggregateError) {
+					// Let the UI know there was a problem with this aggregate, so the user can fix it or
+					// remove the aggregate from the output entirely.
+					log.error('Invalid Aggregate: ' + what + '[' + aggNum + '] - ' + e.message);
+					self.fire(View.events.invalidAggregate, aggNum, e.msg);
+				}
 
-			info[what][aggNum] = {
-				name: spec.name,
-				fields: [],
-				colConfig: [],
-				typeInfo: []
-			};
-
-			var ctorOpts = {};
-
-			if (spec.fields) {
-				info[what][aggNum].fields = spec.fields;
-				info[what][aggNum].colConfig = _.map(spec.fields, function (f) {
-					return self.colConfig[f];
-				});
-				info[what][aggNum].typeInfo = _.map(spec.fields, function (f) {
-					return self.typeInfo.get(f);
-				});
-
-				// Perform type decoding if needed, before we calculate the aggregate results.  This is
-				// needed when doing aggregates like "values" and "distinct values" to make sure they're
-				// formatted right by the aggregate function itself.
-
-				_.each(info[what][aggNum].typeInfo, function (fti) {
-					if (fti.needsDecoding) {
-						if (!fti.field) {
-							log.error('Unable to sort: cannot decode unknown field {typeInfo = %O}', fti);
-							return;
-						}
-
-						debug.info('VIEW (' + self.name + ') // AGGREGATE', 'Decoding data {typeInfo = %O}', fti);
-
-						if (self.data.isPlain) {
-							self.source.convertAll(self.data.data, fti.field);
-						}
-						else {
-							_.each(self.data.data, function (groupedRows) {
-								if (self.data.isGroup) {
-									self.source.convertAll(groupedRows, fti.field);
-								}
-								else {
-									_.each(groupedRows, function (pivottedRows) {
-										self.source.convertAll(pivottedRows, fti.field);
-									});
-								}
-							});
-						}
-
-						fti.deferDecoding = false;
-						fti.needsDecoding = false;
-					}
-				});
-
-				ctorOpts.fields = info[what][aggNum].fields;
-				ctorOpts.colConfig = info[what][aggNum].colConfig;
-				ctorOpts.typeInfo = info[what][aggNum].typeInfo;
+				// Set the aggregate to null so it can be removed later.
+				info[what][aggNum] = null;
 			}
-
-			_.extend(ctorOpts, spec.opts);
-
-			info[what][aggNum].instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
 		});
+
+		// Strip out any aggregates which resulted in errors earlier.
+		info[what] = _.without(info[what], null);
 	});
 
 	_.each(self.data.rowVals, function (rowVal, rowValIdx) {
-		_.each(self.aggregateSpec.group, function (spec, aggNum) {
+		_.each(info.group, function (aggInfo, aggNum) {
 			if (groupResults[aggNum] === undefined) {
 				groupResults[aggNum] = [];
 			}
-			var aggResult = info.group[aggNum].instance.calculate(_.flatten(self.data.data[rowValIdx]));
+			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data[rowValIdx]));
 			groupResults[aggNum][rowValIdx] = aggResult;
 			//debug.info('VIEW // AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %O',
 			//	aggNum,
@@ -1830,14 +1855,14 @@ View.prototype.aggregate = function (cont) {
 		});
 
 		if (self.data.isPivot) {
-			_.each(self.aggregateSpec.cell, function (spec, aggNum) {
+			_.each(info.cell, function (aggInfo, aggNum) {
 				if (cellResults[aggNum] === undefined) {
 					cellResults[aggNum] = [];
 				}
 				cellResults[aggNum][rowValIdx] = [];
 
 				_.each(self.data.colVals, function (colVal, colValIdx) {
-					var aggResult = info.cell[aggNum].instance.calculate(self.data.data[rowValIdx][colValIdx]);
+					var aggResult = aggInfo.instance.calculate(self.data.data[rowValIdx][colValIdx]);
 
 					//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Cell [%s ; %s] = %O',
 					//	aggNum,
@@ -1852,12 +1877,12 @@ View.prototype.aggregate = function (cont) {
 		}
 	});
 
-	if (self.data.isPivot && self.aggregateSpec.pivot) {
-		_.each(self.aggregateSpec.pivot, function (spec, aggNum) {
+	if (self.data.isPivot && info.pivot) {
+		_.each(info.pivot, function (aggInfo, aggNum) {
 			pivotResults[aggNum] = [];
 
 			_.each(self.data.colVals, function (colVal, colValIdx) {
-				var aggResult = info.pivot[aggNum].instance.calculate(_.flatten(_.pluck(self.data.data, colValIdx)));
+				var aggResult = aggInfo.instance.calculate(_.flatten(_.pluck(self.data.data, colValIdx)));
 				pivotResults[aggNum][colValIdx] = aggResult;
 				//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %O',
 				//	aggNum,
@@ -1868,9 +1893,9 @@ View.prototype.aggregate = function (cont) {
 		});
 	}
 
-	if (self.data.isPivot && self.aggregateSpec.all) {
-		_.each(self.aggregateSpec.all, function (spec, aggNum) {
-			var aggResult = info.all[aggNum].instance.calculate(_.flatten(self.data.data));
+	if (self.data.isPivot && info.all) {
+		_.each(info.all, function (aggInfo, aggNum) {
+			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data));
 			//debug.info('VIEW // AGGREGATE', 'All aggregate [%d] (%s) = %O',
 			//	aggNum,
 			//	info.all[aggNum].instance.name + (info.all[aggNum].name ? ' -> ' + info.all[aggNum].name : ''),

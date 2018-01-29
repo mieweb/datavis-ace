@@ -98,6 +98,11 @@
 	$INCLUDE('src/jquery.js');
 	$INCLUDE('src/util.js');
 	$INCLUDE('src/ordmap.js');
+
+	var DataVisError = makeSubclass(Error, function (msg) {
+		this.message = msg;
+	});
+
 	$INCLUDE('src/prefs.js');
 	$INCLUDE('src/aggregates.js');
 	$INCLUDE('src/source.js');
@@ -127,6 +132,7 @@
 	window.MIE.WC_DataVis.graphs             = [];
 	window.MIE.WC_DataVis.Prefs              = Prefs;
 	window.MIE.WC_DataVis.EXPORT_URL         = 'export.php';
+	window.MIE.WC_DataVis.Error              = DataVisError;
 })(jQuery);
 
 // vim:set ft=javascript:
