@@ -211,7 +211,10 @@ AggregateControlField.prototype.draw = function () {
 	for (var i = 0; i < aggDefn.prototype.fieldCount; i += 1) {
 		var li = jQuery('<li>').addClass('wcdv_aggregate_field').appendTo(fieldList);
 		var select = jQuery('<select>')
-			.on('change', function () {
+			.on('change', function (evt) {
+				select.children('option[data-wcdv-bad-field]').filter(function (eltIndex, elt) {
+					return jQuery(elt).attr('value') !== select.val();
+				}).remove();
 				self.control.updateView();
 			})
 			.appendTo(li);
@@ -233,11 +236,20 @@ AggregateControlField.prototype.draw = function () {
 			var matchingOption = dropdown.children('option').filter(function (eltIndex, elt) {
 				return jQuery(elt).attr('value') === self.opts.fields[i];
 			});
+
+			// When the field in the configuration isn't in the dropdown (i.e. it's not in colConfig) then
+			// we need to make an entry for it.  This happens when the aggregate spec from prefs refers to
+			// a field that no longer exists in the data.
+
 			if (matchingOption.length === 0) {
-				jQuery('<option>', { 'value': self.opts.fields[i] })
+				jQuery('<option>', {
+					'value': self.opts.fields[i],
+					'data-wcdv-bad-field': 'yup'
+				})
 					.text(self.opts.fields[i] + ' — Invalid')
 					.appendTo(dropdown);
 			}
+
 			dropdown.val(self.opts.fields[i]);
 		}
 	});
