@@ -263,6 +263,23 @@ li.wcdv_aggregate_field {
 	padding: 4px;
 }
 
+/* AGGREGATE CONTROL */
+
+.wcdv_aggregate_control_error {
+	margin-left: 4px;
+	color: #FF9800;
+	cursor: help;
+}
+
+.ui-widget.ui-widget-content.wcdv_aggregate_control_error_tooltip {
+	border: solid 2px #FF9800;
+	border-top-width: 10px;
+	font-size: 0.85em;
+	padding: 4px 6px 4px 6px;
+}
+
+/* FILTER CONTROL */
+
 .wcdv_filter_control ul li .wcdv_field {
 	display: flex;
 	align-items: center;

@@ -19,6 +19,8 @@
 // Constructor {{{2
 
 /**
+ * @class
+ *
  * Represents an individual field added to a control.  In an older iteration, this literally
  * corresponded to a field in the data (e.g. because the control was a filter, group, or pivot).
  * Now that aggregate functions are also managed through a GridControl subclass, the "field" name is
@@ -168,6 +170,15 @@ AggregateControlField.prototype.draw = function () {
 
 	var aggDefn = AGGREGATE_REGISTRY.get(self.field);
 
+	self.ui.error = fontAwesome('fa-exclamation-triangle', 'wcdv_aggregate_control_error')
+		.hide()
+		.tooltip({
+			classes: {
+				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_aggregate_control_error_tooltip'
+			}
+		})
+		.appendTo(self.ui.root);
+
 	if (aggDefn.prototype.options != null) {
 		jQuery('<button>', {
 			title: 'Edit Options'
@@ -300,6 +311,15 @@ AggregateControlField.prototype.getInfo = function () {
 	};
 };
 
+// #showError {{{1
+
+AggregateControlField.prototype.showError = function (errMsg) {
+	var self = this;
+
+	self.ui.error.attr('title', errMsg);
+	self.ui.error.show();
+};
+
 // GridControl {{{1
 
 // Constructor {{{2
@@ -318,6 +338,13 @@ AggregateControlField.prototype.getInfo = function () {
  * - `updateView()`
  *   Use `self.fields` to set whatever properties are needed on the view.
  *
+ * @property {Grid} grid
+ * @property {object} defn
+ * @property {View} view
+ * @property {object} features
+ * @property {Timing} timing
+ * @property {object} [colConfig]
+ *
  * @property {Array.<string>} fields
  * List of all the fields selected by the user.
  *
@@ -334,11 +361,11 @@ AggregateControlField.prototype.getInfo = function () {
 var GridControl = makeSubclass(Object, function (grid, defn, view, features, timing) {
 	var self = this;
 
+	self.grid = grid;
 	self.defn = defn;
 	self.view = view;
 	self.features = features;
 	self.timing = timing;
-	self.ui = {};
 
 	if (self.useColConfig) {
 		self.colConfig = _.indexBy(getPropDef({}, self.defn, 'table', 'columns'), 'field');
@@ -346,6 +373,8 @@ var GridControl = makeSubclass(Object, function (grid, defn, view, features, tim
 
 	self.fields = [];
 	self.controlFields = [];
+
+	self.ui = {};
 }, {
 	isHorizontal: false,
 	disableUsedItems: true,
@@ -808,7 +837,15 @@ PivotControl.prototype.updateView = function () {
  * Names of the fields
  */
 
-var AggregateControl = makeSubclass(GridControl, null, {
+var AggregateControl = makeSubclass(GridControl, function () {
+	var self = this;
+
+	self.super.ctor.apply(self, arguments);
+
+	self.view.on(View.events.invalidAggregate, function (aggNum, errMsg) {
+		self.controlFields[aggNum].showError(errMsg);
+	});
+}, {
 	disableUsedItems: false,
 	controlFieldCtor: AggregateControlField
 });

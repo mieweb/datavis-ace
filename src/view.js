@@ -1828,7 +1828,7 @@ View.prototype.aggregate = function (cont) {
 					// Let the UI know there was a problem with this aggregate, so the user can fix it or
 					// remove the aggregate from the output entirely.
 					log.error('Invalid Aggregate: ' + what + '[' + aggNum + '] - ' + e.message);
-					self.fire(View.events.invalidAggregate, aggNum, e.msg);
+					self.fire(View.events.invalidAggregate, null, aggNum, e.message);
 				}
 
 				// Set the aggregate to null so it can be removed later.
