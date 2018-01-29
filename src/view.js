@@ -118,15 +118,6 @@ var View = function (source, name, opts) {
 
 	self.lock = new Lock('View Lock (' + self.name + ')');
 
-	if (self.opts.saveViewConfig) {
-		try {
-			self.prefs = new LocalStoragePrefs(self);
-		}
-		catch (e) {
-			self.prefs = new TemporaryPrefs(self);
-		}
-	}
-
 	self.aggregateSpec = {
 		group: [{
 			fun: 'count'
@@ -141,6 +132,15 @@ var View = function (source, name, opts) {
 			fun: 'count'
 		}]
 	};
+
+	if (self.opts.saveViewConfig) {
+		try {
+			self.prefs = new LocalStoragePrefs(self);
+		}
+		catch (e) {
+			self.prefs = new TemporaryPrefs(self);
+		}
+	}
 };
 
 View.prototype = Object.create(Object.prototype);
@@ -2057,13 +2057,15 @@ View.prototype.reset = function (noUpdate) {
 	var self = this;
 
 	self.clearSort(true, true);
-	self.clearFilter({ update: false });
-	self.clearGroup(true, true);
-	self.clearPivot(true, true);
-	self.clearAggregate({
-		sendEvent: false,
+	self.clearFilter({
 		updateData: false
 	});
+	self.clearAggregate({
+		sendEvent: true,
+		updateData: false
+	});
+	self.clearPivot(true, true);
+	self.clearGroup(true, true);
 
 	if (noUpdate) {
 		delete self.lastOps;

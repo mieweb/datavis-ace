@@ -926,7 +926,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 					var floatTheadConfig = {
 						zIndex: 1
 					};
-					console.log(self.opts);
 					if (self.opts.fixedHeight) {
 						floatTheadConfig.position = 'fixed';
 						floatTheadConfig.scrollContainer = true;
