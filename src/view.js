@@ -136,31 +136,31 @@ View.prototype.constructor = View;
 mixinEventHandling(View, function (self) {
 	return 'VIEW (' + self.name + ')';
 }, [
-		'fetchDataBegin' // Started fetching data from the source.
-	, 'fetchDataEnd'   // Done fetching data from the source.
-	, 'getTypeInfo'    // Type information has been retrieved from the source.
-	, 'dataUpdated'    // The data has changed in the source.
-	, 'workBegin'      // The view has started operating on the data.
-	, 'workEnd'        // The view has finished operating on the data.
+		'fetchDataBegin'      // Started fetching data from the source.
+	, 'fetchDataEnd'        // Done fetching data from the source.
+	, 'getTypeInfo'         // Type information has been retrieved from the source.
+	, 'dataUpdated'         // The data has changed in the source.
+	, 'workBegin'           // The view has started operating on the data.
+	, 'workEnd'             // The view has finished operating on the data.
 
-	, 'sortSet'        // When the sort has been set.  Args: (field, direction)
-	, 'filterSet'      // When the filter has been set.  Args: (spec)
-	, 'groupSet'       // When the grouping has been set.  Args: (spec)
-	, 'pivotSet'       // When the pivot config has been set.  Args: (spec)
-	, 'aggregateSet'   // When the aggregate config has been set.  Args: (spec)
+	, 'sortSet'             // When the sort has been set.  Args: (field, direction)
+	, 'filterSet'           // When the filter has been set.  Args: (spec)
+	, 'groupSet'            // When the grouping has been set.  Args: (spec)
+	, 'pivotSet'            // When the pivot config has been set.  Args: (spec)
+	, 'aggregateSet'        // When the aggregate config has been set.  Args: (spec)
 
-	, 'sortBegin'      // A sort operation has started.
-	, 'sort'           // Sort information for a row is available.
-	, 'sortEnd'        // A sort operation has finished.
-	, 'filterBegin'    // A filter operation has started.
-	, 'filter'         // Filter information for a row is available.
-	, 'filterEnd'      // A filter operation has finished.
+	, 'sortBegin'           // A sort operation has started.
+	, 'sort'                // Sort information for a row is available.
+	, 'sortEnd'             // A sort operation has finished.
+	, 'filterBegin'         // A filter operation has started.
+	, 'filter'              // Filter information for a row is available.
+	, 'filterEnd'           // A filter operation has finished.
 
-	, 'invalidFilterField'
-	, 'invalidGroupField'
-	, 'invalidPivotField'
-	, 'invalidSortField'
-	, 'invalidAggregate'
+	, 'invalidFilterField'  // A filtered field does not exist in the source data.
+	, 'invalidGroupField'   // A grouped field does not exist in the source data.
+	, 'invalidPivotField'   // A pivotted field does not exist in the source data.
+	, 'invalidSortField'    // A sorted field does not exist in the source data.
+	, 'invalidAggregate'    // An aggregate function is invalid.
 ]);
 
 // #getRowCount {{{2

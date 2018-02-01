@@ -481,7 +481,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	// Clean up the inputs that we received.
 
-	self.normalize(defn);
+	self._normalize(defn);
 
 	// HACK The *only* reason we need this is so that the aggregate functions which do formatting
 	// (e.g. group concat) know how to format non-string values like currency.  There's got to be a
@@ -543,7 +543,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		})
 		.appendTo(self.ui.root);
 
-	self.addTitleWidgets(self.ui.titlebar, doingServerFilter, !!self.tagOpts.runImmediately, id);
+	self._addTitleWidgets(self.ui.titlebar, doingServerFilter, !!self.tagOpts.runImmediately, id);
 
 	self.ui.content = jQuery('<div>', {
 		'class': 'wcdv_grid_content'
@@ -567,19 +567,19 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		self.ui.toolbar_source = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
 			.appendTo(self.ui.toolbar);
-		self.addSourceButtons(self.ui.toolbar_source);
+		self._addSourceButtons(self.ui.toolbar_source);
 		self.view.source.setToolbar(self.ui.toolbar_source);
 
 		self.ui.toolbar_common = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
 			.appendTo(self.ui.toolbar);
-		self.addCommonButtons(self.ui.toolbar_common);
+		self._addCommonButtons(self.ui.toolbar_common);
 
 		if (self.view.opts.saveViewConfig) {
 			self.ui.toolbar_prefs = jQuery('<div>')
 				.addClass('wcdv_toolbar_section')
 				.appendTo(self.ui.toolbar);
-			self.addPrefsButtons(self.ui.toolbar_prefs);
+			self._addPrefsButtons(self.ui.toolbar_prefs);
 		}
 
 		if (self.features.limit) {
@@ -587,20 +587,20 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 				.addClass('wcdv_toolbar_section')
 				.hide()
 				.appendTo(self.ui.toolbar);
-			self.addLimitButtons(self.ui.toolbar_limit);
+			self._addLimitButtons(self.ui.toolbar_limit);
 		}
 
 		self.ui.toolbar_group = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
 			.hide()
 			.appendTo(self.ui.toolbar);
-		self.addGroupButtons(self.ui.toolbar_group);
+		self._addGroupButtons(self.ui.toolbar_group);
 
 		self.ui.toolbar_pivot = jQuery('<div>')
 			.addClass('wcdv_toolbar_section')
 			.hide()
 			.appendTo(self.ui.toolbar);
-		self.addPivotButtons(self.ui.toolbar_pivot);
+		self._addPivotButtons(self.ui.toolbar_pivot);
 
 		// This is the "gear" icon that shows/hides the controls below the toolbar.  The controls are
 		// used to set the group, pivot, aggregate, and filters.  Ideally the user only has to utilize
@@ -683,20 +683,20 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	};
 
 	self.view.on(View.events.fetchDataBegin, function () {
-		self.setSpinner('loading');
-		self.showSpinner();
+		self._setSpinner('loading');
+		self._showSpinner();
 	});
 	self.view.on(View.events.fetchDataEnd, function () {
-		self.hideSpinner();
+		self._hideSpinner();
 	});
 
 	self.view.on(View.events.workBegin, function () {
-		self.setSpinner('working');
-		self.showSpinner();
+		self._setSpinner('working');
+		self._showSpinner();
 	});
 	self.view.on(View.events.workEnd, function (info, ops) {
-		self.hideSpinner();
-		self.updateRowCount(info, ops);
+		self._hideSpinner();
+		self._updateRowCount(info, ops);
 	});
 
 	self.view.on(View.events.dataUpdated, function () {
@@ -798,7 +798,7 @@ Grid.prototype._validateId = function (id) {
 	setProp(id + '_gridContainer', self.defn, 'table', 'id');
 };
 
-// #addTitleWidgets {{{2
+// #_addTitleWidgets {{{2
 
 /**
  * Add widgets to the header of the grid.
@@ -813,11 +813,11 @@ Grid.prototype._validateId = function (id) {
  * @param {string} id
  */
 
-Grid.prototype.addTitleWidgets = function (titlebar, doingServerFilter, runImmediately, id) {
+Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImmediately, id) {
 	var self = this;
 
 	self.ui.spinner = jQuery('<strong>').css({'font-weight': 'normal', 'margin-right': '0.5em'}).appendTo(titlebar);
-	self.setSpinner(self.tagOpts.runImmediately ? 'loading' : 'not-loaded');
+	self._setSpinner(self.tagOpts.runImmediately ? 'loading' : 'not-loaded');
 
 	jQuery('<strong>', {'id': id + '_title', 'data-parent': id})
 		.text(self.tagOpts.title)
@@ -884,12 +884,21 @@ Grid.prototype.addTitleWidgets = function (titlebar, doingServerFilter, runImmed
 		.appendTo(titlebar);
 };
 
-// #addSourceButtons {{{2
+// #_addSourceButtons {{{2
 
-Grid.prototype.addSourceButtons = function (toolbar) {
+/**
+ * Add buttons that perform operations on the source.
+ *
+ * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
+ */
+
+Grid.prototype._addSourceButtons = function (toolbar) {
 	var self = this;
 
-	self.ui.refreshLink = jQuery('<button>')
+	self.ui.refreshBtn = jQuery('<button>')
 		.append(fontAwesome('F021'))
 		.append('Refresh')
 		.on('click', function () {
@@ -898,18 +907,18 @@ Grid.prototype.addSourceButtons = function (toolbar) {
 		.appendTo(toolbar);
 };
 
-// #addCommonButtons {{{2
+// #_addCommonButtons {{{2
 
 /**
  * Add common controls to the grid's toolbar.
  *
- * @param {Element} parent
- * Where to attach this toolbar section (i.e. the toolbar div).
- *
  * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
  */
 
-Grid.prototype.addCommonButtons = function (toolbar) {
+Grid.prototype._addCommonButtons = function (toolbar) {
 	var self = this;
 
 	self.ui.exportBtn = jQuery('<button>', {'disabled': true})
@@ -921,25 +930,25 @@ Grid.prototype.addCommonButtons = function (toolbar) {
 		.appendTo(toolbar);
 };
 
-// #addLimitButtons {{{2
+// #_addLimitButtons {{{2
 
 /**
  * Add plain-related controls to the grid's toolbar.
  *
- * @param {Element} parent
- * Where to attach this toolbar section (i.e. the toolbar div).
- *
  * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
  */
 
-Grid.prototype.addLimitButtons = function (parent) {
+Grid.prototype._addLimitButtons = function (toolbar) {
 	var self = this;
 
 	if (self.features.limit) {
 
 		// Create a checkbox that will toggle the "automatically show more" feature for the grid table.
 
-		makeToggleCheckbox(self.defn, ['table', 'limit', 'autoShowMore'], true, 'Show More on Scroll', parent);
+		makeToggleCheckbox(self.defn, ['table', 'limit', 'autoShowMore'], true, 'Show More on Scroll', toolbar);
 
 		// Create a button that will show all the rows when clicked.  We fake this a little bit by just
 		// turning off the "limit" feature and letting the grid table be redrawn (changing the features
@@ -958,22 +967,22 @@ Grid.prototype.addLimitButtons = function (parent) {
 				});
 			})
 			.text('Show All Rows')
-			.appendTo(parent);
+			.appendTo(toolbar);
 	}
 };
 
-// #addGroupButtons {{{2
+// #_addGroupButtons {{{2
 
 /**
  * Add group-related controls to the grid's toolbar.
  *
- * @param {Element} parent
- * Where to attach this toolbar section (i.e. the toolbar div).
- *
  * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
  */
 
-Grid.prototype.addGroupButtons = function (parent) {
+Grid.prototype._addGroupButtons = function (toolbar) {
 	var self = this;
 
 	// Create radio buttons to switch between summary and detail group grid tables.
@@ -988,55 +997,23 @@ Grid.prototype.addGroupButtons = function (parent) {
 			, {label: 'Detail', value: 'detail'}]
 		, null
 		, function () { self.redraw() }
-		, parent
+		, toolbar
 	);
 };
 
-// #addPivotButtons {{{2
+// #_addPivotButtons {{{2
 
 /**
  * Add pivot-related controls to the grid's toolbar.
  *
- * @param {Element} parent
- * Where to attach this toolbar section (i.e. the toolbar div).
- *
  * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
  */
 
-Grid.prototype.addPivotButtons = function (parent) {
+Grid.prototype._addPivotButtons = function (toolbar) {
 	var self = this;
-	/*
-	var userAddCols = getPropDef([], self.defn, 'table', 'whenPivot', 'addCols');
-	var totalCol = {
-		name: 'Total',
-		value: function (data, rowNum, rowAgg, aggType) {
-			return _.reduce(rowAgg, function (acc, cur) {
-				if (aggType === 'string') {
-					if (acc === '') {
-						return cur;
-					}
-					else if (cur === '') {
-						return acc;
-					}
-					else {
-						return acc + ', ' + cur;
-					}
-				}
-				else if (numeral.isNumeral(cur)) {
-					return acc + cur._value;
-				}
-				else {
-					return acc + cur;
-				}
-			}, aggType === 'string' ? '' : 0);
-		},
-		isTotalCol: true
-	};
-	var newAddCols = userAddCols.concat([totalCol]);
-
-	setProp(newAddCols, self.defn, 'table', 'whenPivot', 'addCols');
-	*/
-
 	var aggSpec;
 
 	self.view.on(View.events.aggregateSet, function (a) {
@@ -1048,20 +1025,8 @@ Grid.prototype.addPivotButtons = function (parent) {
 		['table', 'whenPivot', 'showTotalCol'],
 		true,
 		'Total Row/Col',
-		parent,
+		toolbar,
 		function (isChecked) {
-			/*
-			setProp(isChecked ? newAddCols : userAddCols, self.defn, 'table', 'whenPivot', 'addCols');
-			var gridTableOpts = {};
-
-			if (self.pivotAggConfig) {
-				gridTableOpts.pivotConfig = {
-					aggFun: self.pivotAggConfig.aggFun,
-					aggField: self.pivotAggConfig.aggField
-				};
-			}
-			*/
-
 			var agg = self.view.getAggregate();
 
 			if (!isChecked) {
@@ -1071,7 +1036,6 @@ Grid.prototype.addPivotButtons = function (parent) {
 				delete agg.all;
 			}
 			else {
-				console.log(aggSpec);
 				agg.group = aggSpec.group;
 				agg.pivot = aggSpec.pivot;
 				agg.all = aggSpec.all;
@@ -1080,30 +1044,28 @@ Grid.prototype.addPivotButtons = function (parent) {
 			self.view.setAggregate(agg, {
 				sendEvent: false
 			});
-			//self.gridTable.clear();
-			//self.gridTable.draw(self.ui.grid, self.tableDoneCont/*, gridTableOpts*/);
 		}
 	);
 };
 
-// #addPrefsButtons {{{2
+// #_addPrefsButtons {{{2
 
 /**
  * Add preference-related controls to the grid's toolbar.
  *
- * @param {Element} parent
- * Where to attach this toolbar section (i.e. the toolbar div).
- *
  * @method
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
  */
 
-Grid.prototype.addPrefsButtons = function (parent) {
+Grid.prototype._addPrefsButtons = function (toolbar) {
 	var self = this;
 
 	var div = jQuery('<div>')
 		.css({'display': 'inline-block'})
 		.append(jQuery('<span>').text('View: '))
-		.appendTo(parent)
+		.appendTo(toolbar)
 	;
 
 	// A shortcut for doing the "right thing" with the rename & delete buttons, which are only shown
@@ -1422,7 +1384,7 @@ Grid.prototype.refresh = function () {
 	self.view.source.clearCachedData();
 };
 
-// #updateRowCount {{{2
+// #_updateRowCount {{{2
 
 /**
  * Set the number of rows shown in the titlebar.  You can provider the number yourself!
@@ -1431,7 +1393,7 @@ Grid.prototype.refresh = function () {
  * @memberof Grid
  */
 
-Grid.prototype.updateRowCount = function (info, ops) {
+Grid.prototype._updateRowCount = function (info, ops) {
 	var self = this
 		, doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
 
@@ -1443,7 +1405,7 @@ Grid.prototype.updateRowCount = function (info, ops) {
 		return;
 	}
 
-	self.hideSpinner();
+	self._hideSpinner();
 
 	if (info.isPlain) {
 		if (info.totalRows) {
@@ -1498,9 +1460,6 @@ Grid.prototype.hide = function () {
 
 /**
  * Make the grid visible.  If the grid has not been "run" yet, it will be done now.
- *
- * @method
- * @memberof Grid
  */
 
 Grid.prototype.show = function () {
@@ -1526,9 +1485,6 @@ Grid.prototype.show = function () {
 
 /**
  * Toggle grid visibility.
- *
- * @method
- * @memberof Grid
  */
 
 Grid.prototype.toggle = function () {
@@ -1545,19 +1501,24 @@ Grid.prototype.toggle = function () {
 /**
  * Determine if the grid is currently visible.
  *
- * @method
- * @memberof Grid
- *
- * @returns {boolean} True if the grid is currently visible, false if it is not.
+ * @returns {boolean}
+ * True if the grid is currently visible, false if it is not.
  */
 
 Grid.prototype.isGridVisible = function () {
 	return this.ui.grid.css('display') !== 'none';
 };
 
-// #setSpinner {{{2
+// #_setSpinner {{{2
 
-Grid.prototype.setSpinner = function (what) {
+/**
+ * Set the type of the spinner icon.
+ *
+ * @param {string} what
+ * The kind of spinner icon to show.  Must be one of: loading, not-loaded, working.
+ */
+
+Grid.prototype._setSpinner = function (what) {
 	var self = this;
 
 	switch (what) {
@@ -1573,9 +1534,13 @@ Grid.prototype.setSpinner = function (what) {
 	}
 };
 
-// #showSpinner {{{2
+// #_showSpinner {{{2
 
-Grid.prototype.showSpinner = function () {
+/**
+ * Show the spinner icon.
+ */
+
+Grid.prototype._showSpinner = function () {
 	var self = this;
 
 	if (self.tagOpts.title) {
@@ -1583,9 +1548,13 @@ Grid.prototype.showSpinner = function () {
 	}
 };
 
-// #hideSpinner {{{2
+// #_hideSpinner {{{2
 
-Grid.prototype.hideSpinner = function () {
+/**
+ * Hide the spinner icon.
+ */
+
+Grid.prototype._hideSpinner = function () {
 	var self = this;
 
 	if (self.tagOpts.title) {
@@ -1669,7 +1638,7 @@ Grid.prototype.togglePivot = function () {
 	self.redraw();
 };
 
-// #normalize {{{2
+// #_normalize {{{2
 
 /**
  * The point of "normalizing" a definition is to expand shortcut configurations.  For example, lots
@@ -1682,7 +1651,7 @@ Grid.prototype.togglePivot = function () {
  * again, even though it should be possible to normalize something that's already been done.
  */
 
-Grid.prototype.normalize = function (defn) {
+Grid.prototype._normalize = function (defn) {
 	var self = this;
 
 	if (defn.normalized) {
@@ -1720,16 +1689,16 @@ Grid.prototype.normalize = function (defn) {
 		}
 	});
 
-	self.normalizeColumns(defn);
+	self._normalizeColumns(defn);
 
 	if (getProp(defn, 'table', 'columns') !== undefined) {
 		defn.table.columns_map = _.indexBy(defn.table.columns, 'field');
 	}
 };
 
-// #normalizeColumns {{{2
+// #_normalizeColumns {{{2
 
-Grid.prototype.normalizeColumns = function (defn) {
+Grid.prototype._normalizeColumns = function (defn) {
 	var self = this;
 
 	// If the column configuration is just a string, that's just the name of a column to show.  Let's
