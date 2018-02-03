@@ -1803,7 +1803,6 @@ function deprecated(defn, msg, ref) {
 function format(colConfig, typeInfo, cell, opts) {
 	colConfig = colConfig || {};
 	typeInfo = typeInfo || {};
-
 	opts = opts || {};
 
 	_.defaults(opts, {
@@ -1836,6 +1835,24 @@ function format(colConfig, typeInfo, cell, opts) {
 	var result = cell.orig || cell.value;
 
 	var t = opts.overrideType || typeInfo.type;
+	var format = colConfig.format;
+
+	// Set default formatting strings for some types.  Note that we're NOT setting one for generic
+	// numbers, because they are often used in different ways (e.g. an ID should have no commas).
+
+	if (format == null) {
+		switch (t) {
+		case 'date':
+			format = 'LL';
+			break;
+		case 'datetime':
+			format = 'LLL';
+			break;
+		case 'currency':
+			format = '$0,0.00';
+			break;
+		}
+	}
 
 	// Handle zero dates like Webchart uses all the time.  Turn them into the empty string, otherwise
 	// Moment will say "Invalid Date".
@@ -1855,10 +1872,10 @@ function format(colConfig, typeInfo, cell, opts) {
 			}
 
 			if (window.moment && window.moment.isMoment(cell.value)) {
-				result = cell.value.format(colConfig.format || 'YYYY-MM-DD');
+				result = cell.value.format(format);
 			}
 			else {
-				result = moment(cell.value).format(colConfig.format);
+				result = moment(cell.value).format(format);
 			}
 			break;
 		case 'number':
@@ -1876,16 +1893,16 @@ function format(colConfig, typeInfo, cell, opts) {
 			}
 
 			if (window.numeral && window.numeral.isNumeral(cell.value)) {
-				if (colConfig.format) {
-					result = cell.value.format(colConfig.format);
+				if (format != null) {
+					result = cell.value.format(format);
 				}
 				else {
 					result = cell.value.value() + '';
 				}
 			}
 			else {
-				if (colConfig.format) {
-					result = numeral(cell.value).format(colConfig.format);
+				if (format != null) {
+					result = numeral(cell.value).format(format);
 				}
 				else {
 					result = cell.value + '';
