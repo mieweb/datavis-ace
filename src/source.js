@@ -1568,6 +1568,16 @@ Source.prototype.postProcess = function (data, cont) {
 	self.getTypeInfo(function (typeInfo) {
 		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo.asMap());
 
+		// Post-processing involves converting the data received from the source into a form that will
+		// be used internally for sorting, filtering, and display.  This takes several steps.
+		//
+		//   #1 - User conversion functions.  These go first because they can alter the value and type
+		//        information.  (For example, turning all strings starting with "$" into currency.)
+		//
+		//   #2 - Decide whether type conversion is necessary and should be deferred.
+		//
+		//   #3 - Perform type conversion for non-deferred fields.
+
 		// Gather the user's conversion functions, which will be applied on every row.  Conversion
 		// functions can be applied across all fields (specified as an array), or on a per-field basis
 		// (specified as an object with field name keys and array values).
@@ -1577,33 +1587,47 @@ Source.prototype.postProcess = function (data, cont) {
 			conversionFuncs[fieldName] = self.getConversionFuncs(fieldName);
 		});
 
-		// Update the type information with whether the internal representation (i.e. numeral or moment)
-		// conversion of a field should be deferred or not.
-
-		self.setConversionTypeInfo(data);
+		// Step #1 - Perform all user conversion functions.
 
 		_.each(data, function (row, rowNum) {
 			_.each(row, function (val, field) {
 				var fti = typeInfo.get(field);
-
-				row[field] = {
+				var cell = {
 					value: val
 				};
 
-				if (conversionFuncs[field] !== undefined) {
+				if (conversionFuncs[field] != null) {
+					var conversionFuncOpts = {
+						row: row,
+						source: self,
+						rowNum: rowNum,
+						totalRows: data.length
+					};
+
 					// Go through all the user's conversion functions.
 
-					var i = 0;
-					while (i < conversionFuncs[field].length) {
-						if (conversionFuncs[field][i](row[field], field, fti, row, self)) {
+					for (var i = 0; i < conversionFuncs[field].length; i += 1) {
+						if (conversionFuncs[field][i](cell, field, fti, conversionFuncOpts)) {
 							break;
 						}
-						i += 1;
 					}
 				}
 
-				// Unless conversion has been deferred on this field, convert it into the appropriate
-				// internal representation (numeral or moment).
+				row[field] = cell;
+			});
+		});
+
+		// Step #2 - Update the type information with whether the internal representation (i.e. numeral
+		// or moment) conversion of a field should be deferred or not.
+
+		self.setConversionTypeInfo(data, typeInfo);
+
+		// Step #3 - Unless conversion has been deferred on this field, convert it into the appropriate
+		// internal representation (numeral or moment).
+
+		_.each(data, function (row, rowNum) {
+			_.each(row, function (val, field) {
+				var fti = typeInfo.get(field);
 
 				if (fti != null && !fti.deferDecoding) {
 					self.convertCell(row, field);
@@ -1648,10 +1672,10 @@ Source.prototype.getConversionFuncs = function (fieldName) {
 
 // #setConversionTypeInfo {{{2
 
-Source.prototype.setConversionTypeInfo = function (data) {
+Source.prototype.setConversionTypeInfo = function (data, typeInfo) {
 	var self = this;
 
-	_.each(self.cache.typeInfo.asMap(), function (fti /* field type info */, f /* field */) {
+	typeInfo.each(function (fti, f) {
 		if (['number', 'currency', 'date', 'datetime'].indexOf(fti.type) >= 0) {
 			fti.deferDecoding = self.opts.deferDecoding;
 
