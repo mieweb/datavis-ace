@@ -1175,7 +1175,7 @@ View.prototype.setGroup = function (spec, opts) {
 
 		if (self.typeInfo == null) {
 			return self.getTypeInfo(function () {
-				self.setFilter.apply(self, args);
+				self.setGroup.apply(self, args);
 			});
 		}
 
