@@ -1,23 +1,24 @@
 {
+  "$< random_seed(0) >$": null,
   "data": [
-    "$< repeat(500, VALUE) >$",
+    "$< repeat(10000, VALUE) >$",
     {
         "string1": "$< word_dict() >$"
-      , "country": "$< choice(['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
       , "state": "$< state() >$"
-      , "int1": "$< random_int(0, 99, output_type='number') >$"
-      , "int2": "$< random_int(0, 99, output_type='string') >$"
-      , "int3": "$< random_int(0, 99, output_type='string', format='#,##0') >$"
-      , "float1": "$< random_float(0, 99, output_type='number') >$"
-      , "float2": "$< random_float(0, 99, output_type='string') >$"
-      , "float3": "$< random_float(0, 99, output_type='string', format='#,##0.###') >$"
+      , "int1": "$< random_int(0, 9999, output_type='number') >$"
+      , "int2": "$< random_int(0, 9999, output_type='string') >$"
+      , "int3": "$< random_int(0, 9999, output_type='string', format='#,##0') >$"
+      , "float1": "$< random_float(0, 9999, output_type='number') >$"
+      , "float2": "$< random_float(0, 9999, output_type='string') >$"
+      , "float3": "$< random_float(0, 9999, output_type='string', format='#,##0.###') >$"
       , "currency1": "$< random_float(0, 9999, output_type='number', fixed=2) >$"
       , "currency2": "$< random_float(0, 9999, output_type='string', format='#,##0.##') >$"
       , "currency3": "$< random_float(0, 9999, output_type='string', format='$#,##0.##') >$"
       , "currency4": "$< random_float(0, 9999, output_type='string', format='$#,##0.##') >$"
       , "date1": "$< random_date(format='yyyy-MM-dd') >$"
       , "date2": "$< random_date(format='MMM d, yyyy') >$"
-      , "date3": "$< random_date(format='MM/dd/yy') >$"
+      , "date3": "$< random_date('1970-01-01', '2010-01-01', format='MM/dd/yy') >$"
     }
   ],
   "typeInfo": [

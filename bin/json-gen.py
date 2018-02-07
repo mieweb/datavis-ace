@@ -11,14 +11,27 @@ import random
 import re
 import time
 import sys
+import inspect
 
 from jsoncomment import JsonComment
 
 WORDS = open('/usr/share/dict/words').read().splitlines()
 STATES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+RANDOMS = {}
+RANDOM_SEED = { 'seed': None }
+
+def init_random(caller=None):
+    if caller == None:
+        caller = inspect.stack()[1].frame.f_code.co_name
+    if caller not in RANDOMS:
+        RANDOMS[caller] = random.Random()
+        if RANDOM_SEED['seed'] != None:
+            RANDOMS[caller].seed(RANDOM_SEED['seed'])
+    return RANDOMS[caller]
 
 def random_int(min=0, max=100, **opts):
-    val = random.randint(min, max)
+    r = init_random('random_int')
+    val = r.randint(min, max)
     if opts.get('output_type') == 'string':
         if 'format' in opts:
             return format_decimal(val, format=opts['format'])
@@ -28,7 +41,8 @@ def random_int(min=0, max=100, **opts):
         return val
 
 def random_float(min=0, max=1, **opts):
-    val = random.uniform(min, max)
+    r = init_random('random_float')
+    val = r.uniform(min, max)
     if opts.get('output_type') == 'string':
         if 'format' in opts:
             return format_decimal(val, format=opts['format'])
@@ -43,22 +57,47 @@ def random_float(min=0, max=1, **opts):
             return val
 
 def random_date(min='1900-01-01', max='2100-01-01', **opts):
+    r = init_random('random_date')
     min = time.mktime(time.strptime(min, '%Y-%m-%d'))
     max = time.mktime(time.strptime(max, '%Y-%m-%d'))
-    val = date.fromtimestamp(random_int(min, max))
+    val = date.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
         return format_date(val, opts['format'])
     else:
         return str(val)
 
 def word_dict():
-    return WORDS[random.randint(0, len(WORDS))]
+    r = init_random('word_dict')
+    return WORDS[r.randint(0, len(WORDS))]
 
 def state():
-    return random.choice(STATES)
+    r = init_random('state')
+    return r.choice(STATES)
+
+def random_seed(n):
+    RANDOM_SEED['seed'] = n
 
 def repeat(times, val):
-    return [process(copy.deepcopy(val)) for i in range(times)]
+    result = []
+    for i in range(times):
+        if i % 100 == 0:
+            if i > 0: print(' ... ', end='', file=sys.stderr)
+            print(i, end='', file=sys.stderr, flush=True)
+        result.append(process(copy.deepcopy(val)))
+    print(' ...', i, '[DONE]', file=sys.stderr, flush=True)
+    return result
+
+CYCLE = {}
+def cycle(name, lst):
+    if name in CYCLE:
+        c = CYCLE[name]
+        c['index'] += 1
+        if c['index'] >= len(c['list']):
+            c['index'] = 0
+        return c['list'][c['index']]
+    else:
+        CYCLE[name] = { 'index': 0, 'list': lst }
+        return lst[0]
 
 def process(node):
     env = { 'random_int': random_int,
@@ -67,11 +106,19 @@ def process(node):
             'repeat': repeat,
             'word_dict': word_dict,
             'choice': random.choice,
-            'state': state }
+            'state': state,
+            'cycle': cycle,
+            'RANDOM_SEED': RANDOM_SEED }
     r = re.compile(r'\$<\s*(.*?)\s*>\$')
     def recur(node):
         if type(node) is dict:
             for key, val in node.items():
+                if val == None:
+                    match = r.fullmatch(key)
+                    if match:
+                        eval(match.group(1))
+                        del node[key]
+                        return recur(node)
                 node[key] = recur(val)
         elif type(node) is list:
             if len(node) == 2:
