@@ -1548,7 +1548,14 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			.on('change', function (evt) {
 				self.checkAll(evt);
 			});
-		headingTr.append(jQuery('<th>').append(self.ui.checkAll_thead));
+
+		headingTh = jQuery('<th>')
+			.append(self.ui.checkAll_thead)
+			.appendTo(headingTr);
+		if (self.opts.drawInternalBorders) {
+			headingTh.addClass('wcdv_pivot_colval_boundary');
+		}
+
 		if (self.features.filter) {
 			filterTr.append(jQuery('<th>').css(filterThCss));
 		}
@@ -1598,6 +1605,10 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		self._addSortingToHeader2(data, 'vertical', {field: field}, headingTh);
 
 		self._addFilterToHeader(headingTh, field);
+
+		if (self.opts.drawInternalBorders) {
+			headingTh.addClass('wcdv_pivot_colval_boundary');
+		}
 
 		/*
 		 * Configure filtering for this column.  This mainly involves creating a button, which when
@@ -1678,9 +1689,18 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	 */
 
 	if (self.features.rowReorder) {
-		headingTr.append(jQuery('<th>').text('Options'));
+		headingTh = jQuery('<th>')
+			.text('Options')
+			.appendTo(headingTr);
+		if (self.opts.drawInternalBorders) {
+			headingTh.addClass('wcdv_pivot_colval_boundary');
+		}
+
 		if (self.features.filter) {
-			filterTr.append(jQuery('<th>').css(filterThCss));
+			headingTh = jQuery('<th>').css(filterThCss).appendTo(filterTr);
+			if (self.opts.drawInternalBorders) {
+				headingTh.addClass('wcdv_pivot_colval_boundary');
+			}
 		}
 	}
 
@@ -1829,7 +1849,10 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 								self.unselect(+this.dataset.rowNum);
 							}
 						});
-					tr.append(jQuery('<td>').append(checkbox));
+					td = jQuery('<td>').append(checkbox).appendTo(tr);
+					if (self.opts.drawInternalBorders) {
+						td.addClass('wcdv_pivot_colval_boundary');
+					}
 				}
 
 				// Create the data cells.
@@ -1853,6 +1876,10 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 					self.setCss(td, field);
 					self.setAlignment(td, colConfig, typeInfo.get(field));
+
+					if (self.opts.drawInternalBorders) {
+						td.addClass('wcdv_pivot_colval_boundary');
+					}
 
 					tr.append(td);
 				});
