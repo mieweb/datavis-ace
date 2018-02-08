@@ -152,7 +152,8 @@ GridControlField.prototype._addErrorIndicator = function (parent, cls) {
 		.tooltip({
 			classes: {
 				'ui-tooltip': 'ui-corner-all ui-widget-shadow ' + cls + '_tooltip'
-			}
+			},
+			show: { delay: 1000 }
 		})
 		.appendTo(parent);
 };

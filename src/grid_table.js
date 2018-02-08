@@ -708,7 +708,8 @@ GridTable.prototype._addFilterToHeader = function (th, field, displayText) {
 		.tooltip({
 			classes: {
 				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip'
-			}
+			},
+			show: { delay: 1000 }
 		})
 		.appendTo(th);
 };
