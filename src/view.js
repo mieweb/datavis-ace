@@ -2178,11 +2178,14 @@ View.prototype.reset = function (noUpdate) {
 		updateData: false
 	});
 	self.clearAggregate({
-		sendEvent: true,
 		updateData: false
 	});
-	self.clearPivot(true, true);
-	self.clearGroup(true, true);
+	self.clearPivot({
+		updateData: false
+	});
+	self.clearGroup({
+		updateData: false
+	});
 
 	if (noUpdate) {
 		delete self.lastOps;
