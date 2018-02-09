@@ -93,7 +93,7 @@
 
 	var EXPERIMENTAL_FEATURES = {
 		'Simpler Colval Determination': true,
-		'Reorder Control Fields': false
+		'Reorder Control Fields': true
 	};
 
 	$INCLUDE('src/jquery.js');

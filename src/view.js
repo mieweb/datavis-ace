@@ -1241,11 +1241,12 @@ View.prototype.clearGroup = function (opts) {
  */
 
 View.prototype.group = function () {
-	var self = this;
+	var self = this
+		, groupFields = [];
 
 	// Make sure that grouping has been asked for.
 
-	if (isNothing(self.groupSpec)) {
+	if (self.groupSpec == null) {
 		return false;
 	}
 
@@ -1257,25 +1258,25 @@ View.prototype.group = function () {
 		return false;
 	}
 
-	// Go through every group field and make sure it exists in the source.
+	// Go through every group field and make sure it exists in the source.  If it doesn't, we use an
+	// event to notify the user interface about it so a warning can be shown.
 
 	_.each(self.groupSpec.fieldNames, function (field, fieldIdx) {
 		if (!self.typeInfo.isSet(field)) {
 			log.error('Group field does not exist in the source: ' + field);
 			self.fire(View.events.invalidGroupField, null, field);
-			self.groupSpec.fieldNames.splice(fieldIdx, 1);
+		}
+		else {
+			groupFields.push(field);
 		}
 	});
 
 	// It's possible now that we've eliminated *all* the group fields because they're invalid; if
 	// that's the case, we just abort as if no grouping was requested at all.
 
-	if (self.groupSpec.fieldNames.length === 0) {
-		self.clearGroup(true, true);
+	if (groupFields.length === 0) {
 		return false;
 	}
-
-	var groupFields = self.groupSpec.fieldNames;
 
 	// The variable `tree` contains all the rows of data, grouped according to the fields given, and
 	// organized into a tree structure.
@@ -1374,6 +1375,7 @@ View.prototype.group = function () {
 		}
 	})(tree, 1, []);
 
+	debug.info('VIEW (' + self.name + ') // GROUP', 'Group Fields: %O', groupFields);
 	debug.info('VIEW (' + self.name + ') // GROUP', 'Row Vals: %O', rowVals);
 	debug.info('VIEW (' + self.name + ') // GROUP', 'New Data: %O', newData);
 
@@ -1418,7 +1420,7 @@ View.prototype.setPivot = function (spec, opts) {
 
 		if (self.typeInfo == null) {
 			return self.getTypeInfo(function () {
-				self.setFilter.apply(self, args);
+				self.setPivot.apply(self, args);
 			});
 		}
 
@@ -1476,7 +1478,7 @@ View.prototype.clearPivot = function (opts) {
 
 View.prototype.pivot = function () {
 	var self = this
-		, pivotFields // Array of field names to pivot by.
+		, pivotFields = [] // Array of field names to pivot by.
 		, colValsTree // Tree of all possible column value combinations.
 		, colVals     // Array of all possible column value combinations.
 	;
@@ -1489,7 +1491,7 @@ View.prototype.pivot = function () {
 
 	// Make sure that pivotting has been asked for.
 
-	if (isNothing(self.pivotSpec)) {
+	if (self.pivotSpec == null) {
 		return false;
 	}
 
@@ -1507,15 +1509,16 @@ View.prototype.pivot = function () {
 		if (!self.typeInfo.isSet(field)) {
 			log.error('Pivot field does not exist in the source: ' + field);
 			self.fire(View.events.invalidPivotField, null, field);
-			self.pivotSpec.fieldNames.splice(fieldIdx, 1);
+		}
+		else {
+			pivotFields.push(field);
 		}
 	});
 
 	// It's possible now that we've eliminated *all* the pivot fields because they're invalid; if
 	// that's the case, we just abort as if no pivotting was requested at all.
 
-	if (self.pivotSpec.fieldNames.length === 0) {
-		self.clearPivot(true, true);
+	if (pivotFields.length === 0) {
 		return false;
 	}
 
@@ -1643,35 +1646,22 @@ View.prototype.pivot = function () {
 		return result;
 	};
 
-	if (!isNothing(self.pivotSpec)) {
-		pivotFields = self.pivotSpec.fieldNames;
-		for (var pivotFieldIndex = 0; pivotFieldIndex < pivotFields.length; pivotFieldIndex += 1) {
-			origKeys[pivotFieldIndex] = {};
-		}
-		if (!EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
-			colValsTree = buildColValsTree(pivotFields);
-			colVals = buildColVals(colValsTree);
-		}
-		else {
-			colVals = buildColVals2(pivotFields);
-		}
-		self.data.data = buildData(self.data.data, colVals);
-		if (EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
-			colVals = convertColVals(colVals);
-		}
+	for (var pivotFieldIndex = 0; pivotFieldIndex < pivotFields.length; pivotFieldIndex += 1) {
+		origKeys[pivotFieldIndex] = {};
 	}
-	else if (self.data.isGroup && self.opts.groupIsPivot) {
-		pivotFields = [];
-		colValsTree = {};
-		colVals = [];
-		_.each(self.data.data, function (group, groupNum) {
-			self.data.data[groupNum] = [group];
-		});
+	if (!EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
+		colValsTree = buildColValsTree(pivotFields);
+		colVals = buildColVals(colValsTree);
 	}
 	else {
-		return false;
+		colVals = buildColVals2(pivotFields);
+	}
+	self.data.data = buildData(self.data.data, colVals);
+	if (EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
+		colVals = convertColVals(colVals);
 	}
 
+	debug.info('VIEW (' + self.name + ') // PIVOT', 'Pivot Fields: %O', pivotFields);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals Tree: %O', colValsTree);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Orig Keys: %O', origKeys);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals: %O', colVals);

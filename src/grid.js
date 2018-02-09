@@ -1289,7 +1289,7 @@ Grid.prototype.redraw = function () {
 			debug.info('GRID', 'Creating grid table with view opertions: %O', ops);
 		}
 
-		if ((ops && ops.pivot) || self.view.getPivot()) {
+		if (ops && ops.pivot) {
 			gridTableCtor = GridTablePivot;
 			gridTableOpts = deepCopy(self.defn.table.whenPivot);
 
@@ -1301,7 +1301,7 @@ Grid.prototype.redraw = function () {
 			self.ui.toolbar_group.hide();
 			self.ui.toolbar_pivot.show();
 		}
-		else if ((ops && ops.group) || self.view.getGroup()) {
+		else if (ops && ops.group) {
 			switch (self.defn.table.groupMode) {
 			case 'summary':
 				gridTableCtor = GridTableGroupSummary;
