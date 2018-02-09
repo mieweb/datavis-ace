@@ -796,10 +796,14 @@ GroupControl.prototype.draw = function (parent) {
 GroupControl.prototype.updateView = function () {
 	var self = this;
 
-	debug.info('GRID // GROUP CONTROL', 'Setting group fields to: %O', self.fields);
+	var fields = self.ui.fields.children('li').map(function (index, elt) {
+		return jQuery(elt).attr('data-wcdv-field');
+	});
 
-	if (self.fields.length > 0) {
-		self.view.setGroup({fieldNames: self.fields}, {
+	debug.info('GRID // GROUP CONTROL', 'Setting group fields to: %O', fields);
+
+	if (fields.length > 0) {
+		self.view.setGroup({fieldNames: fields}, {
 			dontSendEventTo: self
 		});
 	}
@@ -919,14 +923,16 @@ PivotControl.prototype.draw = function (parent) {
 PivotControl.prototype.updateView = function () {
 	var self = this;
 
-	debug.info('GRID // PIVOT CONTROL', 'Setting pivot fields to: %O', self.fields);
+	var fields = self.ui.fields.children('li').map(function (index, elt) {
+		return jQuery(elt).attr('data-wcdv-field');
+	});
 
-	if (self.fields.length > 0) {
-		if (!self.view.setPivot({fieldNames: self.fields}, {
+	debug.info('GRID // PIVOT CONTROL', 'Setting pivot fields to: %O', fields);
+
+	if (fields.length > 0) {
+		self.view.setPivot({fieldNames: fields}, {
 			dontSendEventTo: self
-		})) {
-			self.clear({ updateView: false });
-		}
+		});
 	}
 	else {
 		self.view.clearPivot();

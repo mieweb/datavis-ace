@@ -231,6 +231,13 @@ li.wcdv_aggregate_field {
 	display: inline-block;
 }
 
+/*
+ * These are the little arrows that show the relationship between group & pivot fields like this:
+ * [field] → [field] → [field].  Since these are horizontal lists, the arrows are actually placed at
+ * the beginning of every <LI>, we just use CSS to hide the first one so they appear to be between
+ * field elements.
+ */
+
 .wcdv_group_control ul > li:first-child > span.fa,
 .wcdv_pivot_control ul > li:first-child > span.fa {
 	display: none;
@@ -241,6 +248,10 @@ li.wcdv_aggregate_field {
 	margin-right: 4px;
 }
 
+/*
+ * These are the fields themselves.
+ */
+
 .wcdv_group_control ul li .wcdv_field,
 .wcdv_pivot_control ul li .wcdv_field {
 	display: inline-block;
@@ -248,6 +259,9 @@ li.wcdv_aggregate_field {
 	border-radius: 4px;
 	padding: 4px;
 	margin-right: 4px;
+	cursor: pointer;
+	white-space: nowrap;
+	background-color: #EEE;
 }
 
 /* VERTICAL CONTROLS */

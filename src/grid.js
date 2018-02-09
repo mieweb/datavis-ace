@@ -1266,11 +1266,19 @@ Grid.prototype.redraw = function () {
 	if (EXPERIMENTAL_FEATURES['Reorder Control Fields']) {
 		self.groupControl.getListElement().sortable({
 			connectWith: '#' + self.pivotControl.getListElement().attr('id')
-		})._addEventDebugging('sort', 'GROUP');
+		})
+			._addEventDebugging('sort', 'GROUP')
+			.on('sortupdate', function () {
+				self.groupControl.updateView();
+			});
 
 		self.pivotControl.getListElement().sortable({
 			connectWith: '#' + self.groupControl.getListElement().attr('id')
-		})._addEventDebugging('sort', 'PIVOT');
+		})
+			._addEventDebugging('sort', 'PIVOT')
+			.on('sortupdate', function () {
+				self.pivotControl.updateView();
+			});
 	}
 
 	if (self.aggregateControl === undefined) {
