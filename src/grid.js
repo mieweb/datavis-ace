@@ -1090,8 +1090,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 					dropdown.append(jQuery('<option>', { value: perspectiveName }).text(perspectiveName));
 					dropdown.val(perspectiveName);
 					showHideBtns();
+					self.view.prefs.addPerspective(dropdown.val());
 					self.view.prefs.setCurrentPerspective(dropdown.val());
-					self.view.prefs.save();
 				}
 				else {
 					dropdown.val(self.view.prefs.getCurrentPerspective());
@@ -1101,7 +1101,6 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 
 			showHideBtns();
 			self.view.prefs.setCurrentPerspective(dropdown.val());
-			self.view.prefs.load();
 		})
 		.appendTo(div)
 	;

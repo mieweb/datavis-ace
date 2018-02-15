@@ -57,7 +57,6 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, backendConfig) {
 
 	self.id = id;
 	self.modules = {};
-	self.perspectives = {};
 
 	backendConfig = deepDefaults(backendConfig, {
 		type: 'localStorage',
@@ -124,6 +123,8 @@ Prefs.prototype.init = function (cont) {
 
 	return self.backend.getPerspectives(function (names) {
 		self.availablePerspectives = names;
+		self.perspectives = {};
+
 		return self.backend.getCurrent(function (currentName) {
 			if (currentName == null) {
 				currentName = 'Main';
@@ -210,7 +211,7 @@ Prefs.prototype.addPerspective = function (name, config, cont, opts) {
 	self.perspectives[name] = new Perspective(name, config, self.modules);
 
 	if (opts.switch) {
-		return self.switchPerspective(name, cont, {
+		return self.setCurrentPerspective(name, cont, {
 			loadPerspective: needToLoad
 		});
 	}
@@ -249,7 +250,7 @@ Prefs.prototype.deletePerspective = function (name, cont) {
 
 	// Delete the perspective in the backend.
 
-	self.backend.deletePerspective(name, function (ok) {
+	self.backend.delete(name, function (ok) {
 		if (!ok) {
 			return typeof cont === 'function' ? cont(false) : false;
 		}
@@ -257,7 +258,7 @@ Prefs.prototype.deletePerspective = function (name, cont) {
 		// When we've deleted the current perspective, switch to the "Main" perspective.
 
 		if (self.currentPerspective.getName() === name) {
-			self.switchPerspective('Main');
+			self.setCurrentPerspective('Main');
 		}
 	});
 };
@@ -306,7 +307,7 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
 
 	// Rename the perspective in the backend.
 
-	self.backend.renamePerspective(oldName, newName, function (ok) {
+	self.backend.rename(oldName, newName, function (ok) {
 		if (!ok) {
 			// Error renaming the perspective in the backend.
 			return typeof cont === 'function' ? cont(false) : false;
@@ -323,7 +324,7 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
 	});
 };
 
-// #switchPerspective {{{2
+// #setCurrentPerspective {{{2
 
 /**
  * Switch to a different perspective.
@@ -339,7 +340,7 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
  * If true, automatically load the perspective after we've switched to it.
  */
 
-Prefs.prototype.switchPerspective = function (name, cont, opts) {
+Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -379,6 +380,14 @@ Prefs.prototype.switchPerspective = function (name, cont, opts) {
 	return typeof cont === 'function' ? cont(true) : true;
 };
 
+// #getCurrentPerspective {{{2
+
+Prefs.prototype.getCurrentPerspective = function () {
+	var self = this;
+
+	return self.currentPerspective.getName();
+};
+
 // #save {{{2
 
 /**
@@ -394,6 +403,29 @@ Prefs.prototype.save = function (cont) {
 
 	self.currentPerspective.save(function (config) {
 		self.backend.save(self.currentPerspective.getName(), config, cont);
+	});
+};
+
+// #reset {{{2
+
+Prefs.prototype.reset = function (cont) {
+	var self = this;
+
+	if (cont != null && typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be null or a function');
+	}
+
+	self.backend.reset(function () {
+		self.initialized = false;
+		self.init(function () {
+			_.each(self.modules, function (module, moduleName) {
+				if (typeof module.reset === 'function') {
+					self.debug('Resetting module: moduleName = %s', moduleName);
+					module.reset();
+				}
+			});
+			return typeof cont === 'function' ? cont(true) : true;
+		});
 	});
 };
 
@@ -714,18 +746,16 @@ PrefsBackendLocalStorage.prototype.delete = function (name, cont) {
 
 // #reset {{{2
 
-PrefsBackendLocalStorage.prototype.reset = function () {
+PrefsBackendLocalStorage.prototype.reset = function (cont) {
 	var self = this;
 
-	debug.info('PREFS // LOCAL - (' + self.view.name + ' : ' + self.perspective + ')',
-						 'Resetting perspectives');
+	self.debug('Resetting perspectives');
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
-	delete storedPrefData[self.view.name];
+	delete storedPrefData[self.id];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	self.setCurrentPerspective('Main');
-	self.super.reset();
+	return typeof cont === 'function' ? cont(true) : true;
 };
 
 // PrefsBackendTemporary {{{1
@@ -840,9 +870,9 @@ PrefsBackendTemporary.prototype.setCurrentPerspective = function (perspective) {
 	self.current = perspective;
 };
 
-// #renamePerspective {{{2
+// #rename {{{2
 
-PrefsBackendTemporary.prototype.renamePerspective = function () {
+PrefsBackendTemporary.prototype.rename = function () {
 	var self = this
 		, args = Array.prototype.slice.call(arguments)
 		, oldName
@@ -857,7 +887,7 @@ PrefsBackendTemporary.prototype.renamePerspective = function () {
 		newName = args[1];
 	}
 	else {
-		throw new Error('Usage: PrefsBackendTemporary#renamePerspective([oldName], newName)');
+		throw new Error('Usage: PrefsBackendTemporary#rename([oldName], newName)');
 	}
 
 	if (typeof oldName !== 'string') {
@@ -886,9 +916,9 @@ PrefsBackendTemporary.prototype.renamePerspective = function () {
 	return true;
 };
 
-// #deletePerspective {{{2
+// #delete {{{2
 
-PrefsBackendTemporary.prototype.deletePerspective = function (perspective) {
+PrefsBackendTemporary.prototype.delete = function (perspective) {
 	var self = this;
 
 	if (perspective === undefined) {
@@ -1065,6 +1095,14 @@ PrefsModuleView.prototype.save = function () {
 	}
 
 	return prefs;
+};
+
+// #reset {{{2
+
+PrefsModuleView.prototype.reset = function () {
+	var self = this;
+
+	self.target.reset();
 };
 
 // Perspective {{{1
