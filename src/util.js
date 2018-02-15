@@ -2595,6 +2595,34 @@ function mixinEventHandling(obj, name, events) {
 	};
 }
 
+function mixinDebugging(obj, tagStart) {
+	if (tagStart != null && typeof tagStart !== 'string' && typeof tagStart !== 'function') {
+		throw new Error('Call Error: `tagStart` must be null, a string, or a function');
+	}
+
+	var getTag = function (self) {
+		if (typeof tagStart === 'function') {
+			return tagStart.call(self);
+		}
+		else if (typeof tagStart === 'string') {
+			return tagStart;
+		}
+		else {
+			return null;
+		}
+	};
+
+	obj.prototype.debug = function () {
+		var args = Array.prototype.slice.call(arguments);
+		debug.info.apply(null, Array.prototype.concat.call([getTag(this)], args));
+	};
+	obj.prototype.debug_tag = function () {
+		var args = Array.prototype.slice.call(arguments);
+		var tag = args.shift();
+		debug.info.apply(null, Array.prototype.concat.call([getTag(this) + ' // ' + tag], args));
+	};
+}
+
 // Delegate {{{1
 
 function delegate(from, to, methods) {

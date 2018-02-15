@@ -1182,7 +1182,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// about it to update the UI?
 
 	self.view.prefs.getPerspectives(function (perspectives) {
-		self.view.prefs.getInitialPerspective(function (initial) {
+		self.view.prefs.getCurrent(function (initial) {
 			_.each(perspectives.sort(), function (perspective) {
 				jQuery('<option>', { 'value': perspective })
 					.text(perspective)

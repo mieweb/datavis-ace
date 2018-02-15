@@ -119,12 +119,9 @@ var View = function (source, name, opts) {
 	self.aggregateSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: 'count'}]]);
 
 	if (self.opts.saveViewConfig) {
-		try {
-			self.prefs = new LocalStoragePrefs(self);
-		}
-		catch (e) {
-			self.prefs = new TemporaryPrefs(self);
-		}
+		self.prefs = new Prefs(self.name, {
+			view: self
+		});
 	}
 };
 
@@ -2040,7 +2037,7 @@ View.prototype.getData = function (cont) {
 			self.typeInfo = typeInfo;
 
 			if (self.opts.saveViewConfig && !self.prefsLoaded) {
-				return self.prefs.load(function () {
+				return self.prefs.init(function () {
 					self.prefsLoaded = true;
 					self.lock.unlock();
 					self.getData(cont);
