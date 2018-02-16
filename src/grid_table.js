@@ -3205,7 +3205,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 						.text(text)
 						.on('dblclick', function () {
 							var elt = jQuery(this);
-							var filter = {};
+							var filter = deepCopy(self.view.getFilter());
 							_.each(data.rowVals[elt.attr('data-rowval-index')], function (x, i) {
 								filter[data.groupFields[i]] = x;
 							});
