@@ -515,6 +515,9 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	self._validateFeatures();
 	self._validateId(id);
 
+	self.prefs = self.view.prefs;
+	self.prefs.bind('grid', self);
+
 	/*
 	 * Set up other container elements.
 	 */
@@ -1063,6 +1066,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.appendTo(toolbar)
 	;
 
+	var options = {};
+
 	// A shortcut for doing the "right thing" with the rename & delete buttons, which are only shown
 	// when the currently selected perspective isn't "Main".
 
@@ -1085,22 +1090,26 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.append(jQuery('<option>', { value: 'NEW' }).text('New View...'))
 		.on('change', function (evt) {
 			if (dropdown.val() === 'NEW') {
-				var perspectiveName = prompt('Enter new view name', self.view.prefs.getCurrentPerspective());
+				var perspectiveName = prompt('Enter new view name', self.prefs.getCurrentPerspective());
 				if (perspectiveName) {
-					dropdown.append(jQuery('<option>', { value: perspectiveName }).text(perspectiveName));
-					dropdown.val(perspectiveName);
-					showHideBtns();
-					self.view.prefs.addPerspective(dropdown.val());
-					self.view.prefs.setCurrentPerspective(dropdown.val());
+					if (options[perspectiveName] != null) {
+						self.prefs.setCurrentPerspective(perspectiveName);
+					}
+					else {
+						options[perspectiveName] = jQuery('<option>', { value: perspectiveName }).text(perspectiveName);
+						dropdown.append(options[perspectiveName]);
+						self.prefs.addPerspective(dropdown.val());
+						self.prefs.setCurrentPerspective(dropdown.val());
+					}
 				}
 				else {
-					dropdown.val(self.view.prefs.getCurrentPerspective());
+					dropdown.val(self.prefs.getCurrentPerspective());
 				}
 				return;
 			}
 
 			showHideBtns();
-			self.view.prefs.setCurrentPerspective(dropdown.val());
+			self.prefs.setCurrentPerspective(dropdown.val());
 		})
 		.appendTo(div)
 	;
@@ -1127,7 +1136,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 					dropdown.children().filter(function (i, elt) {
 						return elt.value === oldName;
 					}).attr('value', newName).text(newName);
-					self.view.prefs.renamePerspective(oldName, newName);
+					self.prefs.renamePerspective(oldName, newName);
 				}
 			}
 		})
@@ -1145,11 +1154,11 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 			}
 			else {
 				var toDelete = dropdown.val();
-				self.view.prefs.deletePerspective(toDelete);
+				self.prefs.deletePerspective(toDelete);
 				dropdown.children().filter(function (i, elt) {
 					return elt.value === toDelete;
 				}).remove();
-				dropdown.val(self.view.prefs.getCurrentPerspective());
+				dropdown.val(self.prefs.getCurrentPerspective());
 				showHideBtns();
 			}
 		})
@@ -1163,11 +1172,11 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 
 	var resetBtn = jQuery(fontAwesome('F0E2', 'wcdv_button', 'Reset'))
 		.on('click', function () {
-			self.view.prefs.reset();
+			self.prefs.reset();
 			dropdown.children().filter(function (i, elt) {
-				return elt.value !== self.view.prefs.getCurrentPerspective() && elt.value !== 'NEW';
+				return elt.value !== self.prefs.getCurrentPerspective() && elt.value !== 'NEW';
 			}).remove();
-			dropdown.val(self.view.prefs.getCurrentPerspective());
+			dropdown.val(self.prefs.getCurrentPerspective());
 			showHideBtns();
 		})
 		.appendTo(div)
@@ -1180,16 +1189,48 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// XXX: Is it possible for perspectives to change by some other route so that we need to know
 	// about it to update the UI?
 
-	self.view.prefs.getPerspectives(function (perspectives) {
-		self.view.prefs.getCurrent(function (initial) {
-			_.each(perspectives.sort(), function (perspective) {
-				jQuery('<option>', { 'value': perspective })
-					.text(perspective)
-					.appendTo(dropdown);
+	self.prefs.getPerspectives(function (perspectives) {
+		self.prefs.getCurrent(function (initial) {
+			_.each(perspectives.sort(), function (name) {
+				if (options[name] == null) {
+					options[name] = jQuery('<option>', { 'value': name })
+						.text(name)
+						.appendTo(dropdown);
+				}
 			});
 			dropdown.val(initial);
 			showHideBtns();
 		});
+	});
+
+	self.prefs.on('perspectiveAdded', function (name) {
+		if (options[name] == null) {
+			options[name] = jQuery('<option>', {
+				value: name
+			}).text(name);
+			dropdown.append(options[name]);
+		}
+	});
+
+	self.prefs.on('perspectiveDeleted', function (name) {
+		if (options[name] != null) {
+			options[name].remove();
+			delete options[name];
+		}
+	});
+
+	self.prefs.on('perspectiveRenamed', function (oldName, newName) {
+		if (options[oldName] != null) {
+			options[oldName].attr('value', newName);
+			options[oldName].text(newName);
+			options[newName] = options[oldName];
+			delete options[oldName];
+		}
+	});
+
+	self.prefs.on('perspectiveChanged', function (name) {
+		dropdown.val(name);
+		showHideBtns();
 	});
 };
 

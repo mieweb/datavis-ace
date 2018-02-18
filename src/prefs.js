@@ -94,6 +94,14 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, backendConfig) {
 	}
 });
 
+mixinEventHandling(Prefs, function (self) {
+	return 'PREFS (' + self.id + ')';
+}, [
+	  'perspectiveAdded'   // Fired when a perspective is added.
+	, 'perspectiveDeleted' // Fired when a perspective is deleted.
+	, 'perspectiveRenamed' // Fired when a perspective is renamed.
+	, 'perspectiveChanged' // Fired when the current perspective has changed.
+]);
 mixinDebugging(Prefs, function () {
 	return 'PREFS (' + this.id + ')';
 });
@@ -179,6 +187,10 @@ Prefs.prototype.bind = function (moduleName, target) {
  *
  * @param {boolean} [opts.switch=true]
  * If true, automatically switch to the new perspective after creating it.
+ *
+ * @param {boolean} [opts.sendEvent=true]
+ *
+ * @param {boolean} [opts.dontSendEventTo]
  */
 
 Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, opts) {
@@ -199,7 +211,8 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	}
 
 	opts = deepDefaults(opts, {
-		switch: true
+		switch: true,
+		sendEvent: true
 	});
 
 	if (self.currentPerspective) {
@@ -212,6 +225,14 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 
 	self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
 	self.perspectives[name] = new Perspective(name, config, self.modules, perspectiveOpts);
+
+	// TODO Should we save right away?
+
+	if (opts.sendEvent) {
+		self.fire('perspectiveAdded', {
+			notTo: opts.dontSendEventTo
+		}, name);
+	}
 
 	if (opts.switch) {
 		return self.setCurrentPerspective(name, cont, {
@@ -233,10 +254,18 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
  *
  * @param {function} [cont]
  * Continuation callback.
+ *
+ * @param {object} [opts]
+ * @param {boolean} [opts.sendEvent=true]
+ * @param {boolean} [opts.dontSendEventTo]
  */
 
-Prefs.prototype.deletePerspective = function (name, cont) {
+Prefs.prototype.deletePerspective = function (name, cont, opts) {
 	var self = this;
+
+	opts = deepDefaults(opts, {
+		sendEvent: true
+	});
 
 	// When the name wasn't provided, use the current perspective.
 
@@ -254,8 +283,22 @@ Prefs.prototype.deletePerspective = function (name, cont) {
 	// Delete the perspective in the backend.
 
 	self.backend.delete(name, function (ok) {
+		var newCurrent;
+
 		if (!ok) {
 			return typeof cont === 'function' ? cont(false) : false;
+		}
+
+		// TODO Augment with history, use most recent instead of just "Main."
+
+		if (self.currentPerspective.getName() === name) {
+			newCurrent = 'Main';
+		}
+
+		if (opts.sendEvent) {
+			self.fire('perspectiveDeleted', {
+				notTo: opts.dontSendEventTo
+			}, name, newCurrent);
 		}
 
 		// When we've deleted the current perspective, switch to the "Main" perspective.
@@ -275,10 +318,18 @@ Prefs.prototype.deletePerspective = function (name, cont) {
  * @param {string} newName
  *
  * @param {function} [cont]
+ *
+ * @param {object} [opts]
+ * @param {boolean} [opts.sendEvent=true]
+ * @param {boolean} [opts.dontSendEventTo]
  */
 
-Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
+Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 	var self = this;
+
+	opts = deepDefaults(opts, {
+		sendEvent: true
+	});
 
 	if (oldName != null && typeof oldName !== 'string') {
 		throw new Error('Call Error: `oldName` must be null or a string');
@@ -323,6 +374,12 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
 		self.perspectives[newName] = self.perspectives[oldName];
 		delete self.perspectives[oldName];
 
+		if (opts.sendEvent) {
+			self.fire('perspectiveRenamed', {
+				notTo: opts.dontSendEventTo
+			}, oldName, newName);
+		}
+
 		return typeof cont === 'function' ? cont(true) : true;
 	});
 };
@@ -341,6 +398,9 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont) {
  * @param {object} [opts]
  * @param {boolean} [opts.loadPerspective=true]
  * If true, automatically load the perspective after we've switched to it.
+ *
+ * @param {boolean} [opts.sendEvent=true]
+ * @param {boolean} [opts.dontSendEventTo]
  */
 
 Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
@@ -355,7 +415,8 @@ Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 	}
 
 	opts = deepDefaults(opts, {
-		loadPerspective: true
+		loadPerspective: true,
+		sendEvent: true
 	});
 
 	if (self.perspectives[name] == null) {
@@ -377,7 +438,21 @@ Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 	self.currentPerspective = self.perspectives[name];
 
 	if (opts.loadPerspective) {
-		return self.currentPerspective.load(cont);
+		return self.currentPerspective.load(function () {
+			if (opts.sendEvent) {
+				self.fire('perspectiveChanged', {
+					notTo: opts.dontSendEventTo
+				}, name);
+			}
+
+			return typeof cont === 'function' ? cont(true) : true;
+		});
+	}
+
+	if (opts.sendEvent) {
+		self.fire('perspectiveChanged', {
+			notTo: opts.dontSendEventTo
+		}, name);
 	}
 
 	return typeof cont === 'function' ? cont(true) : true;
@@ -1114,6 +1189,36 @@ PrefsModuleView.prototype.reset = function () {
 	self.target.reset();
 };
 
+// PrefsModuleGrid {{{1
+
+/**
+ * @class
+ */
+
+var PrefsModuleGrid = makeSubclass(PrefsModule);
+
+// #load {{{2
+
+PrefsModuleGrid.prototype.load = function (config) {
+	var self = this;
+};
+
+// #save {{{2
+
+PrefsModuleGrid.prototype.save = function () {
+	var self = this;
+
+	var prefs = {};
+
+	return prefs;
+};
+
+// #reset {{{2
+
+PrefsModuleGrid.prototype.reset = function () {
+	var self = this;
+};
+
 // Perspective {{{1
 
 // Constructor {{{2
@@ -1243,5 +1348,6 @@ var PREFS_BACKEND_REGISTRY = {
 };
 
 var PREFS_MODULE_REGISTRY = {
-	view: PrefsModuleView
+	view: PrefsModuleView,
+	grid: PrefsModuleGrid
 };

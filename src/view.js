@@ -74,14 +74,6 @@ var DATA_VIEW_ID = 1;
  *
  * @property {Function} groupSpec.aggregate
  *
- * @property {Object.<string, Array.<Function>>} eventHandlers
- *
- * @property {Array.<Function>} eventHandlers.filter
- *
- * @property {Array.<Function>} eventHandlers.getTypeInfo
- *
- * @property {Array.<Function>} eventHandlers.sort
- *
  * @property {Timing} timing For keeping track of how long it takes to do things in the view.
  */
 
@@ -106,11 +98,6 @@ var View = function (source, name, opts) {
 	});
 
 	self.name = name || source.getName() || gensym();
-
-	self.eventHandlers = {};
-	_.each(_.keys(View.events), function (evt) {
-		self.eventHandlers[evt] = [];
-	});
 
 	self.timing = new Timing();
 
