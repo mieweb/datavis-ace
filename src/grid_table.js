@@ -3088,8 +3088,10 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			colSpan *= numCellAggregates;
 		}
 
-		th.attr('colspan', colSpan);
-		tr.append(th);
+		if (th != null) {
+			th.attr('colspan', colSpan);
+			tr.append(th);
+		}
 
 		for (var i = 0; i < colSpan - 1; i += 1) {
 			self.csv.addCol('');
