@@ -481,6 +481,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	// Clean up the inputs that we received.
 
+	defn = defn || {};
 	self._normalize(defn);
 
 	// HACK The *only* reason we need this is so that the aggregate functions which do formatting
