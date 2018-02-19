@@ -397,7 +397,7 @@ var StringDropdownGridFilterChosen = makeSubclass(GridFilter, function () {
 
 	self.afterAdd = function (target) {
 		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
-			_.each(uniqueVals[self.field].values, function (val) {
+			_.each(getPropDef([], uniqueVals, self.field, 'values'), function (val) {
 				jQuery('<option>').attr({
 					'value': val
 				}).text(val).appendTo(self.input);
@@ -467,7 +467,7 @@ var StringDropdownGridFilterSumo = makeSubclass(GridFilter, function () {
 
 	self.afterAdd = function (target) {
 		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
-			_.each(uniqueVals[self.field].values, function (val) {
+			_.each(getPropDef([], uniqueVals, self.field, 'values'), function (val) {
 				jQuery('<option>').attr({
 					'value': val
 				}).text(val).appendTo(self.input);
