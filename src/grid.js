@@ -1537,10 +1537,20 @@ Grid.prototype.hide = function () {
 
 /**
  * Make the grid visible.  If the grid has not been "run" yet, it will be done now.
+ *
+ * @param {object} [opts]
+ *
+ * @param {boolean} [opts.redraw=true]
+ * If true, automatically redraw the grid after it has been shown.  This is almost always what you
+ * want, unless you intend to manually call `redraw()` or `refresh()` immediately after showing it.
  */
 
-Grid.prototype.show = function () {
+Grid.prototype.show = function (opts) {
 	var self = this;
+
+	opts = deepDefaults(opts, {
+		redraw: true
+	});
 
 	debug.info('GRID', 'Showing...');
 
@@ -1550,7 +1560,7 @@ Grid.prototype.show = function () {
 			if (self.tagOpts.title) {
 				self.ui.showHideButton.addClass('open').html(fontAwesome('f077'));
 			}
-			if (! self.hasRun) {
+			if (!self.hasRun && opts.redraw) {
 				self.hasRun = true;
 				self.redraw();
 			}
