@@ -1,36 +1,41 @@
 SOURCE=$(wildcard src/*.js)
+DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.css)
+EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
+PANDOC_FILES=index getting_started examples overview source view grid_filter \
+	     grid_filter_set prefs grid_table events known_issues about
+PANDOC_INPUT=$(addprefix doc/,$(addsuffix .pandoc,$(PANDOC_FILES)))
 
-.PHONY:	doc examples clean jsdoc sphinx tags
+.PHONY:	doc jsdoc pandoc examples clean tags
 
 all:	dist/wcdatavis.js examples
 
 dist/wcdatavis.js:	wcdatavis.src $(SOURCE)
 	./bin/jspp -o $@ $<
 
-examples:	examples/wcdatavis.js examples/wcdatavis.css examples/export.php
-
-clean:
-	rm -f dist/wcdatavis.js examples/wcdatavis.js examples/wcdatavis.css
-	rm -rf jsdoc
-	$(MAKE) -C doc clean
-
-doc:	jsdoc sphinx
+doc:	jsdoc pandoc
 
 jsdoc:
 	rm -rf jsdoc
 	./node_modules/.bin/jsdoc -c jsdoc_conf.json src
 
-sphinx:
-	$(MAKE) -C doc html
+pandoc:	doc/html/index.html doc/html/style.css
+
+doc/html/index.html:	$(PANDOC_INPUT)
+	@mkdir -p $(dir $@)
+	pandoc -o $@ -s --toc -c style.css $^
+
+doc/html/style.css:	doc/style.css
+	cp $^ $@
+
+examples:	$(EXAMPLE_FILES)
+
+$(EXAMPLE_FILES):examples/%:	dist/%
+	cp $^ $@
+
+clean:
+	rm -f dist/wcdatavis.js examples/wcdatavis.js examples/wcdatavis.css
+	rm -rf jsdoc
+	rm -rf doc/html
 
 tags:
 	/usr/bin/ctags -R -f TAGS --languages=JavaScript --sort=foldcase src
-
-examples/wcdatavis.js:	dist/wcdatavis.js
-	cp $^ $@
-
-examples/wcdatavis.css:	dist/wcdatavis.css
-	cp $^ $@
-
-examples/export.php:	dist/export.php
-	cp $^ $@
