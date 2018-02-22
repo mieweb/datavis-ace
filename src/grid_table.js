@@ -714,6 +714,37 @@ GridTable.prototype._addFilterToHeader = function (th, field, displayText) {
 		.appendTo(th);
 };
 
+// #_addDrillDownHandler {{{2
+
+GridTable.prototype._addDrillDownHandler = function (data, elt) {
+	var self = this;
+
+	elt.addClass('wcdv_drill_down');
+	elt.on('dblclick', function () {
+		var elt = jQuery(this);
+		var filter = deepCopy(self.view.getFilter());
+		var rowValIndex = elt.attr('data-rowval-index');
+		var colValIndex = elt.attr('data-colval-index');
+
+		if (rowValIndex != null) {
+			_.each(data.rowVals[rowValIndex], function (x, i) {
+				filter[data.groupFields[i]] = x;
+			});
+		}
+
+		if (colValIndex != null) {
+			_.each(data.colVals[colValIndex], function (x, i) {
+				filter[data.pivotFields[i]] = x;
+			});
+		}
+
+		debug.info('GRID TABLE - PIVOT // DRILL DOWN',
+			'Creating new perspective: filter = %O', filter);
+
+		self.view.prefs.addPerspective('Drill Down', { view: { filter: filter } }, { isTemporary: true });
+	});
+};
+
 // #addSortHandler {{{2
 
 GridTable.prototype.addSortHandler = function () {
@@ -1120,9 +1151,9 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 	});
 };
 
-// #drawBody_aggregates {{{2
+// #drawBody_groupAggregates {{{2
 
-GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
+GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum) {
 	var self = this;
 
 	_.each(getPropDef([], data, 'agg', 'info', 'group'), function (aggInfo, aggNum) {
@@ -1141,7 +1172,11 @@ GridTable.prototype.drawBody_aggregates = function (data, tr, groupNum) {
 			});
 		}
 
-		var td = jQuery('<td>').text(text);
+		var td = jQuery('<td>').text(text).attr({
+			'data-rowval-index': groupNum
+		});
+
+		self._addDrillDownHandler(data, td);
 
 		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
 			if (aggNum === 0) {
@@ -2793,7 +2828,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 		self.csv.addRow();
 
 		self.drawBody_rowVals(data, tr, groupNum);
-		self.drawBody_aggregates(data, tr, groupNum);
+		self.drawBody_groupAggregates(data, tr, groupNum);
 
 		// Generate the user's custom-defined additional columns.  If the `value` function returns an
 		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
@@ -3205,22 +3240,9 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							'data-colval-index': pivotNum
 						})
 						.text(text)
-						.on('dblclick', function () {
-							var elt = jQuery(this);
-							var filter = deepCopy(self.view.getFilter());
-							_.each(data.rowVals[elt.attr('data-rowval-index')], function (x, i) {
-								filter[data.groupFields[i]] = x;
-							});
-							_.each(data.colVals[elt.attr('data-colval-index')], function (x, i) {
-								filter[data.pivotFields[i]] = x;
-							});
-
-							debug.info('GRID TABLE - PIVOT // DRILL DOWN',
-								'Creating new perspective: filter = %O', filter);
-
-							self.view.prefs.addPerspective('Drill Down', { view: { filter: filter } }, { isTemporary: true });
-						})
 					;
+
+					self._addDrillDownHandler(data, td);
 
 					if ((self.opts.drawInternalBorders || numCellAggregates > 1) && aggNum === 0) {
 						td.addClass('wcdv_pivot_colval_boundary');
@@ -3237,7 +3259,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			}
 		});
 
-		self.drawBody_aggregates(data, tr, groupNum);
+		self.drawBody_groupAggregates(data, tr, groupNum);
 
 		// Generate the user's custom-defined additional columns.  If the `value` function returns an
 		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
@@ -3345,7 +3367,10 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				});
 			}
 
-			var td = jQuery('<td>').text(text);
+			var td = jQuery('<td>').text(text).attr({
+				'data-colval-index': colValIdx
+			});
+			self._addDrillDownHandler(data, td);
 
 			if (numCellAggregates > 1) {
 				td.attr('colspan', numCellAggregates);
