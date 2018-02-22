@@ -1,13 +1,62 @@
+/**
+ * The jQuery plugin namespace.
+ * @external "jQuery.fn"
+ * @see {@link http://learn.jquery.com/plugins/|jQuery Plugins}
+ */
+
 jQuery.fn.extend({
+
+	/**
+	 * Tells whether the element is checked.
+	 *
+	 * @function external:"jQuery.fn"#_isChecked
+	 *
+	 * @returns {boolean}
+	 * True if the element is checked, false if it's not.
+	 */
+
 	_isChecked: function () {
 		return this.attr('checked');
 	},
+
+	/**
+	 * Tells whether the element is disabled.
+	 *
+	 * @function external:"jQuery.fn"#_isDisabled
+	 *
+	 * @returns {boolean}
+	 * True if the element is disabled, false if it's not.
+	 */
+
 	_isDisabled: function () {
 		return this.attr('disabled');
 	},
+
+	/**
+	 * Tells whether the element is hidden.
+	 *
+	 * @function external:"jQuery.fn"#_isHidden
+	 *
+	 * @returns {boolean}
+	 * True if the element is hidden, false if it's visible.
+	 */
+
 	_isHidden: function () {
 		return this.css('display') === 'none' || this.css('visibility') !== 'visible';
 	},
+
+	/**
+	 * Adds debugging output for jQuery UI behavior events.
+	 *
+	 * @function external:"jQuery.fn"#_addEventDebugging
+	 *
+	 * @param {string} what
+	 * The behavior to output debugging info for.  Must be: drag, drop, or sort.
+	 *
+	 * @param {string} tag
+	 * Prefix to output at the beginning of the debug message.
+	 */
+
 	_addEventDebugging: function (what, tag) {
 		switch (what) {
 		case 'drag':
@@ -57,6 +106,16 @@ jQuery.fn.extend({
 		};
 		return this;
 	},
+
+	/**
+	 * Make this element draggable.
+	 *
+	 * @function external:"jQuery.fn"#_makeDraggableField
+	 *
+	 * @param {object} [opts]
+	 * Change options passed to `draggable()`.
+	 */
+
 	_makeDraggableField: function (opts) {
 		opts = deepDefaults(true, {
 			classes: {
@@ -82,6 +141,22 @@ jQuery.fn.extend({
 		return this
 			.draggable(opts);
 	},
+
+	/**
+	 * Specify what to do when a file is dropped onto this element.
+	 *
+	 * ```
+	 * $('#fileDropTarget')._onFileDrop(function (files) {
+	 *   something.addFiles(files);
+	 * });
+	 * ```
+	 *
+	 * @function external:"jQuery.fn"#_onFileDrop
+	 *
+	 * @param {function} cb
+	 * Function to call when the file is dropped; it is passed a `File` array.
+	 */
+
 	_onFileDrop: function (cb) {
 		// https://www.html5rocks.com/en/tutorials/file/dndfiles/
 		function handleFileSelect(evt) {
