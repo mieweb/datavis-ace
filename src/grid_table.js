@@ -716,16 +716,22 @@ GridTable.prototype._addFilterToHeader = function (th, field, displayText) {
 
 // #_addDrillDownHandler {{{2
 
-GridTable.prototype._addDrillDownHandler = function (data, elt) {
+GridTable.prototype._addDrillDownHandler = function (tbl, data) {
 	var self = this;
 
-	elt.addClass('wcdv_drill_down');
-	elt.on('mousedown', function (evt) {
+	tbl.on('mousedown', function (evt) {
 		if (evt.detail > 1) {
 			evt.preventDefault();
 		}
 	});
-	elt.on('dblclick', function () {
+	tbl.on('dblclick', 'td.wcdv_drill_down', function () {
+		if (window.getSelection) {
+			window.getSelection().removeAllRanges();
+		}
+		else if (document.selection) {
+			document.selection.empty();
+		}
+
 		var elt = jQuery(this);
 		var filter = deepCopy(self.view.getFilter());
 		var rowValIndex = elt.attr('data-rowval-index');
@@ -746,8 +752,16 @@ GridTable.prototype._addDrillDownHandler = function (data, elt) {
 		debug.info('GRID TABLE - PIVOT // DRILL DOWN',
 			'Creating new perspective: filter = %O', filter);
 
-		self.view.prefs.addPerspective('Drill Down', { view: { filter: filter } }, { isTemporary: true });
+		window.setTimeout(function () {
+			self.view.prefs.addPerspective('Drill Down', { view: { filter: filter } }, { isTemporary: true });
+		});
 	});
+};
+
+// #_addDrillDownClass {{{2
+
+GridTable.prototype._addDrillDownClass = function (elt) {
+	elt.addClass('wcdv_drill_down');
 };
 
 // #addSortHandler {{{2
@@ -895,6 +909,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				tr: {},
 				progress: jQuery('<div>')
 			};
+
+			self._addDrillDownHandler(self.ui.tbl, data);
 
 			if (self.features.block) {
 				var blockConfig = {
@@ -1181,7 +1197,7 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum) {
 			'data-rowval-index': groupNum
 		});
 
-		self._addDrillDownHandler(data, td);
+		self._addDrillDownClass(td);
 
 		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
 			if (aggNum === 0) {
@@ -3247,7 +3263,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 						.text(text)
 					;
 
-					self._addDrillDownHandler(data, td);
+					self._addDrillDownClass(td);
 
 					if ((self.opts.drawInternalBorders || numCellAggregates > 1) && aggNum === 0) {
 						td.addClass('wcdv_pivot_colval_boundary');
@@ -3375,7 +3391,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var td = jQuery('<td>').text(text).attr({
 				'data-colval-index': colValIdx
 			});
-			self._addDrillDownHandler(data, td);
+			self._addDrillDownClass(td);
 
 			if (numCellAggregates > 1) {
 				td.attr('colspan', numCellAggregates);
