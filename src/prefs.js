@@ -137,7 +137,7 @@ Prefs.prototype.init = function (cont) {
 		self.perspectives = {};
 
 		return self.backend.getCurrent(function (currentName) {
-			if (currentName == null) {
+			if (currentName == null || self.availablePerspectives.indexOf(currentName) < 0) {
 				currentName = 'Main';
 			}
 
@@ -294,32 +294,36 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 		sendEvent: true
 	});
 
-	if (self.currentPerspective) {
-		self.save(); // Save the current perspective first.
-		if (config == null) {
-			config = deepCopy(self.currentPerspective.getConfig());
-			needToLoad = false; // Don't need to load, because this is the current config.
+	var f = function () {
+		self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
+		self.perspectives[name] = new Perspective(name, config, self.modules, perspectiveOpts);
+
+		if (opts.sendEvent) {
+			self.fire('perspectiveAdded', {
+				notTo: opts.dontSendEventTo
+			}, name);
 		}
-	}
 
-	self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
-	self.perspectives[name] = new Perspective(name, config, self.modules, perspectiveOpts);
+		if (opts.switch) {
+			return self.setCurrentPerspective(name, cont, {
+				loadPerspective: needToLoad
+			});
+		}
 
-	// TODO Should we save right away?
+		return typeof cont === 'function' ? cont(true) : true;
+	};
 
-	if (opts.sendEvent) {
-		self.fire('perspectiveAdded', {
-			notTo: opts.dontSendEventTo
-		}, name);
-	}
-
-	if (opts.switch) {
-		return self.setCurrentPerspective(name, cont, {
-			loadPerspective: needToLoad
+	if (self.currentPerspective) {
+		self.save(function () {
+			if (config == null) {
+				config = deepCopy(self.currentPerspective.getConfig());
+				needToLoad = false; // Don't need to load, because this is the current config.
+			}
+			return f();
 		});
 	}
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return f();
 };
 
 // #deletePerspective {{{2
