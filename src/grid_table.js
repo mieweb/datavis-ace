@@ -1892,14 +1892,14 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				tr.append(td);
 			}
 			else {
-				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': rowNum});
+				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': row.rowNum});
 
 				// Create the check box which selects the row.
 
 				if (self.features.rowSelect) {
 					td = jQuery('<td>');
 					
-					var checkbox = jQuery('<input>', { 'type': 'checkbox', 'data-row-num': rowNum })
+					var checkbox = jQuery('<input>', { 'type': 'checkbox', 'data-row-num': row.rowNum })
 						.on('change', function () {
 							if (this.checked) {
 								self.select(+this.dataset.rowNum);
