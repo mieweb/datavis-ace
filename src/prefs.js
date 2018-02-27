@@ -932,6 +932,7 @@ PrefsBackendLocalStorage.prototype.save = function (name, config, cont) {
 	self.debug('Saving preferences: name = "%s" ; config = %O', name, config);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
+	setProp(self.version, storedPrefData, self.id, 'version');
 	setProp(config, storedPrefData, self.id, 'perspectives', name);
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
@@ -993,6 +994,7 @@ PrefsBackendLocalStorage.prototype.setCurrent = function (name, cont) {
 	self.debug('Setting current perspective to "%s"', name);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
+	setProp(self.version, storedPrefData, self.id, 'version');
 	setProp(name, storedPrefData, self.id, 'current');
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
