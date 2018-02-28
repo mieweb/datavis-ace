@@ -12,34 +12,58 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/sprintf/1.0.3/sprintf.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/jquery.sumoselect.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/jit/2.0.2/jit.js"></script>
-		<script src="tabletool.js"></script>
-		<script src="wcdatavis.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.5/papaparse.min.js"></script>
+		<script src="../tabletool.js"></script>
+		<script src="../wcdatavis.js"></script>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.6.2/chosen.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/2.4.4/flatpickr.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/sumoselect.min.css"/>
-		<link rel="stylesheet" href="wcdatavis-extra.css"/>
-		<link rel="stylesheet" href="wcdatavis.css"/>
-		<link rel="stylesheet" href="tabletool.css"/>
+		<link rel="stylesheet" href="../wcdatavis-extra.css"/>
+		<link rel="stylesheet" href="../wcdatavis.css"/>
+		<link rel="stylesheet" href="../tabletool.css"/>
 		<script>
 $(document).ready(function () {
 	MIE.DEBUGGING = true;
 
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
-		url: 'redmine1.json'
-	});
-	var view = new MIE.WC_DataVis.View(source, 'Example');
+		url: '../fruit.csv'
+	}, null, [{
+		field: 'Order ID',
+		type: 'number'
+	}, {
+		field: 'Product',
+		type: 'string'
+	}, {
+		field: 'Category',
+		type: 'string'
+	}, {
+		field: 'Amount',
+		type: 'currency'
+	}, {
+		field: 'Date',
+		type: 'date',
+		format: 'M/D/YYYY'
+	}, {
+		field: 'Country',
+		type: 'string'
+	}]);
+	var view = new MIE.WC_DataVis.View(source);
 	new MIE.WC_DataVis.Graph('graph', view, {
-		title: 'JavaScript InfoVis Toolkit Example',
-		type: 'bar',
-		categoryField: 'Employee',
-		valueField: 'Hours Reported',
-		height: 600,
-		options: {
-			orientation: 'vertical'
+		title: 'Google Charts Example',
+		height: 400,
+		whenPlain: {
+			graphType: 'area',
+			categoryField: 'Date',
+			valueField: 'Amount'
+		},
+		whenGroup: {
+			graphType: 'pie',
+			options: {
+				pieHole: 0.5
+			}
 		}
 	});
 	new MIE.WC_DataVis.Grid('grid', view, {
@@ -59,14 +83,14 @@ $(document).ready(function () {
 		},
 		source: source
 	}, {
-		title: 'Example Data',
+		title: 'Fruit Sales',
 		runImmediately: true
 	});
 });
 		</script>
 	</head>
 	<body>
-		<div id="graph" style="height: 600px; background-color: #000"></div>
+		<div id="graph"></div>
 		<div id="grid"></div>
 	</body>
 </html>

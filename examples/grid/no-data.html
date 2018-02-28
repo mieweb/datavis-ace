@@ -19,8 +19,8 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.6.3/jquery.contextMenu.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/detectizr/2.2.0/detectizr.min.js"></script>
-		<script src="tabletool.js"></script>
-		<script src="wcdatavis.js"></script>
+		<script src="../tabletool.js"></script>
+		<script src="../wcdatavis.js"></script>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.3/chosen.css"/>
@@ -28,88 +28,26 @@
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/sumoselect.min.css"/>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.6.3/jquery.contextMenu.min.css"/>
-		<link rel="stylesheet" href="base.css"/>
-		<link rel="stylesheet" href="wcdatavis.css"/>
-		<link rel="stylesheet" href="tabletool.css"/>
+		<link rel="stylesheet" href="../base.css"/>
+		<link rel="stylesheet" href="../wcdatavis.css"/>
+		<link rel="stylesheet" href="../tabletool.css"/>
 		<script>
 $(document).ready(function () {
 	MIE.DEBUGGING = true;
 
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
-		url: 'fruit.csv'
-	}, null, [{
-		field: 'Order ID',
-		type: 'number'
-	}, {
-		field: 'Product',
-		type: 'string'
-	}, {
-		field: 'Category',
-		type: 'string'
-	}, {
-		field: 'Amount',
-		type: 'currency'
-	}, {
-		field: 'Date',
-		type: 'date',
-		format: 'M/D/YYYY'
-	}, {
-		field: 'Country',
-		type: 'string'
-	}]);
-	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink');
-	new MIE.WC_DataVis.Grid('grid', view, {
-		id: 'grid',
-		table: {
-			features: {
-				rowSelect: true,
-				floatingHeader: true
-			},
-			floatingHeader: {
-				method: 'floatThead'
-			},
-			columns: [{
-				field: 'Order ID'
-			}, {
-				field: 'Product'
-			}, {
-				field: 'Category'
-			}, {
-				field: 'Amount',
-				format: '$0,0.00'
-			}, {
-				field: 'Date'
-			}, {
-				field: 'Country'
-			}]
-		},
-		source: source
-	}, {
-		title: 'Fruit Sales',
-		showControls: true
+		url: '../no-data.json'
 	});
-
-	jQuery('#feature_header').on('click', function () {
-		jQuery('#feature_list').toggle();
+	var view = new MIE.WC_DataVis.View(source, 'No Data');
+	new MIE.WC_DataVis.Grid('grid', view, null, {
+		title: 'No Data',
+		showControls: true
 	});
 });
 		</script>
-		<style>
-#feature_header {
-	font-size: 1em;
-	cursor: pointer;
-}
-		</style>
 	</head>
 	<body>
-		<h1 id="feature_header">What features are in this example? (click to see)</h1>
-		<ul id="feature_list" style="display: none">
-			<li>Dates and Currency</li>
-			<li>Fixed height grid</li>
-			<li>Filter, Group, Pivot, Sort</li>
-			<li>Saved Views</li>
-		</ul>
-		<div id="grid" style="height: 600px"></div>
+		<div id="grid"></div>
 	</body>
 </html>
