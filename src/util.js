@@ -88,10 +88,10 @@ var getComparisonFn = (function () {
 
 	cmpFn.date = function (a, b) {
 		if (window.moment === undefined || (!moment.isMoment(a) && !moment.isMoment(b))) {
-			return a < b;
+			return a < b ? -1 : a > b ? 1 : 0;
 		}
 		else if (moment.isMoment(a) && moment.isMoment(b)) {
-			return a.isBefore(b);
+			return a.isBefore(b) ? -1 : a.isAfter(b) ? 1 : 0;
 		}
 		else {
 			log.warn('Cannot compare Moment w/ non-Moment');
@@ -105,33 +105,30 @@ var getComparisonFn = (function () {
 	// operators to compare them is OK.
 
 	cmpFn.string = function (a, b) {
-		return a < b;
+		return a < b ? -1 : a > b ? 1 : 0;
 	};
 
 	cmpFn.number = function (a, b) {
-		if (window.numeral === undefined) {
-			return a < b;
+		if (window.numeral === undefined || (!numeral.isNumeral(a) && !numeral.isNumeral(b))) {
+			return a < b ? -1 : a > b ? 1 : 0;
 		}
 
 		if (numeral.isNumeral(a)) {
 			if (numeral.isNumeral(b)) {
-				return a._value < b._value;
+				return a._value < b._value ? -1 : a._value > b._value ? 1 : 0;
 			}
 			else {
-				return a._value < b;
+				return a._value < b ? -1 : a._value > b ? 1 : 0;
 			}
 		}
 		else if (numeral.isNumeral(b)) {
-			return a < b._value;
-		}
-		else {
-			return a < b;
+			return a < b._value ? -1 : a > b._value ? 1 : 0;
 		}
 	};
 	cmpFn.currency = cmpFn.number;
 
 	cmpFn.array = function (a, b) {
-		return arrayCompare(a, b) < 0;
+		return arrayCompare(a, b);
 	};
 
 	return {

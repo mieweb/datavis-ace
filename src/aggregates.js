@@ -434,22 +434,6 @@ Aggregate.prototype.getFullName = function () {
 	return self.name + (self.fieldCount > 0 && _.isArray(self.opts.fields) && self.opts.fields.length > 0 ? (' of ' + self.opts.fields.join(', ')) : '');
 };
 
-// #getComparisonFn {{{2
-
-/**
- * Get a comparison function for the specified type.
- *
- * @param {string} type
- * The type of the data items that we want to compare.
- *
- * @return {function}
- * A function that can be used to compare two items.
- */
-
-Aggregate.prototype.getComparisonFn = function (type) {
-	return getComparisonFn.byType(type);
-};
-
 // #getType {{{2
 
 Aggregate.prototype.getType = function () {
@@ -779,7 +763,7 @@ MinAggregate.prototype.calculateStep = function (acc, next) {
 	var self = this;
 
 	var val = self.getRealValue(next[self.opts.fields[0]]);
-	return self.opts.compare(acc, val) ? acc : val;
+	return self.opts.compare(acc, val) < 0 ? acc : val;
 };
 
 // Max {{{1
@@ -818,7 +802,7 @@ MaxAggregate.prototype.calculateStep = function (acc, next) {
 	var self = this;
 
 	var val = self.getRealValue(next[self.opts.fields[0]]);
-	return self.opts.compare(acc, val) ? val : acc;
+	return self.opts.compare(acc, val) < 0 ? val : acc;
 };
 
 // First {{{1

@@ -739,7 +739,15 @@ View.prototype.sort = function (cont) {
 		//console.log(bundle);
 
 		var comparison = function (a, b) {
-			return !!(cmp(a.sortSource, b.sortSource) ^ (spec.dir.toUpperCase() === 'DESC'));
+			if (spec.dir.toUpperCase() === 'ASC') {
+				return cmp(a.sortSource, b.sortSource) < 0;
+			}
+			else if (spec.dir.toUpperCase() === 'DESC') {
+				return cmp(a.sortSource, b.sortSource) > 0;
+			}
+			else {
+				throw new Error('Invalid sort spec: `dir` must be either "ASC" or "DESC"');
+			}
 		};
 
 		var finish = makeFinishCb(unpackBundle(orientation), next);
@@ -976,12 +984,10 @@ View.prototype.filter = function (cont) {
 
 		var pred = {};
 
+		var cmp = getComparisonFn.byValue(datum);
+
 		pred['$eq'] = function (operand) {
-			return ( isMoment && datum.isSame(operand))
-				|| ( isNumeral && datum._value === operand._value )
-				|| ( isString && datum.toString().toLowerCase() === operand.toString().toLowerCase() )
-				|| ( isNumber && datum === operand )
-			;
+			return cmp(datum, operand) === 0;
 		};
 
 		pred['$ne'] = function (operand) {
@@ -1001,11 +1007,7 @@ View.prototype.filter = function (cont) {
 		};
 
 		pred['$gt'] = function (operand) {
-			return ( isMoment && datum.isAfter(operand) )
-				|| ( isNumeral && datum._value > operand._value )
-				|| ( isString && datum.toLowerCase() > operand.toLowerCase() )
-				|| ( isNumber && datum > operand )
-			;
+			return cmp(datum, operand) > 0;
 		};
 
 		pred['$gte'] = function (operand) {
@@ -1013,11 +1015,7 @@ View.prototype.filter = function (cont) {
 		};
 
 		pred['$lt'] = function (operand) {
-			return ( isMoment && datum.isBefore(operand) )
-				|| ( isNumeral && datum._value < operand._value )
-				|| ( isString && datum.toLowerCase() < operand.toLowerCase() )
-				|| ( isNumber && datum < operand )
-			;
+			return cmp(datum, operand) < 0;
 		};
 
 		pred['$lte'] = function (operand) {
