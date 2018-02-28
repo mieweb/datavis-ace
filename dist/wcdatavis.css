@@ -184,10 +184,11 @@ li.wcdv_aggregate_field {
 	font-weight: bold;
 	border-bottom: solid 1px #888;
 	display: inline-block;
-	flex: 1 0 0;
+	flex: auto;
 }
 
-.wcdv_control_title_button {
+.wcdv_control_clear_button {
+	margin-left: 4px;
 	flex: none;
 }
 

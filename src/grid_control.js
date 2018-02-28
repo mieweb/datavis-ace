@@ -519,8 +519,7 @@ GridControl.prototype.makeClearButton = function (target) {
 	var self = this;
 
 	return jQuery(fontAwesome('F05E'))
-		.addClass('wcdv_button')
-		.css('margin-left', '4px')
+		.addClass('wcdv_button wcdv_control_clear_button')
 		.hide()
 		.on('click', function () {
 			jQuery(this).hide();
