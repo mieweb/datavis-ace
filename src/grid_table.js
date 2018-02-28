@@ -739,13 +739,17 @@ GridTable.prototype._addDrillDownHandler = function (tbl, data) {
 
 		if (rowValIndex != null) {
 			_.each(data.rowVals[rowValIndex], function (x, i) {
-				filter[data.groupFields[i]] = x;
+				filter[data.groupFields[i]] = {
+					'$eq': x
+				};
 			});
 		}
 
 		if (colValIndex != null) {
 			_.each(data.colVals[colValIndex], function (x, i) {
-				filter[data.pivotFields[i]] = x;
+				filter[data.pivotFields[i]] = {
+					'$eq': x
+				};
 			});
 		}
 
@@ -1073,8 +1077,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			if (typeof tableDoneCont === 'function') {
 				return tableDoneCont();
 			}
-		});
-	});
+		}); // view.getTypeInfo()
+	}); // view.getData()
 };
 
 // #drawHeader_aggregates {{{2
@@ -3384,8 +3388,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
 			if (aggInfo.instance.inheritFormatting) {
 				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-					overrideType: aggInfo.instance.getType(),
-					debug: true
+					overrideType: aggInfo.instance.getType()
 				});
 			}
 			else {
