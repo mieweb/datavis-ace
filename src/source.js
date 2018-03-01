@@ -78,6 +78,7 @@ var HttpSource = function (spec, params, userTypeInfo) {
 
 	self.url = spec.url;
 	self.method = spec.method || 'GET';
+	self.dataType = spec.dataType;
 
 	self.cache = null;
 	self.userTypeInfo = userTypeInfo;
@@ -100,7 +101,7 @@ HttpSource.prototype.parseData = function (data) {
 
 	//debug.info('DATA SOURCE // HTTP // PARSER', 'Data = ' + ((data instanceof XMLDocument) ? '%o' : '%O'), data);
 
-	if (data instanceof XMLDocument) {
+	if (data instanceof Document) {
 		var root = jQuery(data).children('root');
 		if (!root.is('root')) {
 			throw new SourceError('HTTP Data Source / XML Parser / Missing (root) element');
@@ -220,6 +221,7 @@ HttpSource.prototype.getData = function (params, cont) {
 	if (self.cache === null) {
 		return jQuery.ajax(self.url, {
 			method: self.method,
+			dataType: self.dataType,
 			error: function (jqXHR, textStatus, errorThrown) {
 				throw new SourceError('HTTP Data Source / AJAX Error / ' + errorThrown.message);
 			},
