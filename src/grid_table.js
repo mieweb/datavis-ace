@@ -1905,10 +1905,10 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					var checkbox = jQuery('<input>', { 'type': 'checkbox', 'data-row-num': row.rowNum })
 						.on('change', function () {
 							if (this.checked) {
-								self.select(+this.dataset.rowNum);
+								self.select(+(jQuery(this).attr('data-row-num')));
 							}
 							else {
-								self.unselect(+this.dataset.rowNum);
+								self.unselect(+(jQuery(this).attr('data-row-num')));
 							}
 						});
 					td = jQuery('<td>').append(checkbox).appendTo(tr);
@@ -2328,7 +2328,7 @@ GridTablePlain.prototype._updateSelectionGui = function () {
 	// Next, find all the TR elements which correspond to selected rows.
 
 	var trs = self.root.find('tbody tr').filter(function (_idx, elt) {
-		return self.selection.indexOf(+elt.dataset.rowNum) >= 0;
+		return self.selection.indexOf(+(jQuery(elt).attr('data-row-num'))) >= 0;
 	});
 
 	// Set the "check all" input in the header.
@@ -2622,17 +2622,18 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			self.ui.tbody
 				.find('tr')
 				.filter(function (i, elt) {
-					return elt.dataset.wcdvGroup === groupId;
+					return jQuery(elt).attr('data-wcdv-group') === groupId;
 				})
 				.each(function (i, elt) {
-					if (elt.dataset.wcdvTogglesGroup) {
-						toggle(elt.dataset.wcdvTogglesGroup, show && elt.dataset.wcdvCollapsed === '0', jQuery(elt));
+					elt = jQuery(elt);
+					if (elt.attr('data-wcdv-toggles-group')) {
+						toggle(elt.attr('data-wcdv-toggles-group'), show && elt.attr('data-wcdv-collapsed') === '0', elt);
 					}
 					if (show) {
-						jQuery(elt).show();
+						elt.show();
 					}
 					else {
-						jQuery(elt).hide();
+						elt.hide();
 					}
 				});
 		};
