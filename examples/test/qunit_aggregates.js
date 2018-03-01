@@ -2,11 +2,13 @@ window.test_aggregates = function (view) {
 	var expected = {
 		country: ['Canada', 'China', 'England', 'France', 'Germany', 'Japan', 'Mexico', 'South Korea', 'Switzerland', 'United States'],
 		fruit: ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'],
-		count: [0, 1, 3, 5, 6, 14, 9, 5, 1, 0]
+		count: [0, 1, 3, 5, 6, 14, 9, 5, 1, 0],
+		min: [undefined, 3931, 2668, 2954, 627, 223, 159, 1318, 5115, undefined],
+		max: [undefined, 3931, 8421, 8593, 6609, 8587, 8956, 6705, 5115, undefined]
 	};
 
 	var testData = MIE.Util.iota(9);
-	var tests = ['count'];
+	var tests = ['count', 'min', 'max'];
 
 	QUnit.test('Aggregate Test', function (assert) {
 		var done = assert.async();
@@ -28,7 +30,7 @@ window.test_aggregates = function (view) {
 			};
 			g();
 		})(tests, function (fun, next) {
-			view.setAggregate(MIE.Util.objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: fun}]]));
+			view.setAggregate(MIE.Util.objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: fun, opts: {fields: ['int1'], typeInfo: [{type: 'number'}]}}]]));
 			view.getData(function (data) {
 				console.log(data.agg.results.cell);
 				_.each(MIE.Util.iota(9), function (n) {
