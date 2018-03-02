@@ -1,13 +1,4 @@
 window.test_group_sort = function (view) {
-	var compare = {
-		numeral: function (actual, expected) {
-			return expected == null ? actual == null : numeral.isNumeral(actual) && actual._input === expected;
-		},
-		moment: function (actual, expected) {
-			return expected == null ? actual == null : moment.isMoment(actual) && moment.creationData().input === actual;
-		}
-	};
-
 	var extract = {
 		numeral: function (x) {
 			return numeral.isNumeral(x) && x._input;
@@ -31,14 +22,12 @@ window.test_group_sort = function (view) {
 		field: 'int2',
 		min: '1',
 		max: '9996',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'integer (string → number)'
 	}, {
 		field: 'int3',
 		min: '1',
 		max: '9,996',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'integer (string → numeral)'
 	}, {
@@ -50,14 +39,12 @@ window.test_group_sort = function (view) {
 		field: 'float2',
 		min: '2.4067245551437795',
 		max: '9995.851570643537',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'float (string → number)'
 	}, {
 		field: 'float3',
 		min: '2.407',
 		max: '9,995.852',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'float (string → numeral)'
 	}, {
@@ -69,21 +56,18 @@ window.test_group_sort = function (view) {
 		field: 'currency2',
 		min: '2.41',
 		max: '9,995.85',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'currency (string : currency → number)'
 	}, {
 		field: 'currency3',
 		min: '$2.41',
 		max: '$9,995.85',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'currency (string : currency → numeral)'
 	}, {
 		field: 'currency4',
 		min: '$2.41',
 		max: '$9,995.85',
-		compare: compare.numeral,
 		extract: extract.numeral,
 		info: 'currency (string : string → numeral)'
 	}, {
@@ -95,14 +79,12 @@ window.test_group_sort = function (view) {
 		field: 'date2',
 		min: 'Jul 12, 1900',
 		max: 'Sep 8, 2099',
-		compare: compare.moment,
 		extract: extract.moment,
 		info: 'date (string → moment)'
 	}, {
 		field: 'date3',
 		min: '07/12/1900',
 		max: '09/08/2099',
-		compare: compare.moment,
 		extract: extract.moment,
 		info: 'date (string → moment)'
 	}];
@@ -119,14 +101,6 @@ window.test_group_sort = function (view) {
 			});
 			view.getData(function (data) {
 				var actual = data.rowVals[0][0];
-				/*
-				if (si.compare) {
-					assert.ok(si.compare(actual, si.min), si.info + ' min');
-				}
-				else {
-					assert.equal(actual, si.min, si.info + ' min');
-				}
-				*/
 				if (si.extract) {
 					actual = si.extract(actual);
 				}
@@ -140,14 +114,6 @@ window.test_group_sort = function (view) {
 				});
 				view.getData(function (data) {
 					var actual = data.rowVals[0][0];
-					/*
-					if (si.compare) {
-						assert.ok(si.compare(actual, si.max), si.info + ' max');
-					}
-					else {
-						assert.equal(actual, si.max, si.info + ' max');
-					}
-					*/
 					if (si.extract) {
 						actual = si.extract(actual);
 					}
