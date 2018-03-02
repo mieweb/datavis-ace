@@ -1714,9 +1714,9 @@ View.prototype.clearPivot = function (opts) {
 	return this.setPivot(null, opts);
 };
 
-// #pivot {{{2
+// #pivot_orig {{{2
 
-View.prototype.pivot = function () {
+View.prototype.pivot_orig = function () {
 	var self = this
 		, pivotFields = [] // Array of field names to pivot by.
 		, colValsTree // Tree of all possible column value combinations.
@@ -1761,8 +1761,6 @@ View.prototype.pivot = function () {
 	if (pivotFields.length === 0) {
 		return false;
 	}
-
-	var origKeys = [];
 
 	var buildColValsTree = function (pivotFields) {
 		var colValsTree = {};
@@ -1816,7 +1814,100 @@ View.prototype.pivot = function () {
 		return colVals;
 	};
 
-	var buildColVals2 = function (pivotFields) {
+	var buildData = function (data) {
+		var result = [];
+
+		_.each(data, function (groupedRows, groupNum) {
+			var newData = [];
+			_.each(colVals, function (colVal) {
+				var tmp = [];
+				_.each(groupedRows, function (row) {
+					if (_.every(colVal, function (colValElt, colValNum) {
+						var pivotField = pivotFields[colValNum];
+						var value = row.rowData[pivotField].value;
+						var natRep = getNatRep(value);
+						return colValElt === natRep;
+					})) {
+						tmp.push(row);
+					}
+				});
+				newData.push(tmp);
+			});
+			result.push(newData);
+		});
+
+		return result;
+	};
+
+	colValsTree = buildColValsTree(pivotFields);
+	colVals = buildColVals(colValsTree);
+	self.data.data = buildData(self.data.data, colVals);
+
+	debug.info('VIEW (' + self.name + ') // PIVOT', 'Pivot Fields: %O', pivotFields);
+	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals Tree: %O', colValsTree);
+	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals: %O', colVals);
+	debug.info('VIEW (' + self.name + ') // PIVOT', 'New Data: %O', self.data);
+
+	self.data.isPlain = false;
+	self.data.isGroup = false;
+	self.data.isPivot = true;
+	self.data.pivotFields = pivotFields;
+	self.data.colVals = colVals;
+
+	return true;
+};
+
+// #pivot_new {{{2
+
+View.prototype.pivot = function () {
+	var self = this
+		, pivotFields = [] // Array of field names to pivot by.
+		, colValsTree // Tree of all possible column value combinations.
+		, colVals     // Array of all possible column value combinations.
+	;
+
+	// FIXME Allow pivot without group.
+
+	if (!self.data.isGroup) {
+		return false;
+	}
+
+	// Make sure that pivotting has been asked for.
+
+	if (self.pivotSpec == null) {
+		return false;
+	}
+
+	// We need `typeInfo` to verify that the pivot fields requested actually exist in the source data.
+	// It's not possible to just use the data, because there may be no rows.
+
+	if (self.typeInfo == null) {
+		log.error('Source type information is missing');
+		return false;
+	}
+
+	// Go through every pivot field and make sure it exists in the source.
+
+	_.each(self.pivotSpec.fieldNames, function (field, fieldIdx) {
+		if (!self.typeInfo.isSet(field)) {
+			log.error('Pivot field does not exist in the source: ' + field);
+			self.fire(View.events.invalidPivotField, null, field);
+		}
+		else {
+			pivotFields.push(field);
+		}
+	});
+
+	// It's possible now that we've eliminated *all* the pivot fields because they're invalid; if
+	// that's the case, we just abort as if no pivotting was requested at all.
+
+	if (pivotFields.length === 0) {
+		return false;
+	}
+
+	var origKeys = [];
+
+	var buildColVals = function (pivotFields) {
 		var colVals = [];
 
 		for (var groupIndex = 0; groupIndex < self.data.data.length; groupIndex += 1) {
@@ -1889,20 +1980,12 @@ View.prototype.pivot = function () {
 	for (var pivotFieldIndex = 0; pivotFieldIndex < pivotFields.length; pivotFieldIndex += 1) {
 		origKeys[pivotFieldIndex] = {};
 	}
-	if (!EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
-		colValsTree = buildColValsTree(pivotFields);
-		colVals = buildColVals(colValsTree);
-	}
-	else {
-		colVals = buildColVals2(pivotFields);
-	}
+
+	colVals = buildColVals(pivotFields);
 	self.data.data = buildData(self.data.data, colVals);
-	if (EXPERIMENTAL_FEATURES['Simpler Colval Determination']) {
-		colVals = convertColVals(colVals);
-	}
+	colVals = convertColVals(colVals);
 
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Pivot Fields: %O', pivotFields);
-	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals Tree: %O', colValsTree);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Orig Keys: %O', origKeys);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'Col Vals: %O', colVals);
 	debug.info('VIEW (' + self.name + ') // PIVOT', 'New Data: %O', self.data);
