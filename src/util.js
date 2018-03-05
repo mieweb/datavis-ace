@@ -612,13 +612,13 @@ function deepDefaults() {
 		base = deepCopy(args.shift());
 	}
 
-	var f = function (a, b) {
-		_.each(b, function (v, k) {
-			if (a[k] === undefined) {
-				a[k] = typeof v === 'object' ? deepCopy(v) : v;
+	var f = function (dst, src) {
+		_.each(src, function (v, k) {
+			if (dst[k] === undefined) {
+				dst[k] = (typeof v === 'object' && v != null) ? deepCopy(v) : v;
 			}
-			else if (_.isObject(a[k]) && _.isObject(v)) {
-				f(a[k], v);
+			else if (_.isObject(dst[k]) && _.isObject(v)) {
+				f(dst[k], v);
 			}
 		});
 	};
