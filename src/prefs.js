@@ -328,14 +328,33 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	opts = deepDefaults(opts, {
 		switch: true,
 		sendEvent: true,
-		replace: false
+		onDuplicate: 'error'
 	});
 
-	if (self.perspectives[name] != null && !opts.replace) {
-		throw new Error('Perspective already exists: ' + name);
+	if (['error', 'nothing', 'replace'].indexOf(opts.onDuplicate) < 0) {
+		throw new Error('Call Error: `opts.onDuplicate` must be one of: error, nothing, replace');
 	}
 
-	var f = function () {
+	var maybeSwitch = function () {
+		if (opts.switch) {
+			return self.setCurrentPerspective(name, cont, {
+				loadPerspective: needToLoad
+			});
+		}
+
+		return typeof cont === 'function' ? cont(true) : true;
+	};
+
+	if (self.perspectives[name] != null) {
+		switch (opts.onDuplicate) {
+		case 'error':
+			throw new Error('Perspective already exists: ' + name);
+		case 'nothing':
+			return maybeSwitch();
+		}
+	}
+
+	var addPerspective = function () {
 		self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
 
 		if (self.availablePerspectives.indexOf(name) < 0) {
@@ -350,13 +369,7 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 			}, name);
 		}
 
-		if (opts.switch) {
-			return self.setCurrentPerspective(name, cont, {
-				loadPerspective: needToLoad
-			});
-		}
-
-		return typeof cont === 'function' ? cont(true) : true;
+		return maybeSwitch();
 	};
 
 	if (self.currentPerspective) {
@@ -365,11 +378,11 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 				config = deepCopy(self.currentPerspective.getConfig());
 				needToLoad = false; // Don't need to load, because this is the current config.
 			}
-			return f();
+			return addPerspective();
 		});
 	}
 
-	return f();
+	return addPerspective();
 };
 
 // #deletePerspective {{{2
