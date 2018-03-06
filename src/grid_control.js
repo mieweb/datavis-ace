@@ -853,7 +853,7 @@ GroupControl.prototype.updateView = function () {
 
 	var fields = self.ui.fields.children('li').map(function (index, elt) {
 		return jQuery(elt).attr('data-wcdv-field');
-	});
+	}).get();
 
 	debug.info('GRID // GROUP CONTROL', 'Setting group fields to: %O', fields);
 
@@ -981,7 +981,7 @@ PivotControl.prototype.updateView = function () {
 
 	var fields = self.ui.fields.children('li').map(function (index, elt) {
 		return jQuery(elt).attr('data-wcdv-field');
-	});
+	}).get();
 
 	debug.info('GRID // PIVOT CONTROL', 'Setting pivot fields to: %O', fields);
 
