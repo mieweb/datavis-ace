@@ -2370,74 +2370,76 @@ View.prototype.getData = function (cont) {
 		return self.getTypeInfo(function (typeInfo) {
 			self.typeInfo = typeInfo;
 
-			self.fire(View.events.fetchDataEnd);
-			self.fire(View.events.workBegin);
+			self.prefs.init(function () {
+				self.fire(View.events.fetchDataEnd);
+				self.fire(View.events.workBegin);
 
-			var ops = {
-				filter: false,
-				group: false,
-				pivot: false,
-				sort: false
-			};
+				var ops = {
+					filter: false,
+					group: false,
+					pivot: false,
+					sort: false
+				};
 
-			self.data = {
-				isPlain: true,
-				isGroup: false,
-				isPivot: false,
-				data: [],
-				dataByRowId: []
-			};
+				self.data = {
+					isPlain: true,
+					isGroup: false,
+					isPivot: false,
+					data: [],
+					dataByRowId: []
+				};
 
-			_.each(data, function (rowData, rowNum) {
-				self.data.data.push({
-					rowNum: rowNum,
-					rowData: rowData
+				_.each(data, function (rowData, rowNum) {
+					self.data.data.push({
+						rowNum: rowNum,
+						rowData: rowData
+					});
+					self.data.dataByRowId[rowNum] = rowData;
 				});
-				self.data.dataByRowId[rowNum] = rowData;
-			});
 
-			return self.filter(function (didFilter, filteredData) {
-				ops.filter = didFilter;
-				if (didFilter) {
-					self.data.data = filteredData;
-				}
-				ops.group = self.group();
-				ops.pivot = self.pivot();
-				return self.aggregate(function () {
-					return self.sort(function (didSort) {
-						ops.sort = didSort;
+				return self.filter(function (didFilter, filteredData) {
+					ops.filter = didFilter;
+					if (didFilter) {
+						self.data.data = filteredData;
+					}
+					ops.group = self.group();
+					ops.pivot = self.pivot();
+					return self.aggregate(function () {
+						return self.sort(function (didSort) {
+							ops.sort = didSort;
 
-						var workEndObj = {
-							isPlain: self.data.isPlain,
-							isGroup: self.data.isGroup,
-							isPivot: self.data.isPivot
-						};
+							var workEndObj = {
+								isPlain: self.data.isPlain,
+								isGroup: self.data.isGroup,
+								isPivot: self.data.isPivot
+							};
 
-						if (self.data.isPlain) {
-							workEndObj.numRows = self.getRowCount();
-							if (self.isFiltered()) {
-								workEndObj.totalRows = self.getTotalRowCount();
+							if (self.data.isPlain) {
+								workEndObj.numRows = self.getRowCount();
+								if (self.isFiltered()) {
+									workEndObj.totalRows = self.getTotalRowCount();
+								}
 							}
-						}
-						else if (self.data.isGroup) {
-							workEndObj.numGroups = self.data.data.length;
-						}
-						else if (self.data.isPivot) {
-							workEndObj.numPivots = 0;
-						}
+							else if (self.data.isGroup) {
+								workEndObj.numGroups = self.data.data.length;
+							}
+							else if (self.data.isPivot) {
+								workEndObj.numPivots = 0;
+							}
 
-						if (self.prefs != null) {
-							self.prefs.save();
-						}
+							if (self.prefs != null) {
+								self.prefs.save();
+							}
 
-						self.lastOps = ops;
-						self.fire(View.events.workEnd, null, workEndObj, ops);
+							self.lastOps = ops;
+							self.fire(View.events.workEnd, null, workEndObj, ops);
 
-						self.lock.unlock();
-						debug.info('VIEW (' + self.name + ')', 'Got new data: %O', self.data);
-						if (typeof cont === 'function') {
-							return cont(self.data);
-						}
+							self.lock.unlock();
+							debug.info('VIEW (' + self.name + ')', 'Got new data: %O', self.data);
+							if (typeof cont === 'function') {
+								return cont(self.data);
+							}
+						});
 					});
 				});
 			});
