@@ -1096,6 +1096,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	var backBtn = jQuery('<button>')
 		.append(fontAwesome('fa-chevron-circle-left'))
 		.attr('title', 'Back')
+		.attr('disabled', true)
 		.addClass('wcdv_icon_button')
 		.css('margin', 0)
 		.on('click', function () {
@@ -1107,6 +1108,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	var forwardBtn = jQuery('<button>')
 		.append(fontAwesome('fa-chevron-circle-right'))
 		.attr('title', 'Forward')
+		.attr('disabled', true)
 		.addClass('wcdv_icon_button')
 		.css('margin', 0)
 		.on('click', function () {
