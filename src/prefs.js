@@ -40,8 +40,11 @@
  * @property {string[]} availablePerspectives
  * List of all the perspective names that we know about.
  *
- * @property {boolean} initialized
+ * @property {boolean} isInitialized
  * If true, this Prefs instance has already been initialized.
+ *
+ * @property {boolean} isPrimed
+ * If true, this Prefs instance has already been primed.
  */
 
 var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
@@ -67,6 +70,8 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 			type: 'localStorage'
 		}
 	});
+
+	self.init();
 
 	// Create the backend for saving preferences.
 
@@ -122,22 +127,44 @@ mixinDebugging(Prefs, function () {
 Prefs.prototype.init = function (cont) {
 	var self = this;
 
+	if (self.isInitialized) {
+		return;
+	}
+
+	self.isInitialized = true;
+	self.perspectives = {};
+	self.availablePerspectives = [];
+	self.history = [];
+	self.historyIndex = 0;
+};
+
+// #prime {{{2
+
+Prefs.prototype.prime = function (cont) {
+	var self = this;
+
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	if (self.initialized) {
-		// Already done, don't need to do it again.
+	if (self.isPrimed) {
 		return typeof cont === 'function' ? cont(false) : false;
 	}
 
-	self.initialized = true;
-	self.history = [];
-	self.historyIndex = 0;
+	self.init();
 
 	return self.backend.getPerspectives(function (names) {
 		self.availablePerspectives = names;
-		self.perspectives = {};
+
+		// When there's already a current perspective (as would be the case when prefs have been
+		// pre-configured), we don't have to do anything else.
+
+		if (self.currentPerspective != null) {
+			self.isPrimed = true;
+			return typeof cont === 'function' ? cont(true) : true;
+		}
+
+		// Otherwise, we need to figure out what the last current perspective was and load it.
 
 		return self.backend.getCurrent(function (currentName) {
 			if (currentName == null || self.availablePerspectives.indexOf(currentName) < 0) {
@@ -149,7 +176,10 @@ Prefs.prototype.init = function (cont) {
 					currentConfig = {};
 				}
 
-				return self.addPerspective(currentName, currentConfig, null, cont);
+				return self.addPerspective(currentName, currentConfig, null, function () {
+					self.isPrimed = true;
+					return typeof cont === 'function' ? cont(true) : true;
+				});
 			});
 		});
 	});
@@ -271,18 +301,6 @@ Prefs.prototype.getPerspectives = function (cont) {
 	return cont(self.availablePerspectives);
 };
 
-// #getCurrent {{{2
-
-Prefs.prototype.getCurrent = function (cont) {
-	var self = this;
-
-	if (typeof cont !== 'function') {
-		throw new Error('Call Error: `cont` must be a function');
-	}
-
-	return cont(self.currentPerspective.getName());
-};
-
 // #addPerspective {{{2
 
 /**
@@ -328,7 +346,7 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	opts = deepDefaults(opts, {
 		switch: true,
 		sendEvent: true,
-		onDuplicate: 'error'
+		onDuplicate: 'nothing'
 	});
 
 	if (['error', 'nothing', 'replace'].indexOf(opts.onDuplicate) < 0) {
@@ -715,7 +733,7 @@ Prefs.prototype.reset = function (cont) {
 	}
 
 	self.backend.reset(function () {
-		self.initialized = false;
+		self.isInitialized = false;
 		self.init(function () {
 			_.each(self.modules, function (module, moduleName) {
 				if (typeof module.reset === 'function') {

@@ -1231,19 +1231,18 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// XXX: Is it possible for perspectives to change by some other route so that we need to know
 	// about it to update the UI?
 
-	self.prefs.init(function () {
+	self.prefs.prime(function () {
 		self.prefs.getPerspectives(function (perspectives) {
-			self.prefs.getCurrent(function (initial) {
-				_.each(perspectives.sort(), function (name) {
-					if (options[name] == null) {
-						options[name] = jQuery('<option>', { 'value': name })
-							.text(name)
-							.appendTo(dropdown);
-					}
-				});
-				dropdown.val(initial);
-				showHideBtns();
+			_.each(perspectives.sort(), function (name) {
+				if (options[name] == null) {
+					options[name] = jQuery('<option>', { 'value': name })
+						.text(name)
+						.appendTo(dropdown);
+				}
 			});
+
+			dropdown.val(self.prefs.getCurrentPerspective());
+			showHideBtns();
 		});
 
 		self.prefs.on('perspectiveAdded', function (name) {

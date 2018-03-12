@@ -92,16 +92,12 @@ $(document).ready(function () {
 	};
 
 	var prefs = new MIE.WC_DataVis.Prefs('example_pre_configured');
-	prefs.init(function () {
-		var config = {
-			view: {
-				group: { fieldNames: ['Product'] },
-				pivot: { fieldNames: ['Country'] }
-			}
-		};
-
-		prefs.addPerspective('Pre-Configured', config, { isConstant: true }, loadView, { onDuplicate: 'nothing' });
-	});
+	prefs.addPerspective('Pre-Configured', {
+		view: {
+			group: { fieldNames: ['Product'] },
+			pivot: { fieldNames: ['Country'] }
+		}
+	}, { isConstant: true }, loadView, { onDuplicate: 'nothing' });
 
 	jQuery('#feature_header').on('click', function () {
 		jQuery('#feature_list').toggle();

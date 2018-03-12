@@ -165,11 +165,12 @@ var View = function (source, name, opts) {
 
 	self.aggregateSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: 'count'}]]);
 
-	if (opts.prefs != null) {
+	if (self.opts.prefs != null) {
 		self.prefs = opts.prefs;
 		self.isBoundToPrefs = false;
 	}
 	else {
+		debug.info('VIEW (' + self.name + ')', 'Creating new Prefs instance');
 		self.prefs = new Prefs(self.name);
 		self.isBoundToPrefs = false;
 	}
@@ -2370,7 +2371,7 @@ View.prototype.getData = function (cont) {
 		return self.getTypeInfo(function (typeInfo) {
 			self.typeInfo = typeInfo;
 
-			self.prefs.init(function () {
+			self.prefs.prime(function () {
 				if (!self.isBoundToPrefs) {
 					self.prefs.bind('view', self);
 					self.isBoundToPrefs = true;
@@ -2447,7 +2448,7 @@ View.prototype.getData = function (cont) {
 						}); // -- self.sort()
 					}); // -- self.aggregate()
 				}); // -- self.filter()
-			}); // -- self.prefs.init()
+			}); // -- self.prefs.prime()
 		}); // -- self.getTypeInfo()
 	}); // -- self.getData()
 };
