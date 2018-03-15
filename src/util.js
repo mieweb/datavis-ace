@@ -465,6 +465,7 @@ function eachUntilObj(o, f, r, extra) {
 }
 
 function asyncEach(args, fun, done) {
+	args = shallowCopy(args);
 	function g() {
 		if (args.length === 0) {
 			return done();
@@ -502,15 +503,60 @@ function mapLimit(a, f, l) {
 }
 
 /**
+ * Create a shallow copy of an object.
+ *
+ * @memberof util.data_structures
+ * @inner
+ *
+ * @param {any} x
+ * The thing to copy.
+ *
+ * @return {any}
+ * A shallow copy of the argument.
+ */
+
+var shallowCopy = function (x) {
+	if (x == null) {
+		return {};
+	}
+
+	var result;
+
+	if (jQuery.isArray(x)) {
+		result = [];
+
+		for (var i = 0; i < x.length; i += 1) {
+			result[i] = x[i];
+		}
+
+		return result;
+	}
+	else if (jQuery.isPlainObject(x)) {
+		result = {};
+
+		for (var k in x) {
+			if (x.hasOwnProperty(k)) {
+				result[k] = x[k];
+			}
+		}
+
+		return result;
+	}
+	else {
+		return x;
+	}
+};
+
+/**
  * Create a deep copy of an object.
  *
  * @memberof util.data_structures
  * @inner
  *
- * @param {object} o
+ * @param {any} x0
  * The thing to copy.
  *
- * @return {object}
+ * @return {any}
  * A clean copy of the argument.
  */
 
