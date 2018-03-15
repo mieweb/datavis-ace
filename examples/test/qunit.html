@@ -22,6 +22,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/qunit/2.4.1/qunit.min.js"></script>
 		<script src="../tabletool.js"></script>
 		<script src="../wcdatavis.js"></script>
+		<script src="qunit_filter.js"></script>
 		<script src="qunit_sort.js"></script>
 		<script src="qunit_group.js"></script>
 		<script src="qunit_group_sort.js"></script>
@@ -48,6 +49,7 @@ $(document).ready(function () {
 		saveViewConfig: false
 	});
 
+	test_filter(view);
 	test_sort(view);
 	test_group(view);
 	test_group_sort(view);
