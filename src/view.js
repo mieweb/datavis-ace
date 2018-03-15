@@ -1001,6 +1001,7 @@ View.prototype.filter = function (cont) {
 	// Checks to see if the given filter passes for the given row.
 
 	function passesFilter(fltr, field, row) {
+		var fti = self.typeInfo.get(field);
 		var datum = row[field].value;
 
 		// When there's no such column, automatically fail.
@@ -1018,7 +1019,8 @@ View.prototype.filter = function (cont) {
 
 		var pred = {};
 
-		var cmp = getComparisonFn.byValue(datum);
+		//var cmp = getComparisonFn.byValue(datum);
+		var cmp = getComparisonFn.byType(fti.type);
 
 		pred['$eq'] = function (operand) {
 			return cmp(datum, operand) === 0;
@@ -1069,7 +1071,7 @@ View.prototype.filter = function (cont) {
 			}
 
 			var operand = fltr[operator];
-			// debug.info('DATA VIEW // FILTER', 'field = ' + field + ' ; Datum = ' + datum + ' ; Operator = ' + operator + ' ; Operand = ' + operand);
+			//debug.info('DATA VIEW // FILTER', 'field = ' + field + ' ; Datum = ' + datum + ' ; Operator = ' + operator + ' ; Operand = ' + operand);
 
 			if (pred[operator] !== undefined) {
 				if (_.isArray(operand)) {
@@ -1118,7 +1120,7 @@ View.prototype.filter = function (cont) {
 		// Iterate over all elements in the filter spec, testing each in turn, until one fails.  Pass
 		// the row along as "extra data" because that's what the predicate is actually testing.
 
-		var passes = isNothing(self.filterSpec) ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
+		var passes = self.filterSpec == null ? true : eachUntilObj(self.filterSpec, passesFilter, false, row.rowData);
 
 		self.fire(View.events.filter, {
 			silent: true

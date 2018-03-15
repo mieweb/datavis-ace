@@ -124,6 +124,8 @@ var getComparisonFn = (function () {
 		else if (numeral.isNumeral(b)) {
 			return a < b._value ? -1 : a > b._value ? 1 : 0;
 		}
+
+		throw new Error('IMPOSSIBLE');
 	};
 	cmpFn.currency = cmpFn.number;
 
@@ -136,7 +138,7 @@ var getComparisonFn = (function () {
 			return cmpFn[type];
 		}),
 		byValue: (function (val) {
-			if (window.numeral && window.numeral.isNumeral(val)) {
+			if (typeof val === 'number' || (window.numeral && window.numeral.isNumeral(val))) {
 				return cmpFn.number;
 			}
 			else if (window.moment && window.moment.isMoment(val)) {
