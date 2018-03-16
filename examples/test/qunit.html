@@ -49,11 +49,13 @@ $(document).ready(function () {
 		saveViewConfig: false
 	});
 
-	test_filter(view);
-	test_sort(view);
-	test_group(view);
-	test_group_sort(view);
-	test_aggregates(view);
+	view.init(function () {
+		test_filter(view);
+		test_sort(view);
+		test_group(view);
+		test_group_sort(view);
+		test_aggregates(view);
+	});
 });
 		</script>
 	</head>
