@@ -2779,8 +2779,9 @@ var GridTableGroupSummary = makeSubclass(GridTable, function (grid, defn, view, 
 
 	debug.info('GRID TABLE - GROUP - SUMMARY', 'Constructing grid table; features = %O', features);
 
-	self.super = makeSuper(self, GridTable);
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
+
+	setPropDef(['rowVals', 'addCols', 'groupAggregates'], self.opts, 'displayOrder');
 });
 
 // #canRender {{{2
@@ -2816,29 +2817,38 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 
 	self.csv.addRow();
 
-	_.each(data.groupFields, function (field, fieldIdx) {
-		span = jQuery('<span>').text(field);
+	_.each(self.opts.displayOrder, function (what) {
+		if (typeof what === 'string') {
+			if (what === 'rowVals') {
+				_.each(data.groupFields, function (field, fieldIdx) {
+					span = jQuery('<span>').text(field);
 
-		th = jQuery('<th>')
-			.attr({
-				'data-wcdv-field': field,
-				'data-wcdv-draggable-origin': 'GRID_TABLE_HEADER'
-			})
-			.append(span)
-			._makeDraggableField();
+					th = jQuery('<th>')
+						.attr({
+							'data-wcdv-field': field,
+							'data-wcdv-draggable-origin': 'GRID_TABLE_HEADER'
+						})
+						.append(span)
+						._makeDraggableField();
 
-		self.csv.addCol(field);
+					self.csv.addCol(field);
 
-		self._addSortingToHeader(data, 'vertical', {groupFieldIndex: fieldIdx}, th, getProp(data, 'agg', 'info', 'group'));
+					self._addSortingToHeader(data, 'vertical', {groupFieldIndex: fieldIdx}, th, getProp(data, 'agg', 'info', 'group'));
 
-		self.setCss(th, field);
+					self.setCss(th, field);
 
-		self.ui.thMap[field] = th;
-		tr.append(th);
+					self.ui.thMap[field] = th;
+					tr.append(th);
+				});
+			}
+			else if (what === 'groupAggregates') {
+				self.drawHeader_aggregates(data, 'group', tr);
+			}
+			else if (what === 'addCols') {
+				self.drawHeader_addCols(tr, typeInfo, opts);
+			}
+		}
 	});
-
-	self.drawHeader_aggregates(data, 'group', tr);
-	self.drawHeader_addCols(tr, typeInfo, opts);
 
 	// Add the row for this pivot field to the THEAD.
 	self.ui.thead.append(tr);
@@ -2853,50 +2863,59 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 		var tr = jQuery('<tr>');
 		self.csv.addRow();
 
-		self.drawBody_rowVals(data, tr, groupNum);
-		self.drawBody_groupAggregates(data, tr, groupNum);
+		_.each(self.opts.displayOrder, function (what) {
+			if (typeof what === 'string') {
+				if (what === 'rowVals') {
+					self.drawBody_rowVals(data, tr, groupNum);
+				}
+				else if (what === 'groupAggregates') {
+					self.drawBody_groupAggregates(data, tr, groupNum);
+				}
+				else if (what === 'addCols') {
+					// Generate the user's custom-defined additional columns.  If the `value` function returns an
+					// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
+					// returns a string or number) we format it according to the type of the field that the pivot
+					// function was operating on.
+					//
+					// EXAMPLE:
+					//
+					// Aggregate Function = sum
+					// Aggregate Field    = Amount : number -> $0,0.00
+					//
+					// If the `value` function adds up the sums, yielding a grand total of them all, then we format
+					// that using Numeral exactly as specified for the "Amount" field.
 
-		// Generate the user's custom-defined additional columns.  If the `value` function returns an
-		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
-		// returns a string or number) we format it according to the type of the field that the pivot
-		// function was operating on.
-		//
-		// EXAMPLE:
-		//
-		// Aggregate Function = sum
-		// Aggregate Field    = Amount : number -> $0,0.00
-		//
-		// If the `value` function adds up the sums, yielding a grand total of them all, then we format
-		// that using Numeral exactly as specified for the "Amount" field.
+					_.each(self.opts.addCols, function (addCol) {
+						var addColResult = addCol.value(data.data, groupNum, rowAgg, aggType);
 
-		_.each(self.opts.addCols, function (addCol) {
-			var addColResult = addCol.value(data.data, groupNum, rowAgg, aggType);
+						if (addColResult instanceof Element || addColResult instanceof jQuery) {
+							var td = jQuery('<td>').append(addColResult);
+						}
+						else {
+							var addColText;
 
-			if (addColResult instanceof Element || addColResult instanceof jQuery) {
-				var td = jQuery('<td>').append(addColResult);
-			}
-			else {
-				var addColText;
+							if (aggInfo.instance.inheritFormatting) {
+								addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
+									alwaysFormat: true
+								});
+							}
+							else {
+								addColText = format(null, null, addColResult, {
+									alwaysFormat: true
+								});
+							}
+							var td = jQuery('<td>').text(addColText);
+						}
 
-				if (aggInfo.instance.inheritFormatting) {
-					addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
-						alwaysFormat: true
+						if (getProp(opts, 'pivotConfig', 'aggField')) {
+							self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+						}
+
+						td.appendTo(tr);
+						self.csv.addCol(td.text());
 					});
 				}
-				else {
-					addColText = format(null, null, addColResult, {
-						alwaysFormat: true
-					});
-				}
-				var td = jQuery('<td>').text(addColText);
 			}
-
-			if (getProp(opts, 'pivotConfig', 'aggField')) {
-				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
-			}
-
-			td.appendTo(tr);
-			self.csv.addCol(td.text());
 		});
 
 		self.ui.tbody.append(tr);
@@ -2950,8 +2969,9 @@ var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, feature
 
 	debug.info('GRID TABLE - PIVOT', 'Constructing grid table; features = %O', features);
 
-	self.super = makeSuper(self, GridTable);
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
+
+	setPropDef(['rowVals', 'cells', 'groupAggregates', 'addCols'], self.opts, 'displayOrder');
 });
 
 // #canRender {{{2
@@ -3006,48 +3026,15 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		});
 	};
 
-	// This produces separate rows in the header for each pivot field.  That's what allows you to
-	// see the combinations of column values, like this:
-	//
-	// Example
-	// -------
-	//
-	//   pivotFields = ["Last Name", "First Name"]
-	//   colVals = [["Kennedy", "John"], ["Kennedy", "Robert"], ["Kennedy", "Ted"],
-	//              ["Roosevelt", "Franklin"], ["Roosevelt", "Teddy"]]
-	//
-	// +---------------------+------------------+
-	// | Kennedy             | Roosevelt        |
-	// +------+--------+-----+----------+-------+
-	// | John | Robert | Ted | Franklin | Teddy |
-	// +------+--------+-----+----------+-------+
+	// +---------------------------+--------------------------------------+-----------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |           |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	// | GROUP FIELD | GROUP FIELD | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 | GROUP AGG |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	var pivotFieldNum, colValIndex;
-	var colVal;
-	var numCellAggregates = _.reduce(
-		getPropDef([], data, 'agg', 'info', 'cell'),
-		function (prev, aggInfo) {
-			return aggInfo.isHidden ? prev : prev + 1;
-		},
-		0
-	);
-	console.log('### ' + numCellAggregates);
-
-	for (pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
-		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
-		var lastPivotField = pivotFieldNum === data.pivotFields.length - 1;
-		var pivotField = data.pivotFields[pivotFieldNum];
-
-		tr = jQuery('<tr>'); // Create the row for the pivot field.
-		self.csv.addRow();
-
-		// +---------------------------+--------------------------------------------------------+
-		// |                           | PIVOT COLVAL 1.1                    | PIVOT COLVAL 1.2 |
-		// +-------------+-------------+------------------+------------------+------------------+
-		// | GROUP FIELD | GROUP FIELD | PIVOT COLVAL 2.1 | PIVOT COLVAL 2.2 | PIVOT COLVAL 2.1 |
-		// +-------------+-------------+-------+----------+-------+----------+------------------+
-
-		if (lastPivotField) {
+	var displayRowVals = function (tr, pivotFieldNum) {
+		if (pivotFieldNum === data.pivotFields.length - 1) {
 			addGroupFields(tr);
 		}
 		else {
@@ -3056,6 +3043,21 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				self.csv.addCol('');
 			}
 		}
+	};
+
+	// +---------------------------+--------------------------------------+-----------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |           |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	// | GROUP FIELD | GROUP FIELD | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 | GROUP AGG |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	//                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	var displayCells = function (tr, pivotFieldNum) {
+		var colVal, colValIndex;
+		var ai = self._getAggInfo(data);
+		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
+		var isLastPivotField = pivotFieldNum === data.pivotFields.length - 1;
+		var pivotField = data.pivotFields[pivotFieldNum];
 
 		// Create headers for the fields that we've pivotted by.  The headers are the column values for
 		// those fields.
@@ -3080,7 +3082,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			colVal = data.colVals[colValIndex][pivotFieldNum];
 			colVal = format(self.colConfig[pivotField], typeInfo.get(pivotField), colVal);
 
-			if (colVal !== lastColVal || lastPivotField) {
+			if (colVal !== lastColVal || isLastPivotField) {
 				if (lastColVal !== null) {
 					// The we've hit a different colVal so count up how many of the last one we had to
 					// determine the column span.  In the above example, there are three "Kennedy" and two
@@ -3088,8 +3090,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 					var colSpan = lastColValCount;
 
-					if (numCellAggregates >= 2) {
-						colSpan *= numCellAggregates;
+					if (ai.cell.length >= 2) {
+						colSpan *= ai.cell.length;
 					}
 
 					th.attr('colspan', colSpan);
@@ -3115,19 +3117,19 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 				// We only allow sorting on the final
 
-				if (lastPivotField) {
+				if (isLastPivotField) {
 					self._addSortingToHeader(data, 'vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 				}
 
-				if (numCellAggregates === 1) {
+				if (ai.cell.length === 1) {
 					aggInfo = data.agg.info.cell[0];
 					self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 				}
-				else if (numCellAggregates > 1) {
+				else if (ai.cell.length > 1) {
 					self.setAlignment(th, null, null, null, 'center');
 				}
 
-				if (self.opts.drawInternalBorders || numCellAggregates > 1) {
+				if (self.opts.drawInternalBorders || ai.cell.length > 1) {
 					th.addClass('wcdv_pivot_colval_boundary');
 				}
 			}
@@ -3140,8 +3142,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		var colSpan = lastColValCount;
 
-		if (numCellAggregates >= 2) {
-			colSpan *= numCellAggregates;
+		if (ai.cell.length >= 2) {
+			colSpan *= ai.cell.length;
 		}
 
 		if (th != null) {
@@ -3152,39 +3154,73 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		for (var i = 0; i < colSpan - 1; i += 1) {
 			self.csv.addCol('');
 		}
+	};
 
-		// Add space for the extra columns that get inserted off to the right.
+	// +---------------------------+--------------------------------------+-----------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |           |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	// | GROUP FIELD | GROUP FIELD | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 | GROUP AGG |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	//                                                                     ^^^^^^^^^^^
 
-		if (!lastPivotField) {
+	var displayGroupAggregates = function (tr, pivotFieldNum) {
+		var isLastPivotField = pivotFieldNum === data.pivotFields.length - 1;
+
+		if (!isLastPivotField) {
 			var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
 				+ getPropDef(0, opts, 'addCols', 'length');
 			if (numExtraCols > 0) {
 				jQuery('<th>', { colspan: numExtraCols }).appendTo(tr).addClass('wcdv_pivot_aggregate_boundary');
 			}
 		}
+		else {
+			// Render the user's custom-defined additional columns at the end of the last row of pivot field
+			// column values.
 
-		// Render the user's custom-defined additional columns at the end of the last row of pivot field
-		// column values.
-
-		if (lastPivotField/* && numCellAggregates <= 1*/) {
 			self.drawHeader_aggregates(data, 'group', tr);
 			self.drawHeader_addCols(tr, typeInfo, opts);
 		}
+	};
 
-		// Add the row for this pivot field to the THEAD.
-		self.ui.thead.append(tr);
-	}
+	// This produces separate rows in the header for each pivot field.  That's what allows you to
+	// see the combinations of column values, like this:
+	//
+	// Example
+	// -------
+	//
+	//   pivotFields = ["Last Name", "First Name"]
+	//   colVals = [["Kennedy", "John"], ["Kennedy", "Robert"], ["Kennedy", "Ted"],
+	//              ["Roosevelt", "Franklin"], ["Roosevelt", "Teddy"]]
+	//
+	// +---------------------+------------------+
+	// | Kennedy             | Roosevelt        |
+	// +------+--------+-----+----------+-------+
+	// | John | Robert | Ted | Franklin | Teddy |
+	// +------+--------+-----+----------+-------+
 
-	/*
-	if (numCellAggregates >= 2) {
-		tr = jQuery('<tr>');
+	for (var pivotFieldNum = 0; pivotFieldNum < data.pivotFields.length; pivotFieldNum += 1) {
 		self.csv.addRow();
-		addGroupFields(tr);
-		self.drawHeader_aggregates(data, 'group', tr);
-		self.drawHeader_addCols(tr, typeInfo, opts);
-		self.ui.thead.append(tr);
+
+		tr = jQuery('<tr>');
+
+		_.each(self.opts.displayOrder, function (what) {
+			if (typeof what === 'string') {
+				switch (what) {
+				case 'rowVals':
+					displayRowVals(tr, pivotFieldNum);
+					break;
+				case 'cells':
+					displayCells(tr, pivotFieldNum);
+					break;
+				case 'groupAggregates':
+					displayGroupAggregates(tr, pivotFieldNum);
+					break;
+				}
+			}
+		});
+
+		tr.appendTo(self.ui.thead);
 	}
-	*/
 };
 
 // #drawBody {{{2
@@ -3207,127 +3243,139 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	}
 
 	_.each(data.data, function (rowGroup, groupNum) {
-		var tr = jQuery('<tr>');
 		self.csv.addRow();
 
-		self.drawBody_rowVals(data, tr, groupNum);
+		var tr = jQuery('<tr>');
 
-		var rowAgg = [];
+		_.each(self.opts.displayOrder, function (what) {
+			if (typeof what === 'string') {
+				switch (what) {
+				case 'rowVals':
+					self.drawBody_rowVals(data, tr, groupNum);
+					break;
+				case 'cells':
+					var rowAgg = [];
 
-		// Create the cells that show the result of the aggregate function for all rows matching the
-		// column values at the same index.
-		//
-		// EXAMPLE
-		// -------
-		//
-		//   pivotFields = ["State"]
-		//   colVals = ["IL", "IN", "MI", "OH"]
-		//
-		// Column #1: agg(rowGroup[0]) - rows in the group w/ State = "IL"
-		// Column #2: agg(rowGroup[1]) - rows in the group w/ State = "IN"
-		// Column #3: agg(rowGroup[2]) - rows in the group w/ State = "MI"
-		// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
+					// Create the cells that show the result of the aggregate function for all rows matching the
+					// column values at the same index.
+					//
+					// EXAMPLE
+					// -------
+					//
+					//   pivotFields = ["State"]
+					//   colVals = ["IL", "IN", "MI", "OH"]
+					//
+					// Column #1: agg(rowGroup[0]) - rows in the group w/ State = "IL"
+					// Column #2: agg(rowGroup[1]) - rows in the group w/ State = "IN"
+					// Column #3: agg(rowGroup[2]) - rows in the group w/ State = "MI"
+					// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
 
-		_.each(rowGroup, function (colGroup, pivotNum) {
-			if (ai.cell.length === 0) {
-				// There's no cell aggregate functions, so there isn't anything to put in the cell.
-				tr.append(document.createElement('td'));
-			}
-			else {
-				// Every cell aggregate function is going to make a separate cell.
-				_.each(ai.cell, function (aggInfo, aiCellIndex) {
-					var aggNum = aggInfo.aggNum;
-					var aggType = aggInfo.instance.getType();
-					var agg = data.agg.results.cell[aggNum];
-					var aggResult = agg[groupNum][pivotNum];
+					_.each(rowGroup, function (colGroup, pivotNum) {
+						if (ai.cell.length === 0) {
+							// There's no cell aggregate functions, so there isn't anything to put in the cell.
+							tr.append(document.createElement('td'));
+						}
+						else {
+							// Every cell aggregate function is going to make a separate cell.
+							_.each(ai.cell, function (aggInfo, aiCellIndex) {
+								var aggNum = aggInfo.aggNum;
+								var aggType = aggInfo.instance.getType();
+								var agg = data.agg.results.cell[aggNum];
+								var aggResult = agg[groupNum][pivotNum];
 
-					rowAgg.push(aggResult);
+								rowAgg.push(aggResult);
 
-					var text;
+								var text;
 
-					if (aggInfo.instance.inheritFormatting) {
-						text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-							overrideType: aggType
-						});
-					}
-					else {
-						text = format(null, null, aggResult, {
-							overrideType: aggType
-						});
-					}
+								if (aggInfo.instance.inheritFormatting) {
+									text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+										overrideType: aggType
+									});
+								}
+								else {
+									text = format(null, null, aggResult, {
+										overrideType: aggType
+									});
+								}
 
-					var td = jQuery('<td>')
-						.addClass('wcdv_pivot_cell')
-						.attr({
-							'data-rowval-index': groupNum,
-							'data-colval-index': pivotNum
-						})
-						.text(text)
-					;
+								var td = jQuery('<td>')
+									.addClass('wcdv_pivot_cell')
+									.attr({
+										'data-rowval-index': groupNum,
+										'data-colval-index': pivotNum
+									})
+									.text(text)
+								;
 
-					self._addDrillDownClass(td);
+								self._addDrillDownClass(td);
 
-					if ((self.opts.drawInternalBorders || ai.cell.length > 1) && aiCellIndex === 0) {
-						td.addClass('wcdv_pivot_colval_boundary');
-					}
+								if ((self.opts.drawInternalBorders || ai.cell.length > 1) && aiCellIndex === 0) {
+									td.addClass('wcdv_pivot_colval_boundary');
+								}
 
-					self.csv.addCol(text);
-					// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
-					// self.setCss(td, col);
+								self.csv.addCol(text);
+								// REMOVED: How do we let the user set sizes &c. when doing a pivot table?
+								// self.setCss(td, col);
 
-					self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
+								self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggType);
 
-					td.appendTo(tr);
-				});
+								td.appendTo(tr);
+							});
+						}
+					});
+					break;
+				case 'groupAggregates':
+					self.drawBody_groupAggregates(data, tr, groupNum);
+					break;
+				case 'addCols':
+					// Generate the user's custom-defined additional columns.  If the `value` function returns an
+					// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
+					// returns a string or number) we format it according to the type of the field that the pivot
+					// function was operating on.
+					//
+					// EXAMPLE:
+					//
+					// Aggregate Function = sum
+					// Aggregate Field    = Amount : number -> $0,0.00
+					//
+					// If the `value` function adds up the sums, yielding a grand total of them all, then we format
+					// that using Numeral exactly as specified for the "Amount" field.
+
+					_.each(self.opts.addCols, function (addCol) {
+						var addColResult = addCol.value(data.data, groupNum, rowAgg, aggType);
+
+						if (addColResult instanceof Element || addColResult instanceof jQuery) {
+							var td = jQuery('<td>').append(addColResult);
+						}
+						else {
+							var addColText;
+
+							if (false && aggInfo.instance.inheritFormatting) {
+								addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
+									alwaysFormat: true
+								});
+							}
+							else {
+								addColText = format(null, null, addColResult, {
+									alwaysFormat: true
+								});
+							}
+							var td = jQuery('<td>').text(addColText);
+						}
+
+						if (getProp(opts, 'pivotConfig', 'aggField')) {
+							self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
+						}
+
+						td.appendTo(tr);
+						self.csv.addCol(td.text());
+					});
+					break;
+				}
 			}
 		});
 
-		self.drawBody_groupAggregates(data, tr, groupNum);
-
-		// Generate the user's custom-defined additional columns.  If the `value` function returns an
-		// Element or jQuery instance, we just put that in the <TD> that we make.  Otherwise (e.g. it
-		// returns a string or number) we format it according to the type of the field that the pivot
-		// function was operating on.
-		//
-		// EXAMPLE:
-		//
-		// Aggregate Function = sum
-		// Aggregate Field    = Amount : number -> $0,0.00
-		//
-		// If the `value` function adds up the sums, yielding a grand total of them all, then we format
-		// that using Numeral exactly as specified for the "Amount" field.
-
-		_.each(self.opts.addCols, function (addCol) {
-			var addColResult = addCol.value(data.data, groupNum, rowAgg, aggType);
-
-			if (addColResult instanceof Element || addColResult instanceof jQuery) {
-				var td = jQuery('<td>').append(addColResult);
-			}
-			else {
-				var addColText;
-
-				if (false && aggInfo.instance.inheritFormatting) {
-					addColText = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], addColResult, {
-						alwaysFormat: true
-					});
-				}
-				else {
-					addColText = format(null, null, addColResult, {
-						alwaysFormat: true
-					});
-				}
-				var td = jQuery('<td>').text(addColText);
-			}
-
-			if (getProp(opts, 'pivotConfig', 'aggField')) {
-				self.setAlignment(td, self.colConfig[opts.pivotConfig.aggField], typeInfo.get(opts.pivotConfig.aggField));
-			}
-
-			td.appendTo(tr);
-			self.csv.addCol(td.text());
-		});
-
-		self.ui.tbody.append(tr);
+		tr.appendTo(self.ui.tbody);
 	});
 
 	// ===========================================================================
@@ -3348,124 +3396,137 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			tr.addClass('wcdv_gridtable_agg_pivot');
 		}
 
-		// Insert the name of the aggregate function in the header.  This will take up as many columns
-		// as there are group fields.
+		_.each(self.opts.displayOrder, function (what) {
+			if (typeof what === 'string') {
+				switch (what) {
+				case 'rowVals':
 
-		if (data.groupFields.length > 1) {
-			for (var i = 0; i < data.groupFields.length - 1; i += 1) {
-				self.csv.addCol('');
-			}
-		}
+					// Insert the name of the aggregate function in the header.  This will take up as many columns
+					// as there are group fields.
 
-		self.csv.addCol(aggInfo.instance.getFullName());
+					if (data.groupFields.length > 1) {
+						for (var i = 0; i < data.groupFields.length - 1; i += 1) {
+							self.csv.addCol('');
+						}
+					}
 
-		var th = jQuery('<th>')
-			.attr({'colspan': data.groupFields.length})
-			.append(jQuery('<span>')
-				.text(aggInfo.instance.getFullName()))
-			.appendTo(tr)
-		;
+					self.csv.addCol(aggInfo.instance.getFullName());
 
-		// Add sorting to the header we just created.
+					var th = jQuery('<th>')
+						.attr({'colspan': data.groupFields.length})
+						.append(jQuery('<span>')
+							.text(aggInfo.instance.getFullName()))
+						.appendTo(tr)
+					;
 
-		self._addSortingToHeader(data, 'horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
+					// Add sorting to the header we just created.
 
-		_.each(data.colVals, function (colVal, colValIdx) {
-			// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
-			// we can't do rowspan in CSV like we can in HTML.
+					self._addSortingToHeader(data, 'horizontal', {aggType: 'pivot', aggNum: aggNum}, th, getPropDef([], data, 'agg', 'info', 'cell'));
 
-			for (var i = 0; i < aiPivotIndex; i += 1) {
-				self.csv.addCol('');
-			}
+					break;
+				case 'cells':
+					_.each(data.colVals, function (colVal, colValIdx) {
+						// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
+						// we can't do rowspan in CSV like we can in HTML.
 
-			var aggResult = data.agg.results.pivot[aggNum][colValIdx];
-			if (aggInfo.instance.inheritFormatting) {
-				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-					overrideType: aggInfo.instance.getType()
-				});
-			}
-			else {
-				text = format(null, null, aggResult, {
-					overrideType: aggInfo.instance.getType()
-				});
-			}
+						for (var i = 0; i < aiPivotIndex; i += 1) {
+							self.csv.addCol('');
+						}
 
-			var td = jQuery('<td>').text(text).attr({
-				'data-colval-index': colValIdx
-			});
-			self._addDrillDownClass(td);
+						var aggResult = data.agg.results.pivot[aggNum][colValIdx];
+						if (aggInfo.instance.inheritFormatting) {
+							text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+								overrideType: aggInfo.instance.getType()
+							});
+						}
+						else {
+							text = format(null, null, aggResult, {
+								overrideType: aggInfo.instance.getType()
+							});
+						}
 
-			if (ai.cell.length > 1) {
-				td.attr('colspan', ai.cell.length);
-			}
+						var td = jQuery('<td>').text(text).attr({
+							'data-colval-index': colValIdx
+						});
+						self._addDrillDownClass(td);
 
-			if (self.opts.drawInternalBorders || ai.cell.length > 1) {
-				td.addClass('wcdv_pivot_colval_boundary');
-			}
+						if (ai.cell.length > 1) {
+							td.attr('colspan', ai.cell.length);
+						}
 
-			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
-			td.appendTo(tr);
+						if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+							td.addClass('wcdv_pivot_colval_boundary');
+						}
 
-			// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
-			// we can't do rowspan in CSV like we can in HTML.
+						self.csv.addCol(text);
+						self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
+						td.appendTo(tr);
 
-			for (var i = aiPivotIndex + 1; i < ai.pivot.length; i += 1) {
-				self.csv.addCol('');
+						// Add padding cells in the CSV output so that the pivot aggregates appear staggered.  Since
+						// we can't do rowspan in CSV like we can in HTML.
+
+						for (var i = aiPivotIndex + 1; i < ai.pivot.length; i += 1) {
+							self.csv.addCol('');
+						}
+					});
+					break;
+				case 'groupAggregates':
+
+					// =========================================================================
+					//  ALL AGGREGATES
+					// =========================================================================
+
+					if (getProp(data, 'agg', 'info', 'all', aggNum)) {
+						for (var i = 0; i < aiPivotIndex; i += 1) {
+							td = jQuery('<td><div>&nbsp;</div></td>');
+							if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+								td.addClass(i === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
+							}
+							td.addClass('wcdv_cell_empty');
+							self.csv.addCol('');
+							td.appendTo(tr);
+						}
+
+						aggInfo = data.agg.info.all[aggNum];
+						aggResult = data.agg.results.all[aggNum];
+
+						if (aggInfo.instance.inheritFormatting) {
+							text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+								overrideType: aggInfo.instance.getType()
+							});
+						}
+						else {
+							text = format(null, null, aggResult, {
+								overrideType: aggInfo.instance.getType()
+							});
+						}
+
+						td = jQuery('<td>').text(text);
+
+						if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+							td.addClass(aiPivotIndex === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
+						}
+
+						self.csv.addCol(text);
+						self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
+						td.appendTo(tr);
+
+						for (var i = aiPivotIndex + 1; i < ai.cell.length; i += 1) {
+							td = jQuery('<td><div>&nbsp;</div></td>');
+							if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+								td.addClass('wcdv_pivot_colval_boundary');
+							}
+							td.addClass('wcdv_cell_empty');
+							self.csv.addCol('');
+							td.appendTo(tr);
+						}
+					}
+					break;
+				}
 			}
 		});
 
-		// =========================================================================
-		//  ALL AGGREGATES
-		// =========================================================================
-
-		if (getProp(data, 'agg', 'info', 'all', aggNum)) {
-			for (var i = 0; i < aiPivotIndex; i += 1) {
-				td = jQuery('<td><div>&nbsp;</div></td>');
-				if (self.opts.drawInternalBorders || ai.cell.length > 1) {
-					td.addClass(i === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
-				}
-				td.addClass('wcdv_cell_empty');
-				self.csv.addCol('');
-				td.appendTo(tr);
-			}
-
-			aggInfo = data.agg.info.all[aggNum];
-			aggResult = data.agg.results.all[aggNum];
-
-			if (aggInfo.instance.inheritFormatting) {
-				text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-					overrideType: aggInfo.instance.getType()
-				});
-			}
-			else {
-				text = format(null, null, aggResult, {
-					overrideType: aggInfo.instance.getType()
-				});
-			}
-
-			td = jQuery('<td>').text(text);
-
-			if (self.opts.drawInternalBorders || ai.cell.length > 1) {
-				td.addClass(aiPivotIndex === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
-			}
-
-			self.csv.addCol(text);
-			self.setAlignment(td, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
-			td.appendTo(tr);
-
-			for (var i = aiPivotIndex + 1; i < ai.cell.length; i += 1) {
-				td = jQuery('<td><div>&nbsp;</div></td>');
-				if (self.opts.drawInternalBorders || ai.cell.length > 1) {
-					td.addClass('wcdv_pivot_colval_boundary');
-				}
-				td.addClass('wcdv_cell_empty');
-				self.csv.addCol('');
-				td.appendTo(tr);
-			}
-		}
-
-		self.ui.tbody.append(tr);
+		tr.appendTo(self.ui.tbody);
 	});
 
 	if (typeof cont === 'function') {
