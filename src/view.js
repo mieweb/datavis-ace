@@ -241,6 +241,25 @@ mixinEventHandling(View, function (self) {
 	, 'invalidAggregate'    // An aggregate function is invalid.
 ]);
 
+// #init {{{2
+
+View.prototype.init = function (cont) {
+	var self = this;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	return self.prefs.prime(function () {
+		if (!self.isBoundToPrefs) {
+			self.prefs.bind('view', self);
+			self.isBoundToPrefs = true;
+		}
+
+		return cont();
+	});
+};
+
 // #getRowCount {{{2
 
 /**
@@ -2492,9 +2511,11 @@ View.prototype.getData = function (cont) {
 View.prototype.getTypeInfo = function (cont) {
 	var self = this;
 
-	if (cont != null && typeof cont !== 'function') {
-		throw new Error('Call Error: `cont` must be null or a function');
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
 	}
+
+	// Retrieve type info from the source and cache it, then re-enter this function.
 
 	if (self.typeInfo === undefined) {
 		return self.source.getTypeInfo(function (typeInfo) {
@@ -2505,13 +2526,8 @@ View.prototype.getTypeInfo = function (cont) {
 
 	self.fire(View.events.getTypeInfo, null, self.typeInfo);
 
-	return self.prefs.prime(function () {
-		if (!self.isBoundToPrefs) {
-			self.prefs.bind('view', self);
-			self.isBoundToPrefs = true;
-		}
-
-		return cont && cont(self.typeInfo);
+	return self.init(function () {
+		return cont(self.typeInfo);
 	});
 };
 
