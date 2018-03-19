@@ -970,10 +970,10 @@ Source.prototype.convertAll = function (data, field) {
 		return;
 	}
 
-	debug.info('SOURCE // CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(data[0].rowData[field].value));
+	debug.info('SOURCE // CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(data[0][field].value));
 
 	_.each(data, function (row) {
-		self.convertCell(row.rowData, field);
+		self.convertCell(row, field);
 	});
 
 	fti.deferDecoding = false;

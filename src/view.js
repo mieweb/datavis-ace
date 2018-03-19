@@ -138,6 +138,9 @@ var InvalidAggregateError = makeSubclass(ViewError);
  *
  * @property {Aggregate} instance
  * The actual aggregate function instance which was used to compute the results.
+ *
+ * @property {boolean} debug
+ * If true, then debugging messages are output for this aggregate.
  */
 
 // Constructor {{{2
@@ -240,6 +243,22 @@ mixinEventHandling(View, function (self) {
 	, 'invalidSortField'    // A sorted field does not exist in the source data.
 	, 'invalidAggregate'    // An aggregate function is invalid.
 ]);
+
+// #_maybeDecode {{{2
+
+View.prototype._maybeDecode = function (tag, fti) {
+	var self = this;
+
+	if (fti.needsDecoding) {
+		debug.info('VIEW // ' + tag, 'Converting data: { field = "%s", type = "%s" }',
+			fti.field, fti.type);
+
+		self.source.convertAll(self.data.dataByRowId, fti.field);
+	}
+
+	fti.deferDecoding = false;
+	fti.needsDecoding = false;
+};
 
 // #init {{{2
 
@@ -419,33 +438,7 @@ View.prototype.sort = function (cont) {
 			return null;
 		}
 
-		if (fti.needsDecoding) {
-			if (!fti.field) {
-				log.error('Unable to sort: cannot decode unknown field {spec = %O, typeInfo = %O}', spec, fti);
-				return null;
-			}
-
-			debug.info('VIEW (' + self.name + ') // SORT', 'Decoding data before sorting {spec = %O, typeInfo = %O}', spec, fti);
-
-			// Since this happens after group/pivot, we need to handle those situations where the data
-			// isn't just a flat array full of objects.
-
-			if (self.data.isPlain) {
-				self.source.convertAll(self.data.data, fti.field);
-			}
-			else {
-				_.each(self.data.data, function (groupedRows) {
-					if (self.data.isGroup) {
-						self.source.convertAll(groupedRows, fti.field);
-					}
-					else {
-						_.each(groupedRows, function (pivottedRows) {
-							self.source.convertAll(pivottedRows, fti.field);
-						});
-					}
-				});
-			}
-		}
+		self._maybeDecode('SORT', fti);
 
 		return cmp;
 	};
@@ -1010,14 +1003,7 @@ View.prototype.filter = function (cont) {
 			throw new ViewError('Unable to filter field "' + filterField + '" - type is not provided');
 		}
 
-		if (fti.needsDecoding) {
-			debug.info('VIEW (' + self.name + ') // FILTER',
-								 'Decoding data before filtering: { field = "%s", type = "%s" }',
-								 fti.field, fti.type);
-
-			// Since this happens before group/pivot, we only need to handle the data as if it were plain.
-			self.source.convertAll(self.data.data, fti.field);
-		}
+		self._maybeDecode('FILTER', fti);
 	});
 
 	// Checks to see if the given filter passes for the given row.
@@ -2202,8 +2188,7 @@ View.prototype.aggregate = function (cont) {
 
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		debug.info('VIEW // AGGREGATE', 'Computing %s aggregate functions: %s',
-							 what,
-							 _.pluck(getProp(self, 'aggregateSpec', what), 'fun').join(', '));
+			what, _.pluck(getProp(self, 'aggregateSpec', what), 'fun').join(', '));
 	});
 
 	// Data structures for storing aggregate function results.
@@ -2228,7 +2213,8 @@ View.prototype.aggregate = function (cont) {
 			isHidden: spec.isHidden,
 			fields: [],
 			colConfig: [],
-			typeInfo: []
+			typeInfo: [],
+			debug: spec.debug
 		};
 
 		if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
@@ -2256,33 +2242,7 @@ View.prototype.aggregate = function (cont) {
 					throw new InvalidAggregateError('Aggregate function applied to unknown field: "' + spec.fields[i] + '"');
 				}
 
-				if (fti.needsDecoding) {
-					if (!fti.field) {
-						log.error('Unable to sort: cannot decode unknown field {typeInfo = %O}', fti);
-						return;
-					}
-
-					debug.info('VIEW (' + self.name + ') // AGGREGATE', 'Decoding data {typeInfo = %O}', fti);
-
-					if (self.data.isPlain) {
-						self.source.convertAll(self.data.data, fti.field);
-					}
-					else {
-						_.each(self.data.data, function (groupedRows) {
-							if (self.data.isGroup) {
-								self.source.convertAll(groupedRows, fti.field);
-							}
-							else {
-								_.each(groupedRows, function (pivottedRows) {
-									self.source.convertAll(pivottedRows, fti.field);
-								});
-							}
-						});
-					}
-
-					fti.deferDecoding = false;
-					fti.needsDecoding = false;
-				}
+				self._maybeDecode('AGGREGATE', fti);
 			});
 
 			ctorOpts.fields = aggInfo.fields;
@@ -2306,14 +2266,18 @@ View.prototype.aggregate = function (cont) {
 			}
 			catch (e) {
 				if (e instanceof InvalidAggregateError) {
+					log.error('Invalid Aggregate: ' + what + '[' + aggNum + '] - ' + e.message);
+
+					// Set the aggregate to null so it can be removed later.
+					info[what][aggNum] = null;
+
 					// Let the UI know there was a problem with this aggregate, so the user can fix it or
 					// remove the aggregate from the output entirely.
-					log.error('Invalid Aggregate: ' + what + '[' + aggNum + '] - ' + e.message);
 					self.fire(View.events.invalidAggregate, null, aggNum, e.message);
 				}
-
-				// Set the aggregate to null so it can be removed later.
-				info[what][aggNum] = null;
+				else {
+					throw e;
+				}
 			}
 		});
 
@@ -2328,11 +2292,13 @@ View.prototype.aggregate = function (cont) {
 			}
 			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data[rowValIdx]));
 			groupResults[aggNum][rowValIdx] = aggResult;
-			//debug.info('VIEW // AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %O',
-			//	aggNum,
-			//	info.group[aggNum].instance.name + (info.group[aggNum].name ? ' -> ' + info.group[aggNum].name : ''),
-			//	rowVal.join(', '),
-			//	aggResult);
+			if (aggInfo.debug) {
+				debug.info('VIEW // AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %s',
+					aggNum,
+					info.group[aggNum].instance.name + (info.group[aggNum].name ? ' -> ' + info.group[aggNum].name : ''),
+					rowVal.join(', '),
+					JSON.stringify(aggResult));
+			}
 		});
 
 		if (self.data.isPivot) {
@@ -2344,15 +2310,15 @@ View.prototype.aggregate = function (cont) {
 
 				_.each(self.data.colVals, function (colVal, colValIdx) {
 					var aggResult = aggInfo.instance.calculate(self.data.data[rowValIdx][colValIdx]);
-
-					//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Cell [%s ; %s] = %O',
-					//	aggNum,
-					//	info.cell[aggNum].instance.name + (info.cell[aggNum].name ? ' -> ' + info.cell[aggNum].name : ''),
-					//	rowVal.join(', '),
-					//	colVal.join(', '),
-					//	aggResult);
-
 					cellResults[aggNum][rowValIdx][colValIdx] = aggResult;
+					if (aggInfo.debug) {
+						debug.info('VIEW // AGGREGATE', 'Cell aggregate [%d] (%s) : Cell [%s ; %s] = %s',
+							aggNum,
+							info.cell[aggNum].instance.name + (info.cell[aggNum].name ? ' -> ' + info.cell[aggNum].name : ''),
+							rowVal.join(', '),
+							colVal.join(', '),
+							JSON.stringify(aggResult));
+					}
 				});
 			});
 		}
@@ -2365,11 +2331,13 @@ View.prototype.aggregate = function (cont) {
 			_.each(self.data.colVals, function (colVal, colValIdx) {
 				var aggResult = aggInfo.instance.calculate(_.flatten(_.pluck(self.data.data, colValIdx)));
 				pivotResults[aggNum][colValIdx] = aggResult;
-				//debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %O',
-				//	aggNum,
-				//	info.pivot[aggNum].instance.name + (info.pivot[aggNum].name ? ' -> ' + info.pivot[aggNum].name : ''),
-				//	colVal.join(', '),
-				//	aggResult);
+				if (aggInfo.debug) {
+					debug.info('VIEW // AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %s',
+						aggNum,
+						info.pivot[aggNum].instance.name + (info.pivot[aggNum].name ? ' -> ' + info.pivot[aggNum].name : ''),
+						colVal.join(', '),
+						JSON.stringify(aggResult));
+				}
 			});
 		});
 	}
@@ -2377,11 +2345,13 @@ View.prototype.aggregate = function (cont) {
 	if (self.data.isPivot && info.all) {
 		_.each(info.all, function (aggInfo, aggNum) {
 			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data));
-			//debug.info('VIEW // AGGREGATE', 'All aggregate [%d] (%s) = %O',
-			//	aggNum,
-			//	info.all[aggNum].instance.name + (info.all[aggNum].name ? ' -> ' + info.all[aggNum].name : ''),
-			//	aggResult);
 			allResults[aggNum] = aggResult;
+			if (aggInfo.debug) {
+				debug.info('VIEW // AGGREGATE', 'All aggregate [%d] (%s) = %s',
+					aggNum,
+					info.all[aggNum].instance.name + (info.all[aggNum].name ? ' -> ' + info.all[aggNum].name : ''),
+					JSON.stringify(aggResult));
+			}
 		});
 	}
 
