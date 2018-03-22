@@ -946,7 +946,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			 * itself.  We may then add columns for extra features (like row selection or reordering).
 			 */
 
-			var columns = determineColumns(self.defn, data, typeInfo)
+			var columns = determineColumns(self.grid.colConfig, data, typeInfo)
 				, numCols = columns.length;
 
 			if (self.features.rowSelect) {
@@ -2241,7 +2241,7 @@ GridTablePlain.prototype.addWorkHandler = function () {
 
 GridTablePlain.prototype.addDataToCsv = function (data) {
 	var self = this;
-	var columns = determineColumns(self.defn, data, self.typeInfo);
+	var columns = determineColumns(self.grid.colConfig, data, self.typeInfo);
 
 	self.csv.clear();
 

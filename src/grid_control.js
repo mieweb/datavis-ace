@@ -276,7 +276,7 @@ AggregateControlField.prototype.draw = function () {
 		self.fieldDropdowns.push(select);
 	}
 
-	_.each(availableFields(self.control.defn, null, self.control.typeInfo), function (fieldName) {
+	_.each(determineColumns(self.control.colConfig, null, self.control.typeInfo), function (fieldName) {
 		var text = getProp(self.control.colConfig, fieldName, 'displayText') || fieldName;
 		_.each(self.fieldDropdowns, function (dropdown, i) {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(dropdown);
@@ -419,7 +419,7 @@ AggregateControlField.prototype.getInfo = function () {
  * Creates a new GridControl instance.
  *
  * @param {Grid} grid
- * @param {object} defn
+ * @param {object} colConfig
  * @param {View} view
  * @param {object} features
  * @param {Timing} timing
@@ -438,11 +438,10 @@ AggregateControlField.prototype.getInfo = function () {
  *   Use `self.fields` to set whatever properties are needed on the view.
  *
  * @property {Grid} grid
- * @property {object} defn
  * @property {View} view
  * @property {object} features
  * @property {Timing} timing
- * @property {object} [colConfig]
+ * @property {OrdMap.<Grid~ColConfig>} colConfig
  *
  * @property {Array.<string>} fields
  * List of all the fields selected by the user.
@@ -460,19 +459,14 @@ AggregateControlField.prototype.getInfo = function () {
  * The SELECT element containing the available fields.
  */
 
-var GridControl = makeSubclass(Object, function (grid, defn, view, features, timing) {
+var GridControl = makeSubclass(Object, function (grid, colConfig, view, features, timing) {
 	var self = this;
 
 	self.grid = grid;
-	self.defn = defn;
+	self.colConfig = colConfig;
 	self.view = view;
 	self.features = features;
 	self.timing = timing;
-
-	if (self.useColConfig) {
-		self.colConfig = _.indexBy(getPropDef({}, self.defn, 'table', 'columns'), 'field');
-	}
-
 	self.fields = [];
 	self.controlFields = [];
 	self.controlFieldsByField = {};
@@ -850,7 +844,7 @@ GroupControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.dropdown);
 
 	self.view.on('getTypeInfo', function (typeInfo) {
-		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
+		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
@@ -972,7 +966,7 @@ PivotControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.dropdown);
 
 	self.view.on('getTypeInfo', function (typeInfo) {
-		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
+		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
@@ -1230,7 +1224,7 @@ AggregateControl.prototype.updateFieldDropdowns = function () {
 
 	// Add <OPTION> elements for all the fields.
 
-	_.each(availableFields(self.defn, null, self.typeInfo), function (fieldName) {
+	_.each(determineColumns(self.colConfig, null, self.typeInfo), function (fieldName) {
 		var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 		_.each(self.ui.fields, function (f) {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(f.dropdown);
@@ -1361,7 +1355,7 @@ FilterControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.dropdown);
 
 	self.view.on('getTypeInfo', function (typeInfo) {
-		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
+		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});

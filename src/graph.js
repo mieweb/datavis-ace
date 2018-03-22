@@ -2434,7 +2434,7 @@ GraphControl.prototype.draw = function () {
 	self.view.on('getTypeInfo', function (typeInfo) {
 		var fields = [];
 
-		_.each(availableFields(self.defn, null, typeInfo), function (fieldName) {
+		_.each(determineColumns(null, null, typeInfo), function (fieldName) {
 			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
 			fields.push({ fieldName: fieldName, displayText: text });
 		});

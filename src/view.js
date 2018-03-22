@@ -2227,7 +2227,7 @@ View.prototype.aggregate = function (cont) {
 		if (spec.fields) {
 			aggInfo.fields = spec.fields;
 			aggInfo.colConfig = _.map(spec.fields, function (f) {
-				return self.colConfig[f];
+				return self.colConfig.get(f);
 			});
 			aggInfo.typeInfo = _.map(spec.fields, function (f) {
 				return self.typeInfo.get(f);
@@ -2583,3 +2583,16 @@ View.prototype.getLastOps = function () {
 	return self.lastOps;
 };
 
+// #setColConfig {{{2
+
+View.prototype.setColConfig = function (colConfig) {
+	var self = this;
+
+	if (!(colConfig instanceof OrdMap)) {
+		throw new Error('Call Error: `colConfig` must be an instance of OrdMap');
+	}
+
+	debug.info('VIEW (' + self.name + ')', 'Setting column configuration');
+
+	self.colConfig = colConfig;
+};

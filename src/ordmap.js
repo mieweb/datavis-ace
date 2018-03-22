@@ -21,6 +21,26 @@ OrdMap.prototype = Object.create(Object.prototype);
 OrdMap.prototype.constructor = OrdMap;
 
 /**
+ * Construct a new OrdMap from an array of values.
+ *
+ * @method
+ *
+ * @param {Array.<object>} values The values to add to the new OrdMap.
+ * @param {string} keyField Name of the field to use as the key.
+ * @returns {OrdMap} An OrdMap containing the values.
+ */
+
+OrdMap.fromArray = function (values, keyField) {
+	var o = new OrdMap();
+
+	for (var i = 0; i < values.length; i += 1) {
+		o.set(values[i][keyField], values[i]);
+	}
+
+	return o;
+};
+
+/**
  * Retrieve a key/value association from the map.
  *
  * @method

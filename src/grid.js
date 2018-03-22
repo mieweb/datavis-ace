@@ -1,111 +1,3 @@
-// Determine Columns {{{1
-
-function validateUserColumnSpec(defn, data, typeInfo) {
-
-	// Error checking for `defn.table.columns` to make sure it:
-	//
-	//   1. Has the correct format.
-	//   2. Only defines fields which actually exist.
-
-	if (defn.table.columns !== undefined) {
-		if (!_.isArray(defn.table.columns)) {
-			throw new GridTablePlainError('Determine Columns / (table.columns) must be an array');
-		}
-
-		_.each(defn.table.columns, function (elt, i) {
-			if (elt.field === undefined) {
-				throw new GridTablePlainError('Determine Columns / Missing (table.columns[' + i + '].field)');
-			}
-		});
-
-		// Check the user's column specification against the data, if it's available.
-
-		if (!isNothing(data)) {
-			if ((data.isPivot && (data.data.length === 0 || data.data[0].length === 0 || data.data[0][0].length === 0))
-					|| (!data.isPivot && data.isGroup && (data.data.length === 0 || data.data[0].length === 0))
-					|| (data.isPlain && (data.data.length === 0))) {
-				log.warn('Unable to check column configuration using data with no rows');
-				return false;
-			}
-			else {
-				_.each(defn.table.columns, function (elt, i) {
-					if ((data.isPivot && data.data[0][0][0].rowData[elt.field] === undefined)
-							|| (!data.isPivot && data.isGroup && data.data[0][0].rowData[elt.field] === undefined)
-							|| (data.isPlain && data.data[0].rowData[elt.field] === undefined)) {
-						log.warn('Column configuration refers to field "' + elt.field + '" which does not exist in the data');
-						return false;
-					}
-				});
-			}
-		}
-	}
-
-	return true;
-}
-
-/**
- * Determine which columns should be shown in plain or grouped output, based on information from
- * several sources.
- *
- * If the user has set `defn.table.columns`, then it will be used to figure out what fields are to
- * be shown.  Otherwise, the fields come from the source's type info, and fields starting with an
- * underscore are omitted.
- *
- * @todo What do we do when the data has been pivotted?
- *
- * @param {Grid~Defn} defn
- *
- * @param {array} data
- *
- * @param {Source~TypeInfo} typeInfo
- *
- * @returns {Array.<string>} An array of the names of the fields that should constitute the columns
- * in the output.  This is not necessarily the same as the headers to be shown in the output.
- */
-
-function determineColumns(defn, data, typeInfo) {
-	var columns = [];
-
-	validateUserColumnSpec(defn, data, typeInfo);
-
-	if (getProp(defn, 'table', 'columns')) {
-		columns = _.pluck(defn.table.columns, 'field');
-	}
-	else if (typeInfo.size() > 0) {
-		columns = _.reject(typeInfo.keys(), function (field) {
-			return field.charAt(0) === '_';
-		});
-	}
-	else if (data.isPlain && data.data.length > 0) {
-		columns = _.keys(data.data[0].rowData);
-	}
-	else if (data.isGroup && data.data[0].length > 0) {
-		columns = _.keys(data.data[0][0].rowData);
-	}
-	else if (data.isPivot && data.data[0][0].length > 0) {
-		columns = _.keys(data.data[0][0][0].rowData);
-	}
-
-	debug.info('DETERMINE COLUMNS', 'Columns = %O', columns);
-
-	return columns;
-};
-
-function availableFields(defn, data, typeInfo) {
-	var fields = [];
-
-	if (defn.table.columns && validateUserColumnSpec(defn, data, typeInfo)) {
-		fields = _.pluck(defn.table.columns, 'field');
-	}
-	else {
-		fields = _.reject(typeInfo.keys(), function (field) {
-			return field.charAt(0) === '_';
-		});
-	}
-
-	return fields;
-};
-
 // Server-Side Filter/Sort {{{1
 
 /*
@@ -530,7 +422,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	// (e.g. group concat) know how to format non-string values like currency.  There's got to be a
 	// better way to do this.
 
-	view.colConfig = self.colConfig;
+	view.setColConfig(self.colConfig);
 
 	debug.info('GRID', 'Definition: %O', defn);
 
@@ -1359,25 +1251,25 @@ Grid.prototype.redraw = function () {
 	}
 
 	if (self.filterControl === undefined) {
-		self.filterControl = new FilterControl(self, self.defn, self.view, self.features, self.timing);
+		self.filterControl = new FilterControl(self, self.colConfig, self.view, self.features, self.timing);
 		self.ui.filterControl.children().remove();
 		self.filterControl.draw(self.ui.filterControl);
 		self.ui.filterControl.show();
 	}
 
 	if (self.groupControl === undefined) {
-		self.groupControl = new GroupControl(self, self.defn, self.view, self.features, self.timing);
-		self.groupControl.on(GridControl.events.fieldAdded, function (fieldAdded, fields) {
+		self.groupControl = new GroupControl(self, self.colConfig, self.view, self.features, self.timing);
+		self.groupControl.on('fieldAdded', function (fieldAdded, fields) {
 			self.ui.pivotControl.show();
 			self.ui.aggregateControl.show();
 		});
-		self.groupControl.on(GridControl.events.fieldRemoved, function (fieldRemoved, fields) {
+		self.groupControl.on('fieldRemoved', function (fieldRemoved, fields) {
 			if (fields.length === 0) {
 				self.ui.pivotControl.hide();
 				self.ui.aggregateControl.hide();
 			}
 		});
-		self.groupControl.on(GridControl.events.cleared, function () {
+		self.groupControl.on('cleared', function () {
 			self.ui.pivotControl.hide();
 			self.ui.aggregateControl.hide();
 		});
@@ -1387,7 +1279,7 @@ Grid.prototype.redraw = function () {
 	}
 
 	if (self.pivotControl === undefined) {
-		self.pivotControl = new PivotControl(self, self.defn, self.view, self.features, self.timing);
+		self.pivotControl = new PivotControl(self, self.colConfig, self.view, self.features, self.timing);
 		self.ui.pivotControl.children().remove();
 		self.pivotControl.draw(self.ui.pivotControl);
 		self.ui.pivotControl.hide();
@@ -1412,7 +1304,7 @@ Grid.prototype.redraw = function () {
 	}
 
 	if (self.aggregateControl === undefined) {
-		self.aggregateControl = new AggregateControl(self, self.defn, self.view, self.features, self.timing);
+		self.aggregateControl = new AggregateControl(self, self.colConfig, self.view, self.features, self.timing);
 		self.ui.aggregateControl.children().remove();
 		self.aggregateControl.draw(self.ui.aggregateControl);
 		self.ui.aggregateControl.hide();
@@ -1885,10 +1777,6 @@ Grid.prototype._normalize = function (defn) {
 	});
 
 	self._normalizeColumns(defn);
-
-	if (getProp(defn, 'table', 'columns') !== undefined) {
-		defn.table.columns_map = _.indexBy(defn.table.columns, 'field');
-	}
 };
 
 // #_normalizeColumns {{{2
@@ -1896,17 +1784,28 @@ Grid.prototype._normalize = function (defn) {
 Grid.prototype._normalizeColumns = function (defn) {
 	var self = this;
 
-	// If the column configuration is just a string, that's just the name of a column to show.  Let's
-	// convert it into the object format.
+	self.colConfig = new OrdMap();
 
 	if (getProp(defn, 'table', 'columns')) {
 		for (var i = 0; i < defn.table.columns.length; i += 1) {
-			var colConfig = defn.table.columns[i];
-			if (_.isString(colConfig)) {
-				defn.table.columns[i] = {
-					field: colConfig
-				};
+			var cc = defn.table.columns[i];
+
+			if (_.isString(cc)) {
+				cc = { field: cc };
 			}
+
+			if (typeof cc.field !== 'string') {
+				log.warn('Column Configuration: `field` must be a string');
+				continue;
+			}
+
+			cc = deepDefaults(cc, {
+				hideMidnight: false,
+				format_dateOnly: 'LL',
+				allowHtml: false
+			});
+
+			self.colConfig.set(cc.field, cc);
 		}
 	}
 
@@ -1921,12 +1820,6 @@ Grid.prototype._normalizeColumns = function (defn) {
 			}
 			colConfig.filter = 'checkbox';
 		}
-	});
-
-	self.colConfig = {};
-
-	_.each(getPropDef([], defn, 'table', 'columns'), function (col) {
-		self.colConfig[col.field] = col;
 	});
 };
 

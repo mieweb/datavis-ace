@@ -2934,3 +2934,90 @@ function getParamsFromUrl() {
 
 	return params;
 }
+
+// #validateColConfig {{{2
+
+function validateColConfig(colConfig, data) {
+	if (!(colConfig instanceof OrdMap)) {
+		throw new Error('Call Error: `colConfig` must be an OrdMap instance');
+	}
+
+	if (data != null) {
+		if ((data.isPivot && (data.data.length === 0 || data.data[0].length === 0 || data.data[0][0].length === 0))
+			|| (!data.isPivot && data.isGroup && (data.data.length === 0 || data.data[0].length === 0))
+			|| (data.isPlain && (data.data.length === 0))) {
+			log.warn('Unable to check column configuration using data with no rows');
+			return false;
+		}
+		else {
+			colConfig.each(function (fcc, field) {
+				if ((data.isPivot && data.data[0][0][0].rowData[field] === undefined)
+						|| (!data.isPivot && data.isGroup && data.data[0][0].rowData[field] === undefined)
+						|| (data.isPlain && data.data[0].rowData[field] === undefined)) {
+					log.warn('Column configuration refers to field "' + field + '" which does not exist in the data');
+					return false;
+				}
+			});
+		}
+	}
+
+	return true;
+}
+
+// #determineColumns {{{2
+
+/**
+ * Determine which columns should be shown in plain or grouped output, based on information from
+ * several sources.
+ *
+ * If the user has set `defn.table.columns`, then it will be used to figure out what fields are to
+ * be shown.  Otherwise, the fields come from the source's type info, and fields starting with an
+ * underscore are omitted.
+ *
+ * @todo What do we do when the data has been pivotted?
+ *
+ * @param {Grid~Defn} defn
+ *
+ * @param {array} data
+ *
+ * @param {Source~TypeInfo} typeInfo
+ *
+ * @returns {Array.<string>} An array of the names of the fields that should constitute the columns
+ * in the output.  This is not necessarily the same as the headers to be shown in the output.
+ */
+
+function determineColumns(colConfig, data, typeInfo) {
+	var columns = [];
+
+	if (!(colConfig instanceof OrdMap)) {
+		throw new Error('Call Error: `colConfig` must be an OrdMap instance');
+	}
+
+	if (!(typeInfo instanceof OrdMap)) {
+		throw new Error('Call Error: `typeInfo` must be an OrdMap instance');
+	}
+
+	validateColConfig(colConfig, data);
+
+	if (colConfig.size() > 0) {
+		columns = colConfig.keys();
+	}
+	else if (typeInfo.size() > 0) {
+		columns = _.reject(typeInfo.keys(), function (field) {
+			return field.charAt(0) === '_';
+		});
+	}
+	else if (data.isPlain && data.data.length > 0) {
+		columns = _.keys(data.data[0].rowData);
+	}
+	else if (data.isGroup && data.data[0].length > 0) {
+		columns = _.keys(data.data[0][0].rowData);
+	}
+	else if (data.isPivot && data.data[0][0].length > 0) {
+		columns = _.keys(data.data[0][0][0].rowData);
+	}
+
+	debug.info('DETERMINE COLUMNS', 'Columns = %O', columns);
+
+	return columns;
+}
