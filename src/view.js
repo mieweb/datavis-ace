@@ -2494,7 +2494,7 @@ View.prototype.getTypeInfo = function (cont) {
 		});
 	}
 
-	self.fire(View.events.getTypeInfo, null, self.typeInfo);
+	self.fire('getTypeInfo', null, self.typeInfo, self.colConfig);
 
 	return self.init(function () {
 		return cont(self.typeInfo);
