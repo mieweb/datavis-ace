@@ -2029,9 +2029,9 @@ function deprecated(defn, msg, ref) {
  * it's applied over a field that contains dates or currency).
  */
 
-function format(colConfig, typeInfo, cell, opts) {
-	colConfig = colConfig || {};
-	typeInfo = typeInfo || {};
+function format(fcc, fti, cell, opts) {
+	fcc = fcc || {};
+	fti = fti || {};
 	opts = opts || {};
 
 	_.defaults(opts, {
@@ -2040,7 +2040,7 @@ function format(colConfig, typeInfo, cell, opts) {
 	});
 
 	if (opts.debug) {
-		debug.info('FORMAT', 'typeInfo = %O ; colConfig = %O ; cell = %O ; opts = %O', typeInfo, colConfig, cell, opts);
+		debug.info('FORMAT', 'typeInfo = %O ; colConfig = %O ; cell = %O ; opts = %O', fti, fcc, cell, opts);
 	}
 
 	// When we just receive a value instead of a proper data cell, convert it so that code below can
@@ -2063,9 +2063,9 @@ function format(colConfig, typeInfo, cell, opts) {
 
 	var result = cell.orig || cell.value;
 
-	var t = opts.overrideType || typeInfo.type;
-	var format = colConfig.format;
-	var format_dateOnly = colConfig.format_dateOnly;
+	var t = opts.overrideType || fti.type;
+	var format = fcc.format;
+	var format_dateOnly = fcc.format_dateOnly;
 
 	// Set default formatting strings for some types.  Note that we're NOT setting one for generic
 	// numbers, because they are often used in different ways (e.g. an ID should have no commas).
@@ -2104,12 +2104,12 @@ function format(colConfig, typeInfo, cell, opts) {
 		switch (t) {
 		case 'date':
 		case 'datetime':
-			if (typeof cell.value === 'string' && typeInfo.needsDecoding) {
-				cell.value = moment(cell.value, typeInfo.format);
+			if (typeof cell.value === 'string' && fti.needsDecoding) {
+				cell.value = moment(cell.value, fti.format);
 			}
 
 			if (window.moment && window.moment.isMoment(cell.value)) {
-				if (colConfig.hideMidnight && cell.value.hour() === 0 && cell.value.minute() === 0 && cell.value.second() === 0) {
+				if (fcc.hideMidnight && cell.value.hour() === 0 && cell.value.minute() === 0 && cell.value.second() === 0) {
 					result = cell.value.format(format_dateOnly);
 				}
 				else {
@@ -2120,7 +2120,7 @@ function format(colConfig, typeInfo, cell, opts) {
 				// FIXME: Make this work without Moment.
 
 				var m = moment(cell.value);
-				if (colConfig.hideMidnight && m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
+				if (fcc.hideMidnight && m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
 					result = m.format(format_dateOnly);
 				}
 				else {
@@ -2130,7 +2130,7 @@ function format(colConfig, typeInfo, cell, opts) {
 			break;
 		case 'number':
 		case 'currency':
-			if (typeof cell.value === 'string' && typeInfo.needsDecoding) {
+			if (typeof cell.value === 'string' && fti.needsDecoding) {
 				if (isInt(cell.value)) {
 					cell.value = toInt(cell.value);
 				}
@@ -2164,7 +2164,7 @@ function format(colConfig, typeInfo, cell, opts) {
 			break;
 		default:
 			log.error('Unable to format - unknown type: { field = "%s", type = "%s", value = "%s" }',
-				typeInfo.field, t, cell.value);
+				fti.field, t, cell.value);
 		}
 	}
 
