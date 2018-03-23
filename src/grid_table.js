@@ -2045,6 +2045,8 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
 
+	var didFooterCell = false;
+
 	tr.append(_.map(columns, function (field, colIndex) {
 		var fcc = self.colConfig.get(field) || {};
 		var colTypeInfo = typeInfo.get(field);
@@ -2058,7 +2060,20 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 		self.setCss(td, field);
 		self.setAlignment(td, fcc, typeInfo.get(field));
 
-		if (footerConfig != null) {
+		if (footerConfig == null) {
+			if (didFooterCell) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = false;
+		}
+		else {
+			if (colIndex > 0) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = true;
+
 			// Although the footer config is an aggregate spec, there is one place we allow more
 			// flexibility.  If the fields aren't set, use the field for the column in which we're
 			// displaying this footer.  This is merely a convenience for the most common case.

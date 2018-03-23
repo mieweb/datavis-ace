@@ -553,6 +553,11 @@ tr.wcdvgrid_more td {
 	padding: 4px;
 }
 
+.wcdv_grid_table table .wcdv_divider {
+	border-left: solid 2px #D0D0D0;
+	padding-left: 4px !important;
+}
+
 .wcdv_grid_table table .wcdv_pivot_colval_boundary {
 	border-left: solid 2px #D0D0D0;
 	padding-left: 4px !important;
