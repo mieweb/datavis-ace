@@ -106,41 +106,43 @@ var InvalidAggregateError = makeSubclass(ViewError);
  */
 
 /**
- * @typedef {object} View~AggregateSpec
+ * @typedef {object} View~AggregateSpecs
  * An object telling what aggregate functions to calculate on the data.
+ *
+ * @property {Array.<View~AggregateSpec>} cell
+ * Aggregate functions applied over the rows that match a single rowval and colval.  Only calculated
+ * for pivot output.
+ *
+ * @property {Array.<View~AggregateSpec>} group
+ * Aggregate functions applied over the rows that match a single rowval.  Calculated for both group
+ * summary output and pivot output.
+ *
+ * @property {Array.<View~AggregateSpec>} pivot
+ * Aggregate functions applied over the rows that match a single colval.  Only calculated for pivot
+ * output.
+ *
+ * @property {Array.<View~AggregateSpec>} all
+ * Aggregate functions applied over all rows.  Calculated for both group summary output and pivot
+ * output.
  */
 
 /**
- * @typedef {object} View~AggInfo
- * Describes an aggregate function which is applied to a slice of the data.
- *
- * @property {number} aggNum
- * The aggregate number; used to correlate with the results.
+ * @typedef {object} View~AggregateSpec
+ * An object specifying a single aggregate function.
  *
  * @property {string} fun
- * Internal name of the aggregate function, maps to a key in `AGGREGATE_REGISTRY`.
+ * Name of the aggregate function to use, e.g. "count" or "min".
  *
- * @property {string} name
- * Display text for the aggregate function.
+ * @property {string} [name]
+ * What should be displayed when the value of this function is output.  When not provided, defaults
+ * to "[function] of [fields]" e.g. "Min of Date".
  *
- * @property {boolean} isHidden
- * If true, then the aggregate function should not be shown in the grid.
+ * @property {boolean} [isHidden=false]
+ * If true, then this aggregate is hidden, i.e. it is calculated (so you could sort on it) but it
+ * isn't displayed in the output.
  *
- * @property {Array.<string>} fields
- * An array of the fields to which the aggregate function applies.  For functions that don't require
- * any fields, this will be an empty array.
- *
- * @property {Array.<Grid~ColConfig>} colConfig
- * An array of column configuration objects which correspond to `fields`.
- *
- * @property {Array.<Source~TypeInfo>} typeInfo
- * An array of type information objects which correspond to `fields`.
- *
- * @property {Aggregate} instance
- * The actual aggregate function instance which was used to compute the results.
- *
- * @property {boolean} debug
- * If true, then debugging messages are output for this aggregate.
+ * @property {boolean} [debug=false]
+ * If true, then extra debugging messages are emitted for this aggregate function.
  */
 
 // Constructor {{{2
@@ -2050,7 +2052,7 @@ View.prototype.pivot = function () {
 /**
  * Set the aggregate configuration.
  *
- * @param {View~AggregateSpec} spec
+ * @param {View~AggregateSpecs} spec
  * The aggregate configuration.
  *
  * @param {object} [opts]
@@ -2205,66 +2207,12 @@ View.prototype.aggregate = function (cont) {
 		all: []
 	};
 
-	var makeAggInfo = function (aggType, spec, aggNum) {
-		var aggInfo = {
-			aggNum: aggNum,
-			fun: spec.fun,
-			name: spec.name,
-			isHidden: spec.isHidden,
-			fields: [],
-			colConfig: [],
-			typeInfo: [],
-			debug: spec.debug
-		};
-
-		if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
-			throw new Error('No such aggregate function: "' + spec.fun + '"' +
-				(spec.name ? ' (output name = "' + spec.name + '")' : ''));
-		}
-
-		var ctorOpts = {
-			name: spec.name
-		};
-
-		if (spec.fields) {
-			aggInfo.fields = spec.fields;
-			aggInfo.colConfig = _.map(spec.fields, function (f) {
-				return self.colConfig.get(f);
-			});
-			aggInfo.typeInfo = _.map(spec.fields, function (f) {
-				return self.typeInfo.get(f);
-			});
-
-			// Perform type decoding if needed, before we calculate the aggregate results.  This is
-			// needed when doing aggregates like "values" and "distinct values" to make sure they're
-			// formatted right by the aggregate function itself.
-
-			_.each(aggInfo.typeInfo, function (fti, i) {
-				if (fti == null) {
-					throw new InvalidAggregateError('Aggregate function applied to unknown field: "' + spec.fields[i] + '"');
-				}
-
-				self._maybeDecode('AGGREGATE', fti);
-			});
-
-			ctorOpts.fields = aggInfo.fields;
-			ctorOpts.isHidden = aggInfo.isHidden;
-			ctorOpts.colConfig = aggInfo.colConfig;
-			ctorOpts.typeInfo = aggInfo.typeInfo;
-		}
-
-		_.extend(ctorOpts, spec.opts);
-
-		aggInfo.instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
-		return aggInfo;
-	};
-
 	// Initialize the informational data structures.
 
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		_.each(self.aggregateSpec[what], function (spec, aggNum) {
 			try {
-				info[what][aggNum] = makeAggInfo(what, spec, aggNum);
+				info[what][aggNum] = new AggregateInfo(what, spec, aggNum, self.colConfig, self.typeInfo, _.bind(self._maybeDecode, self));
 			}
 			catch (e) {
 				if (e instanceof InvalidAggregateError) {

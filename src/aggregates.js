@@ -1022,3 +1022,99 @@ AGGREGATE_REGISTRY.set('first', FirstAggregate);
 AGGREGATE_REGISTRY.set('last', LastAggregate);
 AGGREGATE_REGISTRY.set('nth', NthAggregate);
 AGGREGATE_REGISTRY.set('sumOverSum', SumOverSumAggregate);
+
+// AggregateInfo {{{1
+
+/**
+ * @property {number} aggNum
+ * The aggregate number; used to correlate with the results.
+ *
+ * @property {string} fun
+ * Internal name of the aggregate function, maps to a key in `AGGREGATE_REGISTRY`.
+ *
+ * @property {string} name
+ * Display text for the aggregate function.
+ *
+ * @property {boolean} isHidden
+ * If true, then the aggregate function should not be shown in the grid.
+ *
+ * @property {Array.<string>} fields
+ * An array of the fields to which the aggregate function applies.  For functions that don't require
+ * any fields, this will be an empty array.
+ *
+ * @property {Array.<Grid~ColConfig>} colConfig
+ * An array of column configuration objects which correspond to `fields`.
+ *
+ * @property {Array.<Source~TypeInfo>} typeInfo
+ * An array of type information objects which correspond to `fields`.
+ *
+ * @property {Aggregate} instance
+ * The actual aggregate function instance which was used to compute the results.
+ *
+ * @property {boolean} debug
+ * If true, then debugging messages are output for this aggregate.
+ */
+
+var AggregateInfo = makeSubclass(Object, function (aggType, spec, aggNum, colConfig, typeInfo, maybeDecode) {
+	var self = this;
+
+	self.aggNum = aggNum;
+	self.fun = spec.fun;
+	self.name = spec.name;
+	self.isHidden = spec.isHidden;
+	self.fields = [];
+	self.colConfig = [];
+	self.typeInfo = [];
+	self.debug = spec.debug;
+
+	if (AGGREGATE_REGISTRY.get(spec.fun) == null) {
+		throw new Error('No such aggregate function: "' + spec.fun + '"' +
+			(spec.name ? ' (output name = "' + spec.name + '")' : ''));
+	}
+
+	var ctorOpts = {
+		name: spec.name
+	};
+
+	if (spec.fields) {
+		self.fields = spec.fields;
+		if (colConfig != null) {
+			self.colConfig = _.map(spec.fields, function (f) {
+				return colConfig.get(f);
+			});
+		}
+		else {
+			log.warn('Creating ' + aggType + '[' + aggNum + '] aggregate function "' + spec.fun + '" to be applied over fields ' + JSON.stringify(spec.fields) + ', but no column config was provided.');
+		}
+
+		if (typeInfo != null) {
+			self.typeInfo = _.map(spec.fields, function (f) {
+				return typeInfo.get(f);
+			});
+		}
+		else {
+			log.warn('Creating ' + aggType + '[' + aggNum + '] aggregate function "' + spec.fun + '" to be applied over fields ' + JSON.stringify(spec.fields) + ', but no type info was provided.');
+		}
+
+		// Perform type decoding if needed, before we calculate the aggregate results.  This is
+		// needed when doing aggregates like "values" and "distinct values" to make sure they're
+		// formatted right by the aggregate function itself.
+
+		_.each(self.typeInfo, function (fti, i) {
+			if (fti == null) {
+				throw new InvalidAggregateError('Aggregate function applied to unknown field: "' + spec.fields[i] + '"');
+			}
+
+			maybeDecode('AGGREGATE', fti);
+		});
+
+		ctorOpts.fields = self.fields;
+		ctorOpts.isHidden = self.isHidden;
+		ctorOpts.colConfig = self.colConfig;
+		ctorOpts.typeInfo = self.typeInfo;
+	}
+
+	_.extend(ctorOpts, spec.opts);
+
+	self.instance = new (AGGREGATE_REGISTRY.get(spec.fun))(ctorOpts);
+});
