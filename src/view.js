@@ -2222,7 +2222,9 @@ View.prototype.aggregate = function (cont) {
 				(spec.name ? ' (output name = "' + spec.name + '")' : ''));
 		}
 
-		var ctorOpts = {};
+		var ctorOpts = {
+			name: spec.name
+		};
 
 		if (spec.fields) {
 			aggInfo.fields = spec.fields;

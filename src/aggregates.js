@@ -433,7 +433,12 @@ Aggregate.prototype.getNumber = function (x) {
 Aggregate.prototype.getFullName = function () {
 	var self = this;
 
-	return self.name + (self.fieldCount > 0 && _.isArray(self.opts.fields) && self.opts.fields.length > 0 ? (' of ' + self.opts.fields.join(', ')) : '');
+	if (self.opts.name != null) {
+		return self.opts.name;
+	}
+	else {
+		return self.name + (self.fieldCount > 0 && _.isArray(self.opts.fields) && self.opts.fields.length > 0 ? (' of ' + self.opts.fields.join(', ')) : '');
+	}
 };
 
 // #getType {{{2
