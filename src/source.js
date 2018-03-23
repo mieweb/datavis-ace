@@ -663,23 +663,18 @@ Source.prototype.getTypeInfo = function (cont) {
 				typeInfo.set(k, v);
 			}
 			v.field = k;
+			v.overridden = false;
 		});
-
-		// XXX This object is a clone of the original typeInfo because we're augmenting it with the
-		// user's type info overrides.  I don't remember why we couldn't just do it on the original.
-		//
-		// TODO Try to do this without cloning.
-
-		var typeInfoClone = deepCopy(typeInfo);
 
 		if (self.userTypeInfo !== undefined) {
 			_.each(self.userTypeInfo, function (fieldTypeInfo, field) {
-				jQuery.extend(true, typeInfoClone.get(field), fieldTypeInfo);
+				_.extend(typeInfo.get(field), fieldTypeInfo);
+				typeInfo.get(field).overridden = true;
 				debug.info('SOURCE // GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', fieldTypeInfo);
 			});
 		}
 
-		self.cache.typeInfo = typeInfoClone;
+		self.cache.typeInfo = typeInfo;
 		debug.info('SOURCE // GET TYPE INFO', 'Type Info = %O', deepCopy(self.cache.typeInfo.asMap()));
 
 		self.fire(Source.events.getTypeInfo, null, self.cache.typeInfo, self);
