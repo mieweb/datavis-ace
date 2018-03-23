@@ -93,12 +93,6 @@ HttpSource.prototype.parseData = function (data) {
 			typeInfo: new MIE.OrdMap()
 		};
 
-	if (self.userTypeInfo) {
-		_.each(self.userTypeInfo, function (fti) {
-			result.typeInfo.set(fti.field, fti);
-		});
-	}
-
 	//debug.info('DATA SOURCE // HTTP // PARSER', 'Data = ' + ((data instanceof XMLDocument) ? '%o' : '%O'), data);
 
 	if (data instanceof Document) {
@@ -177,6 +171,12 @@ HttpSource.prototype.parseData = function (data) {
 				newRow[fields[colIdx]] = colVal;
 			});
 			result.data.push(newRow);
+		});
+
+		_.each(fields, function (f) {
+			result.typeInfo.set(f, {
+				type: 'string'
+			});
 		});
 	}
 	else {
@@ -668,6 +668,10 @@ Source.prototype.getTypeInfo = function (cont) {
 
 		if (self.userTypeInfo !== undefined) {
 			_.each(self.userTypeInfo, function (fieldTypeInfo, field) {
+				if (!typeInfo.isSet(field)) {
+					log.warn('Overriding type information on field "' + field + '" which is not present in the source.');
+					typeInfo.set(field, {});
+				}
 				_.extend(typeInfo.get(field), fieldTypeInfo);
 				typeInfo.get(field).overridden = true;
 				debug.info('SOURCE // GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', fieldTypeInfo);
