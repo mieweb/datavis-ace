@@ -1063,18 +1063,15 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
  *
  * @param {Object} data
  *
- * @param {string} what
- * What kind of aggregate to draw, either "group" or "pivot".
- *
  * @param {Element} tr
  * Where to put the TH elements.
  */
 
-GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
+GridTable.prototype.drawHeader_aggregates = function (data, tr, displayOrderIndex, displayOrderMax) {
 	var self = this;
 	var ai = self._getAggInfo(data);
 
-	_.each(ai[what], function (aggInfo, aggIndex) {
+	_.each(ai.group, function (aggInfo, aggIndex) {
 		var aggNum = aggInfo.aggNum;
 		var text = aggInfo.instance.getFullName();
 		var span = jQuery('<span>')
@@ -1083,15 +1080,18 @@ GridTable.prototype.drawHeader_aggregates = function (data, what, tr) {
 			.append(span)
 			.appendTo(tr);
 		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
-			if (what === 'group' && aggIndex === 0) {
-				th.addClass('wcdv_pivot_aggregate_boundary');
+			if (displayOrderIndex > 0 && aggIndex === 0) {
+				th.addClass('wcdv_bld'); // border-left: double
 			}
-			else {
+			if (displayOrderIndex < displayOrderMax - 1 && aggIndex === ai.group.length - 1) {
+				th.addClass('wcdv_brd'); // border-right: double
+			}
+			if (aggIndex > 0) {
 				th.addClass('wcdv_pivot_colval_boundary');
 			}
 		}
 		self.csv.addCol(text);
-		self._addSortingToHeader(data, 'vertical', {aggType: what, aggNum: aggNum}, th, ai[what]);
+		self._addSortingToHeader(data, 'vertical', {aggType: 'group', aggNum: aggNum}, th, ai.group);
 		self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 	});
 };
@@ -1176,7 +1176,7 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 
 // #drawBody_groupAggregates {{{2
 
-GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum) {
+GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum, displayOrderIndex, displayOrderMax) {
 	var self = this;
 	var ai = self._getAggInfo(data);
 
@@ -1204,10 +1204,13 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum) {
 		self._addDrillDownClass(td);
 
 		if (self.opts.drawInternalBorders || data.agg.info.group.length > 1) {
-			if (aggGroupIndex === 0) {
-				td.addClass('wcdv_pivot_aggregate_boundary');
+			if (displayOrderIndex > 0 && aggGroupIndex === 0) {
+				td.addClass('wcdv_bld'); // border-left: double
 			}
-			else {
+			if (displayOrderIndex < displayOrderMax - 1 && aggGroupIndex === ai.group.length - 1) {
+				td.addClass('wcdv_brd'); // border-right: double
+			}
+			if (aggGroupIndex > 0) {
 				td.addClass('wcdv_pivot_colval_boundary');
 			}
 		}
@@ -2825,7 +2828,7 @@ var GridTableGroupSummary = makeSubclass(GridTable, function (grid, defn, view, 
 
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
 
-	setPropDef(['rowVals', 'addCols', 'groupAggregates'], self.opts, 'displayOrder');
+	setPropDef(['rowVals', 'groupAggregates'], self.opts, 'displayOrder');
 });
 
 // #canRender {{{2
@@ -2861,7 +2864,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 
 	self.csv.addRow();
 
-	_.each(self.opts.displayOrder, function (what) {
+	_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 		if (typeof what === 'string') {
 			if (what === 'rowVals') {
 				_.each(data.groupFields, function (field, fieldIdx) {
@@ -2886,7 +2889,7 @@ GridTableGroupSummary.prototype.drawHeader = function (columns, data, typeInfo, 
 				});
 			}
 			else if (what === 'groupAggregates') {
-				self.drawHeader_aggregates(data, 'group', tr);
+				self.drawHeader_aggregates(data, tr, displayOrderIndex, self.opts.displayOrder.length);
 			}
 			else if (what === 'addCols') {
 				self.drawHeader_addCols(tr, typeInfo, opts);
@@ -2907,13 +2910,13 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 		var tr = jQuery('<tr>');
 		self.csv.addRow();
 
-		_.each(self.opts.displayOrder, function (what) {
+		_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 			if (typeof what === 'string') {
 				if (what === 'rowVals') {
 					self.drawBody_rowVals(data, tr, groupNum);
 				}
 				else if (what === 'groupAggregates') {
-					self.drawBody_groupAggregates(data, tr, groupNum);
+					self.drawBody_groupAggregates(data, tr, groupNum, displayOrderIndex, self.opts.displayOrder.length);
 				}
 				else if (what === 'addCols') {
 					// Generate the user's custom-defined additional columns.  If the `value` function returns an
@@ -3015,7 +3018,7 @@ var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, feature
 
 	self.super.ctor(grid, defn, view, features, opts, timing, id);
 
-	setPropDef(['rowVals', 'cells', 'groupAggregates', 'addCols'], self.opts, 'displayOrder');
+	setPropDef(['rowVals', 'cells', 'groupAggregates'], self.opts, 'displayOrder');
 });
 
 // #canRender {{{2
@@ -3077,7 +3080,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +-------------+-------------+------------+------------+------------+-----------+
 	//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	var displayRowVals = function (tr, pivotFieldNum) {
+	var displayRowVals = function (tr, pivotFieldNum, displayOrderIndex) {
 		if (pivotFieldNum === data.pivotFields.length - 1) {
 			addGroupFields(tr);
 		}
@@ -3096,7 +3099,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +-------------+-------------+------------+------------+------------+-----------+
 	//                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	var displayCells = function (tr, pivotFieldNum) {
+	var displayCells = function (tr, pivotFieldNum, displayOrderIndex) {
 		var colVal, colValIndex;
 		var ai = self._getAggInfo(data);
 		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
@@ -3207,21 +3210,28 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +-------------+-------------+------------+------------+------------+-----------+
 	//                                                                     ^^^^^^^^^^^
 
-	var displayGroupAggregates = function (tr, pivotFieldNum) {
+	var displayGroupAggregates = function (tr, pivotFieldNum, displayOrderIndex, displayOrderMax) {
 		var isLastPivotField = pivotFieldNum === data.pivotFields.length - 1;
 
 		if (!isLastPivotField) {
 			var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
 				+ getPropDef(0, opts, 'addCols', 'length');
 			if (numExtraCols > 0) {
-				jQuery('<th>', { colspan: numExtraCols }).appendTo(tr).addClass('wcdv_pivot_aggregate_boundary');
+				var th = jQuery('<th>', { colspan: numExtraCols });
+				if (displayOrderIndex > 0) {
+					th.addClass('wcdv_bld'); // border-left: double
+				}
+				if (displayOrderIndex < displayOrderMax - 1) {
+					th.addClass('wcdv_brd'); // border-right: double
+				}
+				tr.append(th);
 			}
 		}
 		else {
 			// Render the user's custom-defined additional columns at the end of the last row of pivot field
 			// column values.
 
-			self.drawHeader_aggregates(data, 'group', tr);
+			self.drawHeader_aggregates(data, tr, displayOrderIndex, displayOrderMax);
 			self.drawHeader_addCols(tr, typeInfo, opts);
 		}
 	};
@@ -3247,7 +3257,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		tr = jQuery('<tr>');
 
-		_.each(self.opts.displayOrder, function (what) {
+		_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 			if (typeof what === 'string') {
 				switch (what) {
 				case 'rowVals':
@@ -3257,7 +3267,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					displayCells(tr, pivotFieldNum);
 					break;
 				case 'groupAggregates':
-					displayGroupAggregates(tr, pivotFieldNum);
+					displayGroupAggregates(tr, pivotFieldNum, displayOrderIndex, self.opts.displayOrder.length);
 					break;
 				}
 			}
@@ -3291,7 +3301,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		var tr = jQuery('<tr>');
 
-		_.each(self.opts.displayOrder, function (what) {
+		_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 			if (typeof what === 'string') {
 				switch (what) {
 				case 'rowVals':
@@ -3369,7 +3379,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					});
 					break;
 				case 'groupAggregates':
-					self.drawBody_groupAggregates(data, tr, groupNum);
+					self.drawBody_groupAggregates(data, tr, groupNum, displayOrderIndex, self.opts.displayOrder.length);
 					break;
 				case 'addCols':
 					// Generate the user's custom-defined additional columns.  If the `value` function returns an
@@ -3437,7 +3447,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		// Add a class to the first row so it gets the double-bar outline.
 
 		if (aiPivotIndex === 0) {
-			tr.addClass('wcdv_gridtable_agg_pivot');
+			tr.addClass('wcdv_btd'); // border-top: double
 		}
 
 		_.each(self.opts.displayOrder, function (what) {

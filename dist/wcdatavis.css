@@ -578,6 +578,18 @@ tr.wcdvgrid_more td {
 	padding-top: 4px;
 }
 
+.wcdv_grid_table table .wcdv_bld {
+	border-left: double black;
+}
+
+.wcdv_grid_table table .wcdv_brd {
+	border-right: double black;
+}
+
+.wcdv_grid_table table .wcdv_btd {
+	border-top: double black;
+}
+
 /*
  * CELLS YOU CAN "DRILL DOWN" INTO
  */
