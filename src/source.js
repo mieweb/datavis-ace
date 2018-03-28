@@ -969,7 +969,7 @@ Source.prototype.convertAll = function (data, field) {
 		return;
 	}
 
-	debug.info('SOURCE // CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(data[0][field].value));
+	debug.info('SOURCE // CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
 
 	_.each(data, function (row) {
 		self.convertCell(row, field);
