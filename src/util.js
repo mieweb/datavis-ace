@@ -2049,6 +2049,7 @@ function format(fcc, fti, cell, opts) {
 
 	if ((window.moment && window.moment.isMoment(cell))
 			|| (window.numeral && window.numeral.isNumeral(cell))
+			|| cell == null
 			|| typeof cell !== 'object') {
 		cell = {
 			value: cell
