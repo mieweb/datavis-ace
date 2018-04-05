@@ -11,5 +11,8 @@
   },
   "scripts": {
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "json5": "^1.0.1"
   }
 }
