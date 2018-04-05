@@ -906,25 +906,30 @@ Source.prototype.convertCell = function (row, field) {
 			}
 		}
 		else if (typeof cell.value === 'string') {
-			switch (fti.internalType) {
-			case 'primitive':
-				// string -> primitive
-				if (isInt(cell.value)) {
-					cell.value = toInt(cell.value);
+			if (cell.value === '') {
+				cell.value = null;
+			}
+			else {
+				switch (fti.internalType) {
+				case 'primitive':
+					// string -> primitive
+					if (isInt(cell.value)) {
+						cell.value = toInt(cell.value);
+					}
+					else if (isFloat(cell.value)) {
+						cell.value = toFloat(cell.value);
+					}
+					else {
+						log.error('Unable to convert cell value, cannot decode to primitive number: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(cell.value));
+					}
+					break;
+				case 'numeral':
+					// string -> numeral
+					cell.value = numeral(cell.value);
+					break;
+				default:
+					log.error('Unable to convert cell value, invalid internal type: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(cell.value));
 				}
-				else if (isFloat(cell.value)) {
-					cell.value = toFloat(cell.value);
-				}
-				else {
-					log.error('Unable to convert cell value, cannot decode to primitive number: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(cell.value));
-				}
-				break;
-			case 'numeral':
-				// string -> numeral
-				cell.value = numeral(cell.value);
-				break;
-			default:
-				log.error('Unable to convert cell value, invalid internal type: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(cell.value));
 			}
 		}
 		else if (window.numeral == null || !numeral.isNumeral(cell.value)) {
