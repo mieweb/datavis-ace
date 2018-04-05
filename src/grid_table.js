@@ -310,7 +310,40 @@ GridTable.prototype._validateFloatTableHeader = function () {
 
 	var config = getPropDef({}, self.defn, 'table', 'floatingHeader');
 
-	if (config.method === undefined) {
+	if (config.method != null) {
+
+		// The user requested a specific method for doing the floating header, make sure that the
+		// library required is actually available.
+
+		switch (config.method) {
+		case 'floatThead':
+			if (jQuery.prototype.floatThead == null) {
+				log.error('GRID TABLE // CONFIG', 'Requested floating header method "floatThead" is not available');
+				self.features.floatingHeader = false;
+			}
+			break;
+		case 'fixedHeaderTable':
+			if (jQuery.prototype.fixedHeaderTable == null) {
+				log.error('GRID TABLE // CONFIG', 'Requested floating header method "fixedHeaderTable" is not available');
+				self.features.floatingHeader = false;
+			}
+			break;
+		case 'tabletool':
+			if (window.TableTool == null) {
+				log.error('GRID TABLE // CONFIG', 'Requested floating header method "tabletool" is not available');
+				self.features.floatingHeader = false;
+			}
+			break;
+		default:
+			log.error('GRID TABLE // CONFIG', 'Unrecognized floating header method: ' + config.method);
+			self.features.floatingHeader = false;
+		}
+	}
+	else {
+
+		// The user didn't request a specific method for doing the floating header, so let's look at
+		// what libraries are available and pick based on that.
+
 		if (jQuery.prototype.floatThead) {
 			config.method = 'floatThead';
 		}
