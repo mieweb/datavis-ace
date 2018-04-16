@@ -98,7 +98,31 @@ GraphRenderer = makeSubclass(Object, function (id, view, opts) {
 	self.view = view;
 	self.opts = opts;
 	self.addRedrawHandlers();
+
+	self._validateOpts();
 });
+
+// #_validateOpts
+
+GraphRenderer.prototype._validateOpts = function () {
+	var self = this;
+
+	_.each(['Plain', 'Group', 'Pivot'], function (kind) {
+		var propName = 'when' + kind;
+
+		if (self.opts[propName] == null) {
+			return; // It's OK to be undefined.
+		}
+
+		var config = self.opts[propName];
+
+		if (typeof config !== 'function' && typeof config !== 'object') {
+			self.error(kind + ' configuration must be a function or an object');
+			self.opts[propName] = null;
+			return;
+		}
+	});
+};
 
 // #addRedrawHandlers {{{2
 
@@ -174,94 +198,56 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt) {
 // #draw_group {{{2
 
 GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt) {
-	var self = this
-		, graphConfig;
+	var self = this;
 
-	graphConfig = deepCopy(self.opts.whenGroup || {});
+	var graphConfig = self.opts.whenGroup || {};
+
+	if (typeof graphConfig === 'function') {
+		graphConfig = graphConfig(data.groupFields);
+	}
+	else {
+		graphConfig = deepCopy(graphConfig);
+	}
+
 	_.defaults(graphConfig, {
 		graphType: 'column',
 		categoryField: data.groupFields[0],
 		valueFields: [{
 			name: 'Count',
-			aggFun: 'count'
+			fun: 'count'
 		}]
 	});
+
+	var ai = [];
 
 	// dt.addColumn(typeInfo.get(graphConfig.categoryField).type, graphConfig.categoryField);
 	dt.addColumn('string', graphConfig.categoryField);
 
-	_.each(graphConfig.valueFields, function (f) {
-		var agg, aggType;
+	// For each value field, create the AggregateInfo instance that will manage it.  Also create a
+	// column for the result in the data table.
 
-		if (typeof f === 'string') {
-			dt.addColumn(typeInfo.get(f).type, f);
-		}
-		else if (typeof f === 'object') {
-			if (f.aggFun) {
-				agg = AGGREGATE_REGISTRY.get(f.aggFun);
-
-				if (agg.type) {
-					aggType = agg.type;
-				}
-				else if (f.aggField) {
-					aggType = typeInfo.get(f.aggField).type;
-				}
-				else {
-					// Aggregate function doesn't have a specified type, but it isn't being applied to a
-					// specific field, so there's no way to tell what the output type is going to be.
-					//
-					// TODO Choose a default type like 'string' instead of throwing.
-
-					throw new Error('Unable to determine type of value aggregate');
-				}
-
-				dt.addColumn(aggType, f.aggFun + '(' + (f.aggField || '') + ')');
-			}
-			else {
-				// The only configuration allowed when not a string is to specify an aggregate function,
-				// which they didn't do.
-
-				throw new Error('Invalid value specification');
-			}
-		}
-		else {
-			// Not a string (field name) and not an object (aggregate function), so it's some other
-			// weird thing that we don't know what to do with.
-
-			throw new Error('Invalid value specification');
-		}
+	_.each(graphConfig.valueFields, function (v) {
+		var aggInfo = new AggregateInfo('group', v, 0, null /* colConfig */, self.typeInfo, null /* convert */);
+		dt.addColumn(aggInfo.instance.getType(), v.name || aggInfo.instance.getFullName());
+		ai.push(aggInfo);
 	});
 
-	_.each(data.data, function (group, groupNum) {
-		var newRow;
+	// Go through each rowval and create a row for it in the data table.  Every value field gets its
+	// own column, which is the result of the corresponding aggregate function specified above.
 
-		newRow = [data.rowVals[groupNum].join(', ')];
-		newRow = newRow.concat([group.length]);
-		/*
-		newRow = newRow.concat(_.map(graphConfig.valueFields, function (f) {
-			if (typeof f === 'string') {
-				// FIXME
-				throw new Error('Not sure what to do here');
-			}
-			else if (typeof f === 'object') {
-				var agg = AGGREGATES[f.aggFun];
-				var aggFun = agg.fun({field: f.aggField});
-				var aggType = agg.type;
-				var aggResult = format(colConfig, colTypeInfo, aggFun(colGroup), {
-					alwaysFormat: true,
-					overrideType: aggType
-				});
-				// Calculate the aggregate function result from the data in the group.
-				//
-			}
-			else {
-				// Not a string (field name) and not an object (aggregate function), so it's some other
-				// weird thing that we don't know what to do with.
+	_.each(data.rowVals, function (rowVal, rowValIdx) {
+		newRow = [rowVal.join(', ')];
 
-				throw new Error('Invalid value specification');
+		_.each(ai, function (aggInfo) {
+			var aggResult = aggInfo.instance.calculate(_.flatten(data.data[rowValIdx]));
+			newRow.push(aggResult);
+			if (aggInfo.debug) {
+				debug.info('GRAPH // GROUP // AGGREGATE', 'Group aggregate (%s) : Group [%s] = %s',
+					aggInfo.instance.name + (aggInfo.name ? ' -> ' + aggInfo.name : ''),
+					rowVal.join(', '),
+					JSON.stringify(aggResult));
 			}
-		}));
-		*/
+		});
 
 		dt.addRow(newRow);
 	});

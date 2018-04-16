@@ -69,11 +69,19 @@ $(document).ready(function () {
 			categoryField: 'Date',
 			valueField: 'Amount'
 		},
-		whenGroup: {
-			graphType: 'pie',
-			options: {
-				pieHole: 0.5
+		whenGroup: function (groupFields) {
+			var config = {
+				graphType: 'pie'
+			};
+
+			if (groupFields[0] === 'Country') {
+				config.valueFields = [{
+					fun: 'sum',
+					fields: ['Amount']
+				}];
 			}
+			
+			return config;
 		}
 	});
 	new MIE.WC_DataVis.Grid('grid', view, {
