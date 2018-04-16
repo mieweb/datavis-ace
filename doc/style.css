@@ -26,17 +26,44 @@ body {
 }
 
 nav {
-	font-family: "PT Sans", sans-serif;
-	float: right;
-	background-color: white;
-	border: solid 2px #9fa8da;
-	border-radius: 1em;
-	margin-left: 1em;
-	padding-right: 1em;
+    font-family: "PT Sans", sans-serif;
+    float: right;
+    background-color: white;
+    border: solid 2px #9fa8da;
+    border-radius: 1em;
+    margin-left: 1em;
+    padding-right: 1em;
+}
+
+nav ul {
+    list-style: none;
+    padding-left: 1.2em;
+}
+
+nav > ul > li > a {
+    font-weight: bold;
+}
+
+nav > ul > li:before {
+    content: "❖";
+    display: inline-block;
+    width: 1.2em;
+}
+
+nav > ul > li > ul > li:before {
+    content: "◆";
+    display: inline-block;
+    width: 1.2em;
+}
+
+nav > ul > li > ul > li > ul > li:before {
+    content: "◇";
+    display: inline-block;
+    width: 1.2em;
 }
 
 nav a {
-	color: inherit;
+    color: inherit;
 }
 
 /*
@@ -48,16 +75,16 @@ nav a {
  */
 
 h1, h2, h3, h4 {
-	overflow: hidden;
-	font-family: "PT Sans", sans-serif;
+    overflow: hidden;
+    font-family: "PT Sans", sans-serif;
 }
 
 h1 a, h2 a, h3 a, h4 a {
-	text-decoration: none;
+    text-decoration: none;
 }
 
 header h1.title {
-	font-size: 32pt;
+    font-size: 32pt;
     text-align: center;
 }
 

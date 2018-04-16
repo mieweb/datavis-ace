@@ -1,7 +1,7 @@
 SOURCE=$(wildcard src/*.js)
 DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.css)
 EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
-PANDOC_FILES=index getting_started examples overview source view grid_filter \
+PANDOC_FILES=index getting_started examples overview source view grid grid_filter \
 	     grid_filter_set prefs grid_table events known_issues about
 PANDOC_INPUT=$(addprefix doc/,$(addsuffix .pandoc,$(PANDOC_FILES)))
 
