@@ -1143,8 +1143,8 @@ var AggregateInfo = makeSubclass(Object, function (aggType, spec, aggNum, colCon
 		//
 		// TODO Make this into an error?
 
-		if (spec.fields.length !== aggClass.fieldCount) {
-			log.warn('Creating ' + aggType + '[' + aggNum + '] aggregate function "' + spec.fun + '" to be applied over fields ' + JSON.stringify(spec.fields) + ', which doesn\'t match the number of fields supported by the aggregate function (' + aggClass.fieldCount + ')... expect trouble.');
+		if (spec.fields.length !== aggClass.prototype.fieldCount) {
+			log.warn('Creating ' + aggType + '[' + aggNum + '] aggregate function "' + spec.fun + '" to be applied over fields ' + JSON.stringify(spec.fields) + ', which doesn\'t match the number of fields supported by the aggregate function (' + aggClass.prototype.fieldCount + ')... expect trouble.');
 		}
 
 		// Set the colConfig array for the supplied fields.
