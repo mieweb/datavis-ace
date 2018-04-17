@@ -1,0 +1,9 @@
+# Graph
+
+Just like [grids][Grid], graphs are bound to views which manage the data.  This means that a graph and grid can show the same data.  Graphs tend to show aggregate values, making them perfect for summarizing data which has been grouped or pivotted.  For this reason, it's easy to configure a graph to behave differently depending on how the data has been organized.
+
+## Grid / Graph Relationships
+
+![Shared View](https://pkqxxg.bn.files.1drv.com/y4mcMflGa857_8-q2Xl9cBFBlalzMcpW5bs6CwWGgjN9yAuu4IDNy0BkOyJ6sVdHhRIaV_S3Xz_6_fsE2U3cd42Z0Dtw4gkU_YE1eqIWWqLmYbY3SomunVKnQc8VonslwvO4NGqcqVjHCkk-da1qGgW3_K20n7UUDwDVFGoFF1ElhlyFzqoh_3Hvc6stELkUpVqeufGSJBIup44t0hgIYNHpQ?width=660&height=253&cropmode=none)
+
+![Separate Views](https://pkr8uq.bn.files.1drv.com/y4mvfUFRyVWnWLcBcrqdsMaXJata1dXKrOCRBvAOGGrb8eWVBP0CYsbZChrCba6TfGFqdlg8CIs8MBAjKqRxpZWqFzs2INYEo5Z0-giiInW1ymsxxyQwt-jYGLco_cJNbJLCJRxfzxWCLq1NGbDl9Zi7RhJh1HZSTc_EqEeybvsSE6ISmbT4EkCT8icSZM9N0JwgYWhOLrLjrejGtz_GNbRyw?width=660&height=373&cropmode=none)

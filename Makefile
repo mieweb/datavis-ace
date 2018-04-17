@@ -2,7 +2,7 @@ SOURCE=$(wildcard src/*.js)
 DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.css)
 EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
 PANDOC_FILES=index getting_started examples overview source view grid grid_filter \
-	     grid_filter_set prefs grid_table events known_issues about
+	     grid_filter_set prefs grid_table graph events known_issues about
 PANDOC_INPUT=$(addprefix doc/,$(addsuffix .pandoc,$(PANDOC_FILES)))
 
 .PHONY:	doc jsdoc pandoc examples clean tags
@@ -15,7 +15,7 @@ dist/wcdatavis.js:	wcdatavis.src $(SOURCE)
 doc:	jsdoc pandoc
 
 jsdoc:
-	rm -rf jsdoc
+	# rm -rf jsdoc
 	./node_modules/.bin/jsdoc -p -c jsdoc_conf.json src
 
 pandoc:	doc/html/index.html doc/html/style.css
