@@ -478,6 +478,8 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	self.selected = {}; // Information about what rows are selected.
 	self.view = view;
 
+	self.view.addClient(self, 'grid');
+
 	self.defn.grid = self;
 
 	self._validateFeatures();
@@ -552,7 +554,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		.addClass('wcdv_toolbar_section')
 		.appendTo(self.ui.toolbar);
 	self._addSourceButtons(self.ui.toolbar_source);
-	self.view.source.setToolbar(self.ui.toolbar_source);
+	self.view.setToolbar(self.ui.toolbar_source);
 
 	self.ui.toolbar_common = jQuery('<div>')
 		.addClass('wcdv_toolbar_section')
@@ -1439,7 +1441,7 @@ Grid.prototype.refresh = function () {
 		return;
 	}
 
-	self.view.source.clearCachedData();
+	self.view.clearSourceData();
 };
 
 // #_updateRowCount {{{2

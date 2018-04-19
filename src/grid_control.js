@@ -222,6 +222,7 @@ var AggregateControlField = makeSubclass(GridControlField, function () {
 
 	self.super.ctor.apply(self, arguments);
 	self.fieldDropdowns = [];
+	self.shouldGraph = false;
 });
 
 // #draw {{{2
@@ -240,12 +241,27 @@ AggregateControlField.prototype.draw = function () {
 	})
 		.prop('checked', getProp(self.opts, 'isHidden'))
 		.on('change', function () {
-			console.log(jQuery(this)._isChecked());
 			self.control.updateView();
 		})
 		.appendTo(self.ui.root)
 		._makeIconCheckbox('fa-eye-slash', 'fa-eye')
 	;
+
+	if (self.control.view.hasClientKind('graph')) {
+		self.ui.graphBtn = jQuery('<button>', {
+			'type': 'button'
+		})
+			.on('click', function () {
+				// TODO Think of a better way to do this.  I feel like the coupling here is too high.
+
+				self.control.clearGraphFlag();
+				self.shouldGraph = true;
+				self.control.updateView();
+			})
+			.append(fontAwesome('fa-bar-chart'))
+			.appendTo(self.ui.root)
+		;
+	}
 
 	if (aggDefn.prototype.options != null) {
 		jQuery('<button>', {
@@ -355,7 +371,6 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			.append(fontAwesome('F00C'))
 			.append('OK')
 			.on('click', function () {
-				console.log('OK!');
 				self.aggFunOpts = opts;
 				self.control.updateView();
 				self.ui.optionsDialog.dialog('close');
@@ -365,7 +380,6 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			.append(fontAwesome('F05E'))
 			.append('Cancel')
 			.on('click', function () {
-				console.log('CANCEL!');
 				self.ui.optionsDialog.dialog('close');
 			}))
 		.appendTo(self.ui.optionsDiv)
@@ -397,8 +411,6 @@ AggregateControlField.prototype.destroy = function () {
 AggregateControlField.prototype.getInfo = function () {
 	var self = this;
 
-	console.log(self.ui.isHiddenCheckbox._isChecked());
-
 	return {
 		fun: self.field,
 		name: null,
@@ -406,6 +418,7 @@ AggregateControlField.prototype.getInfo = function () {
 			return dropdown.val();
 		}),
 		isHidden: self.ui.isHiddenCheckbox._isChecked(),
+		shouldGraph: self.shouldGraph,
 		opts: _.mapObject(self.aggFunOpts, function (input, optName) {
 			return input.val();
 		})
@@ -1142,7 +1155,16 @@ AggregateControl.prototype.updateView = function () {
 	});
 };
 
-if (false) {
+// #clearGraphFlag {{{2
+
+AggregateControl.prototype.clearGraphFlag = function () {
+	var self = this;
+
+	_.each(self.controlFields, function (cf) {
+		cf.shouldGraph = false;
+	});
+};
+
 // #triggerAggChange {{{2
 
 /**
@@ -1232,7 +1254,6 @@ AggregateControl.prototype.updateFieldDropdowns = function () {
 		});
 	});
 };
-}
 
 // #addViewConfigChangeHandler {{{2
 
@@ -1330,7 +1351,6 @@ FilterControl.prototype.draw = function (parent) {
 			// Turn this off for the sake of efficiency.
 			//ui.draggable.draggable('option', 'refreshPositions', false);
 			var field = ui.draggable.attr('data-wcdv-field');
-			console.log(field);
 
 			self.addField(field, getProp(self.colConfig, field, 'displayText'));
 		}

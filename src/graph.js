@@ -42,21 +42,32 @@
 var Graph = function (id, view, opts) {
 	var self = this;
 
+	self.id = id;
+	self.view = view;
+	self.view.addClient(self, 'graph');
+	self.view.on('aggregateSet', function (spec, shouldGraph) {
+		if (shouldGraph.group.length > 0) {
+			var groupConfig = shouldGraph.group[0];
+			opts.whenGroup = opts.whenGroup || {};
+			opts.whenGroup.valueFields = [{
+				fun: groupConfig.fun,
+				fields: groupConfig.fields
+			}];
+		}
+		if (shouldGraph.pivot.length > 0) {
+			var pivotConfig = shouldGraph.pivot[0];
+			opts.whenPivot = opts.whenPivot || {};
+			opts.whenPivot.valueFields = [{
+				fun: pivotConfig.fun,
+				fields: pivotConfig.fields
+			}];
+		}
+		self.draw(deepCopy(opts));
+	});
+
 	self.normalize(opts);
-	
 	debug.info('GRAPH', 'opts = %O', opts);
-	self.renderer = new GraphRendererGoogle(id, view, opts);
-
-	/*
-	if (window.google) {
-		self.renderer = new GraphRendererGoogle(id, view, opts);
-	}
-	else if (window.$jit) {
-		self.renderer = new GraphRendererJit(id, view, opts);
-	}
-	*/
-
-	self.draw();
+	self.draw(deepCopy(opts));
 };
 
 Graph.prototype = Object.create(Object.prototype);
@@ -64,10 +75,11 @@ Graph.prototype.constructor = Graph;
 
 // #draw {{{2
 
-Graph.prototype.draw = function () {
+Graph.prototype.draw = function (opts) {
 	var self = this;
 
-	self.renderer.draw();
+	var renderer = new GraphRendererGoogle(self.id, self.view, opts);
+	renderer.draw();
 }
 
 // #normalize {{{2

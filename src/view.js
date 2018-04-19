@@ -174,8 +174,8 @@ var InvalidAggregateError = makeSubclass(ViewError);
 var View = function (source, name, opts) {
 	var self = this;
 
-	if (!(source instanceof Source)) {
-		throw new Error('Call Error: `source` must be an instance of MIE.WC_DataVis.Source');
+	if (!(source instanceof Source) && !(source instanceof View)) {
+		throw new Error('Call Error: `source` must be an instance of MIE.WC_DataVis.Source or MIE.WC_DataVis.View');
 	}
 
 	opts = deepDefaults(opts, {
@@ -250,6 +250,10 @@ mixinEventHandling(View, function (self) {
 	, 'invalidAggregate'    // An aggregate function is invalid.
 ]);
 
+// Delegate {{{2
+
+delegate(View, 'source', ['getUniqueVals', 'convertAll', 'setToolbar']);
+
 // #_maybeDecode {{{2
 
 View.prototype._maybeDecode = function (tag, fti) {
@@ -283,6 +287,33 @@ View.prototype.init = function (cont) {
 
 		return cont();
 	});
+};
+
+// #addClient {{{2
+
+/**
+ * Keep track of the clients that are using this view.  The only reason we have this is so that we
+ * can tell if a graph is watching this view or not.
+ */
+
+View.prototype.addClient = function (client, kind) {
+	var self = this;
+
+	self.clients = self.clients || {};
+	self.clients[kind] = self.clients[kind] || [];
+	self.clients[kind].push(client);
+};
+
+// #hasClientKind {{{2
+
+/**
+ * Check to see if we have a client of the specified kind.
+ */
+
+View.prototype.hasClientKind = function (kind) {
+	var self = this;
+
+	return getPropDef(0, self.clients, kind, 'length') > 0;
 };
 
 // #getRowCount {{{2
@@ -2211,6 +2242,11 @@ View.prototype.setAggregate = function (spec, opts) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
+	var shouldGraph = {
+		group: [],
+		pivot: []
+	};
+
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
 			self.setAggregate.apply(self, args);
@@ -2274,6 +2310,9 @@ View.prototype.setAggregate = function (spec, opts) {
 					}
 				}
 				*/
+				if ((aggType === 'group' || aggType === 'pivot') && agg.shouldGraph) {
+					shouldGraph[aggType].push(agg);
+				}
 				return true;
 			});
 			spec[aggType] = aggSpec;
@@ -2285,7 +2324,7 @@ View.prototype.setAggregate = function (spec, opts) {
 	if (opts.sendEvent) {
 		self.fire(View.events.aggregateSet, {
 			notTo: opts.dontSendEventTo
-		}, spec);
+		}, spec, shouldGraph);
 	}
 
 	self.clearCache();
@@ -2606,7 +2645,12 @@ View.prototype.clearCache = function () {
 View.prototype.clearSourceData = function () {
 	var self = this;
 
-	self.typeInfo = undefined;
+	if (self.source instanceof Source) {
+		self.source.clearCachedData();
+	}
+	else if (self.source instanceof View) {
+		self.source.clearSourceData();
+	}
 
 	debug.info('VIEW (' + self.name + ')', 'Cleared source data');
 };
