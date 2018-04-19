@@ -44,7 +44,30 @@ var Graph = function (id, view, opts) {
 
 	self.id = id;
 	self.view = view;
+	self.opts = opts;
+
 	self.view.addClient(self, 'graph');
+
+	self.view.on('fetchDataBegin', function () {
+		self._setSpinner('loading');
+		self._showSpinner();
+	});
+	self.view.on('fetchDataEnd', function () {
+		self._hideSpinner();
+	});
+
+	self.view.on('workBegin', function () {
+		self._setSpinner('working');
+		self._showSpinner();
+	});
+	self.view.on('workEnd', function (info, ops) {
+		self._hideSpinner();
+	});
+
+	self.view.on('dataUpdated', function () {
+		self.draw();
+	});
+
 	self.view.on('aggregateSet', function (spec, shouldGraph) {
 		if (shouldGraph.group.length > 0) {
 			var groupConfig = shouldGraph.group[0];
@@ -65,20 +88,202 @@ var Graph = function (id, view, opts) {
 		self.draw(deepCopy(opts));
 	});
 
-	self.normalize(opts);
-	debug.info('GRAPH', 'opts = %O', opts);
-	self.draw(deepCopy(opts));
+	self._makeUserInterface();
+
+	self.normalize(self.opts);
+	debug.info('GRAPH', 'opts = %O', self.opts);
+	self.draw();
 };
 
 Graph.prototype = Object.create(Object.prototype);
 Graph.prototype.constructor = Graph;
 
-// #draw {{{2
+// #_makeUserInterface {{{2
 
-Graph.prototype.draw = function (opts) {
+Graph.prototype._makeUserInterface = function () {
 	var self = this;
 
-	var renderer = new GraphRendererGoogle(self.id, self.view, opts);
+	// div.wcdv_graph (ui.root)
+	// |
+	// +-- div.wcdv_grid_titlebar (ui.titlebar)
+	// |   |
+	// |   +-- strong (ui.spinner)
+	// |   +-- strong [[ the title ]]
+	// |   `-- button [[ show/hide button ]]
+	// |
+	// `-- div.wcdv_grid_content (ui.content)
+	//     |
+	//     +-- div.wcdv_grid_toolbar (ui.toolbar)
+	//     +-- div.wcdv_toolbar_section (ui.toolbar_source)
+	//     +-- div.wcdv_toolbar_section (ui.toolbar_common)
+	//     +-- div.wcdv_toolbar_section (ui.toolbar_aggregate)
+	//     `-- div.wcdv_graph_render (ui.graph)
+
+	self.ui = {};
+	self.ui.root = jQuery(document.getElementById(self.id));
+
+	self.ui.root.addClass('wcdv_graph');
+	self.ui.root.children().remove();
+
+	self.ui.titlebar = jQuery('<div>')
+		.addClass('wcdv_grid_titlebar')
+		.attr('title', MIE.trans('SHOWHIDE'))
+		.on('click', function (evt) {
+			evt.stopPropagation();
+			self.toggle();
+		})
+		.appendTo(self.ui.root);
+
+	self._addTitleWidgets(self.ui.titlebar);
+
+	self.ui.content = jQuery('<div>', {
+		'class': 'wcdv_grid_content'
+	}).appendTo(self.ui.root);
+
+	self.ui.toolbar = jQuery('<div>')
+		.addClass('wcdv_grid_toolbar')
+		.appendTo(self.ui.content)
+	;
+
+	// The "source" toolbar section lets the user refresh the data being displayed.
+
+	self.ui.toolbar_source = jQuery('<div>')
+		.addClass('wcdv_toolbar_section')
+		.appendTo(self.ui.toolbar);
+	self._addSourceButtons(self.ui.toolbar_source);
+
+	// The "common" toolbar section lets the user export (and download) the currently displayed graph
+	// as a PNG image file.
+
+	self.ui.toolbar_common = jQuery('<div>')
+		.addClass('wcdv_toolbar_section')
+		.appendTo(self.ui.toolbar);
+	self._addCommonButtons(self.ui.toolbar_common);
+
+	// The "aggregates" toolbar section lets the user control what is drawn based on the aggregate
+	// functions calculated by the view.
+
+	self.ui.toolbar_aggregates = jQuery('<div>')
+		.addClass('wcdv_toolbar_section')
+		.appendTo(self.ui.toolbar);
+	self._addAggregateButtons(self.ui.toolbar_aggregates);
+
+	self.ui.graph = jQuery('<div>', { 'id': self.id, 'class': 'wcdv_graph_render' });
+
+	self.ui.root
+		.append(self.ui.titlebar)
+		.append(self.ui.content
+			.append(self.ui.toolbar)
+			.append(self.ui.graph))
+	;
+};
+
+// #_addTitleWidgets {{{2
+
+/**
+ * Add widgets to the header of the graph.
+ *
+ * @private
+ *
+ * @param {jQuery} titlebar
+ */
+
+Graph.prototype._addTitleWidgets = function (titlebar) {
+	var self = this;
+
+	self.ui.spinner = jQuery('<strong>').css({'font-weight': 'normal', 'margin-right': '0.5em'}).appendTo(titlebar);
+	self._setSpinner('loading');
+
+	jQuery('<strong>')
+		.text(self.opts.title)
+		.appendTo(titlebar);
+
+	// The "notHeader" is the extension point for adding information into the titlebar.  It's really
+	// just a place where clicking doesn't trigger the expand/collapse behavior that the rest of the
+	// titlebar has.  Anything that you'd want to shown in the title, which could be interactive,
+	// should be added under here.
+
+	var notHeader = jQuery('<span>', {'class': 'headingInfo'})
+		.on('click', function (evt) {
+			evt.stopPropagation();
+		})
+		.appendTo(titlebar);
+
+	// Create the down-chevron button that opens the grid toolbar.
+
+	self.ui.showHideButton = jQuery('<button type="button">')
+		.append(fontAwesome('f077'))
+		.addClass('showhide pull-right')
+		.attr('title', MIE.trans('SHOWHIDEOPTS'))
+		.click(function (evt) {
+			evt.stopPropagation();
+			self.toggle();
+		})
+		.appendTo(titlebar);
+};
+
+// #_addSourceButtons {{{2
+
+/**
+ * Add buttons that perform operations on the source.
+ *
+ * @method
+ * @memberof Graph
+ * @private
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
+ */
+
+Graph.prototype._addSourceButtons = function (toolbar) {
+	var self = this;
+
+	self.ui.refreshBtn = jQuery('<button>', {'type': 'button'})
+		.append(fontAwesome('F021'))
+		.append('Refresh')
+		.on('click', function () {
+			self.refresh();
+		})
+		.appendTo(toolbar);
+};
+
+// #_addCommonButtons {{{2
+
+/**
+ * Add common controls to the grid's toolbar.
+ *
+ * @method
+ * @memberof Graph
+ * @private
+ *
+ * @param {jQuery} toolbar
+ * Toolbar section that will contain the buttons.
+ */
+
+Graph.prototype._addCommonButtons = function (toolbar) {
+	var self = this;
+
+	self.ui.exportBtn = jQuery('<button>', {'type': 'button', 'disabled': true})
+		.append(fontAwesome('F14C'))
+		.append('Export')
+		.on('click', function () {
+			self.export();
+		})
+		.appendTo(toolbar);
+};
+
+// #_addAggregateButtons {{{2
+
+Graph.prototype._addAggregateButtons = function (toolbar) {
+	var self = this;
+};
+
+// #draw {{{2
+
+Graph.prototype.draw = function () {
+	var self = this;
+
+	var renderer = new GraphRendererGoogle(self.ui.graph, self.view, deepCopy(self.opts));
 	renderer.draw();
 }
 
@@ -140,12 +345,167 @@ Graph.prototype.normalize = function (opts) {
 	});
 };
 
-// GraphRenderer {{{1
+// #refresh {{{2
 
-GraphRenderer = makeSubclass(Object, function (id, view, opts) {
+/**
+ * Refreshes the data from the data view in the grid.
+ *
+ * @method
+ * @memberof Grid
+ */
+
+Graph.prototype.refresh = function () {
 	var self = this;
 
-	self.id = id;
+	if (!self.isVisible()) {
+		return;
+	}
+
+	self.view.clearSourceData();
+};
+
+// #hide {{{2
+
+/**
+ * Hide the grid.
+ *
+ * @method
+ * @memberof Grid
+ */
+
+Graph.prototype.hide = function () {
+	var self = this;
+
+	debug.info('GRID', 'Hiding...');
+
+	self.ui.content.hide({
+		duration: 0,
+		done: function () {
+			if (self.opts.title) {
+				self.ui.showHideButton.removeClass('open').html(fontAwesome('f078'));
+			}
+		}
+	});
+};
+
+// #show {{{2
+
+/**
+ * Make the grid visible.  If the grid has not been "run" yet, it will be done now.
+ *
+ * @param {object} [opts]
+ *
+ * @param {boolean} [opts.redraw=true]
+ * If true, automatically redraw the grid after it has been shown.  This is almost always what you
+ * want, unless you intend to manually call `redraw()` or `refresh()` immediately after showing it.
+ */
+
+Graph.prototype.show = function (opts) {
+	var self = this;
+
+	opts = deepDefaults(opts, {
+		redraw: true
+	});
+
+	debug.info('GRID', 'Showing...');
+
+	self.ui.content.show({
+		duration: 0,
+		done: function () {
+			if (self.opts.title) {
+				self.ui.showHideButton.addClass('open').html(fontAwesome('f077'));
+			}
+		}
+	});
+};
+
+// #toggle {{{2
+
+/**
+ * Toggle graph visibility.
+ */
+
+Graph.prototype.toggle = function () {
+	var self = this;
+
+	if (self.ui.content.css('display') === 'none') {
+		self.show();
+	}
+	else {
+		self.hide();
+	}
+};
+
+// #isVisible {{{2
+
+/**
+ * Determine if the graph is currently visible.
+ *
+ * @returns {boolean}
+ * True if the graph is currently visible, false if it is not.
+ */
+
+Graph.prototype.isVisible = function () {
+	var self = this;
+
+	return self.ui.content.css('display') !== 'none';
+};
+
+// #_setSpinner {{{2
+
+/**
+ * Set the type of the spinner icon.
+ *
+ * @param {string} what
+ * The kind of spinner icon to show.  Must be one of: loading, not-loaded, working.
+ */
+
+Graph.prototype._setSpinner = function (what) {
+	var self = this;
+
+	switch (what) {
+	case 'loading':
+		self.ui.spinner.html(fontAwesome('F021', 'fa-spin', 'Loading...'));
+		break;
+	case 'not-loaded':
+		self.ui.spinner.html(fontAwesome('F05E', null, 'Not Loaded'));
+		break;
+	case 'working':
+		self.ui.spinner.html(fontAwesome('F1CE', 'fa-spin', 'Working...'));
+		break;
+	}
+};
+
+// #_showSpinner {{{2
+
+/**
+ * Show the spinner icon.
+ */
+
+Graph.prototype._showSpinner = function () {
+	var self = this;
+
+	self.ui.spinner.show();
+};
+
+// #_hideSpinner {{{2
+
+/**
+ * Hide the spinner icon.
+ */
+
+Graph.prototype._hideSpinner = function () {
+	var self = this;
+
+	self.ui.spinner.hide();
+};
+
+// GraphRenderer {{{1
+
+GraphRenderer = makeSubclass(Object, function (elt, view, opts) {
+	var self = this;
+
+	self.elt = elt;
 	self.view = view;
 	self.opts = opts;
 	self.addRedrawHandlers();
@@ -379,7 +739,7 @@ GraphRendererGoogle.prototype.draw = function () {
 	var self = this;
 
 	var drawLikeForRealThisTime = function () {
-		jQuery(document.getElementById(self.id)).children().remove();
+		self.elt.children().remove();
 
 		self.view.getData(function (data) {
 			self.view.getTypeInfo(function (typeInfo) {
@@ -424,7 +784,7 @@ GraphRendererGoogle.prototype.draw = function () {
 
 				console.log(options);
 
-				var chart = new google.visualization[ctor[graphConfig.graphType]](document.getElementById(self.id));
+				var chart = new google.visualization[ctor[graphConfig.graphType]](self.elt.get(0));
 				chart.draw(dt, options);
 			});
 		});
@@ -459,7 +819,7 @@ GraphRendererJit = makeSubclass(GraphRenderer);
 GraphRendererJit.prototype.draw = function () {
 	var self = this;
 
-	jQuery(document.getElementById(self.id)).children().remove();
+	elt.children().remove();
 
 	self.view.getData(function (data) {
 		self.view.getTypeInfo(function (typeInfo) {
@@ -487,7 +847,7 @@ GraphRendererJit.prototype.draw = function () {
 			});
 
 			var options = {
-				injectInto: self.id
+				injectInto: elt.attr('id')
 			};
 
 			jQuery.extend(true, options, self.opts.options);
