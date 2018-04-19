@@ -247,7 +247,6 @@ AggregateControlField.prototype.draw = function () {
 		._makeIconCheckbox('fa-eye-slash', 'fa-eye')
 	;
 
-	/*
 	if (self.control.view.hasClientKind('graph')) {
 		self.ui.graphBtn = jQuery('<button>', {
 			'type': 'button'
@@ -263,7 +262,6 @@ AggregateControlField.prototype.draw = function () {
 			.appendTo(self.ui.root)
 		;
 	}
-	*/
 
 	if (aggDefn.prototype.options != null) {
 		jQuery('<button>', {
@@ -420,7 +418,7 @@ AggregateControlField.prototype.getInfo = function () {
 			return dropdown.val();
 		}),
 		isHidden: self.ui.isHiddenCheckbox._isChecked(),
-		//shouldGraph: self.shouldGraph,
+		shouldGraph: self.shouldGraph,
 		opts: _.mapObject(self.aggFunOpts, function (input, optName) {
 			return input.val();
 		})
