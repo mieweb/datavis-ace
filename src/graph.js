@@ -64,6 +64,12 @@ var Graph = function (id, view, graphConfig, opts) {
 		self._showSpinner();
 	});
 	self.view.on('workEnd', function (info, ops) {
+		if (ops.pivot) {
+			self.ui.toolbar_pivot.show();
+		}
+		else {
+			self.ui.toolbar_pivot.hide();
+		}
 		self._hideSpinner();
 	});
 
@@ -144,6 +150,14 @@ Graph.prototype._makeUserInterface = function () {
 		.addClass('wcdv_toolbar_section')
 		.appendTo(self.ui.toolbar);
 	self._addAggregateButtons(self.ui.toolbar_aggregates);
+
+	// The "pivot" toolbar section lets the user decide if colvals should show up stacked or as
+	// separate bars (for bar & column charts).
+
+	self.ui.toolbar_pivot = jQuery('<div>')
+		.addClass('wcdv_toolbar_section')
+		.appendTo(self.ui.toolbar);
+	self._addPivotButtons(self.ui.toolbar_pivot);
 
 	self.ui.graph = jQuery('<div>', { 'id': self.id, 'class': 'wcdv_graph_render' });
 
@@ -293,6 +307,23 @@ Graph.prototype._addAggregateButtons = function (toolbar) {
 	});
 };
 
+// #_addPivotButtons {{{2
+
+Graph.prototype._addPivotButtons = function (toolbar) {
+	var self = this;
+
+	self.ui.stackCheckbox = makeToggleCheckbox(
+		null,
+		null,
+		true,
+		'Stack',
+		toolbar,
+		function (isChecked) {
+			self.drawInteractive()
+		}
+	);
+};
+
 // #_udpateAggDropdown {{{2
 
 Graph.prototype._updateAggDropdown = function () {
@@ -375,6 +406,8 @@ Graph.prototype.drawInteractive = function () {
 			}
 		};
 	});
+
+	graphConfig.whenPivot.options.isStacked = self.ui.stackCheckbox.prop('checked');
 
 	self.renderer.draw(graphConfig);
 };
