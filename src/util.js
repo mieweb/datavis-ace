@@ -3025,6 +3025,16 @@ function determineColumns(colConfig, data, typeInfo) {
 
 // Downloading {{{1
 
+/**
+ * Present a blob as a download.  This works even in IE10!
+ *
+ * @param {Blob} blob
+ * The content to download.
+ *
+ * @param {string} fileName
+ * Default name to use for the file.
+ */
+
 function presentDownload(blob, fileName) {
 	if (!(blob instanceof Blob)) {
 		throw new Error('Call Error: `blob` must be a Blob');
@@ -3047,6 +3057,16 @@ function presentDownload(blob, fileName) {
 }
 
 // https://stackoverflow.com/a/12300351
+
+/**
+ * Convert a data URI to a blob which can be downloaded.  This works even in IE10!
+ *
+ * @param {string} dataURI
+ * The URI to convert into a blob.
+ *
+ * @return {Blob}
+ * A blob that can be downloaded.
+ */
 
 function dataURItoBlob(dataURI) {
   // convert base64 to raw binary data held in a string
