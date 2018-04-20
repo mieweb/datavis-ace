@@ -712,7 +712,11 @@ GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt, config)
 		var aggInfo = data.agg.info.group[config.aggNum];
 		var name = aggInfo.name || aggInfo.instance.getFullName();
 		var aggType = aggInfo.instance.getType();
-		aggType = {'currency': 'number'}[aggType] || aggType;
+
+		if (aggType === 'currency') {
+			aggType = 'number';
+			setProp({format: 'currency'}, config, 'options', 'vAxis');
+		}
 
 		console.log(config.aggNum, aggType, name);
 
@@ -792,7 +796,11 @@ GraphRendererGoogle.prototype.draw_pivot = function (data, typeInfo, dt, config)
 		var aggInfo = data.agg.info.cell[config.aggNum];
 		var name = aggInfo.name || aggInfo.instance.getFullName();
 		var aggType = aggInfo.instance.getType();
-		aggType = {'currency': 'number'}[aggType] || aggType;
+
+		if (aggType === 'currency') {
+			aggType = 'number';
+			setProp({format: 'currency'}, config, 'options', 'vAxis');
+		}
 
 		console.log(config.aggNum, aggType, name);
 
