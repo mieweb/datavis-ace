@@ -2177,50 +2177,7 @@ GridTablePlain.prototype.makeRowReorderBtn = function () {
 	var self = this;
 
 	return jQuery('<button type="button" class="drag-handle fa">')
-		.html(fontAwesome('f07d',null,'Drag or press up/down arrows to move'))
-	// When the drag button has focus, add the keydown handler
-	// to allow up/down arrows to work!
-		.focus( function() {
-			jQuery(this).on('keydown', function(event) {
-				var jobj = jQuery(event.currentTarget).closest('tr'),
-					oldIndex = jobj.index(),
-					newIndex = oldIndex;
-
-				// Reposition if one of the directional keys is pressed
-				switch (event.keyCode) {
-				case 38: // Up
-					event.preventDefault();
-					if (jobj.prev().length) {
-						jobj.insertBefore(jobj.prev());
-					} else {
-						// already at the top so exit
-						return true;
-					}
-					break;
-				case 40: // Down
-					event.preventDefault();
-					if (jobj.next().length) {
-						jobj.insertAfter(jobj.next());
-					} else {
-						// already at the bottom so exit
-						return true;
-					}
-					break;
-				default:
-					return true; // Exit
-				}
-				newIndex = jobj.index();
-				if (oldIndex !== newIndex) {
-					self.view.source.swapRows(oldIndex, newIndex);
-				}
-				// keep focus on the button after move
-				jQuery(event.currentTarget).focus();
-			});
-		})
-	// Remove the keydown handler when focus is lost
-		.focusout( function() {
-			jQuery(this).off('keydown');
-		});
+		.html(fontAwesome('f07d',null,'Drag or press up/down arrows to move'));
 };
 
 // #updateFeatures {{{2

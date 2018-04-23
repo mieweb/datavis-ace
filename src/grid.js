@@ -186,6 +186,42 @@ function helperClone(e, tr) {
 }
 
 function configureRowReordering(tbody, cb) {
+	tbody.on('keydown', 'button.drag-handle', function (event) {
+		var tr = jQuery(event.currentTarget).closest('tr'),
+			oldIndex = tr.index(),
+			newIndex = oldIndex;
+
+		// Reposition if one of the directional keys is pressed
+		switch (event.keyCode) {
+		case 38: // Up
+			event.preventDefault();
+			if (tr.prev().length) {
+				tr.insertBefore(tr.prev());
+			} else {
+				// already at the top so exit
+				return true;
+			}
+			break;
+		case 40: // Down
+			event.preventDefault();
+			if (tr.next().length) {
+				tr.insertAfter(tr.next());
+			} else {
+				// already at the bottom so exit
+				return true;
+			}
+			break;
+		default:
+			return true; // Exit
+		}
+		newIndex = tr.index();
+		if (oldIndex !== newIndex) {
+			cb(oldIndex, newIndex);
+		}
+		// keep focus on the button after move
+		jQuery(event.currentTarget).focus();
+	});
+
 	tbody.sortable({
 		forcePlaceholderSize: true,
 		placeholder: 'sortable-ghost',
