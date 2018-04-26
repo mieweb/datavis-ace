@@ -1,3 +1,5 @@
+// OrdMap {{{1
+
 /**
  * Create a map (a.k.a. dictionary) where the order of the keys added to the data structure is
  * maintained.
@@ -21,6 +23,8 @@ function OrdMap() {
 OrdMap.prototype = Object.create(Object.prototype);
 OrdMap.prototype.constructor = OrdMap;
 
+// .fromArray {{{2
+
 /**
  * Construct a new OrdMap from an array of values.
  *
@@ -41,6 +45,24 @@ OrdMap.fromArray = function (values, keyField) {
 	return o;
 };
 
+// .deserialize {{{2
+
+OrdMap.deserialize = function (x) {
+	var result = new OrdMap();
+
+	if (_.isString(x)) {
+		x = JSON.parse(x);
+	}
+
+	for (var i = 0; i < x._keys.length; i += 1) {
+		result.set(x._keys[i], x._map[x._keys[i]]);
+	}
+
+	return result;
+};
+
+// #get {{{2
+
 /**
  * Retrieve a key/value association from the map.
  *
@@ -54,6 +76,8 @@ OrdMap.fromArray = function (values, keyField) {
 OrdMap.prototype.get = function (k, d) {
 	return this.isSet(k) ? this._map[k] : d;
 };
+
+// #set {{{2
 
 /**
  * Create a key/value association in the map.
@@ -83,6 +107,8 @@ OrdMap.prototype.set = function (k, v) {
 	}
 };
 
+// #append {{{2
+
 OrdMap.prototype.append = function (k, v) {
 	if (this.isSet(k)) {
 		if (!Array.isArray(this._map[k])) {
@@ -94,6 +120,8 @@ OrdMap.prototype.append = function (k, v) {
 		this.set(k, [v]);
 	}
 };
+
+// #unset {{{2
 
 /**
  * Remove a key/value association from the map.
@@ -109,6 +137,8 @@ OrdMap.prototype.unset = function (k) {
 	this._size -= 1;
 };
 
+// #isSet {{{2
+
 /**
  * Indicate if there is an association set for the specified key.
  *
@@ -121,6 +151,8 @@ OrdMap.prototype.unset = function (k) {
 OrdMap.prototype.isSet = function (k) {
 	return this._keyIndex[k] !== undefined;
 };
+
+// #each {{{2
 
 /**
  * Iterate over the map in the order of the keys inserted.  This is the principle way in which
@@ -145,6 +177,8 @@ OrdMap.prototype.each = function (f) {
 	}
 };
 
+// #keys {{{2
+
 /**
  * Get a list of the keys used, in the order they were inserted.
  *
@@ -164,6 +198,8 @@ OrdMap.prototype.keys = function () {
 	return result;
 };
 
+// #toString {{{2
+
 OrdMap.prototype.toString = function () {
 	var s = '';
 	this.each(function (v, k) {
@@ -179,6 +215,8 @@ OrdMap.prototype.toString = function () {
 	return '{' + s + '}';
 };
 
+// #asMap {{{2
+
 /**
  * Returns the internal representation of this ordered map as a regular JS object (a map with no
  * way to tell the order).  Changing the return value will change the internal representation of
@@ -188,6 +226,19 @@ OrdMap.prototype.toString = function () {
 OrdMap.prototype.asMap = function () {
 	return this._map;
 };
+
+// #serialize / #toJSON {{{2
+
+OrdMap.prototype.serialize = function () {
+	return {
+		_keys: this._keys,
+		_map: this._map
+	};
+};
+
+OrdMap.prototype.toJSON = OrdMap.prototype.serialize;
+
+// #size {{{2
 
 /**
  * Tells the number of keys.
@@ -229,4 +280,30 @@ OrdMap.prototype.whenSet = function (k, h, opts) {
 	else {
 		this._setHandlers[k].push(h);
 	}
+};
+
+// #filter {{{2
+
+OrdMap.prototype.filter = function (test) {
+	var result = new OrdMap();
+
+	this.each(function (v, k) {
+		if (test(v, k)) {
+			result.set(k, v);
+		}
+	});
+
+	return result;
+};
+
+// #clone {{{2
+
+OrdMap.prototype.clone = function () {
+	var result = new OrdMap();
+
+	this.each(function (v, k) {
+		result.set(k, deepCopy(v));
+	});
+
+	return result;
 };
