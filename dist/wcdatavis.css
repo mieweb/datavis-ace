@@ -591,6 +591,14 @@ tr.wcdvgrid_more td {
 }
 
 /*
+ * ROW SELECTION CELLS
+ */
+
+.wcdv-row-select-col {
+    width: 1px;
+}
+
+/*
  * CELLS YOU CAN "DRILL DOWN" INTO
  */
 

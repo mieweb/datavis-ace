@@ -1800,6 +1800,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			});
 
 		headingTh = jQuery('<th>')
+			.addClass('wcdv-row-select-col')
 			.append(self.ui.checkAll_thead)
 			.appendTo(headingTr);
 		if (self.opts.drawInternalBorders) {
