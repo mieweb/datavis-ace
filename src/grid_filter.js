@@ -473,7 +473,7 @@ var StringDropdownGridFilterSumo = makeSubclass(GridFilter, function () {
 			_.each(getPropDef([], uniqueVals, self.field, 'values'), function (val) {
 				jQuery('<option>').attr({
 					'value': val
-				}).text(val).appendTo(self.input);
+				}).text(val === '' ? '[blank]' : val).appendTo(self.input);
 			});
 			self.input.SumoSelect({
 				triggerChangeCombined: true,
