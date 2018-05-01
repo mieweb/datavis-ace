@@ -64,6 +64,13 @@ var Graph = function (id, view, graphConfig, opts) {
 		self._showSpinner();
 	});
 	self.view.on('workEnd', function (info, ops) {
+		if (ops.group) {
+			self.ui.toolbar_aggregates.show();
+		}
+		else {
+			self.ui.toolbar_aggregates.hide();
+		}
+
 		if (ops.pivot) {
 			self.ui.toolbar_pivot.show();
 		}
@@ -148,6 +155,7 @@ Graph.prototype._makeUserInterface = function () {
 
 	self.ui.toolbar_aggregates = jQuery('<div>')
 		.addClass('wcdv_toolbar_section')
+		.hide()
 		.appendTo(self.ui.toolbar);
 	self._addAggregateButtons(self.ui.toolbar_aggregates);
 
@@ -156,6 +164,7 @@ Graph.prototype._makeUserInterface = function () {
 
 	self.ui.toolbar_pivot = jQuery('<div>')
 		.addClass('wcdv_toolbar_section')
+		.hide()
 		.appendTo(self.ui.toolbar);
 	self._addPivotButtons(self.ui.toolbar_pivot);
 
