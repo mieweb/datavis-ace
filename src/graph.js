@@ -950,10 +950,10 @@ GraphRendererGoogle.prototype.redraw = function () {
 	var self = this;
 
 	self._ensureGoogleChartsLoaded(function () {
-		self.elt.children().remove();
-
 		self.view.getData(function (data) {
 			self.view.getTypeInfo(function (typeInfo) {
+				self.elt.children().remove();
+
 				var config = null;
 				var dt = new google.visualization.DataTable();
 

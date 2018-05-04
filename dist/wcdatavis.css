@@ -39,6 +39,7 @@ li.wcdv_aggregate_field {
 }
 
 .wcdv_grid, .wcdv_graph {
+	background-color: white;
 	margin-top: 1em;
 	display: flex;
 	flex-direction: column;
