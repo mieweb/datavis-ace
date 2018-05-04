@@ -728,6 +728,10 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config)
 		}
 	};
 
+	_.each(config.valueFields, function (field) {
+		self.view.source.convertAll(data.dataByRowId, field);
+	});
+
 	_.each(data.data, function (row) {
 		var newRow;
 
