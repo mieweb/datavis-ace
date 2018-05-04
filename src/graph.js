@@ -968,6 +968,25 @@ GraphRendererGoogle.prototype.redraw = function () {
 				}
 
 				if (config == null) {
+					jQuery('<div>')
+						.css({
+							'height': self.opts.height + 'px'
+						})
+						.append(
+							jQuery('<div>')
+							.css({
+								'font-size': '36pt',
+								'font-weight': 'bold',
+								'letter-spacing': '0.1em',
+								'color': '#C0C0C0',
+								'text-align': 'center',
+								'position': 'relative',
+								'top': '50%',
+								'transform': 'translateY(-50%)'
+							})
+							.text('Nothing to Graph')
+						)
+						.appendTo(self.elt);
 					return;
 				}
 
