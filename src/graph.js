@@ -377,7 +377,7 @@ Graph.prototype._setExportBlob = function (blob) {
 	var self = this;
 
 	self.exportBlob = blob;
-	self.ui.exportBtn.prop('disabled', false);
+	self.ui.exportBtn.prop('disabled', blob == null);
 };
 
 // #_clearExportBlob {{{2
@@ -710,12 +710,6 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config)
 		}
 	};
 
-	dt.addColumn(convertType(typeInfo.get(config.categoryField).type), config.categoryField);
-
-	_.each(config.valueFields, function (field) {
-		dt.addColumn(convertType(typeInfo.get(field).type), field);
-	});
-
 	var getRealValue = function (f, x) {
 		if (typeInfo.get(f).type === 'date' && moment.isMoment(x.value)) {
 			return {v: x.value.toDate(), f: x.orig};
@@ -728,19 +722,86 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config)
 		}
 	};
 
-	_.each(config.valueFields, function (field) {
-		self.view.source.convertAll(data.dataByRowId, field);
-	});
+	switch (config.graphType) {
+	case 'gantt':
+		if (config.nameField == null) {
+			throw new Error('Configuration option `nameField` must exist');
+		}
 
-	_.each(data.data, function (row) {
-		var newRow;
+		var timeConfigStr = '' + (+config.startField) + (+config.endField) + (+config.durationField);
+		if (timeConfigStr === '100' || timeConfigStr === '010' || timeConfigStr === '000') {
+			throw new Error('Time configuration is insufficient to determine offsets');
+		}
 
-		newRow = _.map([config.categoryField].concat(config.valueFields), function (f) {
-			return getRealValue(f, row.rowData[f]);
+		dt.addColumn('string', 'ID');
+		dt.addColumn('string', 'Name');
+		dt.addColumn('string', 'Resource');
+		dt.addColumn('date', 'Start');
+		dt.addColumn('date', 'End');
+		dt.addColumn('number', 'Duration');
+		dt.addColumn('number', 'Completion');
+		dt.addColumn('string', 'Dependencies');
+
+		var configOpts = [
+			{ name: 'id', default: (function () { var x = 0; return function () { return x++; }; }) },
+			{ name: 'name' },
+			{ name: 'resource', default: null },
+			{ name: 'start', default: null },
+			{ name: 'end', default: null },
+			{ name: 'duration', default: null },
+			{ name: 'completion', default: 0 },
+			{ name: 'dependencies', default: null }
+		];
+
+		_.each(configOpts, function (opt) {
+			if (config[opt.name + 'Field'] != null) {
+				console.log(config[opt.name + 'Field']);
+				self.view.source.convertAll(data.dataByRowId, config[opt.name + 'Field']);
+			}
 		});
 
-		dt.addRow(newRow);
-	});
+		_.each(data.data, function (row) {
+			var newRow = [];
+			_.each(configOpts, function (opt) {
+				if (config[opt.name + 'Field'] != null) {
+					newRow.push(getRealValue(config[opt.name + 'Field'], row.rowData[config[opt.name + 'Field']]));
+				}
+				else if (opt.default === undefined) {
+					throw new Error();
+				}
+				else if (typeof opt.default === 'function') {
+					newRow.push(opt.default());
+				}
+				else {
+					newRow.push(opt.default);
+				}
+			});
+			console.log(newRow);
+			dt.addRow(newRow);
+		});
+
+		break;
+	default:
+		dt.addColumn(convertType(typeInfo.get(config.categoryField).type), config.categoryField);
+
+		_.each(config.valueFields, function (field) {
+			dt.addColumn(convertType(typeInfo.get(field).type), field);
+		});
+
+		_.each(config.valueFields, function (field) {
+			self.view.source.convertAll(data.dataByRowId, field);
+		});
+
+		_.each(data.data, function (row) {
+			var newRow;
+
+			newRow = _.map([config.categoryField].concat(config.valueFields), function (f) {
+				return getRealValue(f, row.rowData[f]);
+			});
+
+			dt.addRow(newRow);
+		});
+	}
 
 	return config;
 };
@@ -926,7 +987,7 @@ GraphRendererGoogle.prototype._ensureGoogleChartsLoaded = function (cont) {
 		};
 		if (!wasAlreadyLoaded) {
 			debug.info('GRAPH // GOOGLE // DRAW', 'Loading support for Google Charts');
-			google.charts.load('current', {'packages':['corechart']});
+			google.charts.load('current', {'packages':['corechart','gantt']});
 			google.charts.setOnLoadCallback(cb);
 		}
 		else {
@@ -994,7 +1055,8 @@ GraphRendererGoogle.prototype.redraw = function () {
 					area: 'AreaChart',
 					bar: 'BarChart',
 					column: 'ColumnChart',
-					pie: 'PieChart'
+					pie: 'PieChart',
+					gantt: 'Gantt'
 				};
 
 				var options = {
@@ -1013,7 +1075,11 @@ GraphRendererGoogle.prototype.redraw = function () {
 				var chart = new google.visualization[ctor[config.graphType]](self.elt.get(0));
 
 				google.visualization.events.addListener(chart, 'ready', function () {
-					self.graph._setExportBlob(dataURItoBlob(chart.getImageURI()));
+					var blob = null;
+					if (typeof chart.getImageURI === 'function') {
+						blob = dataURItoBlob(chart.getImageURI());
+					}
+					self.graph._setExportBlob(blob);
 				});
 
 				debug.info('GRAPH // GOOGLE // DRAW', 'Starting draw...');
