@@ -37,15 +37,53 @@
  * @class
  *
  * Represents a graph.
+ *
+ * @property {string} id
+ * @property {View} view
+ * @property {object} devConfig
+ * @property {object} userConfig
+ * @property {object} opts
+ * @property {GraphRenderer} renderer
  */
 
-var Graph = function (id, view, graphConfig, opts) {
+var Graph = function (id, view, devConfig, opts) {
 	var self = this;
 
 	self.id = id;
 	self.view = view;
-	self.graphConfig = graphConfig;
-	self.opts = opts;
+	self.devConfig = devConfig;
+	self.userConfig = {
+		plain: {},
+		group: {},
+		pivot: {}
+	};
+	self.opts = deepDefaults(opts, {
+		title: 'Graph'
+	});
+
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
+	}
+
+	if (!(view instanceof View)) {
+		throw new Error('Call Error: `view` must be an instance of MIE.WC_DataVis.View');
+	}
+
+	if (self.opts.prefs != null && !(self.opts.prefs instanceof Prefs)) {
+		throw new Error('Call Error: `opts.prefs` must be an instance of MIE.WC_DataVis.Prefs');
+	}
+
+	if (self.opts.prefs != null) {
+		self.prefs = self.opts.prefs;
+	}
+	else if (self.view.prefs != null) {
+		self.prefs = self.view.prefs;
+	}
+	else {
+		self.prefs = new Prefs(self.id);
+	}
+
+	self.prefs.bind('graph', self);
 
 	self._makeUserInterface();
 
@@ -64,8 +102,35 @@ var Graph = function (id, view, graphConfig, opts) {
 		self._showSpinner();
 	});
 	self.view.on('workEnd', function (info, ops) {
+		var config;
+
+		if (ops.pivot) {
+			config = getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current'))
+				|| self.devConfig.whenPivot;
+		}
+		else if (ops.group) {
+			config = getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current'))
+				|| self.devConfig.whenGroup;
+		}
+		else {
+			config = getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current'))
+				|| self.devConfig.whenPlain;
+		}
+
+		if (config != null) {
+			debug.info('GRAPH // HANDLER (View.workEnd)',
+				'Matching configuration: %O', config);
+		}
+
+		var graphType = config.graphType;
+		var axis = graphType === 'bar' ? 'hAxis' : 'vAxis';
+
+		self.ui.graphTypeDropdown.val(config.graphType);
+
 		if (ops.group) {
 			self.ui.toolbar_aggregates.show();
+			self.ui.aggDropdown.val(config.aggNum);
+			self.ui.zeroAxisCheckbox.prop('checked', getProp(config, 'options', axis, 'minValue') == 0);
 		}
 		else {
 			self.ui.toolbar_aggregates.hide();
@@ -73,6 +138,7 @@ var Graph = function (id, view, graphConfig, opts) {
 
 		if (ops.pivot) {
 			self.ui.toolbar_pivot.show();
+			self.ui.stackCheckbox.prop('checked', !!getProp(config, 'options', 'isStacked'));
 		}
 		else {
 			self.ui.toolbar_pivot.hide();
@@ -394,7 +460,7 @@ Graph.prototype._clearExportBlob = function () {
 Graph.prototype.drawFromConfig = function () {
 	var self = this;
 
-	self.renderer.draw(deepCopy(self.graphConfig));
+	self.renderer.draw(deepCopy(self.devConfig));
 }
 
 // #drawInteractive {{{2
@@ -402,38 +468,77 @@ Graph.prototype.drawFromConfig = function () {
 Graph.prototype.drawInteractive = function () {
 	var self = this;
 
-	var graphConfig = deepCopy(self.graphConfig);
+	var graphType = self.ui.graphTypeDropdown.val();
+	var minValue = self.ui.zeroAxisCheckbox.prop('checked') ? 0 : null;
 
-	_.each(['whenGroup', 'whenPivot'], function (kind) {
-		graphConfig[kind] = {
-			aggNum: toInt(self.ui.aggDropdown.val()),
-			graphType: self.ui.graphTypeDropdown.val(),
-			options: {
-				vAxis: {
-					minValue: self.ui.zeroAxisCheckbox.prop('checked') ? 0 : null
-				}
+	var config = {
+		group: {
+			graphs: {},
+			current: graphType
+		},
+		pivot: {
+			graphs: {},
+			current: graphType
+		}
+	};
+
+	// NOTE The `graphType` field here is useless except that it makes the rendering function (e.g.
+	// GoogleGraphRenderer#draw_plain) more convenient to implement.
+
+	config.group.graphs[graphType] = {
+		graphType: graphType,
+		aggNum: toInt(self.ui.aggDropdown.val()),
+		options: {}
+	};
+
+	// At least with Google Charts, you have to swap the horizontal and vertical axis configuration
+	// for bar charts (since they're on their side).
+
+	switch (graphType) {
+	case 'bar':
+		config.group.graphs[graphType].options = {
+			vAxis: {
+				minValue: minValue
 			}
 		};
-	});
+		break;
+	default:
+		config.group.graphs[graphType].options = {
+			vAxis: {
+				minValue: minValue
+			}
+		};
+	}
 
-	graphConfig.whenPivot.options.isStacked = self.ui.stackCheckbox.prop('checked');
+	// Copy everything... not strictly necessary AFAIK, but it's safe.
+	config.pivot = deepCopy(config.group);
 
-	self.renderer.draw(graphConfig);
+	// Make sure to add the stack setting for pivot mode.
+	config.pivot.graphs[graphType].options.isStacked = self.ui.stackCheckbox.prop('checked');
+
+	// Store this configuration in the userConfig so that it can be saved with prefs.
+	_.extend(self.userConfig, config);
+
+	if (self.prefs != null) {
+		self.prefs.save();
+	}
+
+	self.renderer.draw(self.userConfig);
 };
 
 // #checkGraphConfig {{{2
 
 Graph.prototype.checkGraphConfig = function () {
-	if (self.graphConfig == null) {
+	if (self.devConfig == null) {
 		return;
 	}
 
 	_.each(['whenPlain', 'whenGroup', 'whenPivot'], function (dataFormat) {
-		if (self.graphConfig[dataFormat] === undefined) {
+		if (self.devConfig[dataFormat] === undefined) {
 			return;
 		}
 
-		var config = self.graphConfig[dataFormat];
+		var config = self.devConfig[dataFormat];
 
 		// Check the "graphType" property.
 
@@ -514,7 +619,7 @@ Graph.prototype.refresh = function () {
 Graph.prototype.hide = function () {
 	var self = this;
 
-	debug.info('GRID', 'Hiding...');
+	debug.info('GRAPH', 'Hiding...');
 
 	self.ui.content.hide({
 		duration: 0,
@@ -545,7 +650,7 @@ Graph.prototype.show = function (opts) {
 		redraw: true
 	});
 
-	debug.info('GRID', 'Showing...');
+	debug.info('GRAPH', 'Showing...');
 
 	self.ui.content.show({
 		duration: 0,
@@ -636,6 +741,15 @@ Graph.prototype._hideSpinner = function () {
 	var self = this;
 
 	self.ui.spinner.hide();
+};
+
+// #setUserConfig {{{2
+
+Graph.prototype.setUserConfig = function (config) {
+	var self = this;
+
+	self.userConfig = config;
+	self.renderer.draw(self.userConfig);
 };
 
 // GraphRenderer {{{1
@@ -1019,13 +1133,13 @@ GraphRendererGoogle.prototype.redraw = function () {
 				var dt = new google.visualization.DataTable();
 
 				if (data.isPlain) {
-					config = self.draw_plain(data, typeInfo, dt, self.config.whenPlain);
+					config = self.draw_plain(data, typeInfo, dt, self.config.whenPlain || getProp(self.config, 'plain', 'graphs', getProp(self.config, 'plain', 'current')));
 				}
 				else if (data.isGroup) {
-					config = self.draw_group(data, typeInfo, dt, self.config.whenGroup);
+					config = self.draw_group(data, typeInfo, dt, self.config.whenGroup || getProp(self.config, 'group', 'graphs', getProp(self.config, 'group', 'current')));
 				}
 				else if (data.isPivot) {
-					config = self.draw_pivot(data, typeInfo, dt, self.config.whenPivot);
+					config = self.draw_pivot(data, typeInfo, dt, self.config.whenPivot || getProp(self.config, 'pivot', 'graphs', getProp(self.config, 'pivot', 'current')));
 				}
 
 				if (config == null) {
