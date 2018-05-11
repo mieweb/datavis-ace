@@ -672,6 +672,11 @@ Source.prototype.getTypeInfo = function (cont) {
 					log.warn('Overriding type information on field "' + field + '" which is not present in the source.');
 					typeInfo.set(field, {});
 				}
+				if (typeof fieldTypeInfo === 'string') {
+					fieldTypeInfo = {
+						type: fieldTypeInfo
+					};
+				}
 				_.extend(typeInfo.get(field), fieldTypeInfo);
 				typeInfo.get(field).overridden = true;
 				debug.info('SOURCE // GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', fieldTypeInfo);
