@@ -1337,8 +1337,11 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 		var groupField = data.groupFields[rowValIndex];
 		var fcc = self.colConfig.get(groupField) || {};
 
+		rowVal = format(fcc, self.typeInfo.get(groupField), rowVal);
+
 		var th = jQuery('<th>');
 		var span = jQuery('<span>');
+
 		if (rowVal instanceof Element || rowVal instanceof jQuery) {
 			span.append(rowVal);
 		}
@@ -1348,6 +1351,7 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 		else {
 			span.text(rowVal);
 		}
+
 		span.appendTo(th);
 		th.appendTo(tr);
 		self.csv.addCol(span.text());
@@ -2891,6 +2895,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 			var groupField = data.groupFields[rowValIdx];
 			var fcc = self.colConfig.get(groupField) || {};
+			rowValElt = format(fcc, self.typeInfo.get(groupField), rowValElt);
 			var span = jQuery('<span>');
 			if (rowValElt instanceof Element || rowValElt instanceof jQuery) {
 				span.append(rowValElt);
