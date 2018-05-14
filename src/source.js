@@ -880,7 +880,7 @@ Source.prototype.guessTypes = function (data, typeInfo) {
 		}
 
 		if (guess != null) {
-			MIE.debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'For field "%s", successfully guessed new type "%s"', f, guess);
+			debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'For field "%s", successfully guessed new type "%s"', f, guess);
 			fti.type = guess;
 		}
 	});
@@ -897,23 +897,25 @@ Source.prototype.setConversionTypeInfo = function (data, typeInfo) {
 
 			if (fti.type === 'number' || fti.type === 'currency') {
 				fti.needsDecoding = true;
-				fti.internalType = 'numeral';
 
-				// This value might not exist if:
-				//
-				//   - There's no data.
-				//   - The typeInfo is for a field that doesn't exist in the data.
-				//
-				// But those aren't error conditions, so we shouldn't let them stop us.  We'll simplify by
-				// using `getProp()` to extract the value if it exists.
+				var stop = false;
+				for (var i = 0; !stop && i < data.length; i += 1) {
+					if (isInt(data[i][f].value) || isFloat(data[i][f].value)) {
+						// Looks like it can be decoded into a primitive number, so there's no need for
+						// Numeral's advanced parsing.
+						//
+						// However, we do need to keep checking other rows, e.g. when the first row is "123.45"
+						// (toFloat will work) but the second row is "1,234.56" (we need to use Numeral).
 
-				var exampleValue = getProp(data, 0, f, 'value');
+						fti.internalType = 'primitive';
+					}
+					else {
+						// We need to use Numeral's parser, which means there's no point in checking any other
+						// rows... we don't have any better tools than that.
 
-				if (isInt(exampleValue) || isFloat(exampleValue)) {
-					// Looks like it can be decoded into a primitive number, so there's no need for Numeral's
-					// advanced parsing.
-
-					fti.internalType = 'primitive';
+						fti.internalType = 'numeral';
+						stop = true;
+					}
 				}
 			}
 			else if (fti.type === 'date' || fti.type === 'datetime') {
