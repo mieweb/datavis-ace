@@ -1,8 +1,40 @@
 window.test_group = function (view) {
 	var groupInfo = [
-		[['country'], 10, [
-			['Canada'], 100, ['China'], 100, ['England'], 100, ['France'], 100, ['Germany'], 100, ['Japan'], 100, ['Mexico'], 100, ['South Korea'], 100, ['Switzerland'], 100, ['United States'], 100
-		]]
+		[
+			['fruit'], 10,
+			[
+				['Apple'], 9,
+				['Banana'], 24,
+				['Blueberry'], 79,
+				['Cherry'], 135,
+				['Grape'], 233,
+				['Kiwi'], 248,
+				['Mango'], 146,
+				['Orange'], 85,
+				['Pineapple'], 32,
+				['Strawberry'], 9
+			]
+		], [
+			['fruit', 'country'], null,
+			[
+				['Apple', 'China'], 2,
+				['Apple', 'England'], 2,
+				['Apple', 'France'], 2,
+				['Apple', 'Mexico'], 1,
+				['Apple', 'United States'], 2,
+			], [
+				['Kiwi', 'Canada'], 30,
+				['Kiwi', 'China'], 25,
+				['Kiwi', 'England'], 25,
+				['Kiwi', 'France'], 25,
+				['Kiwi', 'Germany'], 29,
+				['Kiwi', 'Japan'], 29,
+				['Kiwi', 'Mexico'], 23,
+				['Kiwi', 'South Korea'], 23,
+				['Kiwi', 'Switzerland'], 17,
+				['Kiwi', 'United States'], 22
+			]
+		]
 	];
 
 	QUnit.test('Group Test', function (assert) {
