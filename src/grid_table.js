@@ -2929,14 +2929,15 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 			if (data.groupMetadata) {
 				var infoText = ' (';
+				var path = interleaveWith(_.map(data.rowVals[groupNum].slice(0, rowValIdx + 1), getNatRep), 'children');
 
 				if (rowValIdx < data.groupFields.length - 1) {
-					var numSubGroups = getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_children');
+					var numSubGroups = _.keys(getProp(data.groupMetadata, 'children', path, 'children')).length;
 					infoText += '' + numSubGroups + ' group' + (numSubGroups > 1 ? 's' : '');
 					infoText += ', ';
 				}
 
-				infoText += '' + getProp(data.groupMetadata, data.rowVals[groupNum].slice(0, rowValIdx + 1), '_count') + ' rows';
+				infoText += '' + getProp(data.groupMetadata, 'children', path, 'numRows') + ' rows';
 
 				infoText += ')';
 			}
