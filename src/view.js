@@ -1809,6 +1809,7 @@ View.prototype.group = function () {
 			}
 			else {
 				node.numRows = 0;
+				node.numChildren = _.keys(node.children).length;
 				_.each(node.children, function (child) {
 					child.parent = node;
 					postorder(child);

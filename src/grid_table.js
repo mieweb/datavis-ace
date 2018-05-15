@@ -2932,7 +2932,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				var path = interleaveWith(_.map(data.rowVals[groupNum].slice(0, rowValIdx + 1), getNatRep), 'children');
 
 				if (rowValIdx < data.groupFields.length - 1) {
-					var numSubGroups = _.keys(getProp(data.groupMetadata, 'children', path, 'children')).length;
+					var numSubGroups = getProp(data.groupMetadata, 'children', path, 'numChildren');
 					infoText += '' + numSubGroups + ' group' + (numSubGroups > 1 ? 's' : '');
 					infoText += ', ';
 				}
