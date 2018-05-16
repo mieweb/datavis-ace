@@ -2725,28 +2725,11 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	}
 
-	var groupIds = {};
-	var revGroupIds = [];
 	var isRendered = [];
-	var groupId = 0;
-	_.each(data.rowVals, function (rowVal, rowValIdx) {
-		setProp(0, groupIds, _.map(rowVal, getNatRep), '_groupId');
-		setProp(rowValIdx, groupIds, _.map(rowVal, getNatRep), '_rowValIdx');
-	});
-
-	(function RECUR(o) {
-		_.each(o, function (v, k) {
-			if (typeof v === 'object') {
-				v._groupId = groupId++;
-				revGroupIds[v._groupId] = v._rowValIdx;
-				RECUR(v);
-			}
-		});
-	})(groupIds, []);
 
 	var lastRowVal = [];
 
-	var render = function (groupNum, placeAfter) {
+	var render = function (groupMetadataId, groupNum, placeAfter) {
 		var rowGroup = data.data[groupNum];
 		var rowVal = data.rowVals[groupNum];
 		var tr;
@@ -2763,7 +2746,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 		_.each(rowGroup, function (row, rowNum) {
 			tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': row.rowNum})
-				.attr('data-wcdv-group', getProp(groupIds, _.map(rowVal, getNatRep), '_groupId'))
+				.attr('data-wcdv-group', groupMetadataId)
 				.hide();
 
 			// Create the check box which selects the row.
@@ -2817,10 +2800,31 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	};
 
+	var findRowValIndexFromMetadataId = (function () {
+		var mapping = {};
+
+		function recur(node) {
+			if (node.children == null) {
+				mapping[node.id] = node.rowValIndex;
+			}
+			else {
+				_.each(node.children, recur);
+			}
+		}
+
+		recur(data.groupMetadata);
+
+		return function (id) {
+			return mapping[id];
+		};
+	})();
+
 	var toggleGroup = function () {
 		var toggle = function (groupId, show, tr) {
-			if (show && revGroupIds[groupId] !== undefined && !isRendered[groupId]) {
-				render(revGroupIds[groupId], tr);
+			var rowValIndex = findRowValIndexFromMetadataId(groupId);
+			if (show && rowValIndex != null && !isRendered[groupId]) {
+				debug.info('GRID TABLE // GROUP [DETAIL] // TOGGLE', 'Rendering: group metadata ID = %s, rowValIndex = %s', groupId, rowValIndex);
+				render(groupId, rowValIndex, tr);
 				isRendered[groupId] = true;
 			}
 			self.ui.tbody
@@ -2881,17 +2885,37 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		_.each(rowVal, function (rowValElt, rowValIdx) {
 			var th;
 
+			// Skip rendering this <TR> if it's for an ancestor of the previously rendered rowVal.
+			//
+			// Example:
+			//
+			//   1. rowVal = ['Elric', 'Alphonse']
+			//     -> rowValIdx = 0, render 'Elric' <---+
+			//     -> rowValIdx = 1, render 'Alphonse'  |
+			//   2. rowVal = ['Elric', 'Edward']        |
+			//     -> rowValIdx = 0, SKIP 'Elric' ------+
+			//     -> rowValIdx = 1, render 'Edward'
+			//
+			// You end up getting this:
+			//
+			//   [-] Elric
+			//       [+] Alphonse
+			//       [+] Edward
+
 			if (lastRowVal[rowValIdx] === rowValElt) {
 				return;
 			}
 
-			//console.log(rowVal.slice(0, rowValIdx + 1).join(', ')
-			//						+ ' { group = ' + getProp(groupIds, rowVal.slice(0, rowValIdx), '_groupId')
-			//						+ ' ; toggles = ' + getProp(groupIds, rowVal.slice(0, rowValIdx + 1), '_groupId') + ' }');
+			var parentMetadata = rowValIdx === 0 ? data.groupMetadata : getProp(data.groupMetadata, 'children', interleaveWith(_.map(rowVal.slice(0, rowValIdx), getNatRep), 'children'));
+			var childMetadata = parentMetadata.children[getNatRep(rowVal[rowValIdx])];
+
+			console.log(rowVal.slice(0, rowValIdx + 1).join(', ')
+				+ ' { group = ' + parentMetadata.id
+				+ ' ; toggles = ' + childMetadata.id + ' }');
 
 			tr = jQuery('<tr>')
-				.attr('data-wcdv-group', getProp(groupIds, _.map(rowVal.slice(0, rowValIdx), getNatRep), '_groupId'))
-				.attr('data-wcdv-toggles-group', getProp(groupIds, _.map(rowVal.slice(0, rowValIdx + 1), getNatRep), '_groupId'))
+				.attr('data-wcdv-group', parentMetadata.id)
+				.attr('data-wcdv-toggles-group', childMetadata.id)
 				.attr('data-wcdv-collapsed', '1')
 			;
 

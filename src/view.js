@@ -1803,7 +1803,9 @@ View.prototype.group = function () {
 			rowValMetadata.rows.push(row);
 		}
 
+		var metadataId = 0;
 		var postorder = function (node) {
+			node.id = metadataId++;
 			if (node.children == null) {
 				node.numRows = node.rows.length;
 			}
