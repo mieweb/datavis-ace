@@ -1778,7 +1778,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			});
 
 		headingTh = jQuery('<th>')
-			.addClass('wcdv-row-select-col')
+			.addClass('wcdv_group_col_spacer')
 			.append(self.ui.checkAll_thead)
 			.appendTo(headingTr);
 		if (self.opts.drawInternalBorders) {
@@ -2060,7 +2060,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 						'type': 'checkbox',
 						'data-row-num': row.rowNum,
 					});
-					td = jQuery('<td>').addClass('wcdv-row-select-col').append(checkbox).appendTo(tr);
+					td = jQuery('<td>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
 					if (self.opts.drawInternalBorders) {
 						td.addClass('wcdv_pivot_colval_boundary');
 					}
@@ -2527,7 +2527,7 @@ GridTablePlain.prototype._addRowReorderHandler = function () {
 
 /**
  * Add an event handler for the row select checkboxes.  The event is bound on `self.ui.tbody` and
- * looks for checkbox inputs inside TD elements with class `wcdv-row-select-col` to actually handle
+ * looks for checkbox inputs inside TD elements with class `wcdv_group_col_spacer` to actually handle
  * the events.  The handler calls `self.select(ROW_NUM)` or `self.unselect(ROW_NUM)` when the
  * checkbox is changed.
  */
@@ -2535,7 +2535,7 @@ GridTablePlain.prototype._addRowReorderHandler = function () {
 GridTablePlain.prototype._addRowSelectHandler = function () {
 	var self = this;
 
-	self.ui.tbody.on('change', 'td.wcdv-row-select-col > input[type="checkbox"]', function () {
+	self.ui.tbody.on('change', 'th.wcdv_group_col_spacer > input[type="checkbox"]', function () {
 		if (this.checked) {
 			self.select(+(jQuery(this).attr('data-row-num')));
 		}
@@ -2613,13 +2613,13 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 					});
 
 				headingTh = jQuery('<th>')
-					.addClass('wcdv-row-select-col')
+					.addClass('wcdv_group_col_spacer')
 					.append(self.ui.checkAll_thead)
 					.appendTo(headingTr);
 			}
 			else {
 				jQuery('<th>')
-					.addClass('wcdv-row-select-col')
+					.addClass('wcdv_group_col_spacer')
 					.appendTo(headingTr);
 			}
 		}
@@ -2664,7 +2664,7 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 
 	if (self.features.rowSelect) {
 		jQuery('<th>')
-			.addClass('wcdv-row-select-col')
+			.addClass('wcdv_group_col_spacer')
 			.appendTo(headingTr);
 	}
 
@@ -2860,6 +2860,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			})
 				.hide();
 
+			tr.append(jQuery('<td>', { colspan: data.groupFields.length + 1 }));
+
 			// Create the check box which selects the row.
 
 			if (self.features.rowSelect) {
@@ -2869,10 +2871,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 					'class': 'wcdv_select_row',
 					'checked': self.isSelected(row.rowNum)
 				});
-				td = jQuery('<td>').addClass('wcdv-row-select-col').append(checkbox).appendTo(tr);
+				td = jQuery('<td>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
 			}
-
-			tr.append(jQuery('<td>', { colspan: data.groupFields.length + 1 }));
 
 			// Create the data cells.
 
@@ -3068,7 +3068,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 					'class': 'wcdv_select_group'
 				});
 				groupInfo[childMetadata.id].checkbox = checkbox;
-				td = jQuery('<th>').addClass('wcdv-row-select-col').append(checkbox).appendTo(tr);
+				td = jQuery('<th>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
 			}
 
 			if (data.groupMetadata) {
