@@ -2733,60 +2733,65 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	}
 
+	function percolateUp(node /* groupInfo elt */) {
+		var disabled = false;
+		var checked = false;
+		var indeterminate = false;
+
+		if (node.metadata.children) {
+			node.numSelected = 0;
+			_.each(node.metadata.children, function (child) {
+				node.numSelected += child.numSelected;
+			});
+		}
+
+		if (node.metadata.numRows === 0) {
+			disabled = true;
+			checked = false;
+		}
+		else {
+			if (node.numSelected === 0) {
+				checked = false;
+			}
+			else if (node.numSelected === node.metadata.numRows) {
+				checked = true;
+			}
+			else {
+				indeterminate = true;
+			}
+		}
+
+		node.checkbox.prop('disabled', disabled);
+		node.checkbox.prop('checked', checked);
+		node.checkbox.prop('indeterminate', indeterminate);
+
+		if (node.metadata.parent) {
+			percolateUp(groupInfo[node.metadata.parent.id]);
+		}
+	}
+
 	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_row', function () {
 		var elt = jQuery(this);
 		var tr = elt.closest('tr');
 		var isChecked = elt.prop('checked');
 		var rowNum = +tr.attr('data-row-num');
 		var rowValIndex = +tr.attr('data-wcdv-rowValIndex');
-		var groupMetadataId = data.groupMetadataIndex[rowValIndex].id;
-
-		function recur(node) {
-			var disabled = false;
-			var checked = false;
-			var indeterminate = false;
-
-			node.numSelected += isChecked ? 1 : -1;
-
-			if (node.metadata.numRows === 0) {
-				disabled = true;
-				checked = false;
-			}
-			else {
-				if (node.numSelected === 0) {
-					checked = false;
-				}
-				else if (node.numSelected === node.metadata.numRows) {
-					checked = true;
-				}
-				else {
-					indeterminate = true;
-				}
-			}
-
-			console.log(node.checkbox);
-			console.log('disabled = %s, checked = %s, indeterminate = %s',
-				disabled, checked, indeterminate);
-
-			node.checkbox.prop('disabled', disabled);
-			node.checkbox.prop('checked', checked);
-			node.checkbox.prop('indeterminate', indeterminate);
-
-			if (node.metadata.parent) {
-				recur(groupInfo[node.metadata.parent.id]);
-			}
-		}
+		var rowValMetadata = data.groupMetadataIndex[rowValIndex];
 
 		debug.info('GRID TABLE // GROUP - DETAIL // SELECT',
 			'Selecting data row: rowNum = %d, rowValIndex = %d, parentGroupId = %s, parentGroupInfo = %O',
-			rowNum, rowValIndex, groupMetadataId, groupInfo[groupMetadataId]);
+			rowNum, rowValIndex, rowValMetadata.id, groupInfo[rowValMetadata.id]);
 
-		recur(groupInfo[groupMetadataId]);
+		groupInfo[rowValMetadata.id].numSelected += isChecked ? 1 : -1;
+
+		percolateUp(groupInfo[rowValMetadata.id]);
 	});
 
 	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_group', function () {
 		var elt = jQuery(this);
 		var tr = elt.closest('tr');
+		var isChecked = elt.prop('checked');
+		var groupMetadataId = +tr.attr('data-wcdv-group');
 
 		console.log('### SELECTING GROUP: %s', tr.attr('data-wcdv-group'));
 	});
