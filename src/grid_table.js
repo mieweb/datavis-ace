@@ -1575,7 +1575,7 @@ GridTable.prototype.select = function (what) {
 	}
 	else if (_.isArray(what)) {
 		// Add elements to the selection.
-		self.selection = _.intersection(self.selection, what);
+		self.selection = _.union(self.selection, what);
 	}
 	else if (typeof what === 'function') {
 		// Add passing rows to the selection.
@@ -2607,7 +2607,12 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 
 		if (self.features.rowSelect) {
 			if (fieldIdx === 0) {
-				self.ui.checkAll_thead = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
+				self.ui.checkAll_thead = jQuery('<input>', {
+					'name': 'checkAll',
+					'type': 'checkbox',
+					'class': 'wcdv_select_group',
+					'data-group-id': '0'
+				})
 					.on('change', function (evt) {
 						self.checkAll(evt);
 					});
@@ -2747,7 +2752,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		if (node.metadata.children != null) {
 			node.numSelected = 0;
 			_.each(node.metadata.children, function (child) {
-				node.numSelected += groupInfo[child.id].numSelected;
+				node.numSelected += self.groupInfo[child.id].numSelected;
 			});
 		}
 
@@ -2756,7 +2761,6 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			checked = false;
 		}
 		else {
-			console.log('groupInfo = %O, node = %O, id = %d, numSelected = %d, numRows = %d', groupInfo, node, node.metadata.id, node.numSelected, node.metadata.numRows);
 			if (node.numSelected === 0) {
 				checked = false;
 			}
@@ -2773,7 +2777,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		node.checkbox.prop('indeterminate', indeterminate);
 
 		if (node.metadata.parent) {
-			percolateUp(groupInfo[node.metadata.parent.id]);
+			percolateUp(self.groupInfo[node.metadata.parent.id]);
 		}
 	}
 
@@ -2800,26 +2804,27 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 		else {
 			_.each(node.metadata.children, function (child) {
-				percolateDown(groupInfo[child.id], isChecked);
+				percolateDown(self.groupInfo[child.id], isChecked);
 			});
 		}
 	}
 
+	/*
 	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_row', function () {
 		var elt = jQuery(this);
 		var tr = elt.closest('tr');
 		var isChecked = elt.prop('checked');
 		var rowNum = +tr.attr('data-row-num');
 		var rowValIndex = +tr.attr('data-wcdv-rowValIndex');
-		var rowValMetadata = data.groupMetadataIndex[rowValIndex];
+		var rowValMetadata = data.groupMetadata.lookup.byRowValIndex[rowValIndex];
 
 		debug.info('GRID TABLE // GROUP - DETAIL // SELECT',
 			'Selecting data row: rowNum = %d, rowValIndex = %d, parentGroupId = %s, parentGroupInfo = %O',
-			rowNum, rowValIndex, rowValMetadata.id, groupInfo[rowValMetadata.id]);
+			rowNum, rowValIndex, rowValMetadata.id, self.groupInfo[rowValMetadata.id]);
 
-		groupInfo[rowValMetadata.id].numSelected += isChecked ? 1 : -1;
+		self.groupInfo[rowValMetadata.id].numSelected += isChecked ? 1 : -1;
 
-		percolateUp(groupInfo[rowValMetadata.id]);
+		percolateUp(self.groupInfo[rowValMetadata.id]);
 	});
 
 	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_group', function () {
@@ -2828,9 +2833,10 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		var isChecked = elt.prop('checked');
 		var groupMetadataId = +tr.attr('data-wcdv-toggles-group');
 
-		percolateDown(groupInfo[groupMetadataId], isChecked);
-		percolateUp(groupInfo[groupMetadataId]);
+		percolateDown(self.groupInfo[groupMetadataId], isChecked);
+		percolateUp(self.groupInfo[groupMetadataId]);
 	});
+	*/
 
 	var isRendered = [];
 
@@ -2840,6 +2846,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		var rowGroup = data.data[groupNum];
 		var rowVal = data.rowVals[groupNum];
 		var tr;
+		var isSelected;
 
 		// Create the cells that show the rows in this group.
 		//
@@ -2856,7 +2863,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				id: self.defn.table.id + '_' + rowNum,
 				'data-row-num': row.rowNum,
 				'data-wcdv-group': groupMetadataId,
-				'data-wcdv-rowValIndex': groupInfo[groupMetadataId].metadata.rowValIndex
+				'data-wcdv-rowValIndex': self.data.groupMetadata.lookup.byId[groupMetadataId].rowValIndex
 			})
 				.hide();
 
@@ -2865,11 +2872,13 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			// Create the check box which selects the row.
 
 			if (self.features.rowSelect) {
+				isSelected = self.isSelected(row.rowNum);
+
 				var checkbox = jQuery('<input>', {
 					'type': 'checkbox',
 					'data-row-num': row.rowNum,
 					'class': 'wcdv_select_row',
-					'checked': self.isSelected(row.rowNum)
+					'checked': isSelected
 				});
 				td = jQuery('<td>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
 			}
@@ -2903,6 +2912,10 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				tr.append(td);
 			});
 
+			if (self.features.rowSelect && isSelected) {
+				tr.children('td').addClass('wcdv_selected_row');
+			}
+
 			self.ui.tr[rowNum] = tr;
 			placeAfter.after(tr);
 		});
@@ -2922,7 +2935,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 	//   checkbox
 	// }
 
-	var groupInfo = (function () {
+	self.groupInfo = (function () {
 		var mapping = {};
 
 		function recur(node) {
@@ -2942,7 +2955,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 	var toggleGroup = function () {
 		var toggle = function (groupId, show, tr) {
-			var rowValIndex = groupInfo[groupId].metadata.rowValIndex;
+			var rowValIndex = self.data.groupMetadata.lookup.byId[groupId].rowValIndex;
 			if (show && rowValIndex != null && !isRendered[groupId]) {
 				debug.info('GRID TABLE // GROUP [DETAIL] // TOGGLE', 'Rendering: group metadata ID = %s, rowValIndex = %s', groupId, rowValIndex);
 				render(groupId, rowValIndex, tr);
@@ -3030,10 +3043,6 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			var parentMetadata = rowValIdx === 0 ? data.groupMetadata : getProp(data.groupMetadata, 'children', interleaveWith(_.map(rowVal.slice(0, rowValIdx), getNatRep), 'children'));
 			var childMetadata = parentMetadata.children[getNatRep(rowVal[rowValIdx])];
 
-			console.log(rowVal.slice(0, rowValIdx + 1).join(', ')
-				+ ' { group = ' + parentMetadata.id
-				+ ' ; toggles = ' + childMetadata.id + ' }');
-
 			tr = jQuery('<tr>')
 				.attr('data-wcdv-group', parentMetadata.id)
 				.attr('data-wcdv-toggles-group', childMetadata.id)
@@ -3065,9 +3074,10 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			if (self.features.rowSelect) {
 				var checkbox = jQuery('<input>', {
 					'type': 'checkbox',
-					'class': 'wcdv_select_group'
+					'class': 'wcdv_select_group',
+					'data-group-id': childMetadata.id,
 				});
-				groupInfo[childMetadata.id].checkbox = checkbox;
+				self.groupInfo[childMetadata.id].checkbox = checkbox;
 				td = jQuery('<th>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
 			}
 
@@ -3150,6 +3160,59 @@ GridTableGroupDetail.prototype.addWorkHandler = function () {
 	}, { who: self });
 };
 
+// #_addRowSelectHandler {{{2
+
+/**
+ * Add an event handler for the row select checkboxes.  The event is bound on `self.ui.tbody` and
+ * looks for checkbox inputs inside TD elements with class `wcdv_group_col_spacer` to actually handle
+ * the events.  The handler calls `self.select(ROW_NUM)` or `self.unselect(ROW_NUM)` when the
+ * checkbox is changed.
+ */
+
+GridTableGroupDetail.prototype._addRowSelectHandler = function () {
+	var self = this;
+
+	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_row', function () {
+		var elt = jQuery(this);
+		var rowNum = +elt.attr('data-row-num');
+		var isChecked = elt.prop('checked');
+
+		if (isChecked) {
+			self.select(rowNum);
+		}
+		else {
+			self.unselect(rowNum);
+		}
+	});
+
+	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_group', function () {
+		var elt = jQuery(this);
+		var isChecked = elt.prop('checked');
+		var groupMetadataId = +elt.attr('data-group-id');
+		var rowNums = [];
+
+		// Find all rows that are a descendant of the selected group.
+
+		function recur(node) {
+			if (node.children == null) {
+				rowNums = rowNums.concat(_.pluck(self.data.data[node.rowValIndex], 'rowNum'));
+			}
+			else {
+				_.each(node.children, recur);
+			}
+		};
+
+		recur(self.data.groupMetadata.lookup.byId[groupMetadataId]);
+
+		if (isChecked) {
+			self.select(rowNums);
+		}
+		else {
+			self.unselect(rowNums);
+		}
+	});
+};
+
 // #_updateSelectionGui {{{2
 
 /**
@@ -3158,16 +3221,6 @@ GridTableGroupDetail.prototype.addWorkHandler = function () {
 
 GridTableGroupDetail.prototype._updateSelectionGui = function () {
 	var self = this;
-	return; // FIXME
-
-	// True if there are no rows to select.
-	var isDisabled = self.data.data.length === 0;
-
-	// True if all rows are selected.
-	var isAllChecked = !isDisabled && self.selection.length === self.data.data.length;
-
-	// True if some rows are selected, but not all of them.
-	var isIndeterminate = !isDisabled && !isAllChecked && self.selection.length > 0;
 
 	var updateCheckboxState = function (elt) {
 		elt.prop('disabled', isDisabled);
@@ -3178,7 +3231,8 @@ GridTableGroupDetail.prototype._updateSelectionGui = function () {
 	// First, deselect all rows (remove "selected" class and uncheck the box).
 
 	self.root.find('tbody td.wcdv_selected_row').removeClass('wcdv_selected_row');
-	self.root.find('tbody td:first-child input[type="checkbox"]').prop('checked', false);
+	self.root.find('tbody input[type="checkbox"].wcdv_select_row').prop('checked', false);
+	self.root.find('tbody input[type="checkbox"].wcdv_select_group').prop('checked', false);
 
 	// Next, find all the TR elements which correspond to selected rows.
 
@@ -3186,26 +3240,92 @@ GridTableGroupDetail.prototype._updateSelectionGui = function () {
 		return self.selection.indexOf(+(jQuery(elt).attr('data-row-num'))) >= 0;
 	});
 
-	// TODO Set the checkboxes that correspond to the groups.
-
-	// Set the "check all" input in the header.
-
-	if (self.ui.checkAll_thead) {
-		updateCheckboxState(self.ui.checkAll_thead);
-		updateCheckboxState(self.ui.checkAll_thead.parents('div.tabletool').find('input[name="checkAll"]'));
-	}
-
-	// Set the "check all" input in the footer.
-
-	if (self.ui.checkAll_tfoot) {
-		updateCheckboxState(self.ui.checkAll_tfoot);
-		updateCheckboxState(self.ui.checkAll_tfoot.parents('div.tabletool').find('input[name="checkAll"]'));
-	}
-
-	// Finally, select appropriate rows (add "selected" class and check the box).
+	// Select appropriate rows (add "selected" class and check the box).
 
 	trs.children('td').addClass('wcdv_selected_row');
-	trs.find('td:first-child input[type="checkbox"]').prop('checked', true);
+	trs.find('input[type="checkbox"].wcdv_select_row').prop('checked', true);
+
+	// ===============================================================================================
+	//
+	//   DETERMINE GROUPING (HIERARCHICAL, PARENT) CHECKBOX STATES
+	//
+	// ===============================================================================================
+
+	// Initialize the structure with no rows selected in any leaf.
+
+	var numSelected = {};
+
+	_.each(_.keys(self.data.groupMetadata.lookup.byId), function (id) {
+		numSelected[id] = 0;
+	});
+
+	// Determine how many are selected in each leaf of the tree.
+
+	for (var i = 0; i < self.selection.length; i += 1) {
+		var s = self.selection[i];
+		var id = self.data.groupMetadata.lookup.byRowNum[s].id;
+
+		if (numSelected[id] == null) {
+			numSelected[id] = 0;
+		}
+
+		numSelected[id] += 1;
+	}
+
+	// Determine how many are selected at all non-leaf nodes.
+
+	(function () {
+		function postorder(node) {
+			if (node.children != null) {
+				numSelected[node.id] = 0;
+				_.each(node.children, function (c) {
+					postorder(c);
+					numSelected[node.id] += numSelected[c.id];
+				});
+			}
+		}
+
+		postorder(self.data.groupMetadata);
+	})();
+
+	_.each(numSelected, function (count, id) {
+		var numRows = self.data.groupMetadata.lookup.byId[id].numRows;
+		var checkbox = self.root.find('input[type="checkbox"][data-group-id="' + id + '"].wcdv_select_group');
+
+		if (checkbox.length === 0) {
+			log.error('GRID TABLE // GROUP (DETAILS) // UPDATE SELECTION UI -- Unable to locate checkbox for group ' + id);
+			return;
+		}
+
+		if (numRows === 0) {
+			checkbox.prop({
+				disabled: true,
+				indeterminate: false,
+				checked: false,
+			});
+		}
+		else if (count === 0) {
+			checkbox.prop({
+				disabled: false,
+				indeterminate: false,
+				checked: false,
+			});
+		}
+		else if (numRows === count) {
+			checkbox.prop({
+				disabled: false,
+				indeterminate: false,
+				checked: true,
+			});
+		}
+		else {
+			checkbox.prop({
+				disabled: false,
+				indeterminate: true,
+				checked: false,
+			});
+		}
+	});
 };
 
 // #checkAll {{{2

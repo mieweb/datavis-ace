@@ -1769,8 +1769,13 @@ View.prototype.group = function () {
 
 	var buildData = function (data, rowVals) {
 		var result = new Array(rowVals.length);
-		var metadataTree = {};
-		var metadataLeaves = new Array(rowVals.length);
+		var metadataTree = {
+			lookup: {
+				byRowNum: new Array(data.length),
+				byRowValIndex: new Array(rowVals.length),
+				byId: [],
+			}
+		};
 
 		for (var rowValIndex = 0; rowValIndex < rowVals.length; rowValIndex += 1) {
 			var rowVal = rowVals[rowValIndex];
@@ -1781,12 +1786,11 @@ View.prototype.group = function () {
 			};
 
 			setProp(metadata, metadataTree, 'children', interleaveWith(rowVal, 'children'));
-			metadataLeaves[rowValIndex] = metadata;
+			metadataTree.lookup.byRowValIndex[rowValIndex] = metadata;
 		}
 
 		for (var rowIndex = 0; rowIndex < data.length; rowIndex += 1) {
 			var row = data[rowIndex];
-			var needsStored = false;
 			var rowVal = new Array(groupFields.length);
 
 			for (var groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
@@ -1794,6 +1798,7 @@ View.prototype.group = function () {
 			}
 
 			var rowValMetadata = getProp(metadataTree, 'children', interleaveWith(rowVal, 'children'));
+			metadataTree.lookup.byRowNum[row.rowNum] = rowValMetadata;
 
 			if (rowValMetadata.rows == null) {
 				rowValMetadata.rows = [];
@@ -1806,6 +1811,7 @@ View.prototype.group = function () {
 		var metadataId = 0;
 		var postorder = function (node) {
 			node.id = metadataId++;
+			metadataTree.lookup.byId[node.id] = node;
 			if (node.children == null) {
 				node.numRows = node.rows.length;
 			}
@@ -1824,8 +1830,7 @@ View.prototype.group = function () {
 
 		return {
 			data: result,
-			metadata: metadataTree,
-			metadataIndex: metadataLeaves
+			metadata: metadataTree
 		};
 	};
 
@@ -1939,7 +1944,6 @@ View.prototype.group = function () {
 	self.data.rowVals = rowVals;
 	self.data.data = newData.data;
 	self.data.groupMetadata = newData.metadata;
-	self.data.groupMetadataIndex = newData.metadataIndex;
 
 	return true;
 };
