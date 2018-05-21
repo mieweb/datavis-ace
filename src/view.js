@@ -1724,6 +1724,22 @@ View.prototype.group = function () {
 
 	var origKeys = []; // groupFieldIndex[] → natRep → value
 
+	// buildRowVals(groupFields) => rowVals
+	//
+	//   Create the list of the native representations of all combinations of the values of the group
+	//   fields.  Here's a simple example with strings, where the natrep transform is identity.
+	//
+	//   buildRowVals(['Last Name', 'First Name'])
+	//     => [['Roosevelt', 'Franklin'], ['Roosevelt', 'Theodore'], ['Kennedy', 'John'], ...]
+	//
+	//   Here's an example with dates, where the natrep transform is to convert to UNIX time.
+	//
+	//   buildRowVals(['Create Date'])
+	//     => [[1526346077 /* 2018-05-14 21:01:17 GMT-4 */, ...]]
+	//
+	//   As a side effect, the `origKeys[groupFieldIndex]` object is updated with how to reverse the
+	//   natrep transform.  This will be used later.
+
 	var buildRowVals = function (groupFields) {
 		var rowVals = [];
 
@@ -1751,12 +1767,117 @@ View.prototype.group = function () {
 		return rowVals;
 	};
 
-	var buildData = function (data) {
-		var result = [];
+	var buildData = function (data, rowVals) {
+		var result = new Array(rowVals.length);
+		var metadataTree = {
+			lookup: {
+				byRowNum: new Array(data.length),
+				byRowValIndex: new Array(rowVals.length),
+				byId: [],
+			}
+		};
 
-		_.each(rowVals, function (rowVal) {
+		for (var rowValIndex = 0; rowValIndex < rowVals.length; rowValIndex += 1) {
+			var rowVal = rowVals[rowValIndex];
+			var metadata = {
+				rowValIndex: rowValIndex,
+				parent: null,
+				numRows: 0
+			};
+
+			setProp(metadata, metadataTree, 'children', interleaveWith(rowVal, 'children'));
+			metadataTree.lookup.byRowValIndex[rowValIndex] = metadata;
+		}
+
+		for (var rowIndex = 0; rowIndex < data.length; rowIndex += 1) {
+			var row = data[rowIndex];
+			var rowVal = new Array(groupFields.length);
+
+			for (var groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
+				rowVal[groupFieldIndex] = getNatRep(row.rowData[groupFields[groupFieldIndex]].value);
+			}
+
+			var rowValMetadata = getProp(metadataTree, 'children', interleaveWith(rowVal, 'children'));
+			metadataTree.lookup.byRowNum[row.rowNum] = rowValMetadata;
+
+			if (rowValMetadata.rows == null) {
+				rowValMetadata.rows = [];
+				result[rowValMetadata.rowValIndex] = rowValMetadata.rows;
+			}
+
+			rowValMetadata.rows.push(row);
+		}
+
+		var metadataId = 0;
+		var postorder = function (node) {
+			node.id = metadataId++;
+			metadataTree.lookup.byId[node.id] = node;
+			if (node.children == null) {
+				node.numRows = node.rows.length;
+			}
+			else {
+				node.numRows = 0;
+				node.numChildren = _.keys(node.children).length;
+				_.each(node.children, function (child) {
+					child.parent = node;
+					postorder(child);
+					node.numRows += child.numRows;
+				});
+			}
+		};
+
+		postorder(metadataTree);
+
+		return {
+			data: result,
+			metadata: metadataTree
+		};
+	};
+
+	// buildData(plainData, rowVals) => groupedData
+	//
+	//   Groups the data.  This is done by comparing the natrep of the groupField's value in the row
+	//   with the groupField's value in the rowval (which is a natrep).  Let's take the "Create Date"
+	//   example above:
+	//
+	//   rowVals = [[1526346077, 1514782800, ...]]
+	//   data = [ { Create Date: '2018-01-01 00:00:00 GMT-4' }    (natrep = 1514782800)
+	//          , { Create Date: '2018-05-14 21:01:17 GMT-4' }    (natrep = 1526346077)
+	//          , ... ]
+	//
+	//   buildData(data, rowVals)
+	//     => [ [data[1], ...]    // natrep = rowVals[0]
+	//        , [data[0], ...]    // natrep = rowVals[0]
+	//        , ... ]
+
+	var buildData_orig = function (data, rowVals) {
+		var result = [];
+		var tree = {};
+		var leaves = [];
+
+		// Every rowVal is a group, so go through them and figure out what rows belong in each one.
+
+		for (var rowValIndex = 0; rowValIndex < rowVals.length; rowValIndex += 1) {
+			var rowVal = rowVals[rowValIndex];
+
+			var metadata = {
+				rowValIndex: rowValIndex,
+				parent: null,
+				numRows: 0
+			};
+
+			// Store the metadata for the group in the metadata tree.
+
+			setProp(metadata, tree, 'children', interleaveWith(rowVal, 'children'));
+			leaves[rowValIndex] = metadata;
+
 			var groupedRows = [];
-			_.each(data, function (row) {
+
+			// Go through all the rows to find which ones match the current rowVal.
+
+			for (var rowIndex = 0; rowIndex < data.length; rowIndex += 1) {
+				var row = data[rowIndex];
+
 				if (_.every(rowVal, function (rowValElt, rowValNum) {
 					var groupField = groupFields[rowValNum];
 					var value = row.rowData[groupField].value;
@@ -1765,11 +1886,30 @@ View.prototype.group = function () {
 				})) {
 					groupedRows.push(row);
 				}
-			});
-			result.push(groupedRows);
-		});
+			}
 
-		return result;
+			metadata.numRows = groupedRows.length;
+			result.push(groupedRows);
+		}
+
+		var postorder = function (node) {
+			if (node.children != null) {
+				node.numRows = 0;
+				_.each(node.children, function (child) {
+					child.parent = node;
+					postorder(child);
+					node.numRows += child.numRows;
+				});
+			}
+		};
+
+		postorder(tree);
+
+		return {
+			data: result,
+			metadata: tree,
+			metadataIndex: leaves
+		};
 	};
 
 	var convertRowVals = function (rowVals) {
@@ -1796,13 +1936,14 @@ View.prototype.group = function () {
 
 	debug.info('VIEW (' + self.name + ') // GROUP', 'Group Fields: %O', groupFields);
 	debug.info('VIEW (' + self.name + ') // GROUP', 'Row Vals: %O', rowVals);
-	debug.info('VIEW (' + self.name + ') // GROUP', 'New Data: %O', newData);
+	debug.info('VIEW (' + self.name + ') // GROUP', 'New Data: %O', newData.data);
 
 	self.data.isPlain = false;
 	self.data.isGroup = true;
 	self.data.groupFields = groupFields;
 	self.data.rowVals = rowVals;
-	self.data.data = newData;
+	self.data.data = newData.data;
+	self.data.groupMetadata = newData.metadata;
 
 	return true;
 };

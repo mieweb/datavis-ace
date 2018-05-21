@@ -1031,6 +1031,21 @@ function pruneTree() {
 	}
 }
 
+function interleaveWith(a, x) {
+	var result = [];
+
+	if (a.length > 0) {
+		result.push(a[0]);
+	}
+
+	for (var i = 1; i < a.length; i += 1) {
+		result.push(x);
+		result.push(a[i]);
+	}
+
+	return result;
+}
+
 /**
  * Stable sort algorithm that allows for responsive browser UI.
  */
