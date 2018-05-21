@@ -753,7 +753,13 @@ Graph.prototype.setUserConfig = function (config) {
 	var self = this;
 
 	self.userConfig = config;
-	self.renderer.draw(self.devConfig, self.userConfig);
+
+	// When the constructor binds to prefs, this method can be called before the renderer is created.
+	// That's not a big deal, just don't do anything here if that's the case.
+
+	if (self.renderer != null) {
+		self.renderer.draw(self.devConfig, self.userConfig);
+	}
 };
 
 // GraphRenderer {{{1
