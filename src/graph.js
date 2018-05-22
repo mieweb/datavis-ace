@@ -89,6 +89,10 @@ var Graph = function (id, view, devConfig, opts) {
 
 	self.view.addClient(self, 'graph');
 
+	self.view.on('dataUpdated', function () {
+		self.view.getData();
+	});
+
 	self.view.on('fetchDataBegin', function () {
 		self._setSpinner('loading');
 		self._showSpinner();
@@ -101,6 +105,10 @@ var Graph = function (id, view, devConfig, opts) {
 		self._setSpinner('working');
 		self._showSpinner();
 	});
+	self.view.on('workEnd', function (info, ops) {
+		self._hideSpinner();
+	});
+
 	self.view.on('workEnd', function (info, ops) {
 		var config;
 
@@ -146,7 +154,6 @@ var Graph = function (id, view, devConfig, opts) {
 		else {
 			self.ui.toolbar_pivot.hide();
 		}
-		self._hideSpinner();
 	});
 
 	self.checkGraphConfig();
