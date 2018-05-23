@@ -1672,6 +1672,57 @@ View.prototype.group_orig = function () {
 // #group_new {{{2
 
 /**
+ * @typedef {metadataNode} groupMetadata
+ *
+ * @property {object} lookup
+ *
+ * @property {Object.<number,metadataNode>} lookup.byId
+ * Used by grid table group details selection.
+ *
+ * @property {Object.<number,metadataNode>} lookup.byRowValIndex
+ * Used by grid table group details selection.
+ *
+ * @property {Object.<number,metadataNode>} lookup.byRowNum
+ * Used by grid table group details selection to find out what rowVal a selected row belongs to (and
+ * thus to determine status of checkboxes in grouping hierarchy).
+ */
+
+/**
+ * @typedef {object} metadataNode
+ *
+ * @property {number} id
+ * A unique identifier for this node.
+ *
+ * @property {number} numRows
+ * Number of descendant rows (either directly in this rowVal leaf, or in all children).
+ *
+ * @property {metadataNode} parent
+ * Parent node of this one.  Only in non-root nodes.
+ *
+ * @property {number} numChildren
+ * Number of direct child nodes.  Only in non-leaf nodes.
+ *
+ * @property {Object.<string,metadataNode>} children
+ * Children mapped by the natrep of their rowValElt.  Only in non-leaf nodes.
+ *
+ * @property {Array} rows
+ * All the rows in the rowVal this rowValElt completes.  Only in leaf nodes.
+ *
+ * @property {number} rowValIndex
+ * What rowVal this rowValElt completes. Only in leaf nodes.  Example:
+ *
+ * ```
+ * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
+ * tree = <ORIGIN>
+ *       /        \
+ *      A1        A2
+ *     /  \      /  \
+ *    B1  B2    B1  B2
+ *    0   1     2   3   <- rowValIndex
+ * ```
+ */
+
+/**
  * Perform grouping on the data.  This modifies the data in place; it's not asynchronous and there's
  * no return value.
  */
@@ -1949,39 +2000,6 @@ View.prototype.group = function () {
 	self.data.rowVals = rowVals;
 	self.data.data = newData.data;
 	self.data.groupMetadata = newData.metadata;
-
-	// groupMetadata = {
-	//   lookup: {
-	//     byId: { [<ID>] = <NODE> }
-	//       - Used by grid table group details selection.
-	//     byRowValIndex: { [<RVI>] = <NODE> }
-	//       - Used by grid table group details selection.
-	//     byRowNum: { [<ROWNUM>] = <NODE> }
-	//       - Used by grid table group details selection to find out what rowVal a selected row
-	//         belongs to (and thus to determine status of checkboxes in grouping hierarchy).
-	//   }
-	//   <NODE>
-	// }
-	//
-	// <NODE> = {
-	//   id
-	//   numRows
-	//     - Number of descendant rows (either directly in this rowVal leaf, or in all children).
-	//   parent: <NODE>
-	//     - Parent node of this one.
-	//   children: { [<NATREP>] = <NODE> }
-	//     - Children mapped by the natrep of their rowValElt.  Only in non-leaves.
-	//   rowValIndex
-	//     - What rowVal this rowValElt completes. Only in leaves.  Example:
-	//
-	//       rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
-	//       tree = <ORIGIN>
-	//             /        \
-	//            A1        A2
-	//           /  \      /  \
-	//          B1  B2    B1  B2
-	//          0   1     2   3   <- rowValIndex
-	// }
 
 	return true;
 };
