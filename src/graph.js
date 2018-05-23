@@ -91,7 +91,10 @@ var Graph = function (id, view, devConfig, opts) {
 	self.view.addClient(self, 'graph');
 
 	self.view.on('dataUpdated', function () {
-		self.view.getData();
+		if (self.opts.showOnDataChange && !self.isVisible()) {
+			self.view.off('dataUpdated', self.renderer);
+			self.show();
+		}
 	});
 
 	self.view.on('fetchDataBegin', function () {
@@ -668,7 +671,9 @@ Graph.prototype.show = function (opts) {
 			if (self.opts.title) {
 				self.ui.showHideButton.addClass('open').html(fontAwesome('f077'));
 			}
-			self.drawFromConfig();
+			if (opts.redraw) {
+				self.drawFromConfig();
+			}
 		}
 	});
 };
@@ -807,9 +812,11 @@ GraphRenderer.prototype._validateConfig = function (config) {
 GraphRenderer.prototype.addRedrawHandlers = function (f) {
 	var self = this;
 
-	self.view.off('workEnd', self);
-	self.view.on('workEnd', function () {
-		debug.info('GRAPH RENDERER // HANDLER (View.workEnd)',
+	debug.info('GRAPH // RENDER (GOOGLE)', 'Adding redraw handlers');
+
+	self.view.off('dataUpdated', self);
+	self.view.on('dataUpdated', function () {
+		debug.info('GRAPH RENDERER // HANDLER (View.dataUpdated)',
 			'Redrawing graph because the view has finished doing work');
 		f();
 	}, { who: self });
