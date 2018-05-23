@@ -879,7 +879,7 @@ Source.prototype.guessTypes = function (data, typeInfo) {
 			}
 		}
 
-		if (guess != null) {
+		if (guess != null && guess !== 'string') {
 			debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'For field "%s", successfully guessed new type "%s"', f, guess);
 			fti.type = guess;
 		}
