@@ -1782,8 +1782,11 @@ View.prototype.group = function () {
 			var metadata = {
 				rowValIndex: rowValIndex,
 				parent: null,
-				numRows: 0
+				numRows: 0,
+				rows: []
 			};
+
+			result[rowValIndex] = metadata.rows;
 
 			setProp(metadata, metadataTree, 'children', interleaveWith(rowVal, 'children'));
 			metadataTree.lookup.byRowValIndex[rowValIndex] = metadata;
@@ -1800,23 +1803,25 @@ View.prototype.group = function () {
 			var rowValMetadata = getProp(metadataTree, 'children', interleaveWith(rowVal, 'children'));
 			metadataTree.lookup.byRowNum[row.rowNum] = rowValMetadata;
 
-			if (rowValMetadata.rows == null) {
-				rowValMetadata.rows = [];
-				result[rowValMetadata.rowValIndex] = rowValMetadata.rows;
-			}
-
 			rowValMetadata.rows.push(row);
 		}
 
 		var metadataId = 0;
 		var postorder = function (node) {
 			node.id = metadataId++;
+			node.numRows = 0;
+
 			metadataTree.lookup.byId[node.id] = node;
+
+			// NOTE When there are no rows in the data, the root of the tree has no children, but also no
+			// rows (because it's not a rowVal leaf).  This case is handled by setting numRows = 0 above.
+
 			if (node.children == null) {
-				node.numRows = node.rows.length;
+				if (node.rows != null) {
+					node.numRows = node.rows.length;
+				}
 			}
 			else {
-				node.numRows = 0;
 				node.numChildren = _.keys(node.children).length;
 				_.each(node.children, function (child) {
 					child.parent = node;
