@@ -778,7 +778,6 @@ GraphRenderer = makeSubclass(Object, function (graph, elt, view, opts) {
 	self.elt = elt;
 	self.view = view;
 	self.opts = opts;
-	self.addRedrawHandlers();
 });
 
 // #_validateConfig
@@ -805,18 +804,15 @@ GraphRenderer.prototype._validateConfig = function (config) {
 
 // #addRedrawHandlers {{{2
 
-GraphRenderer.prototype.addRedrawHandlers = function () {
+GraphRenderer.prototype.addRedrawHandlers = function (f) {
 	var self = this;
 
+	self.view.off('workEnd', self);
 	self.view.on('workEnd', function () {
-		if (typeof self.redraw == 'function') {
-			debug.info('GRAPH RENDERER // HANDLER (View.workEnd)',
-				'Redrawing graph because the view has finished doing work');
-			self.redraw();
-		}
-	}, {
-		who: self
-	});
+		debug.info('GRAPH RENDERER // HANDLER (View.workEnd)',
+			'Redrawing graph because the view has finished doing work');
+		f();
+	}, { who: self });
 };
 
 // #draw {{{2
@@ -824,9 +820,12 @@ GraphRenderer.prototype.addRedrawHandlers = function () {
 GraphRenderer.prototype.draw = function (devConfig, userConfig) {
 	var self = this;
 
-	self.devConfig = devConfig;
-	self.userConfig = userConfig;
-	self.redraw();
+	var reallyDraw = function () {
+		self._draw(devConfig, userConfig);
+	};
+
+	self.addRedrawHandlers(reallyDraw);
+	reallyDraw();
 };
 
 // GraphRendererGoogle {{{1
@@ -1137,10 +1136,13 @@ GraphRendererGoogle.prototype._ensureGoogleChartsLoaded = function (cont) {
 	});
 };
 
-// #redraw {{{2
+// #draw {{{2
 
-GraphRendererGoogle.prototype.redraw = function () {
+GraphRendererGoogle.prototype._draw = function (devConfig, userConfig) {
 	var self = this;
+
+	devConfig = devConfig || {};
+	userConfig = userConfig || {};
 
 	self._ensureGoogleChartsLoaded(function () {
 		self.view.getData(function (data) {
@@ -1151,13 +1153,13 @@ GraphRendererGoogle.prototype.redraw = function () {
 				var dt = new google.visualization.DataTable();
 
 				if (data.isPlain) {
-					config = self.draw_plain(data, typeInfo, dt, getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current')) || self.devConfig.whenPlain);
+					config = self.draw_plain(data, typeInfo, dt, getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current')) || devConfig.whenPlain);
 				}
 				else if (data.isGroup) {
-					config = self.draw_group(data, typeInfo, dt, getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current')) || self.devConfig.whenGroup);
+					config = self.draw_group(data, typeInfo, dt, getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current')) || devConfig.whenGroup);
 				}
 				else if (data.isPivot) {
-					config = self.draw_pivot(data, typeInfo, dt, getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current')) || self.devConfig.whenPivot);
+					config = self.draw_pivot(data, typeInfo, dt, getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current')) || devConfig.whenPivot);
 				}
 
 				if (config == null) {
