@@ -58,7 +58,8 @@ var Graph = function (id, view, devConfig, opts) {
 		pivot: {}
 	};
 	self.opts = deepDefaults(opts, {
-		title: 'Graph'
+		title: 'Graph',
+		runImmediately: true
 	});
 
 	if (typeof id !== 'string') {
@@ -158,7 +159,13 @@ var Graph = function (id, view, devConfig, opts) {
 
 	self.checkGraphConfig();
 	self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
-	self.drawFromConfig();
+
+	if (self.opts.runImmediately) {
+		self.show();
+	}
+	else {
+		self.hide();
+	}
 };
 
 Graph.prototype = Object.create(Object.prototype);
@@ -268,7 +275,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 	var self = this;
 
 	self.ui.spinner = jQuery('<strong>').css({'font-weight': 'normal', 'margin-right': '0.5em'}).appendTo(titlebar);
-	self._setSpinner('loading');
+	self._setSpinner(self.opts.runImmediately ? 'loading' : 'not-loaded');
 
 	jQuery('<strong>')
 		.text(self.opts.title)
@@ -384,10 +391,6 @@ Graph.prototype._addAggregateButtons = function (toolbar) {
 		}
 	);
 
-	// Update the aggregate dropdown now and also make sure that it stays updated whenever new
-	// aggregate functions are calculated in the view.
-
-	self._updateAggDropdown();
 	self.view.on('workEnd', function () {
 		self._updateAggDropdown();
 	});
@@ -611,10 +614,6 @@ Graph.prototype.checkGraphConfig = function () {
 Graph.prototype.refresh = function () {
 	var self = this;
 
-	if (!self.isVisible()) {
-		return;
-	}
-
 	self.view.clearSourceData();
 };
 
@@ -669,6 +668,7 @@ Graph.prototype.show = function (opts) {
 			if (self.opts.title) {
 				self.ui.showHideButton.addClass('open').html(fontAwesome('f077'));
 			}
+			self.drawFromConfig();
 		}
 	});
 };
