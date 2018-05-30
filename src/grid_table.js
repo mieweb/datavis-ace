@@ -2535,7 +2535,7 @@ GridTablePlain.prototype._addRowReorderHandler = function () {
 GridTablePlain.prototype._addRowSelectHandler = function () {
 	var self = this;
 
-	self.ui.tbody.on('change', 'th.wcdv_group_col_spacer > input[type="checkbox"]', function () {
+	self.ui.tbody.on('change', '.wcdv_group_col_spacer > input[type="checkbox"]', function () {
 		if (this.checked) {
 			self.select(+(jQuery(this).attr('data-row-num')));
 		}
