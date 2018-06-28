@@ -2702,6 +2702,10 @@ GridTableGroupDetail.prototype.drawHeader = function (columns, data, typeInfo, o
 			.css(headingThCss)
 			.append(headingSpan);
 
+		if (colIndex > 0) {
+			headingTh.addClass('wcdv_pivot_colval_boundary');
+		}
+
 		self._addSortingToHeader(data, 'vertical', {field: field}, headingTh);
 
 		self.setCss(headingTh, field);
@@ -2894,6 +2898,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				var cell = row.rowData[field];
 
 				var td = jQuery('<td>');
+				if (colIndex > 0) {
+					td.addClass('wcdv_pivot_colval_boundary');
+				}
 				var value = format(fcc, typeInfo.get(field), cell);
 
 				if (value instanceof Element || value instanceof jQuery) {
