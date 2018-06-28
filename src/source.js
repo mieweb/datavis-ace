@@ -457,7 +457,7 @@ var Source = function (spec, params, userTypeInfo, opts) {
 	self.opts = opts || {};
 
 	_.defaults(self.opts, {
-		deferDecoding: false,
+		deferDecoding: true,
 		passThroughParams: false
 	});
 
