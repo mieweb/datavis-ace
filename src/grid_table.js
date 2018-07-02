@@ -2445,33 +2445,48 @@ GridTablePlain.prototype.addDataToCsv = function (data) {
 		self.csv.addCol(fcc.displayText || field);
 	});
 
-	_.each(data.data, function (row) {
-		self.csv.addRow();
-		_.each(columns, function (field, colIndex) {
-			var fcc = self.colConfig.get(field) || {};
-			var cell = row.rowData[field];
-			var value = format(fcc, self.typeInfo.get(field), cell);
+	howMany = data.data.length / 10;
 
-			if (value instanceof Element) {
-				self.csv.addCol(jQuery(value).text());
-			}
-			else if (value instanceof jQuery) {
-				self.csv.addCol(value.text());
-			}
-			else if (fcc.allowHtml && self.typeInfo.get(field).type === 'string' && value.charAt(0) === '<') {
-				self.csv.addCol(jQuery(value).text());
-			}
-			else {
-				self.csv.addCol(value);
-			}
-		});
-	});
+	var f = function (startIndex) {
+		var endIndex = Math.min(data.data.length, startIndex + howMany);
+		for (var i = startIndex; i < endIndex; i += 1) {
+			var row = data.data[i];
 
-	debug.info('GRID TABLE - PLAIN // GENERATE CSV', 'Finished generating CSV file');
-	self.fire('generateCsvProgress', null, 100);
-	self.fire('csvReady');
+			self.csv.addRow();
+			_.each(columns, function (field, colIndex) {
+				var fcc = self.colConfig.get(field) || {};
+				var cell = row.rowData[field];
+				var value = format(fcc, self.typeInfo.get(field), cell);
 
-	return self.csv.toString();
+				if (value instanceof Element) {
+					self.csv.addCol(jQuery(value).text());
+				}
+				else if (value instanceof jQuery) {
+					self.csv.addCol(value.text());
+				}
+				else if (fcc.allowHtml && self.typeInfo.get(field).type === 'string' && value.charAt(0) === '<') {
+					self.csv.addCol(jQuery(value).text());
+				}
+				else {
+					self.csv.addCol(value);
+				}
+			});
+		}
+
+		if (i === data.data.length) {
+			debug.info('GRID TABLE - PLAIN // GENERATE CSV', 'Finished generating CSV file');
+			self.fire('generateCsvProgress', null, 100);
+			self.fire('csvReady');
+		}
+		else {
+			self.fire('generateCsvProgress', null, Math.floor((i / data.data.length) * 100));
+			setTimeout(function () {
+				return f(i);
+			}, 100);
+		}
+	};
+
+	return f(0);
 };
 
 // #_updateSelectionGui {{{2

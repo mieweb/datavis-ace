@@ -355,6 +355,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	self.generateCsv = false;
 	self.csvReady = false;
+	self.exportLock = new Lock();
 
 	self.rootHasFixedHeight = false;
 	self.timing = new Timing();
@@ -747,7 +748,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 	
 	// Create the Export button
 		
-	self.ui.exportBtn = jQuery('<button>', {'type': 'button'})
+	self.ui.exportBtn = jQuery('<button>', {'type': 'button', 'style': 'font-size: 18px'})
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.on('click', function () {
 			self.export();
@@ -1288,10 +1289,16 @@ Grid.prototype.redraw = function () {
 		});
 
 		self.gridTable.on('csvReady', function () {
+			if (self.exportLock.isLocked()) {
+				self.exportLock.unlock();
+			}
 			self._setExportStatus('ready');
 		});
 		self.gridTable.on('generateCsvProgress', function (progress) {
-			debug.info('GRID', 'CSV generation progress: ' + progress);
+			if (progress === 0) {
+				self.ui.exportBtn.children('span.fa').remove();
+				self.ui.exportBtn.append(fontAwesome('fa-spinner', 'fa-spin'));
+			}
 		});
 
 		if (self.features.limit) {
@@ -1769,6 +1776,10 @@ Grid.prototype._normalizeColumns = function (defn) {
 Grid.prototype.export = function () {
 	var self = this;
 
+	if (self.exportLock.isLocked()) {
+		return;
+	}
+
 	if (self.csvReady) {
 		var fileName = (self.tagOpts.title || self.id) + '.csv';
 		var csv = self.gridTable.getCsv();
@@ -1778,6 +1789,7 @@ Grid.prototype.export = function () {
 		presentDownload(blob, fileName);
 	}
 	else {
+		self.exportLock.lock(); // Unlocked in `csvReady` event handler.
 		self.generateCsv = true;
 		self.redraw();
 	}
@@ -1792,13 +1804,13 @@ Grid.prototype._setExportStatus = function (status) {
 	case 'notReady':
 		self.csvReady = false;
 		self.ui.exportBtn.attr('title', 'Generate CSV');
-		self.ui.exportBtn.children().remove();
+		self.ui.exportBtn.children('span.fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-file-o'));
 		break;
 	case 'ready':
 		self.csvReady = true;
 		self.ui.exportBtn.attr('title', 'Download CSV');
-		self.ui.exportBtn.children().remove();
+		self.ui.exportBtn.children('span.fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-download'));
 		break;
 	default:
