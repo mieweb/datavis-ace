@@ -748,47 +748,66 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 	
 	// Create the Export button
 		
-	self.ui.exportBtn = jQuery('<button>', {'type': 'button', 'style': 'font-size: 18px'})
-		.addClass('wcdv_icon_button wcdv_text-primary')
+	self.ui.exportBtn = jQuery('<button>', {
+		'type': 'button',
+		'style': 'font-size: 18px',
+		'class': 'wcdv_icon_button wcdv_text-primary'
+	})
 		.on('click', function () {
 			self.export();
 		})
-		.appendTo(self.ui.titlebar_controls);
+		.appendTo(self.ui.titlebar_controls)
+	;
 
 	self._setExportStatus('notReady');
 	
 	// Create the Refresh button
 	
-	self.ui.refreshBtn = jQuery(fontAwesome('f021'))
-		.addClass('wcdv_text-primary')
+	self.ui.refreshBtn = jQuery('<button>', {
+		'type': 'button',
+		'style': 'font-size: 18px',
+		'class': 'wcdv_icon_button wcdv_text-primary'
+	})
 		.attr('title', 'Refresh')
 		.on('click', function () {
 			self.refresh();
 		})
-		.appendTo(self.ui.titlebar_controls);
+		.append(fontAwesome('f021'))
+		.appendTo(self.ui.titlebar_controls)
+	;
 		
 	// This is the "gear" icon that shows/hides the controls below the toolbar.  The controls are used
 	// to set the group, pivot, aggregate, and filters.  Ideally the user only has to utilize these
 	// once, and then switches between perspectives to get the same effect.
 
-	jQuery(fontAwesome('f013'))
-		.addClass('wcdv_text-primary')
+	jQuery('<button>', {
+		'type': 'button',
+		'style': 'font-size: 18px',
+		'class': 'wcdv_icon_button wcdv_text-primary'
+	})
 		.attr('title', MIE.trans('SHOWHIDEOPTS'))
 		.click(function (evt) {
 			self.toggleControls();
 		})
-		.appendTo(self.ui.titlebar_controls);
+		.append(jQuery(fontAwesome('f013')))
+		.appendTo(self.ui.titlebar_controls)
+	;
 		
 	// Create the down-chevron button that shows/hides everything under the titlebar.
 
-	self.ui.showHideButton = jQuery(fontAwesome('f078'))
-		.addClass('showhide wcdv_text-primary')
+	self.ui.showHideButton = jQuery('<button>', {
+		'type': 'button',
+		'style': 'font-size: 18px',
+		'class': 'wcdv_icon_button wcdv_text-primary showhide'
+	})
 		.attr('title', MIE.trans('SHOWHIDE'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			self.toggle();
 		})
-		.appendTo(self.ui.titlebar_controls);		
+		.append(jQuery(fontAwesome('f078')))
+		.appendTo(self.ui.titlebar_controls)
+	;
 };
 
 // #_addLimitButtons {{{2
