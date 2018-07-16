@@ -502,6 +502,58 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		self.ui.controls.hide();
 	}
 
+	// Filter Control
+
+	self.filterControl = new FilterControl(self, self.colConfig, self.view, self.features, self.timing);
+	self.ui.filterControl.children().remove();
+	self.filterControl.draw(self.ui.filterControl);
+	self.ui.filterControl.show();
+
+	// Group Control
+
+	self.groupControl = new GroupControl(self, self.colConfig, self.view, self.features, self.timing);
+	self.groupControl.draw(self.ui.groupControl);
+
+	self.groupControl.on('fieldAdded', function (fieldAdded, fields) {
+		self.ui.pivotControl.show();
+		self.ui.aggregateControl.show();
+	});
+	self.groupControl.on('fieldRemoved', function (fieldRemoved, fields) {
+		if (fields.length === 0) {
+			self.ui.pivotControl.hide();
+			self.ui.aggregateControl.hide();
+		}
+	});
+	self.groupControl.on('cleared', function () {
+		self.ui.pivotControl.hide();
+		self.ui.aggregateControl.hide();
+	});
+
+	// Pivot Control
+
+	self.pivotControl = new PivotControl(self, self.colConfig, self.view, self.features, self.timing);
+	self.pivotControl.draw(self.ui.pivotControl);
+
+	// Group <-> Pivot (Drag & Drop)
+
+	self.groupControl.getListElement().sortable({
+		connectWith: '#' + self.pivotControl.getListElement().attr('id')
+	})
+		.on('sortupdate', function () {
+			self.groupControl.updateView();
+		});
+	self.pivotControl.getListElement().sortable({
+		connectWith: '#' + self.groupControl.getListElement().attr('id')
+	})
+		.on('sortupdate', function () {
+			self.pivotControl.updateView();
+		});
+
+	// Aggregate Control
+
+	self.aggregateControl = new AggregateControl(self, self.colConfig, self.view, self.features, self.timing);
+	self.aggregateControl.draw(self.ui.aggregateControl);
+
 	// The user has fixed the height of the containing grid, so we will need to have the browser put
 	// in some scrollbars for the overflow.
 
@@ -1180,74 +1232,10 @@ Grid.prototype.redraw = function () {
 
 	debug.info('GRID', 'Redrawing...');
 
-	if (self.tagOpts.title) {
-		self.ui.rowCount.text('');
-	}
-
-	if (self.tagOpts.filterInput) {
-		self.tagOpts.filterInput.store();
-	}
-
-	if (self.filterControl === undefined) {
-		self.filterControl = new FilterControl(self, self.colConfig, self.view, self.features, self.timing);
-		self.ui.filterControl.children().remove();
-		self.filterControl.draw(self.ui.filterControl);
-		self.ui.filterControl.show();
-	}
-
-	if (self.groupControl === undefined) {
-		self.groupControl = new GroupControl(self, self.colConfig, self.view, self.features, self.timing);
-		self.groupControl.on('fieldAdded', function (fieldAdded, fields) {
-			self.ui.pivotControl.show();
-			self.ui.aggregateControl.show();
-		});
-		self.groupControl.on('fieldRemoved', function (fieldRemoved, fields) {
-			if (fields.length === 0) {
-				self.ui.pivotControl.hide();
-				self.ui.aggregateControl.hide();
-			}
-		});
-		self.groupControl.on('cleared', function () {
-			self.ui.pivotControl.hide();
-			self.ui.aggregateControl.hide();
-		});
-		self.ui.groupControl.children().remove();
-		self.groupControl.draw(self.ui.groupControl);
-		self.ui.groupControl.show();
-	}
-
-	if (self.pivotControl === undefined) {
-		self.pivotControl = new PivotControl(self, self.colConfig, self.view, self.features, self.timing);
-		self.ui.pivotControl.children().remove();
-		self.pivotControl.draw(self.ui.pivotControl);
-		self.ui.pivotControl.hide();
-	}
-
-	self.groupControl.getListElement().sortable({
-		connectWith: '#' + self.pivotControl.getListElement().attr('id')
-	})
-		.on('sortupdate', function () {
-			self.groupControl.updateView();
-		});
-
-	self.pivotControl.getListElement().sortable({
-		connectWith: '#' + self.groupControl.getListElement().attr('id')
-	})
-		.on('sortupdate', function () {
-			self.pivotControl.updateView();
-		});
-
-	if (self.aggregateControl === undefined) {
-		self.aggregateControl = new AggregateControl(self, self.colConfig, self.view, self.features, self.timing);
-		self.ui.aggregateControl.children().remove();
-		self.aggregateControl.draw(self.ui.aggregateControl);
-		self.ui.aggregateControl.hide();
-	}
-
 	var makeGridTable = function () {
 		var gridTableCtor
 			, gridTableOpts
-			, ops = self.view.getLastOps()
+			, ops = self.view.getLastOps();
 
 		if (ops) {
 			debug.info('GRID', 'Creating grid table with view opertions: %O', ops);
@@ -1386,17 +1374,17 @@ Grid.prototype._updateRowCount = function (info, ops) {
 
 	if (info.isPlain) {
 		if (info.totalRows) {
-			self.ui.rowCount.text(info.numRows + ' / ' + info.totalRows + ' row' + (info.numRows > 1 ? 's' : '') + ', filtered');
+			self.ui.rowCount.text(info.numRows + ' / ' + info.totalRows + ' row' + (info.numRows === 1 ? '' : 's') + ', filtered');
 		}
 		else {
-			self.ui.rowCount.text(info.numRows + ' row' + (info.numRows > 1 ? 's' : ''));
+			self.ui.rowCount.text(info.numRows + ' row' + (info.numRows === 1 ? '' : 's'));
 		}
 	}
 	else if (info.isGroup) {
-		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups > 1 ? 's' : ''));
+		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
 	}
 	else if (info.isPivot) {
-		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups > 1 ? 's' : ''));
+		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
 	}
 
 	if (self.ui.clearFilter) {
@@ -1614,82 +1602,6 @@ Grid.prototype._hideSpinner = function () {
 	if (self.tagOpts.title) {
 		self.ui.spinner.hide();
 	}
-};
-
-// #enableGroup {{{2
-
-Grid.prototype.enableGroup = function () {
-	var self = this;
-
-	if (self.features.group) {
-		return;
-	}
-
-	self.toggleGroup();
-};
-
-// #disableGroup {{{2
-
-Grid.prototype.disableGroup = function () {
-	var self = this;
-
-	if (!self.features.group) {
-		return;
-	}
-
-	self.toggleGroup();
-};
-
-// #toggleGroup {{{2
-
-Grid.prototype.toggleGroup = function () {
-	var self = this;
-
-	self.features.group = !self.features.group;
-
-	if (!self.features.group) {
-		self.view.clearGroup();
-	}
-
-	self.redraw();
-};
-
-// #enablePivot {{{2
-
-Grid.prototype.enablePivot = function () {
-	var self = this;
-
-	if (self.features.pivot) {
-		return;
-	}
-
-	self.togglePivot();
-};
-
-// #disablePivot {{{2
-
-Grid.prototype.disablePivot = function () {
-	var self = this;
-
-	if (!self.features.pivot) {
-		return;
-	}
-
-	self.togglePivot();
-};
-
-// #togglePivot {{{2
-
-Grid.prototype.togglePivot = function () {
-	var self = this;
-
-	self.features.pivot = !self.features.pivot;
-
-	if (!self.features.group) {
-		self.view.clearGroup();
-	}
-
-	self.redraw();
 };
 
 // #_normalize {{{2
