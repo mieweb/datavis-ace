@@ -1390,17 +1390,17 @@ Grid.prototype._updateRowCount = function (info, ops) {
 
 	if (info.isPlain) {
 		if (info.totalRows) {
-			self.ui.rowCount.text(info.numRows + ' / ' + info.totalRows + ' row(s), filtered');
+			self.ui.rowCount.text(info.numRows + ' / ' + info.totalRows + ' row' + (info.numRows > 1 ? 's' : '') + ', filtered');
 		}
 		else {
-			self.ui.rowCount.text(info.numRows + ' row(s)');
+			self.ui.rowCount.text(info.numRows + ' row' + (info.numRows > 1 ? 's' : ''));
 		}
 	}
 	else if (info.isGroup) {
-		self.ui.rowCount.text(info.numGroups + ' group(s)');
+		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups > 1 ? 's' : ''));
 	}
 	else if (info.isPivot) {
-		self.ui.rowCount.text('pivoted');
+		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups > 1 ? 's' : ''));
 	}
 
 	if (self.ui.clearFilter) {

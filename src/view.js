@@ -2608,10 +2608,11 @@ View.prototype.getData = function (cont) {
 							}
 						}
 						else if (self.data.isGroup) {
-							workEndObj.numGroups = self.data.data.length;
+							workEndObj.numGroups = self.data.rowVals.length;
 						}
 						else if (self.data.isPivot) {
-							workEndObj.numPivots = 0;
+							workEndObj.numGroups = self.data.rowVals.length;
+							workEndObj.numPivots = self.data.colVals.length;
 						}
 
 						if (self.prefs != null) {
