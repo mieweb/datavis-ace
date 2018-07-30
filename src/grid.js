@@ -1393,8 +1393,9 @@ Grid.prototype.refresh = function () {
  */
 
 Grid.prototype._updateRowCount = function (info, ops) {
-	var self = this
-		, doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
+	var self = this;
+	var doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
+	var text = [];
 
 	debug.info('GRID', 'Updating row count');
 
@@ -1406,20 +1407,20 @@ Grid.prototype._updateRowCount = function (info, ops) {
 
 	self._hideSpinner();
 
-	if (info.isPlain) {
-		if (info.totalRows) {
-			self.ui.rowCount.text(info.numRows + ' / ' + info.totalRows + ' row' + (info.numRows === 1 ? '' : 's') + ', filtered');
+	if (info.numRows != null) {
+		if (info.totalRows != null) {
+			text.push(info.numRows + ' / ' + info.totalRows + ' row' + (info.numRows === 1 ? '' : 's') + ', filtered');
 		}
 		else {
-			self.ui.rowCount.text(info.numRows + ' row' + (info.numRows === 1 ? '' : 's'));
+			text.push(info.numRows + ' row' + (info.numRows === 1 ? '' : 's'));
 		}
 	}
-	else if (info.isGroup) {
-		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
+
+	if (info.isGroup || info.isPivot) {
+		text.push(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
 	}
-	else if (info.isPivot) {
-		self.ui.rowCount.text(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
-	}
+
+	self.ui.rowCount.text(text.join(', '));
 
 	if (self.ui.clearFilter) {
 		if (info.totalRows) {

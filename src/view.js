@@ -332,15 +332,15 @@ View.prototype.getRowCount = function () {
 		return self.data.data.length;
 	}
 	else if (self.data.isGroup) {
-		return _.reduce(self.data, function (prev1, groupedData, rowValNum) {
-			if (self.data.isPivot) {
-				return prev1 + _.reduce(groupedData, function (prev2, pivottedData, colValNum) {
-					return prev2 + pivottedData.length;
-				}, 0);
-			}
-			else {
-				return prev1 + groupedData.length;
-			}
+		return _.reduce(self.data.data, function (prev1, groupedData, rowValNum) {
+			return prev1 + groupedData.length;
+		}, 0);
+	}
+	else if (self.data.isPivot) {
+		return _.reduce(self.data.data, function (prev1, groupedData, rowValNum) {
+			return prev1 + _.reduce(groupedData, function (prev2, pivottedData, colValNum) {
+				return prev2 + pivottedData.length;
+			}, 0);
 		}, 0);
 	}
 	else {
@@ -2601,16 +2601,16 @@ View.prototype.getData = function (cont) {
 							isPivot: self.data.isPivot
 						};
 
-						if (self.data.isPlain) {
-							workEndObj.numRows = self.getRowCount();
-							if (self.isFiltered()) {
-								workEndObj.totalRows = self.getTotalRowCount();
-							}
+						workEndObj.numRows = self.getRowCount();
+						if (self.isFiltered()) {
+							workEndObj.totalRows = self.getTotalRowCount();
 						}
-						else if (self.data.isGroup) {
+
+						if (self.data.isGroup) {
 							workEndObj.numGroups = self.data.rowVals.length;
 						}
-						else if (self.data.isPivot) {
+
+						if (self.data.isPivot) {
 							workEndObj.numGroups = self.data.rowVals.length;
 							workEndObj.numPivots = self.data.colVals.length;
 						}
