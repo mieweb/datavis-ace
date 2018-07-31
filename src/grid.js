@@ -1076,6 +1076,11 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		}
 	};
 
+	var removePerspectiveFromDropdown = function (name) {
+		options[name].remove();
+		delete options[name];
+	};
+
 	var backBtn = jQuery('<button>', {'type': 'button'})
 		.append(fontAwesome('fa-chevron-circle-left'))
 		.attr('title', 'Back')
@@ -1154,9 +1159,9 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				var newName = prompt('Rename view "' + oldName + '" to what?');
 
 				if (newName) {
-					dropdown.children().filter(function (i, elt) {
-						return elt.value === oldName;
-					}).attr('value', newName).text(newName);
+					//dropdown.children().filter(function (i, elt) {
+					//	return elt.value === oldName;
+					//}).attr('value', newName).text(newName);
 					self.prefs.renamePerspective(oldName, newName);
 				}
 			}
@@ -1174,13 +1179,12 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				alert('Cannot delete main perspective!');
 			}
 			else {
-				var toDelete = dropdown.val();
-				self.prefs.deletePerspective(toDelete);
-				dropdown.children().filter(function (i, elt) {
-					return elt.value === toDelete;
-				}).remove();
-				dropdown.val(self.prefs.getCurrentPerspective());
-				showHideBtns();
+				self.prefs.deletePerspective(dropdown.val());
+				//dropdown.children().filter(function (i, elt) {
+				//	return elt.value === toDelete;
+				//}).remove();
+				//dropdown.val(self.prefs.getCurrentPerspective());
+				//showHideBtns();
 			}
 		})
 		.appendTo(div)
@@ -1194,11 +1198,11 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	var resetBtn = jQuery(fontAwesome('F0E2', 'wcdv_button wcdv_text-primary', 'Reset'))
 		.on('click', function () {
 			self.prefs.reset();
-			dropdown.children().filter(function (i, elt) {
-				return elt.value !== self.prefs.getCurrentPerspective() && elt.value !== 'NEW';
-			}).remove();
-			dropdown.val(self.prefs.getCurrentPerspective());
-			showHideBtns();
+			//dropdown.children().filter(function (i, elt) {
+			//	return elt.value !== self.prefs.getCurrentPerspective() && elt.value !== 'NEW';
+			//}).remove();
+			//dropdown.val(self.prefs.getCurrentPerspective());
+			//showHideBtns();
 		})
 		.appendTo(div)
 	;
@@ -1809,6 +1813,8 @@ Grid.prototype._setExportStatus = function (status) {
 Grid.prototype.setColConfig = function (colConfig, caller) {
 	var self = this;
 
+	debug.info('GRID', 'Setting column config (caller = "%s"): %O', caller, colConfig);
+
 	self.colConfig = colConfig.clone();
 
 	if (caller !== 'colConfigWin') {
@@ -1816,10 +1822,10 @@ Grid.prototype.setColConfig = function (colConfig, caller) {
 	}
 
 	self.view.setColConfig(self.colConfig);
-	self.redraw();
 
 	if (caller !== 'prefs') {
 		self.prefs.save();
+		self.redraw();
 	}
 };
 

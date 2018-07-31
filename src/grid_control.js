@@ -193,10 +193,6 @@ var FilterControlField = makeSubclass(GridControlField);
 FilterControlField.prototype.draw = function () {
 	var self = this;
 
-	console.log('################################################################################');
-	console.log(self.colConfig);
-	console.log('################################################################################');
-
 	self.super.draw();
 	self.ui.filterContainer = jQuery('<div>')
 		.addClass('wcdv_filter_control_filter_container')

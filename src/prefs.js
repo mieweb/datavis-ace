@@ -1,3 +1,27 @@
+/**
+ * @file
+ * This file contains the implementation of the prefs system.
+ *
+ * ### Terminology
+ *
+ * - **Perspective**:
+ *
+ * - **Prefs Module**:
+ *
+ * - **Prefs Backend**:
+ *
+ * - **Prime**: Prepare the prefs system for interactive use.  See {@link Prefs#prime}.
+ *
+ * - **Reset**:
+ *
+ * ### Responsibilities
+ *
+ * - Take configuration from bound components and store it in a backend.
+ * - Retrieve configuration from a backend and load it into bound components.
+ * - Allow management of perspectives, e.g. create new, rename, and delete.
+ * - Facilitate switching between perspectives, including via history stack.
+ */
+
 // Prefs {{{1
 
 // Constructor {{{2
@@ -27,6 +51,8 @@
  *
  * @property {string} id
  * Unique identifier for this Prefs instance; used as the primary key by the backend.
+ *
+ * @property {Perspective[]} bardo
  *
  * @property {object} moduleBindings
  * How perspectives know how to load/save their configurations to/from real things.  Keys are module
@@ -62,6 +88,7 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 
 	self.id = id;
 	self.modules = {};
+	self.bardo = {};
 
 	opts = deepDefaults(opts, {
 		saveCurrent: true,
@@ -121,7 +148,7 @@ mixinDebugging(Prefs, function () {
 // #init {{{2
 
 /**
- * Initialize the prefs by loading the "current" perspective from the backend.
+ * Initialize internal data structures.
  */
 
 Prefs.prototype.init = function () {
@@ -131,6 +158,8 @@ Prefs.prototype.init = function () {
 		return;
 	}
 
+	self.debug('Initializing prefs system');
+
 	self.isInitialized = true;
 	self.perspectives = {};
 	self.availablePerspectives = [];
@@ -139,6 +168,23 @@ Prefs.prototype.init = function () {
 };
 
 // #prime {{{2
+
+/**
+ * Prime the prefs system for first use.  This involves:
+ *
+ *   1. Retrieving the list of available perspectives from the backend.
+ *   2. Determine the current perspective name, possibly from the backend.
+ *   3. Load the current perspective from the backend.
+ *   4. Switch to the current perspective (which loads it into bound modules).
+ *
+ * The prefs system is now ready for interactive use.
+ *
+ * TODO This should lock the prefs system so it can't be interacted with.
+ *
+ * @param {function} cont
+ * What to do after the prefs system is primed.  Receives `false` if the prefs system was already
+ * primed before this call.  Receives `true` if this was the first time the prefs system was primed.
+ */
 
 Prefs.prototype.prime = function (cont) {
 	var self = this;
@@ -153,10 +199,10 @@ Prefs.prototype.prime = function (cont) {
 
 	self.init();
 
-	self.debug('PRIMING!');
+	self.debug('Priming prefs system');
 
 	return self.backend.getPerspectives(function (names) {
-		self.availablePerspectives = names;
+		self.availablePerspectives = _.union(self.availablePerspectives, names);
 
 		// When there's already a current perspective (as would be the case when prefs have been
 		// pre-configured), we don't have to do anything else.
@@ -375,6 +421,8 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	}
 
 	var addPerspective = function () {
+		var p;
+
 		self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
 
 		if (self.availablePerspectives.indexOf(name) < 0) {
@@ -716,7 +764,7 @@ Prefs.prototype.save = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	if (self.currentPerspective.isTemporary()) {
+	if (self.currentPerspective.opts.isTemporary) {
 		return typeof cont === 'function' ? cont(false) : false;
 	}
 
@@ -727,6 +775,19 @@ Prefs.prototype.save = function (cont) {
 
 // #reset {{{2
 
+/**
+ * Reset the prefs system.  This involves:
+ *
+ *   1. Reset the backend.
+ *   2. Flush internal data structures.
+ *   3. Prime the prefs system.
+ *
+ * TODO This should lock the prefs system so it can't be interacted with.
+ *
+ * @param {function} cont
+ * What to do when the prefs system is ready for use again.
+ */
+
 Prefs.prototype.reset = function (cont) {
 	var self = this;
 
@@ -734,17 +795,46 @@ Prefs.prototype.reset = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	// Save some info for all perspectives that are both temporary and essential, so we can restore
+	// them after everything else has been cleared.  The main use case for this is for pre-configured
+	// perspectives to survive when destroying stuff the user created.
+
+	_.each(self.perspectives, function (p) {
+		if (p.opts.isTemporary && p.opts.isEssential) {
+			self.debug('Saving temporary essential perspective: %s', p.name);
+			self.bardo[p.name] = {
+				name: p.name,
+				config: p.config,
+				opts: p.opts
+			};
+		}
+	});
+
+	var current = self.getCurrentPerspective();
+
 	self.backend.reset(function () {
 		self.isInitialized = false;
 		self.init();
+
+		_.each(self.modules, function (module, moduleName) {
+			if (typeof module.reset === 'function') {
+				self.debug('Resetting module: moduleName = %s', moduleName);
+				module.reset();
+			}
+		});
+
+		self.debug('Restoring temporary essential perspectives: %s', _.keys(self.bardo).join(', '));
+
+		_.each(self.bardo, function (p) {
+			self.addPerspective(p.name, p.config, p.opts, null, { switch: false });
+		});
+
+		if (self.perspectives[current]) {
+			self.setCurrentPerspective(current);
+		}
+
 		self.isPrimed = false;
 		self.prime(function () {
-			_.each(self.modules, function (module, moduleName) {
-				if (typeof module.reset === 'function') {
-					self.debug('Resetting module: moduleName = %s', moduleName);
-					module.reset();
-				}
-			});
 			return typeof cont === 'function' ? cont(true) : true;
 		});
 	});
@@ -1592,7 +1682,7 @@ PrefsModuleGraph.prototype.reset = function () {
  * If true, then the perspective will not be saved automatically, but it can be made permanent.
  *
  * @property {boolean} opts.isEssential
- * If true, then the perspective cannot be renamed or deleted.
+ * If true, then the perspective cannot be renamed or deleted.  A reset will not remove it.
  *
  * @property {boolean} opts.isConstant
  * If true, then the perspective will not be saved if it has been changed.
@@ -1607,8 +1697,8 @@ var Perspective = makeSubclass(Object, function (name, config, modules, opts) {
 	self.config = config;
 	self.modules = modules;
 	self.opts = deepDefaults(opts, {
-		isTemporary: false,
 		isEssential: false,
+		isTemporary: false,
 		isConstant: false
 	});
 });
@@ -1697,22 +1787,6 @@ Perspective.prototype.save = function (cont) {
 	});
 
 	return typeof cont === 'function' ? cont(self.config) : self.config;
-};
-
-// #isTemporary {{{2
-
-Perspective.prototype.isTemporary = function () {
-	var self = this;
-
-	return self.opts.isTemporary;
-};
-
-// #makePermanent {{{2
-
-Perspective.prototype.makePermanent = function () {
-	var self = this;
-
-	self.opts.isTemporary = false;
 };
 
 // Registries {{{1

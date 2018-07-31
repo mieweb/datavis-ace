@@ -21,3 +21,7 @@ Type Decoding
 Type Guessing
 
 :   The process of iterating through all rows of data for a specific field which is declared as a string, examining each value to determine if the field should be considered as a different type, e.g. a date, number, or currency.  This is necessary to handle things like CSV files (which have no way to identify field types internally), or other origins that don't adequately specify types.  Type guessing can be a performance drain, as a successful guess requires checking the value of the field in every row, to make sure that the guessed type is consistent across all rows.
+
+Preferences System
+
+:   The system which stores interactive configuration of different DataVis components.  The preferences system manages a set of named configurations, each of which is called a "Perspectives."
