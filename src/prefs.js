@@ -163,6 +163,7 @@ Prefs.prototype.init = function () {
 	self.isInitialized = true;
 	self.perspectives = {};
 	self.availablePerspectives = [];
+	self.currentPerspective = null;
 	self.history = [];
 	self.historyIndex = 0;
 };
@@ -193,8 +194,15 @@ Prefs.prototype.prime = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	var finish = function (status) {
+		return function () {
+			self.isPrimed = true;
+			return typeof cont === 'function' ? cont(status) : status;
+		};
+	};
+
 	if (self.isPrimed) {
-		return typeof cont === 'function' ? cont(false) : false;
+		return finish(false)();
 	}
 
 	self.init();
@@ -208,28 +216,34 @@ Prefs.prototype.prime = function (cont) {
 		// pre-configured), we don't have to do anything else.
 
 		if (self.currentPerspective != null) {
-			self.isPrimed = true;
-			return typeof cont === 'function' ? cont(true) : true;
+			return finish(true)();
 		}
+		else if (self.availablePerspectives.length === 0) {
 
-		// Otherwise, we need to figure out what the last current perspective was and load it.
+			// There are no perspectives available, so we need to make a basic one.
 
-		return self.backend.getCurrent(function (currentName) {
-			if (currentName == null || self.availablePerspectives.indexOf(currentName) < 0) {
-				currentName = Prefs.MAIN_PERSPECTIVE_NAME;
-			}
+			return self.addPerspective(Prefs.MAIN_PERSPECTIVE_NAME, {
+				grid: {},
+				view: {}
+			}, null, finish(true));
+		}
+		else {
+			// Otherwise, we need to figure out what the last current perspective was and load it.
 
-			return self.backend.load(currentName, function (currentConfig) {
-				if (currentConfig == null) {
-					currentConfig = {};
+			return self.backend.getCurrent(function (currentName) {
+				if (currentName == null) {
+					return self.addPerspective(Prefs.MAIN_PERSPECTIVE_NAME, {
+						grid: {},
+						view: {}
+					}, null, finish(true));
 				}
-
-				return self.addPerspective(currentName, currentConfig, null, function () {
-					self.isPrimed = true;
-					return typeof cont === 'function' ? cont(true) : true;
-				});
+				else {
+					return self.backend.load(currentName, function (currentConfig) {
+						return self.addPerspective(currentName, currentConfig, null, finish(true));
+					});
+				}
 			});
-		});
+		}
 	});
 };
 
@@ -349,6 +363,14 @@ Prefs.prototype.getPerspectives = function (cont) {
 	return cont(self.availablePerspectives);
 };
 
+// #getPerspective {{{2
+
+Prefs.prototype.getPerspective = function (name) {
+	var self = this;
+
+	return self.perspectives[name];
+};
+
 // #addPerspective {{{2
 
 /**
@@ -448,6 +470,9 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 			}
 			return addPerspective();
 		});
+	}
+	else if (config == null) {
+		config = {};
 	}
 
 	return addPerspective();
@@ -1127,10 +1152,6 @@ PrefsBackendLocalStorage.prototype.getPerspectives = function (cont) {
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	var perspectives = _.keys(getPropDef({}, storedPrefData, self.id, 'perspectives'));
 
-	if (perspectives.length === 0) {
-		perspectives = [Prefs.MAIN_PERSPECTIVE_NAME];
-	}
-
 	self.debug('Found %d perspectives: %s', perspectives.length, JSON.stringify(perspectives));
 
 	return cont(perspectives);
@@ -1146,7 +1167,7 @@ PrefsBackendLocalStorage.prototype.getCurrent = function (cont) {
 	}
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
-	var current = getPropDef(Prefs.MAIN_PERSPECTIVE_NAME, storedPrefData, self.id, 'current')
+	var current = getProp(storedPrefData, self.id, 'current')
 
 	self.debug('Current perspective is "%s"', current);
 
@@ -1190,11 +1211,6 @@ PrefsBackendLocalStorage.prototype.rename = function (oldName, newName, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	if (oldName === Prefs.MAIN_PERSPECTIVE_NAME) {
-		log.error('Not allowed to rename "Main" perspective');
-		return typeof cont === 'function' ? cont(false) : false;
-	}
-
 	self.debug('Renaming perspective: "%s" -> "%s"', oldName, newName);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
@@ -1215,11 +1231,6 @@ PrefsBackendLocalStorage.prototype.delete = function (name, cont) {
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
-	}
-
-	if (name === Prefs.MAIN_PERSPECTIVE_NAME) {
-		log.error('Not allowed to delete "Main" perspective');
-		return typeof cont === 'function' ? cont(false) : false;
 	}
 
 	self.debug('Deleting perspective: "%s"', name);
@@ -1322,10 +1333,6 @@ PrefsBackendTemporary.prototype.getPerspectives = function (cont) {
 
 	var perspectives = _.keys(self.storage.perspectives);
 
-	if (perspectives.length === 0) {
-		perspectives = [Prefs.MAIN_PERSPECTIVE_NAME];
-	}
-
 	self.debug('Found %d perspectives: %s', perspectives.length, JSON.stringify(perspectives));
 
 	return cont(perspectives);
@@ -1340,7 +1347,7 @@ PrefsBackendTemporary.prototype.getCurrent = function (cont) {
 		throw new Error('Call Error: `cont` must be a function');
 	}
 
-	var current = self.storage.current || Prefs.MAIN_PERSPECTIVE_NAME;
+	var current = self.storage.current;
 
 	self.debug('Current perspective is "%s"', current);
 
@@ -1381,11 +1388,6 @@ PrefsBackendTemporary.prototype.rename = function (oldName, newName, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	if (oldName === Prefs.MAIN_PERSPECTIVE_NAME) {
-		log.error('Not allowed to rename "Main" perspective');
-		return typeof cont === 'function' ? cont(false) : false;
-	}
-
 	self.debug('Renaming perspective: "%s" -> "%s"', oldName, newName);
 
 	self.storage.perspectives[newName] = self.storage.perspectives[oldName];
@@ -1404,11 +1406,6 @@ PrefsBackendTemporary.prototype.delete = function (name, cont) {
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
-	}
-
-	if (name === Prefs.MAIN_PERSPECTIVE_NAME) {
-		log.error('Not allowed to delete "Main" perspective');
-		return typeof cont === 'function' ? cont(false) : false;
 	}
 
 	self.debug('Deleting perspective: "%s"', name);
@@ -1577,7 +1574,9 @@ PrefsModuleView.prototype.save = function () {
 PrefsModuleView.prototype.reset = function () {
 	var self = this;
 
-	self.target.reset();
+	self.target.reset({
+		updateData: false
+	});
 };
 
 // PrefsModuleGrid {{{1

@@ -1066,13 +1066,24 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// when the currently selected perspective isn't "Main Perspective".
 
 	var showHideBtns = function () {
-		if (dropdown.val() === Prefs.MAIN_PERSPECTIVE_NAME) {
-			deleteBtn.hide();
+		var p = self.prefs.getPerspective(dropdown.val());
+
+		if (p == null) {
+			throw new Error('No such perspective: ' + dropdown.val());
+		}
+
+		if (p.opts.isTemporary) {
 			renameBtn.hide();
 		}
 		else {
-			deleteBtn.show();
 			renameBtn.show();
+		}
+
+		if (p.opts.isEssential) {
+			deleteBtn.hide();
+		}
+		else {
+			deleteBtn.show();
 		}
 	};
 
@@ -1126,6 +1137,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 					}
 					else {
 						self.prefs.addPerspective(name);
+						self.prefs.save();
 					}
 				}
 				else {
@@ -1134,8 +1146,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				return;
 			}
 
-			showHideBtns();
 			self.prefs.setCurrentPerspective(dropdown.val());
+			showHideBtns();
 		})
 		.appendTo(div)
 	;
