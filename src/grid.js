@@ -1091,6 +1091,20 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		delete options[name];
 	};
 
+	// Clicking this button will reset all preferences back to the initial set (i.e. just "Main
+	// Perspective" and no changes in the view from its default).  Perhaps useful when you have too
+	// many different perspectives set, but I feel better having it as a safety in case your prefs
+	// somehow get really messed up and don't work at all anymore.  This button is always shown.
+
+	var resetBtn = jQuery('<button>', {'type': 'button', 'title': 'Reset'})
+		.addClass('wcdv_icon_button wcdv_text-primary')
+		.append(fontAwesome('fa-undo'))
+		.on('click', function () {
+			self.prefs.reset();
+		})
+		.appendTo(div)
+	;
+
 	var backBtn = jQuery('<button>', {'type': 'button'})
 		.append(fontAwesome('fa-chevron-circle-left'))
 		.attr('title', 'Back')
@@ -1195,7 +1209,9 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// XXX: What if the user types in "Main Perspective" ?
 	// XXX: What if the user types in "NEW" ?
 
-	var renameBtn = jQuery(fontAwesome('F040', 'wcdv_button wcdv_text-primary', 'Rename'))
+	var renameBtn = jQuery('<button>', {'type': 'button', 'title': 'Rename'})
+		.addClass('wcdv_icon_button wcdv_text-primary')
+		.append(fontAwesome('fa-pencil'))
 		.on('click', function () {
 			var oldName = dropdown.val();
 
@@ -1206,9 +1222,6 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				var newName = prompt('Rename view "' + oldName + '" to what?');
 
 				if (newName) {
-					//dropdown.children().filter(function (i, elt) {
-					//	return elt.value === oldName;
-					//}).attr('value', newName).text(newName);
 					self.prefs.renamePerspective(oldName, newName);
 				}
 			}
@@ -1220,36 +1233,16 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 	// Perspective".  It is only shown when the currently selected perspective is not "Main
 	// Perspective" as it cannot be deleted.
 
-	var deleteBtn = jQuery(fontAwesome('F1F8', 'wcdv_button wcdv_text-primary', 'Delete'))
+	var deleteBtn = jQuery('<button>', {'type': 'button', 'title': 'Delete'})
+		.addClass('wcdv_icon_button wcdv_text-primary')
+		.append(fontAwesome('fa-trash'))
 		.on('click', function () {
 			if (dropdown.val() === Prefs.MAIN_PERSPECTIVE_NAME) {
 				alert('Cannot delete main perspective!');
 			}
 			else {
 				self.prefs.deletePerspective(dropdown.val());
-				//dropdown.children().filter(function (i, elt) {
-				//	return elt.value === toDelete;
-				//}).remove();
-				//dropdown.val(self.prefs.getCurrentPerspective());
-				//showHideBtns();
 			}
-		})
-		.appendTo(div)
-	;
-
-	// Clicking this button will reset all preferences back to the initial set (i.e. just "Main
-	// Perspective" and no changes in the view from its default).  Perhaps useful when you have too
-	// many different perspectives set, but I feel better having it as a safety in case your prefs
-	// somehow get really messed up and don't work at all anymore.  This button is always shown.
-
-	var resetBtn = jQuery(fontAwesome('F0E2', 'wcdv_button wcdv_text-primary', 'Reset'))
-		.on('click', function () {
-			self.prefs.reset();
-			//dropdown.children().filter(function (i, elt) {
-			//	return elt.value !== self.prefs.getCurrentPerspective() && elt.value !== 'NEW';
-			//}).remove();
-			//dropdown.val(self.prefs.getCurrentPerspective());
-			//showHideBtns();
 		})
 		.appendTo(div)
 	;
