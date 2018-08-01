@@ -238,8 +238,6 @@ var GridTable = (function () {
 
 		self._validateFeatures();
 
-		self.colConfig = self.grid.colConfig;
-
 		_.defaults(self.opts, {
 			drawInternalBorders: true,
 			zebraStriping: true,
@@ -900,6 +898,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	var self = this;
 
 	debug.info('GRID TABLE // DRAW', 'Beginning draw operation; opts = %O', opts);
+
+	self.colConfig = self.grid.colConfig;
 
 	opts = opts || self.drawOpts;
 

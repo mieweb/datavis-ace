@@ -1479,10 +1479,14 @@ PrefsModuleView.prototype.load = function (config) {
 	}
 
 	if (config.sort == null) {
-		self.target.clearSort(true);
+		self.target.clearSort({
+			updateData: false
+		});
 	}
 	else {
-		self.target.setSort(config.sort, null, true);
+		self.target.setSort(config.sort, {
+			updateData: false
+		});
 	}
 
 	if (config.filter == null) {

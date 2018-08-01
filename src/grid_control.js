@@ -296,7 +296,7 @@ AggregateControlField.prototype.draw = function () {
 	}
 
 	_.each(determineColumns(self.control.colConfig, null, self.control.typeInfo), function (fieldName) {
-		var text = getProp(self.control.colConfig, fieldName, 'displayText') || fieldName;
+		var text = getProp(self.control.colConfig.get(fieldName), 'displayText') || fieldName;
 		_.each(self.fieldDropdowns, function (dropdown, i) {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(dropdown);
 		});
@@ -435,7 +435,7 @@ AggregateControlField.prototype.getInfo = function () {
  * Creates a new GridControl instance.
  *
  * @param {Grid} grid
- * @param {object} colConfig
+ * @param {OrdMap.<Grid~ColConfig>} colConfig
  * @param {View} view
  * @param {object} features
  * @param {Timing} timing
@@ -477,6 +477,14 @@ AggregateControlField.prototype.getInfo = function () {
 
 var GridControl = makeSubclass(Object, function (grid, colConfig, view, features, timing) {
 	var self = this;
+
+	if (!(grid instanceof Grid)) {
+		throw new Error('Call Error: `grid` must be an instance of MIE.WC_DataVis.Grid');
+	}
+
+	if (!(colConfig instanceof OrdMap)) {
+		throw new Error('Call Error: `colConfig` must be an instance of MIE.OrdMap');
+	}
 
 	self.grid = grid;
 	self.colConfig = colConfig;
@@ -705,7 +713,7 @@ GridControl.prototype.addViewConfigChangeHandler = function (kind) {
 							 'View set ' + kind + ' fields to: ' + JSON.stringify(fields));
 
 		_.each(fields, function (field) {
-			self.addField(field, getProp(self.colConfig, field, 'displayText'), { updateView: false });
+			self.addField(field, getProp(self.colConfig.get(field), 'displayText'), { updateView: false });
 		});
 	};
 
@@ -807,7 +815,7 @@ GroupControl.prototype.draw = function (parent) {
 
 			if (ui.draggable.attr('data-wcdv-draggable-origin') === 'GRID_TABLE_HEADER') {
 				var field = ui.draggable.attr('data-wcdv-field');
-				self.addField(field, getProp(self.colConfig, field, 'displayText'));
+				self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
 			}
 		}
 	})
@@ -837,7 +845,7 @@ GroupControl.prototype.draw = function (parent) {
 
 	self.view.on('getTypeInfo', function (typeInfo) {
 		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
-			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
+			var text = getProp(self.colConfig.get(fieldName), 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
 	}, { limit: 1 });
@@ -930,7 +938,7 @@ PivotControl.prototype.draw = function (parent) {
 
 			if (ui.draggable.attr('data-wcdv-draggable-origin') === 'GRID_TABLE_HEADER') {
 				var field = ui.draggable.attr('data-wcdv-field');
-				self.addField(field, getProp(self.colConfig, field, 'displayText'));
+				self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
 			}
 		}
 	})
@@ -961,7 +969,7 @@ PivotControl.prototype.draw = function (parent) {
 
 	self.view.on('getTypeInfo', function (typeInfo) {
 		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
-			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
+			var text = getProp(self.colConfig.get(fieldName), 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
 	}, { limit: 1 });
@@ -1242,7 +1250,7 @@ AggregateControl.prototype.updateFieldDropdowns = function () {
 	// Add <OPTION> elements for all the fields.
 
 	_.each(determineColumns(self.colConfig, null, self.typeInfo), function (fieldName) {
-		var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
+		var text = getProp(self.colConfig.get(fieldName), 'displayText') || fieldName;
 		_.each(self.ui.fields, function (f) {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(f.dropdown);
 		});
@@ -1346,7 +1354,7 @@ FilterControl.prototype.draw = function (parent) {
 			//ui.draggable.draggable('option', 'refreshPositions', false);
 			var field = ui.draggable.attr('data-wcdv-field');
 
-			self.addField(field, getProp(self.colConfig, field, 'displayText'));
+			self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
 		}
 	})
 		._addEventDebugging('drop', 'FILTER');
@@ -1373,7 +1381,7 @@ FilterControl.prototype.draw = function (parent) {
 
 	self.view.on('getTypeInfo', function (typeInfo) {
 		_.each(determineColumns(self.colConfig, null, typeInfo), function (fieldName) {
-			var text = getProp(self.colConfig, fieldName, 'displayText') || fieldName;
+			var text = getProp(self.colConfig.get(fieldName), 'displayText') || fieldName;
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(self.ui.dropdown);
 		});
 	}, { limit: 1 });
@@ -1388,7 +1396,7 @@ FilterControl.prototype.draw = function (parent) {
 FilterControl.prototype.addField = function (field, displayText, opts) {
 	var self = this;
 
-	self.super.addField(field, displayText || getProp(self.colConfig, field, 'displayText'), opts);	
+	self.super.addField(field, displayText || getProp(self.colConfig.get(field), 'displayText'), opts);	
 };
 
 // #removeField {{{2
@@ -1424,7 +1432,7 @@ FilterControl.prototype.addViewConfigChangeHandler = function () {
 
 		self.clear({ updateView: false });
 		_.each(spec, function (fieldSpec, field) {
-			self.addField(field, getProp(self.colConfig, field, 'displayText'), { updateView: false });
+			self.addField(field, getProp(self.colConfig.get(field), 'displayText'), { updateView: false });
 			self.gfs.set(field, fieldSpec);
 		});
 	};
