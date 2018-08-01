@@ -1870,9 +1870,10 @@ Grid.prototype.setColConfig = function (colConfig, caller) {
 
 	self.view.setColConfig(self.colConfig);
 
+	self.redraw();
+
 	if (caller !== 'prefs') {
 		self.prefs.save();
-		self.redraw();
 	}
 };
 
