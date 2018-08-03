@@ -1,0 +1,214 @@
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.20.1/moment.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.3/chosen.jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.4/flatpickr.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/progressbar.js/1.0.1/progressbar.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/sprintf/1.1.1/sprintf.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/jquery.sumoselect.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/floatthead/2.0.3/jquery.floatThead.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/fixed-header-table/1.3.0/jquery.fixedheadertable.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.blockUI/2.70/jquery.blockUI.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.6.3/jquery.contextMenu.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/detectizr/2.2.0/detectizr.min.js"></script>
+		<script src="../tabletool.js"></script>
+		<script src="../wcdatavis.js"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.3/chosen.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.4/flatpickr.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.sumoselect/3.0.2/sumoselect.min.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.6.3/jquery.contextMenu.min.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pretty-checkbox/3.0.3/pretty-checkbox.min.css"/>
+		<link rel="stylesheet" href="../base.css"/>
+		<link rel="stylesheet" href="../wcdatavis.css"/>
+		<link rel="stylesheet" href="../tabletool.css"/>
+		<script>
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	var source = new MIE.WC_DataVis.Source({
+		type: 'http',
+		url: '../fruit.csv'
+	}, null, {
+		'Order ID': {
+			type: 'number'
+		},
+		'Product': {
+			type: 'string'
+		},
+		'Category': {
+			type: 'string'
+		},
+		'Amount': {
+			type: 'currency'
+		},
+		'Date': {
+			type: 'date',
+			format: 'M/D/YYYY'
+		},
+		'Country': {
+			type: 'string'
+		}
+	});
+
+	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink');
+	new MIE.WC_DataVis.Grid('grid', view, {
+		id: 'grid',
+		table: {
+			columns: [{
+				field: 'Order ID'
+			}, {
+				field: 'Product'
+			}, {
+				field: 'Category'
+			}, {
+				field: 'Amount',
+				format: '$0,0.00'
+			}, {
+				field: 'Date'
+			}, {
+				field: 'Country'
+			}],
+			features: {
+				rowSelect: true,
+				floatingHeader: true,
+				limit: true,
+			},
+			floatingHeader: {
+				method: 'floatThead'
+			},
+			limit: {
+				threshold: 50,
+			},
+			footer: {
+				'Amount': {
+					fun: 'sum',
+					fields: ['Amount'],
+					debug: true,
+					format: 'Sum = %s'
+				}
+			},
+			whenGroup: {
+				events: {
+					rowRender: function (tr, info) {
+
+						// This is triggered when rendering a row in group output, details mode.
+						//
+						//   - tr = The TR element of the row.
+						//
+						//   - info
+						//       .groupField = (group rows) The TR represents a value of this field.
+						//       .rowValElt  = (group rows) The TR represents this value.
+						//       .rowData    = (data rows) The TR contains cells showing this data.
+						//
+						// Example: Group by Country, City.
+						//
+						// Initially, this only gets called for the TRs that represent groups.  This is because
+						// the TRs that represent data rows are only rendered when the groups are expanded.
+						//
+						// rowRender(<TR>, {groupField: 'Country', rowValElt: 'Spain'})
+						// rowRender(<TR>, {groupField: 'City', rowValElt: 'Barcelona'})
+						// rowRender(<TR>, {groupField: 'Country', rowValElt: 'United States'})
+						// rowRender(<TR>, {groupField: 'City', rowValElt: 'New York'})
+						// rowRender(<TR>, {groupField: 'City', rowValElt: 'Las Angeles'})
+						//
+						// After expanding United States then New York:
+						//
+						// rowRender(<TR>, {rowData: ...})
+						// rowRender(<TR>, {rowData: ...})
+						// ... (for as many rows as there are in the group)
+
+						var flags = {
+							'United States': [0x1f1fa, 0x1f1f8],
+							'France': [0x1f1eb, 0x1f1f7],
+							'Germany': [0x1f1e9, 0x1f1ea],
+							'Canada': [0x1f1e8, 0x1f1e6],
+							'New Zealand': [0x1f1f3, 0x1f1ff],
+							'Australia': [0x1f1e6, 0x1f1fa],
+							'United Kingdom': [0x1f1ec, 0x1f1e7],
+						};
+
+						var makeEmoji = function (codePoints) {
+							return _.map(codePoints, function (c) {
+								return String.fromCodePoint(c);
+							}).join('');
+						};
+
+						if (info.groupField != null) {
+							switch (info.groupField) {
+							case 'Category':
+								switch (info.rowValElt) {
+								case 'Fruit':
+									tr.findFieldCell(info.groupField).css('color', 'red');
+									break;
+								case 'Vegetables':
+									tr.findFieldCell(info.groupField).css('color', 'green');
+									break;
+								}
+								break;
+							case 'Country':
+								if (flags[info.rowValElt]) {
+									tr.findFieldCell(info.groupField)
+										.prepend(jQuery('<button>', {'type': 'button'})
+											.addClass('wcdv_icon_button wcdv_text-primary')
+											.css({
+												'font-size': '20px',
+												'margin-top': '-4px',
+												'margin-bottom': '-4px'
+											})
+											.text(makeEmoji(flags[info.rowValElt]))
+											.on('click', function () {
+												window.open('https://www.google.com/maps/place/' + info.rowValElt + '/');
+											}))
+									;
+								}
+							}
+						}
+						else if (info.rowData) {
+							var country = info.rowData['Country'].value;
+							if (flags[country]) {
+								tr.findFieldCell('Country').prepend(makeEmoji(flags[country]));
+							}
+						}
+					}
+				}
+			}
+		},
+		source: source
+	}, {
+		title: 'Fruit Sales',
+		showControls: true
+	});
+
+	jQuery('#feature_header').on('click', function () {
+		jQuery('#feature_list').toggle();
+	});
+});
+		</script>
+		<style>
+#feature_header {
+	font-size: 1em;
+	cursor: pointer;
+}
+		</style>
+	</head>
+	<body>
+		<h1 id="feature_header">What features are in this example? (click to see)</h1>
+		<ul id="feature_list" style="display: none">
+			<li>Dates and Currency</li>
+			<li>Filter, Group, Pivot, Sort</li>
+			<li>Saved Views</li>
+		</ul>
+		<div id="grid"></div>
+	</body>
+</html>

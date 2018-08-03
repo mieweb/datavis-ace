@@ -368,5 +368,11 @@ jQuery.fn.extend({
 
 		this.get(0).addEventListener('dragover', handleDragOver, false);
 		this.get(0).addEventListener('drop', handleFileSelect, false);
+	},
+
+	findFieldCell: function (field) {
+		return this.children().filter(function (i, elt) {
+			return jQuery(elt).attr('data-wcdv-field') === field;
+		});
 	}
 });

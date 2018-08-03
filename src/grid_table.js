@@ -2885,7 +2885,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				var fcc = self.colConfig.get(field) || {};
 				var cell = row.rowData[field];
 
-				var td = jQuery('<td>');
+				var td = jQuery('<td>', {'data-wcdv-field': field});
 				if (colIndex > 0) {
 					td.addClass('wcdv_pivot_colval_boundary');
 				}
@@ -2913,6 +2913,16 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 			self.ui.tr[rowNum] = tr;
 			placeAfter.after(tr);
+
+			var rowRenderCb = getProp(self.opts, 'events', 'rowRender');
+			if (typeof rowRenderCb === 'function') {
+				rowRenderCb(tr, {
+					isGroup: true,
+					groupMode: 'details',
+					rowData: row.rowData,
+					rowNum: row.rowNum
+				});
+			}
 		});
 
 		if (self.features.floatingHeader) {
@@ -3113,6 +3123,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 			th = jQuery('<th>')
 				.addClass('wcdv_group_value')
+				.attr('data-wcdv-field', groupField)
 				.attr('colspan', columns.length - rowValEltIndex)
 				.append(span)
 			;
@@ -3124,6 +3135,16 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			th.appendTo(tr);
 
 			self.ui.tbody.append(tr);
+
+			var rowRenderCb = getProp(self.opts, 'events', 'rowRender');
+			if (typeof rowRenderCb === 'function') {
+				rowRenderCb(tr, {
+					isGroup: true,
+					groupMode: 'details',
+					groupField: groupField,
+					rowValElt: rowValElt
+				});
+			}
 		});
 
 		lastRowVal = arrayCopy(rowVal);
