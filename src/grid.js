@@ -835,6 +835,31 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		.append(fontAwesome('f021'))
 		.appendTo(self.ui.titlebar_controls)
 	;
+
+	var pWinEffect = {
+		effect: 'fade',
+		duration: 100
+	};
+
+	var pWin = jQuery('<div>', { title: 'Perspective' }).dialog({
+		autoOpen: false,
+		modal: true,
+		width: 500,
+		position: {
+			my: 'top',
+			at: 'bottom',
+			of: titlebar
+		},
+		show: pWinEffect,
+		hide: pWinEffect,
+	});
+
+	var pWinWarning = jQuery('<div>')
+		.addClass('wcdv_warning_banner')
+		.appendTo(pWin);
+
+	var pWinTextArea = jQuery('<textarea>', {'style': 'font-family: monospace; font-size: 10pt; width: 100%', 'rows': '20', 'readonly': true})
+		.appendTo(pWin);
 		
 	// This is the "gear" icon that shows/hides the controls below the toolbar.  The controls are used
 	// to set the group, pivot, aggregate, and filters.  Ideally the user only has to utilize these
@@ -848,9 +873,23 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		.attr('title', MIE.trans('SHOWHIDEOPTS'))
 		.click(function (evt) {
 			evt.stopPropagation();
-			self.toggleControls();
+			if (evt.shiftKey) {
+				var p = self.prefs.getPerspective(self.prefs.getCurrentPerspective());
+				if (p.opts.isTemporary) {
+					pWinWarning.text('This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.');
+					pWinWarning.show();
+				}
+				else {
+					pWinWarning.hide();
+				}
+				pWinTextArea.val(JSON.stringify(p.getConfig(), null, 2));
+				pWin.dialog('open');
+			}
+			else {
+				self.toggleControls();
+			}
 		})
-		.append(jQuery(fontAwesome('f013')))
+		.append(jQuery(fontAwesome('fa-cog')))
 		.appendTo(self.ui.titlebar_controls)
 	;
 

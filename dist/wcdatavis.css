@@ -52,6 +52,13 @@ li.wcdv_aggregate_field {
 	margin-top: 0;
 }
 
+.wcdv_warning_banner {
+	border-left: solid 8px #bf311a;
+    padding: 4px;
+    margin-bottom: 4px;
+    background-color: #fadfdb;
+}
+
 /******************************************************************************/
 
 .wcdv_grid_titlebar {
