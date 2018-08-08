@@ -1230,16 +1230,29 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.appendTo(div)
 	;
 
+	var warnMsgText = jQuery('<span>');
+
+	var warnMsgContent = jQuery('<div>')
+		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
+		.append(warnMsgText);
+
 	var warnMsg = fontAwesome('fa-info-circle', 'wcdv_info_icon')
+		.attr({'title': 'Info'})
 		.hide()
 		.tooltip({
 			classes: {
 				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
 			},
-			show: { delay: 1000 }
+			show: { delay: 1000 },
+			content: warnMsgContent,
 		})
 		.appendTo(div)
 	;
+
+	if (self.prefs.backend instanceof PrefsBackendTemporary) {
+		warnMsgText.text('The preferences system is not configured to permanently save perspectives.');
+		warnMsg.show();
+	}
 
 	var saveBtnTooltipContent = jQuery('<div>')
 		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
