@@ -2192,7 +2192,7 @@ View.prototype.pivot = function () {
 
 	var origKeys = [];
 
-	var buildColVals = function (pivotFields) {
+	var buildColVals = function (pivotFields, addColVals) {
 		var colVals = [];
 
 		for (var groupIndex = 0; groupIndex < self.data.data.length; groupIndex += 1) {
@@ -2207,6 +2207,31 @@ View.prototype.pivot = function () {
 					origKeys[pivotFieldIndex][natRep] = value;
 					colVal[pivotFieldIndex] = natRep;
 				}
+				if (_.findIndex(colVals, function (x) {
+					return arrayEqual(colVal, x);
+				}) === -1) {
+					colVals.push(colVal);
+				}
+			}
+		}
+
+		if (addColVals != null) {
+			for (var acvIndex = 0; acvIndex < addColVals.length; acvIndex += 1) {
+				var colVal = addColVals[acvIndex];
+
+				if (colVal.length != pivotFields.length) {
+					log.error('Unable to add colVal %s when pivotting by %s: the lengths must be the same',
+						JSON.stringify(colVal), JSON.stringify(pivotFields));
+					continue;
+				}
+
+				for (var pivotFieldIndex = 0; pivotFieldIndex < colVal.length; pivotFieldIndex += 1) {
+					var value = colVal[pivotFieldIndex];
+					var natRep = getNatRep(value);
+					origKeys[pivotFieldIndex][natRep] = value;
+					colVal[pivotFieldIndex] = natRep;
+				}
+
 				if (_.findIndex(colVals, function (x) {
 					return arrayEqual(colVal, x);
 				}) === -1) {
@@ -2266,7 +2291,7 @@ View.prototype.pivot = function () {
 		origKeys[pivotFieldIndex] = {};
 	}
 
-	colVals = buildColVals(pivotFields);
+	colVals = buildColVals(pivotFields, self.pivotSpec.addColVals);
 	self.data.data = buildData(self.data.data, colVals);
 	colVals = convertColVals(colVals);
 
