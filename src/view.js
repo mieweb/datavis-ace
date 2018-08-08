@@ -815,6 +815,34 @@ View.prototype.sort = function (cont) {
 			// #5 - Sort pivots by the result of a pivot aggregate
 			// #6 - Sort groups by the result of a group aggregate
 
+			if (spec.field != null) {
+				switch (orientation) {
+				case 'vertical':
+					var gfi = self.data.groupFields.indexOf(spec.field);
+
+					if (gfi < 0) {
+						log.error('Unable to sort: `field` property does not refer to a grouped field ' +
+							'{field = "%s", groupFields = %s}', spec.field, self.data.groupFields);
+					}
+					else {
+						spec.groupFieldIndex = gfi;
+					}
+					break;
+
+				case 'horizontal':
+					var pfi = self.data.pivotFields.indexOf(spec.field);
+
+					if (pfi < 0) {
+						log.error('Unable to sort: `field` property does not refer to a pivotted field ' +
+							'{field = "%s", pivotFields = %s}', spec.field, self.data.pivotFields);
+					}
+					else {
+						spec.pivotFieldIndex = pfi;
+					}
+					break;
+				}
+			}
+
 			if (spec.groupFieldIndex != null) { // #1
 
 				// SORT GROUPS BY GROUP FIELD VALUE
@@ -891,9 +919,15 @@ View.prototype.sort = function (cont) {
 					return next(false);
 				}
 
-				fti = self.typeInfo.get(self.data.pivotFields[spec.pivotFieldIndex]);
+				if (spec.values) {
+					sortAlgorithm = 'pigeonHole';
+				}
+				else {
+					fti = self.typeInfo.get(self.data.pivotFields[spec.pivotFieldIndex]);
+				}
+
 				sortSourceFn = function (i) {
-					return self.data.rowVals[i][spec.pivotFieldIndex];
+					return self.data.colVals[i][spec.pivotFieldIndex];
 				};
 			}
 			else if ((spec.colVal || spec.colValIndex != null) && spec.aggNum != null) { // #4
