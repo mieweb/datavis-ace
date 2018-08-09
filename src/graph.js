@@ -1408,4 +1408,3 @@ var GRAPH_TYPES = OrdMap.fromArray([{
 	modes: ['plain'],
 	renderers: [GraphRendererGoogle],
 }], 'value');
-

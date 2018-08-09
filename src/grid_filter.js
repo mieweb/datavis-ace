@@ -97,7 +97,7 @@ var GridFilter = (function () {
 		}
 
 		if (self.gridFilterSet.gridTable) {
-			self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+			self.gridFilterSet.gridTable.on('columnResize', function () {
 				self.adjustInputWidth({ useSizingElement: true, fromColumnResize: true });
 			});
 		}
@@ -408,7 +408,7 @@ var StringDropdownGridFilterChosen = makeSubclass(GridFilter, function () {
 	};
 
 	if (self.gridFilterSet.gridTable) {
-		self.gridFilterSet.gridTable.on(GridTable.events.columnResize, function () {
+		self.gridFilterSet.gridTable.on('columnResize', function () {
 			var targetWidth = self.opts.sizingElement.innerWidth() - self.removeBtn.outerWidth() - 14;
 			debug.info('GRID FILTER // HANDLER (GridTablePlain.columnResize)', 'Adjusting Chosen widget width to ' + targetWidth + 'px to match column width');
 			self.chosen.innerWidth(targetWidth);

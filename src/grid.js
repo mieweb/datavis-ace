@@ -997,7 +997,7 @@ Grid.prototype._addPlainButtons = function (toolbar) {
 
 		jQuery('<button>', {'type': 'button'})
 			.on('click', function (evt) {
-				self.gridTable.updateFeatures({
+				self.renderer.updateFeatures({
 					'block': true,
 					'progress': true,
 					'limit': false
@@ -1468,8 +1468,8 @@ Grid.prototype.redraw = function () {
 	var self = this;
 
 	var makeGridTable = function () {
-		var gridTableCtor
-			, gridTableOpts
+		var rendererCtor
+			, rendererCtorOpts
 			, ops = self.view.getLastOps();
 
 		if (ops) {
@@ -1477,8 +1477,8 @@ Grid.prototype.redraw = function () {
 		}
 
 		if (ops && ops.pivot) {
-			gridTableCtor = GridTablePivot;
-			gridTableOpts = deepCopy(self.defn.table.whenPivot);
+			rendererCtor = GridTablePivot;
+			rendererCtorOpts = deepCopy(self.defn.table.whenPivot);
 
 			debug.info('GRID', 'Creating pivot grid table');
 
@@ -1489,14 +1489,14 @@ Grid.prototype.redraw = function () {
 		else if (ops && ops.group) {
 			switch (self.defn.table.groupMode) {
 			case 'summary':
-				gridTableCtor = GridTableGroupSummary;
+				rendererCtor = GridTableGroupSummary;
 				break;
 			case 'detail':
-				gridTableCtor = GridTableGroupDetail;
+				rendererCtor = GridTableGroupDetail;
 				break;
 			}
 
-			gridTableOpts = deepCopy(self.defn.table.whenGroup);
+			rendererCtorOpts = deepCopy(self.defn.table.whenGroup);
 
 			debug.info('GRID', 'Creating group grid table');
 
@@ -1505,8 +1505,8 @@ Grid.prototype.redraw = function () {
 			self.ui.toolbar_pivot.hide();
 		}
 		else {
-			gridTableCtor = GridTablePlain;
-			gridTableOpts = deepCopy(self.defn.table.whenPlain);
+			rendererCtor = GridTablePlain;
+			rendererCtorOpts = deepCopy(self.defn.table.whenPlain);
 
 			debug.info('GRID', 'Creating plain grid table');
 
@@ -1515,37 +1515,37 @@ Grid.prototype.redraw = function () {
 			self.ui.toolbar_pivot.hide();
 		}
 
-		if (self.gridTable) {
-			self.gridTable.clear();
+		if (self.renderer) {
+			self.renderer.clear();
 		}
 
-		gridTableOpts.generateCsv = self.generateCsv;
-		gridTableOpts.fixedHeight = self.rootHasFixedHeight;
+		rendererCtorOpts.generateCsv = self.generateCsv;
+		rendererCtorOpts.fixedHeight = self.rootHasFixedHeight;
 
 		self.ui.exportBtn.attr('disabled', true);
-		self.gridTable = new gridTableCtor(self, self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
+		self.renderer = new rendererCtor(self, self.defn, self.view, self.features, rendererCtorOpts, self.timing, self.id);
 
-		self.gridTable.on('renderBegin', function () {
+		self.renderer.on('renderBegin', function () {
 			self._isIdle = false;
 			self.fire('renderBegin');
 		});
-		self.gridTable.on('renderEnd', function () {
+		self.renderer.on('renderEnd', function () {
 			self.fire('renderEnd');
 			self._isIdle = true;
 		});
 
-		self.gridTable.on(GridTable.events.unableToRender, function () {
+		self.renderer.on('unableToRender', function () {
 			self._setExportStatus('notReady');
 			makeGridTable();
 		});
 
-		self.gridTable.on('csvReady', function () {
+		self.renderer.on('csvReady', function () {
 			if (self.exportLock.isLocked()) {
 				self.exportLock.unlock();
 			}
 			self._setExportStatus('ready');
 		});
-		self.gridTable.on('generateCsvProgress', function (progress) {
+		self.renderer.on('generateCsvProgress', function (progress) {
 			if (progress === 0) {
 				self.ui.exportBtn.children('span.fa').remove();
 				self.ui.exportBtn.append(fontAwesome('fa-spinner', 'fa-spin'));
@@ -1553,14 +1553,14 @@ Grid.prototype.redraw = function () {
 		});
 
 		if (self.features.limit) {
-			self.gridTable.on(GridTable.events.limited, function () {
+			self.renderer.on('limited', function () {
 				self.ui.limit_div.show();
 			});
-			self.gridTable.on(GridTable.events.unlimited, function () {
+			self.renderer.on('unlimited', function () {
 				self.ui.limit_div.hide();
 			});
 		}
-		self.gridTable.draw(self.ui.grid, function () {
+		self.renderer.draw(self.ui.grid, function () {
 			self.ui.exportBtn.attr('disabled', false);
 			self.tableDoneCont();
 		});
@@ -1990,7 +1990,7 @@ Grid.prototype.export = function () {
 
 	if (self.csvReady) {
 		var fileName = (self.tagOpts.title || self.id) + '.csv';
-		var csv = self.gridTable.getCsv();
+		var csv = self.renderer.getCsv();
 		var contentType = 'text/csv';
 		var blob = new Blob([csv], {'type': contentType});
 

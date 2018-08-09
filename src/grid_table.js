@@ -220,7 +220,7 @@ Csv.prototype.setOrder = function (rowId, pos) {
 var GridTable = (function () {
 	var UNIQUE_ID = 0;
 
-	return function (grid, defn, view, features, opts, timing, id) {
+	return makeSubclass(GridRenderer, function (grid, defn, view, features, opts, timing, id) {
 		var self = this;
 
 		self.UNIQUE_ID = UNIQUE_ID++;
@@ -243,7 +243,7 @@ var GridTable = (function () {
 			zebraStriping: true,
 			generateCsv: true
 		});
-	};
+	});
 })();
 
 GridTable.prototype = Object.create(Object.prototype);
@@ -960,163 +960,156 @@ GridTable.prototype._getAggInfo = function (data) {
 GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 	var self = this;
 
-	debug.info('GRID TABLE // DRAW', 'Beginning draw operation; opts = %O', opts);
+	return self.super.draw(root, opts, function (data, typeInfo) {
+		if (self.features.limit && self.defn.table.limit.method === 'more') {
+			self.scrollEventElement = self.opts.fixedHeight ? self.root : window;
+			jQuery(self.scrollEventElement).on(self.scrollEvents, function () {
+				if (typeof self.moreVisibleHandler === 'function') {
+					self.moreVisibleHandler();
+				}
+			});
+		}
 
-	self.colConfig = self.grid.colConfig;
-
-	opts = opts || self.drawOpts;
-
-	self.root = root;
-
-	if (self.features.limit && self.defn.table.limit.method === 'more') {
-		self.scrollEventElement = self.opts.fixedHeight ? self.root : window;
-		jQuery(self.scrollEventElement).on(self.scrollEvents, function () {
-			if (typeof self.moreVisibleHandler === 'function') {
-				self.moreVisibleHandler();
-			}
-		});
-	}
-
-	return self.view.getData(function (data) {
-		debug.info('GRID TABLE // DRAW', 'Data = %O', data);
-
-		return self.view.getTypeInfo(function (typeInfo) {
-			debug.info('GRID TABLE // DRAW', 'TypeInfo = %O', typeInfo.asMap());
-
-			if ((data.isPlain && !self.canRender('plain'))
-					|| (data.isGroup && !self.canRender('group'))
-					|| (data.isPivot && !self.canRender('pivot'))) {
-
-				debug.info('GRID TABLE // DRAW', 'Unable to render data using current grid table: { isPlain = %s ; isGroup = %s ; isPivot = %s }', data.isPlain, data.isGroup, data.isPivot);
-
-				return self.fire(GridTable.events.unableToRender);
-			}
-
+<<<<<<< HEAD
 			self.fire('renderBegin');
 
 			self.data = data;
 			self.typeInfo = typeInfo;
+=======
+		var tr;
+		var srcIndex = 0;
 
-			self.timing.start(['Grid Table', 'Draw']);
+		self.csv = new Csv();
 
-			var tr;
-			var srcIndex = 0;
+		self.ui = {
+			tbl: jQuery('<table>'),
+			thead: jQuery('<thead>'),
+			tbody: jQuery('<tbody>'),
+			tfoot: jQuery('<tfoot>'),
+			thMap: {},
+			tr: {},
+			progress: jQuery('<div>')
+		};
+>>>>>>> Refactor: Add GridRenderer class above GridTable; other subclasses can render non-tabular output.
 
-			self.csv = new Csv();
+		self._addDrillDownHandler(self.ui.tbl, data);
 
-			self.ui = {
-				tbl: jQuery('<table>'),
-				thead: jQuery('<thead>'),
-				tbody: jQuery('<tbody>'),
-				tfoot: jQuery('<tfoot>'),
-				thMap: {},
-				tr: {},
-				progress: jQuery('<div>')
+		if (self.features.block) {
+			var blockConfig = {
+				overlayCSS: {
+					opacity: 0.9,
+					backgroundColor: '#FFF'
+				}
 			};
 
-			self._addDrillDownHandler(self.ui.tbl, data);
+			if (self.features.progress && getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
+				blockConfig.message = jQuery('<div>')
+					.append(jQuery('<h1>').text('Working...'))
+					.append(self.ui.progress);
+			}
+		}
 
+		self.view.on(View.events.workBegin, function () {
 			if (self.features.block) {
-				var blockConfig = {
-					overlayCSS: {
-						opacity: 0.9,
-						backgroundColor: '#FFF'
-					}
-				};
-
-				if (self.features.progress && getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
-					blockConfig.message = jQuery('<div>')
-						.append(jQuery('<h1>').text('Working...'))
-						.append(self.ui.progress);
-				}
-			}
-
-			self.view.on(View.events.workBegin, function () {
-				if (self.features.block) {
-					debug.info('GRID TABLE // HANDLER (View.workBegin)', 'Blocking table body');
-					if (getProp(self.defn, 'table', 'block', 'wholePage')) {
-						jQuery.blockUI(blockConfig);
-					}
-					else {
-						self.ui.tbl.block(blockConfig);
-					}
-				}
-				if (self.features.floatingHeader) {
-					switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
-					case 'tabletool':
-						TableTool.update();
-						break;
-					}
-				}
-			}, { who: self });
-
-			self.view.on(View.events.workEnd, function () {
-				if (self.features.block) {
-					debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Unblocking table body');
-					if (getProp(self.defn, 'table', 'block', 'wholePage')) {
-						jQuery.unblockUI();
-					}
-					else {
-						self.ui.tbl.unblock();
-					}
-				}
-				if (self.features.floatingHeader) {
-					switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
-					case 'tabletool':
-						TableTool.update();
-						break;
-					}
-				}
-			}, { who: self });
-
-			/*
-			 * Determine what columns will be in the table.  This comes from the user, or from the data
-			 * itself.  We may then add columns for extra features (like row selection or reordering).
-			 */
-
-			var columns = determineColumns(self.colConfig, data, typeInfo);
-			var numCols = columns.length;
-
-			if (self.features.rowSelect) {
-				numCols += 1; // Add a column for the row selection checkbox.
-			}
-
-			if (self.features.rowReorder) {
-				numCols += 1; // Add a column for the reordering button.
-			}
-
-			self.drawHeader(columns, data, typeInfo, opts);
-
-			if (self.features.footer) {
-				self.drawFooter(columns, data, typeInfo);
-			}
-
-			self.addSortHandler();
-
-			if (self.features.rowSelect) {
-				if (typeof self._addRowSelectHandler !== 'function') {
-					log.warn('Requested feature "rowSelect" is not available: `_addRowSelectHandler` method does not exist');
+				debug.info('GRID TABLE // HANDLER (View.workBegin)', 'Blocking table body');
+				if (getProp(self.defn, 'table', 'block', 'wholePage')) {
+					jQuery.blockUI(blockConfig);
 				}
 				else {
-					self._addRowSelectHandler();
+					self.ui.tbl.block(blockConfig);
 				}
 			}
-
-			if (self.features.rowReorder) {
-				self._addRowReorderHandler();
+			if (self.features.floatingHeader) {
+				switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
+				case 'tabletool':
+					TableTool.update();
+					break;
+				}
 			}
+		}, { who: self });
 
-			if (self.opts.zebraStriping) {
-				self.ui.tbl.addClass('zebra');
+		self.view.on(View.events.workEnd, function () {
+			if (self.features.block) {
+				debug.info('GRID TABLE // HANDLER (View.workEnd)', 'Unblocking table body');
+				if (getProp(self.defn, 'table', 'block', 'wholePage')) {
+					jQuery.unblockUI();
+				}
+				else {
+					self.ui.tbl.unblock();
+				}
 			}
-
-			if (getProp(self.opts, 'addClass', 'table')) {
-				self.ui.tbl.addClass(getProp(self.opts, 'addClass', 'table'));
+			if (self.features.floatingHeader) {
+				switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
+				case 'tabletool':
+					TableTool.update();
+					break;
+				}
 			}
+		}, { who: self });
 
-			self.ui.tbl.append(self.ui.thead);
+		/*
+		 * Determine what columns will be in the table.  This comes from the user, or from the data
+		 * itself.  We may then add columns for extra features (like row selection or reordering).
+		 */
 
-			if (!getProp(self.defn, 'table', 'incremental', 'appendBodyLast')) {
+		var columns = determineColumns(self.colConfig, data, typeInfo);
+		var numCols = columns.length;
+
+		if (self.features.rowSelect) {
+			numCols += 1; // Add a column for the row selection checkbox.
+		}
+
+		if (self.features.rowReorder) {
+			numCols += 1; // Add a column for the reordering button.
+		}
+
+		self.drawHeader(columns, data, typeInfo, opts);
+
+		if (self.features.footer) {
+			self.drawFooter(columns, data, typeInfo);
+		}
+
+		self.addSortHandler();
+
+		if (self.features.rowSelect) {
+			if (typeof self._addRowSelectHandler !== 'function') {
+				log.warn('Requested feature "rowSelect" is not available: `_addRowSelectHandler` method does not exist');
+			}
+			else {
+				self._addRowSelectHandler();
+			}
+		}
+
+		if (self.features.rowReorder) {
+			self._addRowReorderHandler();
+		}
+
+		if (self.opts.zebraStriping) {
+			self.ui.tbl.addClass('zebra');
+		}
+
+		if (getProp(self.opts, 'addClass', 'table')) {
+			self.ui.tbl.addClass(getProp(self.opts, 'addClass', 'table'));
+		}
+
+		self.ui.tbl.append(self.ui.thead);
+
+		if (!getProp(self.defn, 'table', 'incremental', 'appendBodyLast')) {
+			self.ui.tbl.append(self.ui.tbody);
+
+			if (self.features.footer) {
+				self.ui.tbl.append(self.ui.tfoot);
+			}
+		}
+
+		self.root.append(self.ui.tbl);
+
+		/*
+		 * Draw the body.
+		 */
+
+		self.drawBody(data, typeInfo, columns, function () {
+			if (getProp(self.defn, 'table', 'incremental', 'appendBodyLast')) {
 				self.ui.tbl.append(self.ui.tbody);
 
 				if (self.features.footer) {
@@ -1124,78 +1117,68 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				}
 			}
 
-			self.root.append(self.ui.tbl);
+			self.timing.stop(['Grid Table', 'Draw']);
 
-			/*
-			 * Draw the body.
-			 */
+			if (typeof tableDone === 'function') {
+				window.setTimeout(function () {
+					tableDone();
+				});
+			}
+		}, opts);
 
-			self.drawBody(data, typeInfo, columns, function () {
-				if (getProp(self.defn, 'table', 'incremental', 'appendBodyLast')) {
-					self.ui.tbl.append(self.ui.tbody);
+		// Activate TableTool using this attribute, if the user asked for it.
 
-					if (self.features.footer) {
-						self.ui.tbl.append(self.ui.tfoot);
-					}
-				}
-
-				self.timing.stop(['Grid Table', 'Draw']);
-
+<<<<<<< HEAD
 				self.fire('renderEnd');
 
 				if (typeof tableDone === 'function') {
 					window.setTimeout(function () {
 						tableDone();
+=======
+		if (self.features.floatingHeader) {
+			debug.info('GRID TABLE // DRAW', 'Enabling floating header using method "%s"',
+				getProp(self.defn, 'table', 'floatingHeader', 'method'));
+			switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
+			case 'floatThead':
+				var floatTheadConfig = {
+					zIndex: 1
+				};
+				if (self.opts.fixedHeight) {
+					floatTheadConfig.position = 'fixed';
+					floatTheadConfig.scrollContainer = true;
+					self.grid.on(Grid.events.showControls, function () {
+						self.ui.tbl.floatThead('reflow');
+					});
+					self.grid.on(Grid.events.hideControls, function () {
+						self.ui.tbl.floatThead('reflow');
+					});
+					self.grid.filterControl.on(['fieldAdded', 'fieldRemoved'], function () {
+						self.ui.tbl.floatThead('reflow');
+					});
+					self.grid.aggregateControl.on(['fieldAdded', 'fieldRemoved'], function () {
+						self.ui.tbl.floatThead('reflow');
+>>>>>>> Refactor: Add GridRenderer class above GridTable; other subclasses can render non-tabular output.
 					});
 				}
-			}, opts);
-
-			// Activate TableTool using this attribute, if the user asked for it.
-
-			if (self.features.floatingHeader) {
-				debug.info('GRID TABLE // DRAW', 'Enabling floating header using method "%s"',
-									 getProp(self.defn, 'table', 'floatingHeader', 'method'));
-				switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
-				case 'floatThead':
-					var floatTheadConfig = {
-						zIndex: 1
-					};
-					if (self.opts.fixedHeight) {
-						floatTheadConfig.position = 'fixed';
-						floatTheadConfig.scrollContainer = true;
-						self.grid.on(Grid.events.showControls, function () {
-							self.ui.tbl.floatThead('reflow');
-						});
-						self.grid.on(Grid.events.hideControls, function () {
-							self.ui.tbl.floatThead('reflow');
-						});
-						self.grid.filterControl.on(['fieldAdded', 'fieldRemoved'], function () {
-							self.ui.tbl.floatThead('reflow');
-						});
-						self.grid.aggregateControl.on(['fieldAdded', 'fieldRemoved'], function () {
-							self.ui.tbl.floatThead('reflow');
-						});
-					}
-					self.ui.tbl.floatThead(floatTheadConfig);
-					break;
-				case 'tabletool':
-					if (self.opts.fixedHeight) {
-						self.ui.tbl.attr('data-tttype', 'fixed');
-					}
-					else {
-						self.ui.tbl.attr('data-tttype', 'sticky');
-					}
-					break;
+				self.ui.tbl.floatThead(floatTheadConfig);
+				break;
+			case 'tabletool':
+				if (self.opts.fixedHeight) {
+					self.ui.tbl.attr('data-tttype', 'fixed');
 				}
+				else {
+					self.ui.tbl.attr('data-tttype', 'sticky');
+				}
+				break;
 			}
+		}
 
-			self.addWorkHandler();
+		self.addWorkHandler();
 
-			if (typeof tableDoneCont === 'function') {
-				return tableDoneCont();
-			}
-		}); // view.getTypeInfo()
-	}); // view.getData()
+		if (typeof tableDoneCont === 'function') {
+			return tableDoneCont();
+		}
+	});
 };
 
 // #drawHeader_aggregates {{{2
@@ -2002,7 +1985,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 				atLimit = true;
 
-				self.fire(GridTable.events.limited);
+				self.fire('limited');
 
 				tr = jQuery('<tr>').addClass('wcdvgrid_more');
 
@@ -2105,7 +2088,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		}
 
 		if (!atLimit) {
-			self.fire(GridTable.events.unlimited);
+			self.fire('unlimited');
 		}
 
 		self._updateSelectionGui();
@@ -2332,7 +2315,7 @@ GridTablePlain.prototype.addWorkHandler = function () {
 
 		if (ops.group || ops.pivot) {
 			debug.info('GRID TABLE - PLAIN // HANDLER (View.workEnd)', 'Unable to render this data: %O', ops);
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire('unableToRender', null, ops);
 			return;
 		}
 
@@ -3286,7 +3269,7 @@ GridTableGroupDetail.prototype.addWorkHandler = function () {
 		debug.info('GRID TABLE - GROUP - DETAIL // HANDLER (View.workEnd)', 'View has finished doing work');
 
 		if (!ops.group || ops.pivot) {
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire('unableToRender', null, ops);
 			return;
 		}
 
@@ -3746,7 +3729,7 @@ GridTableGroupSummary.prototype.addWorkHandler = function () {
 		debug.info('GRID TABLE - GROUP - SUMMARY // HANDLER (View.workEnd)', 'View has finished doing work');
 
 		if (!ops.group || ops.pivot) {
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire('unableToRender', null, ops);
 			return;
 		}
 
@@ -4380,7 +4363,7 @@ GridTablePivot.prototype.addWorkHandler = function () {
 
 		if (!ops.pivot) {
 			debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'Unable to render this data: %O', ops);
-			self.fire(GridTable.events.unableToRender, null, ops);
+			self.fire('unableToRender', null, ops);
 			return;
 		}
 
