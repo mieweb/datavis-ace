@@ -1,7 +1,44 @@
 // GridRenderer {{{1
 
-var GridRenderer = makeSubclass(Object, function () {
-});
+// Constructor {{{2
+
+/**
+ * @param {Grid} grid
+ *
+ * @param {object} defn
+ *
+ * @param {View} view
+ *
+ * @param {object} features
+ *
+ * @param {object} opts
+ *
+ * @param {Timing} timing
+ *
+ * @param {string} id
+ *
+ * @class
+ */
+
+var GridRenderer = (function () {
+	UNIQUE_ID = 0;
+	
+	return makeSubclass(Object, function (grid, defn, view, features, opts, timing, id) {
+		var self = this;
+
+		self.UNIQUE_ID = UNIQUE_ID++;
+
+		self.id = id;
+		self.grid = grid;
+		self.defn = defn;
+		self.view = view;
+		self.features = deepCopy(features);
+		self.opts = opts;
+		self.timing = timing;
+
+		self._validateFeatures();
+	});
+})();
 
 // FIXME: We don't need all these, we only need "unableToRender."  However, mixinEventHandling()
 // can't traverse the class hierarchy, so trying to subscribe to "unableToRender" from a GridTable
@@ -17,25 +54,6 @@ mixinEventHandling(GridRenderer, 'GridRenderer', [
 	, 'csvReady'            // CSV data has been generated.
 	, 'generateCsvProgress' // CSV generation progress.
 ]);
-
-// .registry {{{2
-
-GridRenderer.registry = OrdMap.fromArray([{
-	name: 'table_plain',
-	cls: GridTablePlain
-}, {
-	name: 'table_group_detail',
-	cls: GridTableGroupDetail
-}, {
-	name: 'table_group_summary',
-	cls: GridTableGroupSummary
-}, {
-	name: 'table_pivot',
-	cls: GridTablePivot
-}, {
-	name: 'mustache',
-	cls: GridRendererMustache
-}], 'name');
 
 // #canRender {{{2
 
@@ -71,6 +89,8 @@ GridRenderer.prototype.draw = function (root, opts, cont) {
 				return self.fire('unableToRender');
 			}
 
+			self.fire('renderBegin');
+
 			self.data = data;
 			self.typeInfo = typeInfo;
 
@@ -81,23 +101,164 @@ GridRenderer.prototype.draw = function (root, opts, cont) {
 	});
 };
 
-// GridRendererMustache {{{1
+// #clear {{{2
 
-var GridRendererMustache = makeSubclass(GridRenderer, function () {
+/**
+ * Remove the table from page.
+ */
+
+GridRenderer.prototype.clear = function () {
+	var self = this;
+
+	self.root.children().remove();
+};
+
+// #_validateFeatures {{{2
+
+GridRenderer.prototype._validateFeatures = function () {
+	return true;
+};
+
+// GridRendererHandlebars {{{1
+
+var GridRendererHandlebars = makeSubclass(GridRenderer, function () {
+	var self = this;
+
+	self.super.ctor.apply(self, arguments);
+
+	Handlebars.registerHelper('rowval', function (groupField) {
+		if (['number', 'string'].indexOf(typeof groupField) < 0) {
+			throw new Error('In Handlebars "rowval" helper, `groupField` must be a number or string');
+		}
+
+		var groupFieldIndex;
+
+		if (typeof groupField === 'number') {
+			groupFieldIndex = groupField;
+
+			if (groupFieldIndex < 0) {
+				throw new Error('In Handlebars "rowval" helper, group field index "' + groupField + '" out of range');
+			}
+		}
+		else {
+			groupFieldIndex = self.data.groupFields.indexOf(groupField);
+
+			if (groupFieldIndex < 0) {
+				throw new Error('In Handlebars "rowval" helper, specified field "' + groupField + '" is not part of group');
+			}
+		}
+
+		return self.data.rowVals[this.rowValIndex][groupFieldIndex];
+	});
+
+	Handlebars.registerHelper('colval', function (pivotField) {
+		if (['number', 'string'].indexOf(typeof pivotField) < 0) {
+			throw new Error('In Handlebars "rowval" helper, `pivotField` must be a number or string');
+		}
+
+		var pivotFieldIndex;
+
+		if (typeof pivotField === 'number') {
+			pivotFieldIndex = pivotField;
+
+			if (pivotFieldIndex < 0) {
+				throw new Error('In Handlebars "rowval" helper, pivot field index "' + pivotField + '" out of range');
+			}
+		}
+		else {
+			pivotFieldIndex = self.data.pivotFields.indexOf(pivotField);
+
+			if (pivotFieldIndex < 0) {
+				throw new Error('In Handlebars "rowval" helper, specified field "' + pivotField + '" is not part of pivot');
+			}
+		}
+
+		return self.data.colVals[this.colValIndex][pivotFieldIndex];
+	});
 });
 
 // #canRender {{{2
 
-GridRendererMustache.prototype.canRender = function (what) {
-	return what === 'plain';
+GridRendererHandlebars.prototype.canRender = function (what) {
+	return true;
+};
+
+// #_draw_plain {{{2
+
+GridRendererHandlebars.prototype._draw_plain = function (root, data, typeInfo, opts) {
+	var self = this;
+
+	_.each(data.data, function (row) {
+		var div = jQuery('<div>').appendTo(root);
+		var context = {};
+		_.each(row.rowData, function (v, k) {
+			context[k] = v.value;
+		});
+		div.html(self.template(context));
+	});
+};
+
+// #_draw_group {{{2
+
+GridRendererHandlebars.prototype._draw_group = function (root, data, typeInfo, opts) {
+	var self = this;
+
+	_.each(data.data, function (group, rowValIndex) {
+		var div = jQuery('<div>').appendTo(root);
+		var context = {
+			rowValIndex: rowValIndex
+		};
+		div.html(self.template(context));
+	});
+};
+
+// #_draw_pivot {{{2
+
+GridRendererHandlebars.prototype._draw_pivot = function (root, data, typeInfo, opts) {
+	var self = this;
+
+	_.each(data.data, function (group, rowValIndex) {
+		_.each(group, function (pivot, colValIndex) {
+			var div = jQuery('<div>').appendTo(root);
+			var context = {
+				rowValIndex: rowValIndex,
+				colValIndex: colValIndex
+			};
+			div.html(self.template(context));
+		});
+	});
 };
 
 // #draw {{{2
 
-GridRendererMustache.prototype.draw = function () {
+GridRendererHandlebars.prototype.draw = function (root, cont, opts) {
 	var self = this;
 
-	return self.super.draw(function (data, typeInfo) {
-		console.log('yay');
+	return self.super.draw(root, opts, function (data, typeInfo) {
+		if (data.isPlain) {
+			self.template = Handlebars.compile(self.opts.whenPlain.template);
+			self._draw_plain(root, data, typeInfo, opts);
+		}
+		else if (data.isGroup) {
+			self.template = Handlebars.compile(self.opts.whenGroup.template);
+			self._draw_group(root, data, typeInfo, opts);
+		}
+		else if (data.isPivot) {
+			self.template = Handlebars.compile(self.opts.whenPivot.template);
+			self._draw_group(root, data, typeInfo, opts);
+		}
+		self.addWorkHandler();
+		return typeof cont === 'function' ? cont() : null;
 	});
+};
+
+// #addWorkHandler {{{2
+
+GridRendererHandlebars.prototype.addWorkHandler = function () {
+	var self = this;
+
+	self.view.on(View.events.workEnd, function (info, ops) {
+		self.clear();
+		self.draw(self.root);
+	}, { who: self, limit: 1 });
 };

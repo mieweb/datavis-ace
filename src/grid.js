@@ -1476,8 +1476,12 @@ Grid.prototype.redraw = function () {
 			debug.info('GRID', 'Creating grid table with view opertions: %O', ops);
 		}
 
-		if (ops && ops.pivot) {
-			rendererCtor = GridTablePivot;
+		if (self.defn.renderer != null) {
+			rendererCtor = GridRenderer.registry.get(self.defn.renderer).cls;
+			rendererCtorOpts = deepCopy(self.defn.rendererOpts);
+		}
+		else if (ops && ops.pivot) {
+			rendererCtor = GridRenderer.registry.get(getPropDef('table_pivot', self.defn, 'whenPivot', 'renderer')).cls;
 			rendererCtorOpts = deepCopy(self.defn.table.whenPivot);
 
 			debug.info('GRID', 'Creating pivot grid table');
@@ -1489,10 +1493,10 @@ Grid.prototype.redraw = function () {
 		else if (ops && ops.group) {
 			switch (self.defn.table.groupMode) {
 			case 'summary':
-				rendererCtor = GridTableGroupSummary;
+				rendererCtor = GridRenderer.registry.get(getPropDef('table_group_summary', self.defn, 'whenGroup', 'renderer')).cls;
 				break;
 			case 'detail':
-				rendererCtor = GridTableGroupDetail;
+				rendererCtor = GridRenderer.registry.get(getPropDef('table_group_detail', self.defn, 'whenGroup', 'renderer')).cls;
 				break;
 			}
 
@@ -1505,7 +1509,7 @@ Grid.prototype.redraw = function () {
 			self.ui.toolbar_pivot.hide();
 		}
 		else {
-			rendererCtor = GridTablePlain;
+			rendererCtor = GridRenderer.registry.get(getPropDef('table_plain', self.defn, 'whenPlain', 'renderer')).cls;
 			rendererCtorOpts = deepCopy(self.defn.table.whenPlain);
 
 			debug.info('GRID', 'Creating plain grid table');

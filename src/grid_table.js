@@ -165,21 +165,8 @@ Csv.prototype.setOrder = function (rowId, pos) {
 // Constructor {{{2
 
 /**
- * @param {Grid} grid
- *
- * @param {object} defn
- *
- * @param {View} view
- *
- * @param {object} features
- *
- * @param {object} opts
- *
- * @param {Timing} timing
- *
- * @param {string} id
- *
  * @class
+ * @extends GridRenderer
  *
  * An abstract base class for all grid tables (which are responsible for building the DOM elements
  * to represent the data in a tabular format).  Concrete subclasses must implement the following
@@ -217,34 +204,20 @@ Csv.prototype.setOrder = function (rowId, pos) {
  * @property {OrdMap} colConfig
  */
 
-var GridTable = (function () {
-	var UNIQUE_ID = 0;
+var GridTable = makeSubclass(GridRenderer, function () {
+	var self = this;
 
-	return makeSubclass(GridRenderer, function (grid, defn, view, features, opts, timing, id) {
-		var self = this;
+	self.super.ctor.apply(self, arguments);
 
-		self.UNIQUE_ID = UNIQUE_ID++;
+	self.selection = [];
+	self.needsRedraw = false;
 
-		self.id = id;
-		self.grid = grid;
-		self.defn = defn;
-		self.view = view;
-		self.features = deepCopy(features);
-		self.opts = opts;
-		self.timing = timing;
-		self.selection = [];
-
-		self.needsRedraw = false;
-
-		self._validateFeatures();
-
-		_.defaults(self.opts, {
-			drawInternalBorders: true,
-			zebraStriping: true,
-			generateCsv: true
-		});
+	_.defaults(self.opts, {
+		drawInternalBorders: true,
+		zebraStriping: true,
+		generateCsv: true
 	});
-})();
+});
 
 GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
@@ -970,12 +943,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			});
 		}
 
-<<<<<<< HEAD
-			self.fire('renderBegin');
-
-			self.data = data;
-			self.typeInfo = typeInfo;
-=======
 		var tr;
 		var srcIndex = 0;
 
@@ -990,7 +957,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 			tr: {},
 			progress: jQuery('<div>')
 		};
->>>>>>> Refactor: Add GridRenderer class above GridTable; other subclasses can render non-tabular output.
 
 		self._addDrillDownHandler(self.ui.tbl, data);
 
@@ -1128,13 +1094,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 
 		// Activate TableTool using this attribute, if the user asked for it.
 
-<<<<<<< HEAD
-				self.fire('renderEnd');
-
-				if (typeof tableDone === 'function') {
-					window.setTimeout(function () {
-						tableDone();
-=======
 		if (self.features.floatingHeader) {
 			debug.info('GRID TABLE // DRAW', 'Enabling floating header using method "%s"',
 				getProp(self.defn, 'table', 'floatingHeader', 'method'));
@@ -1157,7 +1116,6 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 					});
 					self.grid.aggregateControl.on(['fieldAdded', 'fieldRemoved'], function () {
 						self.ui.tbl.floatThead('reflow');
->>>>>>> Refactor: Add GridRenderer class above GridTable; other subclasses can render non-tabular output.
 					});
 				}
 				self.ui.tbl.floatThead(floatTheadConfig);
@@ -1174,6 +1132,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 		}
 
 		self.addWorkHandler();
+
+		self.fire('renderEnd');
 
 		if (typeof tableDoneCont === 'function') {
 			return tableDoneCont();
@@ -1648,13 +1608,8 @@ GridTable.prototype._updateSelectionGui = function () {
 /**
  * The GridTablePlain is in charge of displaying the HTML table of data.
  *
- * @param {object} defn
- *
- * @param {Grid~Features} features
- *
- * @param {Timing} timing
- *
  * @class
+ * @extends GridTable
  *
  * @property {Grid~Features} features
  *
@@ -1676,13 +1631,12 @@ GridTable.prototype._updateSelectionGui = function () {
 var GridTablePlain = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = deepCopy(features);
-	features.filter = false;
+	self.super.ctor.apply(self, arguments);
+
+	self.features.filter = false;
 
 	debug.info('GRID TABLE - PLAIN', 'Constructing grid table; features = %O', features);
 
-	self.super = makeSuper(self, GridTable);
-	self.super.ctor(grid, defn, view, features, opts, timing, id);
 	self.addFilterHandler();
 });
 
@@ -2560,17 +2514,20 @@ GridTablePlain.prototype._addRowSelectHandler = function () {
 // GridTableGroupDetail {{{1
 // Constructor {{{2
 
+/**
+ * @class
+ * @extends GridTable
+ */
+
 var GridTableGroupDetail = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = deepCopy(features);
-	features.limit = false;
-	features.footer = false;
+	self.super.ctor.apply(self, arguments);
+
+	self.features.limit = false;
+	self.features.footer = false;
 
 	debug.info('GRID TABLE - GROUP - DETAIL', 'Constructing grid table; features = %O', features);
-
-	self.super = makeSuper(self, GridTable);
-	self.super.ctor(grid, defn, view, features, opts, timing, id);
 });
 
 // #canRender {{{2
@@ -3474,16 +3431,20 @@ GridTableGroupDetail.prototype.checkAll = function (evt) {
 // GridTableGroupSummary {{{1
 // Constructor {{{2
 
+/**
+ * @class
+ * @extends GridTable
+ */
+
 var GridTableGroupSummary = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = deepCopy(features);
-	features.limit = false;
-	features.footer = false;
+	self.super.ctor.apply(self, arguments);
+
+	self.features.limit = false;
+	self.features.footer = false;
 
 	debug.info('GRID TABLE - GROUP - SUMMARY', 'Constructing grid table; features = %O', features);
-
-	self.super.ctor(grid, defn, view, features, opts, timing, id);
 
 	setPropDef(['rowVals', 'groupAggregates'], self.opts, 'displayOrder');
 });
@@ -3744,18 +3705,20 @@ GridTableGroupSummary.prototype.addWorkHandler = function () {
 
 /**
  * A grid table used for showing data that's been pivotted by the view.
+ *
+ * @class
+ * @extends GridTable
  */
 
 var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
-	features = deepCopy(features);
-	features.limit = false;
-	features.footer = false;
+	self.super.ctor.apply(self, arguments);
+
+	self.features.limit = false;
+	self.features.footer = false;
 
 	debug.info('GRID TABLE - PIVOT', 'Constructing grid table; features = %O', features);
-
-	self.super.ctor(grid, defn, view, features, opts, timing, id);
 
 	setPropDef(['rowVals', 'cells', 'groupAggregates'], self.opts, 'displayOrder');
 });
@@ -4372,3 +4335,22 @@ GridTablePivot.prototype.addWorkHandler = function () {
 		self.draw(self.root);
 	}, { who: self });
 };
+
+// Registry {{{1
+
+GridRenderer.registry = OrdMap.fromArray([{
+	name: 'table_plain',
+	cls: GridTablePlain
+}, {
+	name: 'table_group_detail',
+	cls: GridTableGroupDetail
+}, {
+	name: 'table_group_summary',
+	cls: GridTableGroupSummary
+}, {
+	name: 'table_pivot',
+	cls: GridTablePivot
+}, {
+	name: 'handlebars',
+	cls: GridRendererHandlebars
+}], 'name');
