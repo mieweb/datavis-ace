@@ -1820,10 +1820,12 @@ View.prototype.group = function () {
 			}
 			else {
 				node.numChildren = _.keys(node.children).length;
+				node.rows = [];
 				_.each(node.children, function (child) {
 					child.parent = node;
 					postorder(child);
 					node.numRows += child.numRows;
+					node.rows = node.rows.concat(child.rows);
 				});
 			}
 		};

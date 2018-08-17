@@ -3142,9 +3142,10 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			if (typeof rowRenderCb === 'function') {
 				rowRenderCb(tr, {
 					isGroup: true,
-					groupMode: 'details',
+					groupMode: 'detail',
 					groupField: groupField,
-					rowValElt: rowValElt
+					rowValElt: rowValElt,
+					groupMetadata: childMetadata
 				});
 			}
 		});
