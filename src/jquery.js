@@ -83,8 +83,22 @@ jQuery.fn.extend({
 		return this.css('display') === 'none' || this.css('visibility') !== 'visible';
 	},
 
-	_makeIconCheckbox: function (on, off) {
-		var self = this;
+	_makeIconCheckbox: function () {
+		var self = this
+			, args = Array.prototype.slice.call(arguments)
+			, opts = {};
+
+		if (args.length === 1) {
+			opts = args[0];
+		}
+		else if (args.length === 2) {
+			opts.on = {
+				icon: args[0]
+			};
+			opts.off = {
+				icon: args[1]
+			};
+		}
 
 		var button = jQuery('<button>', {'type': 'button'})
 			.addClass('wcdv_icon_button wcdv_button_left')
@@ -93,17 +107,19 @@ jQuery.fn.extend({
 				self.trigger('change');
 			})
 		;
-		var onIcon = fontAwesome(on).hide().appendTo(button);
-		var offIcon = fontAwesome(off).hide().appendTo(button);
+		var onIcon = fontAwesome(opts.on.icon).hide().appendTo(button);
+		var offIcon = fontAwesome(opts.off.icon).hide().appendTo(button);
 
 		var updateIcon = function () {
 			if (self._isChecked()) {
 				onIcon.show();
 				offIcon.hide();
+				button.attr('title', opts.on.tooltip);
 			}
 			else {
 				onIcon.hide();
 				offIcon.show();
+				button.attr('title', opts.off.tooltip);
 			}
 		};
 
