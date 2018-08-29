@@ -95,7 +95,7 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 		saveCurrent: true,
 		savePerspectives: true,
 		backend: {
-			type: 'localStorage'
+			type: Prefs.DEFAULT_BACKEND_TYPE
 		}
 	});
 
@@ -103,11 +103,11 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 
 	// Create the backend for saving preferences.
 
-	if (PREFS_BACKEND_REGISTRY[opts.backend.type] == null) {
+	if (!PREFS_BACKEND_REGISTRY.isSet(opts.backend.type)) {
 		throw new Error('PREFS BACKEND IS NOT REGISTERED'); // XXX
 	}
 
-	var backendCtor = PREFS_BACKEND_REGISTRY[opts.backend.type];
+	var backendCtor = PREFS_BACKEND_REGISTRY.get(opts.backend.type);
 	var backendCtorOpts = opts.backend[opts.backend.type];
 
 	self.debug('Creating new preferences backend: id = "%s" ; type = %s ; opts = %O',
@@ -117,7 +117,7 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 	// back to a "temporary" prefs backend that doesn't actually save or load anything.
 
 	//try {
-		self.backend = new backendCtor(self.id, backendCtorOpts);
+		self.backend = new backendCtor(self.id, self, backendCtorOpts);
 	//}
 	//catch (e) {
 	//	self.bakend = new PrefsBackendTemporary();
@@ -130,7 +130,61 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 	}
 });
 
+/**
+ * Default name of the "main perspective" which is used when no other perspectives exist.  It's a
+ * fallback, to ensure that there's always something present.
+ */
+
 Prefs.MAIN_PERSPECTIVE_NAME = 'Main Perspective';
+
+/**
+ * Default backend type, for when none is specified.  Must be a valid key of something in {@link
+ * PREFS_BACKEND_REGISTRY}.
+ */
+
+Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
+
+/**
+ * Fired when a new perspective is added.
+ *
+ * @event Prefs#perspectiveAdded
+ */
+
+/**
+ * Fired when a perspective is deleted.
+ *
+ * @event Prefs#perspectiveDeleted
+ */
+
+/**
+ * Fired when a perspective is renamed.
+ *
+ * @event Prefs#perspectiveRenamed
+ */
+
+/**
+ * Fired when the current perspective is changed.
+ *
+ * @event Prefs#perspectiveChanged
+ */
+
+/**
+ * Fired when the perspective history stack changes.
+ *
+ * @event Prefs#prefsHistoryStatus
+ */
+
+/**
+ * Fired when prefs are completely reset.
+ *
+ * @event Prefs#prefsReset
+ */
+
+/**
+ * Fired when the prefs system binds a module.
+ *
+ * @event Prefs#moduleBound
+ */
 
 mixinEventHandling(Prefs, function (self) {
 	return 'PREFS (' + self.id + ')';
@@ -141,10 +195,13 @@ mixinEventHandling(Prefs, function (self) {
 	, 'perspectiveChanged' // Fired when the current perspective has changed.
 	, 'prefsHistoryStatus'
 	, 'prefsReset'
+	, 'moduleBound'
 ]);
+
 mixinDebugging(Prefs, function () {
 	return 'PREFS (' + this.id + ')';
 });
+
 //delegate(Prefs, 'backend', ['getPerspectives', 'getCurrent']);
 
 // #init {{{2
@@ -336,7 +393,7 @@ Prefs.prototype._historyDebug = function () {
 
 // #bind {{{2
 
-Prefs.prototype.bind = function (moduleName, target) {
+Prefs.prototype.bind = function (moduleName, target, opts) {
 	var self = this;
 
 	if (typeof moduleName !== 'string') {
@@ -349,11 +406,14 @@ Prefs.prototype.bind = function (moduleName, target) {
 	// Make sure that the module is registered with a class, otherwise we obviously have no idea what
 	// to do with it.
 
-	if (PREFS_MODULE_REGISTRY[moduleName] == null) {
+	if (!PREFS_MODULE_REGISTRY.isSet(moduleName)) {
 		throw new Error('Module is not registered: ' + moduleName);
 	}
 
-	self.modules[moduleName] = new PREFS_MODULE_REGISTRY[moduleName](target);
+	var moduleCtor = PREFS_MODULE_REGISTRY.get(moduleName);
+	self.modules[moduleName] = new moduleCtor(target);
+
+	self.fire('moduleBound', null, moduleName, self.modules[moduleName], target, opts);
 
 	// When we're adding a binding with a perspective already loaded, reload it for the new binding.
 
@@ -393,7 +453,7 @@ Prefs.prototype.getPerspective = function (name) {
  * If missing, the configuration of the current perspective is used.
  *
  * @param {object} [perspectiveOpts]
- * Additional options to pass to Perspective().
+ * Additional options to pass to the {@link Perspective} constructor.
  *
  * @param {function} [cont]
  *
@@ -626,6 +686,8 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
 // #renamePerspective {{{2
 
 /**
+ * Rename a perspective.
+ *
  * @param {string} [oldName]
  * When null or undefined, uses the current perspective.
  *
@@ -640,6 +702,8 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
 
 Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 	var self = this;
+
+	var isCurrent = false;
 
 	opts = deepDefaults(opts, {
 		sendEvent: true
@@ -659,6 +723,10 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 
 	if (oldName == null) {
 		oldName = self.currentPerspective.getName();
+	}
+
+	if (oldName === self.currentPerspective.getName()) {
+		isCurrent = true;
 	}
 
 	// Make sure a perspective with the old name exists.
@@ -688,13 +756,20 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 		self.perspectives[newName] = self.perspectives[oldName];
 		delete self.perspectives[oldName];
 
+		// Remove the old name from the list of available perspectives.
+		self.availablePerspectives = _.without(self.availablePerspectives, oldName);
+
 		if (opts.sendEvent) {
 			self.fire('perspectiveRenamed', {
 				notTo: opts.dontSendEventTo
 			}, oldName, newName);
 		}
 
-		return typeof cont === 'function' ? cont(true) : true;
+		return isCurrent
+			? self.setCurrentPerspective(newName, cont)
+			: typeof cont === 'function'
+				? cont(true)
+				: true;
 	});
 };
 
@@ -896,17 +971,21 @@ Prefs.prototype.reset = function (cont) {
  * @param {object} [opts]
  */
 
-var PrefsBackend = makeSubclass(Object, function (id, opts) {
+var PrefsBackend = makeSubclass(Object, function (id, prefs, opts) {
 	var self = this;
 
 	self.id = id;
+	self.prefs = prefs;
 	self.opts = opts;
 });
 
 // #load {{{2
 
 /**
- * Loads the configuration for the specified perspective.
+ * Loads the configuration for the specified perspective.  A subclass implementation need not
+ * support loading perspectives individually, but that's how this function is called.  (For example,
+ * an implementation could retrieve all available perspectives from somewhere and just give `cont`
+ * the one that was requested.)
  *
  * @param {string} name
  * @param {function} cont
@@ -919,7 +998,10 @@ PrefsBackend.prototype.load = function (name, cont) {
 // #save {{{2
 
 /**
- * Saves the configuration for the specified perspective.
+ * Saves the configuration for the specified perspective.  A subclass implementation need not
+ * support saving perspectives individually, but that's how this function is called.  (For example,
+ * an implementation could update the `name` perspective in a big object containing all available
+ * perspectives, and store the whole thing somewhere.)
  *
  * @param {string} name
  * @param {object} config
@@ -933,9 +1015,16 @@ PrefsBackend.prototype.save = function (name, config, cont) {
 // #getPerspectives {{{2
 
 /**
+ * @callback PrefsBackend~getPerspectives_cont
+ * @param {string[]} names
+ * List of the names of all currently available perspectives.
+ */
+
+/**
  * Get the names of all the available perspectives.
  *
- * @param {function} cont
+ * @param {PrefsBackend~getPerspectives_cont} cont
+ * Callback function to receive the perspective names.
  */
 
 PrefsBackend.prototype.getPerspectives = function (cont) {
@@ -1811,13 +1900,12 @@ Perspective.prototype.save = function (cont) {
 
 // Registries {{{1
 
-var PREFS_BACKEND_REGISTRY = {
-	localStorage: PrefsBackendLocalStorage,
-	temporary: PrefsBackendTemporary
-};
+var PREFS_BACKEND_REGISTRY = new OrdMap();
+var PREFS_MODULE_REGISTRY = new OrdMap();
 
-var PREFS_MODULE_REGISTRY = {
-	view: PrefsModuleView,
-	grid: PrefsModuleGrid,
-	graph: PrefsModuleGraph
-};
+PREFS_BACKEND_REGISTRY.set('localStorage', PrefsBackendLocalStorage);
+PREFS_BACKEND_REGISTRY.set('temporary', PrefsBackendTemporary);
+
+PREFS_MODULE_REGISTRY.set('view', PrefsModuleView);
+PREFS_MODULE_REGISTRY.set('grid', PrefsModuleGrid);
+PREFS_MODULE_REGISTRY.set('graph', PrefsModuleGraph);
