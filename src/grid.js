@@ -415,8 +415,6 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		self.prefs = new Prefs(self.id);
 	}
 
-	self.prefs.bind('grid', self);
-
 	self.colConfigWin = new ColConfigWin(self.colConfig);
 
 	/*
@@ -472,6 +470,10 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 		.addClass('wcdv_toolbar_section')
 		.appendTo(self.ui.toolbar);
 	self._addPrefsButtons(self.ui.toolbar_prefs);
+
+	self.prefs.bind('grid', self, {
+		toolbar: self.ui.toolbar_prefs
+	});
 
 	self.ui.toolbar_plain = jQuery('<div>')
 		.addClass('wcdv_toolbar_section')
