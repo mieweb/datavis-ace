@@ -20,6 +20,29 @@ jQuery.fn.extend({
 	},
 
 	/**
+	 * Checks a checkbox.
+	 *
+	 * @function external:"jQuery.fn"#_check
+	 *
+	 * @returns {boolean}
+	 * True if the element is now checked, false if it's not.
+	 */
+
+	_check: function () {
+		this.prop('checked', true);
+	},
+
+	/**
+	 * Unchecks a checkbox.
+	 *
+	 * @function external:"jQuery.fn"#_uncheck
+	 */
+
+	_uncheck: function () {
+		this.prop('checked', false);
+	},
+
+	/**
 	 * Toggles the checkbox.
 	 *
 	 * @function external:"jQuery.fn"#_toggleCheck
