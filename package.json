@@ -5,7 +5,6 @@
   "license": "TBD",
   "devDependencies": {
     "eslint": "latest",
-    "ink-docstrap": "latest",
     "jsdoc": "latest",
     "jshint": "latest"
   },
