@@ -14,6 +14,10 @@
         "collapseSymbols": false,
         "inverseNav": true,
         "methodHeadingReturns": true,
-        "outputSourceFiles": true
+        "outputSourceFiles": true,
+        "applicationName": "DataVis",
+        "meta": {
+            "title": "DataVis JSDoc"
+        }
     }
 }
