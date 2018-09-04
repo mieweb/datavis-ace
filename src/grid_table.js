@@ -249,6 +249,67 @@ var GridTable = (function () {
 GridTable.prototype = Object.create(Object.prototype);
 GridTable.prototype.constructor = GridTable;
 
+// Events {{{2
+
+/**
+ * Fired when columns have been resized automatically.  No longer used.
+ *
+ * @event GridTable#columnResize
+ */
+
+/**
+ * Fired when the current GridRenderer subclass instance is unable to render the data from the view,
+ * potentially because the view performed an operation (e.g. pivot) that this renderer is not able
+ * to show the result of.
+ *
+ * @event GridTable#unableToRender
+ *
+ * @param {View~OperationsPerformed} ops
+ * The operations performed by the view.
+ */
+
+/**
+ * Fired when the output has been limited according to the renderer's limit configuration.
+ *
+ * @event GridTable#limited
+ */
+
+/**
+ * Fired when all output is being shown, even though the grid is configured to limit output.  Most
+ * likely, this is due to the number of rows not reaching the threshold configured for limiting.
+ *
+ * @event GridTable#unlimited
+ */
+
+/**
+ * Fired when asynchronous CSV generation is finished.
+ *
+ * @event GridTable#csvReady
+ */
+
+/**
+ * Fired periodically while generating the CSV file to indicate progress.  Before rendering starts,
+ * it will be fired with a `progress` value of 0.  After rendering is done, it will be fired with a
+ * `progress` value of 100.
+ *
+ * @event GridTable#generateCsvProgress
+ *
+ * @param {number} progress
+ * The progress on a scale from 0 to 100.
+ */
+
+/**
+ * Fired when rendering has started.
+ *
+ * @event GridTable#renderBegin
+ */
+
+/**
+ * Fired when rendering has finished.
+ *
+ * @event GridTable#renderEnd
+ */
+
 mixinEventHandling(GridTable, 'GridTable', [
 		'columnResize'        // A column is resized.
 	, 'unableToRender'      // A grid table can't render the data in the view it's bound to.
@@ -256,6 +317,8 @@ mixinEventHandling(GridTable, 'GridTable', [
 	, 'unlimited'           // The grid table is rendering all possible rows.
 	, 'csvReady'            // CSV data has been generated.
 	, 'generateCsvProgress' // CSV generation progress.
+	, 'renderBegin'
+	, 'renderEnd'
 ]);
 
 // #_validateFeatures {{{2
@@ -929,6 +992,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				return self.fire(GridTable.events.unableToRender);
 			}
 
+			self.fire('renderBegin');
+
 			self.data = data;
 			self.typeInfo = typeInfo;
 
@@ -1075,6 +1140,8 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 				}
 
 				self.timing.stop(['Grid Table', 'Draw']);
+
+				self.fire('renderEnd');
 
 				if (typeof tableDone === 'function') {
 					window.setTimeout(function () {

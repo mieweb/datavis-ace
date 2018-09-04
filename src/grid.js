@@ -193,6 +193,14 @@ GridError.prototype.constructor = GridError;
  * If this is not specified, the default is based on what library is available in the page, in the
  * order listed above.
  *
+ * @property {string} [table.groupMode]
+ * The starting mode for group output.  Must be one of the following:
+ *
+ *   - `summary`
+ *   - `detail`
+ *
+ * The perspective will override this.
+ *
  * @property {object} [table.limit]
  * Configuration for the "limit" feature.
  *
@@ -317,11 +325,6 @@ GridError.prototype.constructor = GridError;
  *
  * @param {function} cb A function that will be called after the grid has finished rendering, with
  * the underlying output method grid object (e.g. the jqxGrid instance) being passed.
- *
- * @example <caption>Getting the grid object using a callback.</caption>
- * var grid = new MIE.Grid('test', {...}, {...}, (grid) => {
- *   grid.jqxGrid('autoresizecolumns');
- * });
  *
  * @class
  *
@@ -653,9 +656,35 @@ Grid.prototype.constructor = Grid;
 
 // Events {{{2
 
+/**
+ * Fired when controls are shown in the grid.
+ *
+ * @event Grid#showControls
+ */
+
+/**
+ * Fired when controls are hidden in the grid.
+ *
+ * @event Grid#hideControls
+ */
+
+/**
+ * Fired when rendering has started.
+ *
+ * @event Grid#renderBegin
+ */
+
+/**
+ * Fired when rendering has finished.
+ *
+ * @event Grid#renderEnd
+ */
+
 mixinEventHandling(Grid, 'Grid', [
 		'showControls'
 	, 'hideControls'
+	, 'renderBegin'
+	, 'renderEnd'
 ]);
 
 // Delegate {{{2
@@ -1472,6 +1501,14 @@ Grid.prototype.redraw = function () {
 
 		self.ui.exportBtn.attr('disabled', true);
 		self.gridTable = new gridTableCtor(self, self.defn, self.view, self.features, gridTableOpts, self.timing, self.id);
+
+		self.gridTable.on('renderBegin', function () {
+			self.fire('renderBegin');
+		});
+		self.gridTable.on('renderEnd', function () {
+			self.fire('renderEnd');
+		});
+
 		self.gridTable.on(GridTable.events.unableToRender, function () {
 			self._setExportStatus('notReady');
 			makeGridTable();
@@ -1865,7 +1902,8 @@ Grid.prototype._normalizeColumns = function (defn) {
 			cc = deepDefaults(cc, {
 				hideMidnight: false,
 				format_dateOnly: 'LL',
-				allowHtml: false
+				allowHtml: false,
+				canHide: true
 			});
 
 			self.colConfig.set(cc.field, cc);
@@ -1946,7 +1984,7 @@ Grid.prototype.setColConfig = function (colConfig, caller) {
 
 	debug.info('GRID', 'Setting column config (caller = "%s"): %O', caller, colConfig);
 
-	self.colConfig = colConfig.clone();
+	self.colConfig = colConfig;
 
 	if (caller !== 'colConfigWin') {
 		self.colConfigWin.setColConfig(self.colConfig);
