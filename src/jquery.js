@@ -100,13 +100,17 @@ jQuery.fn.extend({
 			};
 		}
 
-		var button = jQuery('<button>', {'type': 'button'})
+		var button = jQuery('<button>', {
+			'type': 'button',
+			'disabled': jQuery(self).prop('disabled')
+		})
 			.addClass('wcdv_icon_button wcdv_button_left')
 			.on('click', function () {
 				self._toggleCheck();
 				self.trigger('change');
 			})
 		;
+
 		var onIcon = fontAwesome(opts.on.icon).hide().appendTo(button);
 		var offIcon = fontAwesome(opts.off.icon).hide().appendTo(button);
 

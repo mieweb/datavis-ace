@@ -144,34 +144,60 @@ Prefs.MAIN_PERSPECTIVE_NAME = 'Main Perspective';
 
 Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
 
+// Events {{{2
+
 /**
  * Fired when a new perspective is added.
  *
  * @event Prefs#perspectiveAdded
+ *
+ * @param {string} newName
+ * Name of the new perspective.
  */
 
 /**
  * Fired when a perspective is deleted.
  *
  * @event Prefs#perspectiveDeleted
+ *
+ * @param {string} deletedName
+ * Name of the perspective being deleted.
+ *
+ * @param {string} newCurrentName
+ * Name of the new current perspective.
  */
 
 /**
  * Fired when a perspective is renamed.
  *
  * @event Prefs#perspectiveRenamed
+ *
+ * @param {string} oldName
+ * Original name of the perspective.
+ *
+ * @param {string} newName
+ * New name of the perspective.
  */
 
 /**
  * Fired when the current perspective is changed.
  *
  * @event Prefs#perspectiveChanged
+ *
+ * @param {string} newCurrentName
+ * Name of the new current perspective.
  */
 
 /**
  * Fired when the perspective history stack changes.
  *
  * @event Prefs#prefsHistoryStatus
+ *
+ * @param {boolean} canGoFoward
+ * If true, there are history stack elements "after" this one.
+ *
+ * @param {boolean} canGoBack
+ * If true, there are history stack elements "before" this one.
  */
 
 /**
@@ -184,6 +210,18 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  * Fired when the prefs system binds a module.
  *
  * @event Prefs#moduleBound
+ *
+ * @param {string} moduleName
+ * Name of the module being bound, e.g. "grid" or "view."
+ *
+ * @param {PrefsModule} module
+ * The instance configuring the target.
+ *
+ * @param {object} target
+ * The target object, what is configured via the module.
+ *
+ * @param {object} opts
+ * Any additional options passed by the target when it bound itself to a module in the prefs system.
  */
 
 mixinEventHandling(Prefs, function (self) {
@@ -325,6 +363,12 @@ Prefs.prototype._firePrefsHistoryStatus = function () {
 
 // #back {{{2
 
+/**
+ * Navigate back in the perspective history stack.
+ *
+ * @fires Prefs#prefsHistoryStatus
+ */
+
 Prefs.prototype.back = function () {
 	var self = this;
 
@@ -342,6 +386,12 @@ Prefs.prototype.back = function () {
 };
 
 // #forward {{{2
+
+/**
+ * Navigate forward in the perspective history stack.
+ *
+ * @fires Prefs#prefsHistoryStatus
+ */
 
 Prefs.prototype.forward = function () {
 	var self = this;
@@ -392,6 +442,21 @@ Prefs.prototype._historyDebug = function () {
 };
 
 // #bind {{{2
+
+/**
+ * Binds a module and target to the prefs system.
+ *
+ * @param {string} moduleName
+ * Name of the module to bind.  Corresponds to a key in {@link PREFS_MODULE_REGISTRY}.
+ *
+ * @param {object} target
+ * The object that will be controlled by the module.
+ *
+ * @param {object} opts
+ * Userdata forwarded to the `moduleBound` event handler.
+ *
+ * @fires Prefs#moduleBound
+ */
 
 Prefs.prototype.bind = function (moduleName, target, opts) {
 	var self = this;
@@ -465,6 +530,8 @@ Prefs.prototype.getPerspective = function (name) {
  * @param {boolean} [opts.sendEvent=true]
  *
  * @param {boolean} [opts.dontSendEventTo]
+ *
+ * @fires Prefs#perspectiveAdded
  */
 
 Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, opts) {
@@ -564,6 +631,9 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
  * @param {object} [opts]
  * @param {boolean} [opts.sendEvent=true]
  * @param {boolean} [opts.dontSendEventTo]
+ *
+ * @fires Prefs#perspectiveDeleted
+ * @fires Prefs#prefsHistoryStatus
  */
 
 Prefs.prototype.deletePerspective = function (name, cont, opts) {
@@ -698,6 +768,8 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
  * @param {object} [opts]
  * @param {boolean} [opts.sendEvent=true]
  * @param {boolean} [opts.dontSendEventTo]
+ *
+ * @fires Prefs#perspectiveRenamed
  */
 
 Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
@@ -790,6 +862,8 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
  *
  * @param {boolean} [opts.sendEvent=true]
  * @param {boolean} [opts.dontSendEventTo]
+ *
+ * @fires Prefs#perspectiveChanged
  */
 
 Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
@@ -897,6 +971,8 @@ Prefs.prototype.save = function (cont) {
  *
  * @param {function} cont
  * What to do when the prefs system is ready for use again.
+ *
+ * @fires Prefs#prefsReset
  */
 
 Prefs.prototype.reset = function (cont) {
@@ -968,6 +1044,7 @@ Prefs.prototype.reset = function (cont) {
  * @class
  *
  * @param {string} id
+ * @param {Prefs} prefs
  * @param {object} [opts]
  */
 
@@ -987,6 +1064,8 @@ var PrefsBackend = makeSubclass(Object, function (id, prefs, opts) {
  * an implementation could retrieve all available perspectives from somewhere and just give `cont`
  * the one that was requested.)
  *
+ * @abstract
+ *
  * @param {string} name
  * @param {function} cont
  */
@@ -1002,6 +1081,8 @@ PrefsBackend.prototype.load = function (name, cont) {
  * support saving perspectives individually, but that's how this function is called.  (For example,
  * an implementation could update the `name` perspective in a big object containing all available
  * perspectives, and store the whole thing somewhere.)
+ *
+ * @abstract
  *
  * @param {string} name
  * @param {object} config
@@ -1023,6 +1104,8 @@ PrefsBackend.prototype.save = function (name, config, cont) {
 /**
  * Get the names of all the available perspectives.
  *
+ * @abstract
+ *
  * @param {PrefsBackend~getPerspectives_cont} cont
  * Callback function to receive the perspective names.
  */
@@ -1036,6 +1119,8 @@ PrefsBackend.prototype.getPerspectives = function (cont) {
 /**
  * Get the name of the current perspective.
  *
+ * @abstract
+ *
  * @param {function} cont
  */
 
@@ -1048,6 +1133,8 @@ PrefsBackend.prototype.getCurrent = function (cont) {
 /**
  * Set the name of the current perspective.
  *
+ * @abstract
+ *
  * @param {string} name
  * @param {function} [cont]
  */
@@ -1059,8 +1146,13 @@ PrefsBackend.prototype.setCurrent = function (name, cont) {
 // #rename {{{2
 
 /**
- * @param {string} oldName
- * @param {string} newName
+ * Rename a perspective in the backend, i.e. store that the perspective previously known as
+ * `oldName` is now called `newName`.
+ *
+ * @abstract
+ *
+ * @param {string} oldName Perspective's old name.
+ * @param {string} newName Perspective's new name.
  * @param {function} [cont]
  */
 
@@ -1071,6 +1163,10 @@ PrefsBackend.prototype.rename = function (oldName, newName, cont) {
 // #delete {{{2
 
 /**
+ * Delete a perspective in the backend.
+ *
+ * @abstract
+ *
  * @param {string} name
  * @param {function} [cont]
  */
@@ -1082,6 +1178,10 @@ PrefsBackend.prototype.deletePerspective = function (name, cont) {
 // #reset {{{2
 
 /**
+ * Reset all preferences.
+ *
+ * @abstract
+ *
  * @param {function} [cont]
  */
 
@@ -1900,7 +2000,14 @@ Perspective.prototype.save = function (cont) {
 
 // Registries {{{1
 
+/**
+ * Associates backend names with classes implementing those modules.
+ */
 var PREFS_BACKEND_REGISTRY = new OrdMap();
+
+/**
+ * Associates module names with classes implementing those modules.
+ */
 var PREFS_MODULE_REGISTRY = new OrdMap();
 
 PREFS_BACKEND_REGISTRY.set('localStorage', PrefsBackendLocalStorage);

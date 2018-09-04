@@ -68,14 +68,14 @@ var InvalidAggregateError = makeSubclass(ViewError);
  */
 
 /**
- * @typedef {Object<string,string>|Object<string,View_Filter_Spec_Value>} View_Filter_Spec
+ * @typedef {Object<string,string>|Object<string,View~FilterSpecValue>} View~FilterSpec
  * The specification used for filtering within a data view.  The keys are column names, and the
  * values are either strings (implying an equality relationship) or objects indicating a more
  * complex relationship.
  */
 
 /**
- * @typedef {Object<string,any>} View_Filter_Spec_Value
+ * @typedef {Object<string,any>} View~FilterSpecValue
  * A value within the filter spec object.  In order for a row to "pass" the filter, all of the
  * conditions supplied must be true.  At least one of the following must be provided.
  *
@@ -106,28 +106,28 @@ var InvalidAggregateError = makeSubclass(ViewError);
  */
 
 /**
- * @typedef {object} View~AggregateSpecs
+ * @typedef {object} View~AggregateSpec
  * An object telling what aggregate functions to calculate on the data.
  *
- * @property {Array.<View~AggregateSpec>} cell
+ * @property {Array.<View~AggregateTypeSpec>} cell
  * Aggregate functions applied over the rows that match a single rowval and colval.  Only calculated
  * for pivot output.
  *
- * @property {Array.<View~AggregateSpec>} group
+ * @property {Array.<View~AggregateTypeSpec>} group
  * Aggregate functions applied over the rows that match a single rowval.  Calculated for both group
  * summary output and pivot output.
  *
- * @property {Array.<View~AggregateSpec>} pivot
+ * @property {Array.<View~AggregateTypeSpec>} pivot
  * Aggregate functions applied over the rows that match a single colval.  Only calculated for pivot
  * output.
  *
- * @property {Array.<View~AggregateSpec>} all
+ * @property {Array.<View~AggregateTypeSpec>} all
  * Aggregate functions applied over all rows.  Calculated for both group summary output and pivot
  * output.
  */
 
 /**
- * @typedef {object} View~AggregateSpec
+ * @typedef {object} View~AggregateTypeSpec
  * An object specifying a single aggregate function.
  *
  * @property {string} fun
@@ -137,7 +137,7 @@ var InvalidAggregateError = makeSubclass(ViewError);
  * What should be displayed when the value of this function is output.  When not provided, defaults
  * to "[function] of [fields]" e.g. "Min of Date".
  *
- * @property {string} [fields]
+ * @property {Array.<string>} [fields]
  * A list of names referring to the fields to which the aggregate should be applied.  Should have a
  * length equal to `AGGREGATE_REGISTRY[fun].fieldCount` or else bad things may happen.
  *
@@ -147,6 +147,25 @@ var InvalidAggregateError = makeSubclass(ViewError);
  *
  * @property {boolean} [debug=false]
  * If true, then extra debugging messages are emitted for this aggregate function.
+ *
+ * @property {boolean} [shouldGraph=false]
+ * If true, then this aggregate should be used for graphing.
+ */
+
+/**
+ * @typedef {object} View~OperationsPerformed
+ *
+ * @property {boolean} filter
+ * True if the data was filtered.
+ *
+ * @property {boolean} group
+ * True if the data was grouped.
+ *
+ * @property {boolean} pivot
+ * True if the data was pivotted.
+ *
+ * @property {boolean} sort
+ * True if the data was sorted.
  */
 
 // Constructor {{{2
@@ -220,6 +239,156 @@ View.prototype = Object.create(Object.prototype);
 View.prototype.constructor = View;
 
 // Events {{{2
+
+/**
+ * Fired when the view has started getting data from the source.
+ *
+ * @event View#fetchDataBegin
+ */
+
+/**
+ * Fired when the view has finished getting data from the source.
+ *
+ * @event View#fetchDataEnd
+ */
+
+/**
+ * Fired when new type information is available from the source.
+ *
+ * @event View#getTypeInfo
+ */
+
+/**
+ * Fired when new data is available from the source.
+ *
+ * @event View#dataUpdated
+ */
+
+/**
+ * Fired when the view has started doing work with data.
+ *
+ * @event View#workBegin
+ */
+
+/**
+ * Fired when the view has finished doing work with data.
+ *
+ * @event View#workEnd
+ *
+ * @param {View~OperationsPerformed} ops
+ * An object identifying what operations were performed.
+ */
+
+/**
+ * Fired when the sort configuration is set in the view.
+ *
+ * @event View#sortSet
+ */
+
+/**
+ * Fired when the filter configuration is set in the view.
+ *
+ * @event View#filterSet
+ */
+
+/**
+ * Fired when the group configuration is set in the view.
+ *
+ * @event View#groupSet
+ */
+
+/**
+ * Fired when the pivot configuration is set in the view.
+ *
+ * @event View#pivotSet
+ */
+
+/**
+ * Fired when the aggregate configuration is set in the view.
+ *
+ * @event View#aggregateSet
+ */
+
+/**
+ * Fired when the view starts a sort operation.
+ *
+ * @event View#sortBegin
+ */
+
+/**
+ * Fired when the view has determined the final sort position of a record.  One place this is used
+ * is by GridTable to update itself without having to completely redraw from scratch after sorting.
+ *
+ * @event View#sort
+ *
+ * @param {number} rowNum
+ * The unique ID of the row.
+ *
+ * @param {number} index
+ * The index of the row in the sorted output.
+ */
+
+/**
+ * Fired when the view finishes a sort operation.
+ *
+ * @event View#sortEnd
+ */
+
+/**
+ * Fired when the view starts a filter operation.
+ *
+ * @event View#filterBegin
+ */
+
+/**
+ * Fired when the view has determined whether a record should be shown or hidden.  One place this is
+ * used is by GridTable to update itself without having to completely redraw from scratch after
+ * filtering.
+ *
+ * @event View#filter
+ *
+ * @param {number} rowNum
+ * The unique ID of the row.
+ *
+ * @param {boolean} isHidden
+ * If true, the row should be hidden; if false, it should be shown.
+ */
+
+/**
+ * Fired when the view finishes a filter operation.
+ *
+ * @event View#filterEnd
+ */
+
+/**
+ * Fired when attempting to filter by an invalid field.
+ *
+ * @event View#invalidFilterField
+ */
+
+/**
+ * Fired when attempting to group by an invalid field.
+ *
+ * @event View#invalidGroupField
+ */
+
+/**
+ * Fired when attempting to pivot by an invalid field.
+ *
+ * @event View#invalidPivotField
+ */
+
+/**
+ * Fired when attempting to sort by an invalid field.
+ *
+ * @event View#invalidSortField
+ */
+
+/**
+ * Fired when attempting to set an invalid aggregate.
+ *
+ * @event View#invalidAggregate
+ */
 
 mixinEventHandling(View, function (self) {
 	return 'VIEW (' + self.name + ')';
@@ -1099,7 +1268,7 @@ View.prototype.sort = function (cont) {
  * @method
  * @memberof View
  *
- * @param {View_Filter_Spec} spec How to perform filtering.
+ * @param {View~FilterSpec} spec How to perform filtering.
  *
  * @param {object} progress
  *

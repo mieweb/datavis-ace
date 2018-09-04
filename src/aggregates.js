@@ -430,6 +430,16 @@ Aggregate.prototype.getNumber = function (x) {
 
 // #getFullName {{{2
 
+/**
+ * Returns a name for this aggregate function, suitable for display.
+ *
+ * #. If `opts.name` was provided to the constructor, that will be used.
+ * #. If fields are required and some were given, builds a name like "[name] of [field]".
+ * #. Uses the aggregate function name.
+ *
+ * @returns {string} A name suitable for display.
+ */
+
 Aggregate.prototype.getFullName = function () {
 	var self = this;
 
@@ -450,6 +460,20 @@ Aggregate.prototype.getFullName = function () {
 };
 
 // #getType {{{2
+
+/**
+ * Gets the type of the result of the aggregate function.
+ *
+ * An aggregate function can specify its own type $T_a$, e.g. count is always a number.
+ *
+ * * If fields were supplied, and they are all the same type $T_f$:
+ *    * If that type is in the aggregate function's list of allowed types, then $T_f$ is used.
+ *    * If the aggregate function didn't specify a fixed type, $T_f$ is used.
+ * * If $T_a$ was specified, then it is used.
+ * * The type "string" is used.
+ *
+ * @returns {string} The type of the result of the aggregate function.
+ */
 
 Aggregate.prototype.getType = function () {
 	var self = this;

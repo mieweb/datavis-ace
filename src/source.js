@@ -524,6 +524,20 @@ var Source = function (spec, params, userTypeInfo, opts) {
 Source.prototype = Object.create(Object.prototype);
 Source.prototype.constructor = Source;
 
+// Events {{{2
+
+/**
+ * Fired when new data is available.
+ *
+ * @event Source#dataUpdated
+ */
+
+/**
+ * Fired when new type information is available.
+ *
+ * @event Source#getTypeInfo
+ */
+
 mixinEventHandling(Source, 'Source', [
 		'dataUpdated'
 	, 'getTypeInfo'

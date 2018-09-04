@@ -13,7 +13,7 @@ var ColConfigWin = makeSubclass(Object, function (colConfig) {
 ColConfigWin.prototype.setColConfig = function (colConfig) {
 	var self = this;
 
-	self.colConfig = colConfig.clone();
+	self.colConfig = colConfig;
 };
 
 // #show {{{2
@@ -22,6 +22,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	var self = this;
 
 	var current = self.colConfig.clone();
+	console.log(current.asMap());
 
 	var orderWinEffect = {
 		effect: 'fade',
@@ -44,10 +45,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 				// Overwrite the "initial" configuration with one derived from the current one, based on the
 				// order of the keys saved by the reordering the table rows.
 
-				self.colConfig = new OrdMap();
-				_.each(keys, function (k) {
-					self.colConfig.set(k, current.get(k));
-				});
+				self.colConfig.replaceWith(current);
 
 				orderWin.dialog('close');
 				onSave(self.colConfig);
@@ -130,7 +128,8 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(tr);
 
 		var isHiddenCheckbox = jQuery('<input>', {'type': 'checkbox'})
-			.prop('checked', !!getProp(colConfig, 'isHidden'))
+			.prop('disabled', !getPropDef(true, colConfig, 'canHide'))
+			.prop('checked', getPropDef(false, colConfig, 'isHidden'))
 			.on('change', function () {
 				colConfig.isHidden = isHiddenCheckbox.prop('checked');
 			})

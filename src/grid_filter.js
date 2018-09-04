@@ -961,6 +961,20 @@ var GridFilterSet = function (view, prefs, gridTable, progress, opts) {
 GridFilterSet.prototype = Object.create(Object.prototype);
 GridFilterSet.prototype.constructor = GridFilterSet;
 
+// Events {{{2
+
+/**
+ * Fired when a filter has been added.
+ *
+ * @event GridFilterSet#filterAdded
+ */
+
+/**
+ * Fired when a filter has been removed.
+ *
+ * @event GridFilterSet#filterRemoved
+ */
+
 mixinEventHandling(GridFilterSet, 'GridFilterSet', [
 		'filterAdded'
 	, 'filterRemoved'

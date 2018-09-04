@@ -499,10 +499,41 @@ var GridControl = makeSubclass(Object, function (grid, colConfig, view, features
 }, {
 	isHorizontal: false,
 	disableUsedItems: true,
-	useColConfig: true
+	useColConfig: true,
+	updateCanHide: true
 });
 
 // Events {{{2
+
+/**
+ * Fired when a field has been added to the control.
+ *
+ * @event GridControl#fieldAdded
+ *
+ * @param {string} fieldAdded
+ * The field that was added.
+ *
+ * @param {Array.<string>} allFields
+ * All fields in the control, after the addition.
+ */
+
+/**
+ * Fired when a field has been removed from the control.
+ *
+ * @event GridControl#fieldRemoved
+ *
+ * @param {string} fieldRemoved
+ * The field that was removed.
+ *
+ * @param {Array.<string>} allFields
+ * All fields in the control, after the removal.
+ */
+
+/**
+ * Fired when the control has been cleared (reset).
+ *
+ * @event GridControl#cleared
+ */
 
 mixinEventHandling(GridControl, 'GridControl', [
 		'fieldAdded'
@@ -561,6 +592,14 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 
 	if (opts.openControls) {
 		self.grid.showControls();
+	}
+
+	// Check to see if we are supposed to update the 'canHide' property of the column config.  Since
+	// we're adding the field, we mark it so that the field can't be hidden.
+
+	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(field)) {
+		self.colConfig.get(field).isHidden = false;
+		self.colConfig.get(field).canHide = false;
 	}
 
 	var cf = new self.controlFieldCtor(self, field, displayText, self.useColConfig ? self.colConfig.get(field) : null, controlFieldOpts);
@@ -623,6 +662,13 @@ GridControl.prototype.removeField = function (cf) {
 	var self = this
 		, field = cf.field;
 
+	// Check to see if we are supposed to update the 'canHide' property of the column config.  Since
+	// we're removing the field, we mark it so that the field can be hidden.
+
+	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(field)) {
+		self.colConfig.get(field).canHide = true;
+	}
+
 	// Remove it from the UI.
 
 	cf.destroy();
@@ -666,6 +712,15 @@ GridControl.prototype.clear = function (opts) {
 	_.defaults(opts, {
 		updateView: true
 	});
+
+	// Check to see if we are supposed to update the 'canHide' property of the column config.  Since
+	// we're removing all fields, we mark it so that they can all be hidden.
+
+	if (self.updateCanHide && self.colConfig != null) {
+		self.colConfig.each(function (cc) {
+			cc.canHide = true;
+		});
+	}
 
 	self.fields = [];
 	self.controlFields = [];
@@ -1031,6 +1086,7 @@ var AggregateControl = makeSubclass(GridControl, function () {
 	});
 }, {
 	disableUsedItems: false,
+	updateCanHide: false,
 	controlFieldCtor: AggregateControlField
 });
 
