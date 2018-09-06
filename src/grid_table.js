@@ -2088,6 +2088,9 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
 						td.html(value);
 					}
+					else if (value === '') {
+						td.html('&nbsp;');
+					}
 					else {
 						td.text(value);
 					}
@@ -2965,6 +2968,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				}
 				else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
 					td.html(value);
+				}
+				else if (value === '') {
+					td.html('&nbsp;');
 				}
 				else {
 					td.text(value);
