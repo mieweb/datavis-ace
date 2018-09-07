@@ -92,85 +92,89 @@ var Graph = function (id, view, devConfig, opts) {
 
 	self.view.addClient(self, 'graph');
 
-	self.view.on('dataUpdated', function () {
-		if (self.opts.showOnDataChange && !self.isVisible()) {
-			self.view.off('dataUpdated', self.renderer);
-			self.show();
-		}
-	});
+	self.prefs.prime(function () {
+		self.view.prime(function () {
+			self.view.on('dataUpdated', function () {
+				if (self.opts.showOnDataChange && !self.isVisible()) {
+					self.view.off('dataUpdated', self.renderer);
+					self.show();
+				}
+			});
 
-	self.view.on('fetchDataBegin', function () {
-		self._setSpinner('loading');
-		self._showSpinner();
-	});
-	self.view.on('fetchDataEnd', function () {
-		self._hideSpinner();
-	});
+			self.view.on('fetchDataBegin', function () {
+				self._setSpinner('loading');
+				self._showSpinner();
+			});
+			self.view.on('fetchDataEnd', function () {
+				self._hideSpinner();
+			});
 
-	self.view.on('workBegin', function () {
-		self._setSpinner('working');
-		self._showSpinner();
-	});
-	self.view.on('workEnd', function (info, ops) {
-		self._hideSpinner();
-	});
+			self.view.on('workBegin', function () {
+				self._setSpinner('working');
+				self._showSpinner();
+			});
+			self.view.on('workEnd', function (info, ops) {
+				self._hideSpinner();
+			});
 
-	self.view.on('workEnd', function (info, ops) {
-		var config;
+			self.view.on('workEnd', function (info, ops) {
+				var config;
 
-		if (ops.pivot) {
-			config = getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current'))
-				|| self.devConfig.whenPivot;
-		}
-		else if (ops.group) {
-			config = getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current'))
-				|| self.devConfig.whenGroup;
-		}
-		else {
-			config = getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current'))
-				|| self.devConfig.whenPlain;
-		}
+				if (ops.pivot) {
+					config = getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current'))
+						|| self.devConfig.whenPivot;
+				}
+				else if (ops.group) {
+					config = getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current'))
+						|| self.devConfig.whenGroup;
+				}
+				else {
+					config = getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current'))
+						|| self.devConfig.whenPlain;
+				}
 
-		if (config != null) {
-			debug.info('GRAPH // HANDLER (View.workEnd)',
-				'Matching configuration: %O', config);
+				if (config != null) {
+					debug.info('GRAPH // HANDLER (View.workEnd)',
+						'Matching configuration: %O', config);
 
-			var graphType = config.graphType;
-			var axis = graphType === 'bar' ? 'hAxis' : 'vAxis';
-			self.ui.graphTypeDropdown.val(config.graphType);
-		}
+					var graphType = config.graphType;
+					var axis = graphType === 'bar' ? 'hAxis' : 'vAxis';
+					self.ui.graphTypeDropdown.val(config.graphType);
+				}
 
-		if (ops.group) {
-			self.ui.toolbar_aggregates.show();
-			if (config != null) {
-				self.ui.aggDropdown.val(config.aggNum);
-				self.ui.zeroAxisCheckbox.prop('checked', getProp(config, 'options', axis, 'minValue') == 0);
+				if (ops.group) {
+					self.ui.toolbar_aggregates.show();
+					if (config != null) {
+						self.ui.aggDropdown.val(config.aggNum);
+						self.ui.zeroAxisCheckbox.prop('checked', getProp(config, 'options', axis, 'minValue') == 0);
+					}
+				}
+				else {
+					self.ui.toolbar_aggregates.hide();
+				}
+
+				if (ops.pivot) {
+					self.ui.toolbar_pivot.show();
+					if (config != null) {
+						self.ui.stackCheckbox.prop('checked', !!getProp(config, 'options', 'isStacked'));
+					}
+				}
+				else {
+					self.ui.toolbar_pivot.hide();
+				}
+			});
+
+			self.checkGraphConfig();
+			self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
+
+			if (self.opts.runImmediately) {
+				self.show();
 			}
-		}
-		else {
-			self.ui.toolbar_aggregates.hide();
-		}
-
-		if (ops.pivot) {
-			self.ui.toolbar_pivot.show();
-			if (config != null) {
-				self.ui.stackCheckbox.prop('checked', !!getProp(config, 'options', 'isStacked'));
+			else {
+				self.hide();
 			}
-		}
-		else {
-			self.ui.toolbar_pivot.hide();
-		}
+		});
 	});
-
-	self.checkGraphConfig();
-	self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
-
-	if (self.opts.runImmediately) {
-		self.show();
-	}
-	else {
-		self.hide();
-	}
 };
 
 Graph.prototype = Object.create(Object.prototype);
@@ -763,6 +767,14 @@ GraphRenderer = makeSubclass(Object, function (graph, elt, view, opts) {
 	self.view = view;
 	self.opts = opts;
 });
+
+// #toString {{{2
+
+GraphRenderer.prototype.toString = function () {
+	var self = this;
+
+	return '#<GraphRenderer \"' + self.graph.id + '\">';
+};
 
 // #_validateConfig {{{2
 
