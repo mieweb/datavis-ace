@@ -8,7 +8,10 @@ PANDOC_INPUT=$(addprefix doc/,$(addsuffix .pandoc,$(PANDOC_FILES)))
 
 .PHONY:	doc jsdoc pandoc examples clean tags
 
-all:	dist/wcdatavis.js examples
+all:	package-lock.json dist/wcdatavis.js examples
+
+package-lock.json:	package.json
+	npm install
 
 dist/wcdatavis.js:	wcdatavis.src $(SOURCE)
 	./bin/jspp -o $@ $<
