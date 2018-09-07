@@ -1478,7 +1478,7 @@ var PrefsBackendTemporary = makeSubclass(PrefsBackend, function () {
 });
 
 mixinDebugging(PrefsBackendTemporary, function () {
-	return 'PREFS (' + this.id + ') // BACKEND - LOCAL';
+	return 'PREFS (' + this.id + ') // BACKEND - TEMPORARY';
 });
 
 // #load {{{2
