@@ -518,7 +518,7 @@ var Source = function (spec, params, userTypeInfo, opts) {
 
 	self.conversion = spec.conversion;
 
-	self.locks.getData = new Lock();
+	self.locks.getData = new Lock('Get Data');
 };
 
 Source.prototype = Object.create(Object.prototype);

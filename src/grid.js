@@ -380,7 +380,8 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 
 	self.generateCsv = false;
 	self.csvReady = false;
-	self.exportLock = new Lock();
+	self.exportLock = new Lock('Export');
+	self.colConfigLock = new Lock('colConfig');
 
 	self.rootHasFixedHeight = false;
 	self.timing = new Timing();
@@ -1527,7 +1528,7 @@ Grid.prototype.redraw = function () {
 		rendererCtorOpts.fixedHeight = self.rootHasFixedHeight;
 
 		self.ui.exportBtn.attr('disabled', true);
-		self.renderer = new rendererCtor(self, self.defn, self.view, self.features, rendererCtorOpts, self.timing, self.id);
+		self.renderer = new rendererCtor(self, self.defn, self.view, self.features, rendererCtorOpts, self.timing, self.id, self.colConfig);
 
 		self.renderer.on('renderBegin', function () {
 			self._isIdle = false;
@@ -1572,6 +1573,13 @@ Grid.prototype.redraw = function () {
 
 	self.prefs.prime(function () {
 		self.view.prime(function () {
+			if (self.colConfig == null) {
+				self.colConfigLock.lock();
+				self.view.getTypeInfo(function (typeInfo) {
+					self.colConfigFromTypeInfo(typeInfo, { redraw: false });
+					self.colConfigLock.unlock();
+				});
+			}
 			debug.info('GRID', 'Redrawing...');
 			makeGridTable();
 		});
@@ -1927,12 +1935,11 @@ Grid.prototype._normalizeColumns = function (defn) {
 
 	if (getProp(defn, 'table', 'columns') == null) {
 		self.initColConfig = new OrdMap();
+		self.colConfig = null;
 		self.view.on('getTypeInfo', function (typeInfo) {
-			var typeInfoColConfig = makeColConfigFromTypeInfo(typeInfo);
-			debug.info('GRID', 'Creating column config from typeInfo: %O -> %O', typeInfo, typeInfoColConfig);
-			self.setColConfig(self.colConfig == null
-				? typeInfoColConfig
-				: OrdMap.fromMerge([self.colConfig, typeInfoColConfig]));
+			if (!self.colConfigLock.isLocked()) {
+				self.colConfigFromTypeInfo(typeInfo);
+			}
 		});
 		return;
 	}
@@ -2042,7 +2049,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		savePrefs: true
 	});
 
-	debug.info('GRID', 'Setting column config: %O', colConfig);
+	debug.info('GRID', 'Setting colConfig: %O', colConfig);
 
 	self.colConfig = colConfig;
 	if (opts.savePrefs) {
@@ -2057,7 +2064,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	}
 
 	if (opts.redraw) {
-		self.redraw();
+		//self.redraw();
 	}
 };
 
@@ -2101,4 +2108,28 @@ Grid.prototype.isIdle = function () {
 	var self = this;
 
 	return self._isIdle;
+};
+
+// #colConfigFromTypeInfo {{{2
+
+Grid.prototype.colConfigFromTypeInfo = function (typeInfo, opts) {
+	var self = this;
+
+	if (!(typeInfo instanceof OrdMap)) {
+		throw new Error('Call Error: `typeInfo` must be an OrdMap');
+	}
+
+	var typeInfoColConfig = new OrdMap();
+
+	typeInfo.each(function (fti, fieldName) {
+		typeInfoColConfig.set(fieldName, {
+			field: fieldName
+		});
+	});
+
+	debug.info('GRID', 'Creating colConfig from typeInfo: %O -> %O', typeInfo.asMap(), typeInfoColConfig.asMap());
+
+	self.setColConfig(self.colConfig == null
+		? typeInfoColConfig
+		: OrdMap.fromMerge([self.colConfig, typeInfoColConfig]), opts);
 };

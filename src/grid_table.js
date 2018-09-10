@@ -1134,6 +1134,7 @@ GridTable.prototype.draw = function (root, tableDoneCont, opts) {
 		self.addWorkHandler();
 
 		self.fire('renderEnd');
+		self.drawLock.unlock();
 
 		if (typeof tableDoneCont === 'function') {
 			return tableDoneCont();
@@ -1393,22 +1394,6 @@ GridTable.prototype.makeProgress = function (thing) {
 			}
 		};
 	}
-};
-
-// #setDrawOptions {{{2
-
-GridTable.prototype.setDrawOptions = function (opts) {
-	var self = this;
-
-	self.drawOpts = opts;
-};
-
-// #clearDrawOptions {{{2
-
-GridTable.prototype.clearDrawOptions = function () {
-	var self = this;
-
-	delete self.drawOpts;
 };
 
 // #getCsv {{{2
@@ -2128,8 +2113,6 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 	var self = this;
 	var tr = jQuery('<tr>');
 
-	var colConfig = self.grid.colConfig;
-
 	if (self.features.rowSelect) {
 		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
 			.on('change', function (evt) {
@@ -2177,7 +2160,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 
 			debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
 
-			var aggInfo = new AggregateInfo('all', footerConfig, 0, colConfig, typeInfo, null /* TODO */);
+			var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, null /* TODO */);
 			var aggResult = aggInfo.instance.calculate(data.data);
 			var aggResult_formatted;
 
@@ -2255,7 +2238,6 @@ GridTablePlain.prototype.updateFeatures = function (f) {
 		self.features[k] = v;
 	});
 
-	self.clear();
 	self.draw(self.root);
 };
 
@@ -2274,7 +2256,6 @@ GridTablePlain.prototype.addWorkHandler = function () {
 		}
 
 		debug.info('GRID TABLE - PLAIN // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
-		self.clear();
 		self.draw(self.root);
 	}, { who: self });
 };
@@ -3231,7 +3212,6 @@ GridTableGroupDetail.prototype.addWorkHandler = function () {
 		}
 
 		debug.info('GRID TABLE - GROUP - DETAIL // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
-		self.clear();
 		self.draw(self.root);
 	}, { who: self });
 };
@@ -3695,7 +3675,6 @@ GridTableGroupSummary.prototype.addWorkHandler = function () {
 		}
 
 		debug.info('GRID TABLE - GROUP - SUMMARY // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
-		self.clear();
 		self.draw(self.root);
 	}, { who: self });
 };
@@ -4331,7 +4310,6 @@ GridTablePivot.prototype.addWorkHandler = function () {
 		}
 
 		debug.info('GRID TABLE - PIVOT // HANDLER (View.workEnd)', 'Redrawing because the view has done work');
-		self.clear();
 		self.draw(self.root);
 	}, { who: self });
 };

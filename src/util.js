@@ -1345,9 +1345,7 @@ function walkObj(o, f, opts) {
 
 // Object Orientation {{{1
 
-/**
- * @namespace util.object_orientation
- */
+// makeSubclass {{{2
 
 /**
  * Create a function representing a subclass.
@@ -1426,6 +1424,8 @@ var makeSubclass = function (parent, ctor, ptype) {
 	return subclass;
 };
 
+// makeSuper {{{2
+
 /**
  * Creates an object to act as a proxy to superclass methods.  Probably best to not use this
  * directly, and instead let {@linkcode makeSubclass makeSubclass()} do the work for you.
@@ -1451,6 +1451,226 @@ var makeSuper = function (me, parent) {
 
 	return sup;
 };
+
+// mixinEventHandling {{{2
+
+var mixinEventHandling = (function () {
+	var HANDLER_ID = 0;
+
+	return function (obj, name, events) {
+		obj.events = objFromArray(events);
+
+		// #_initEventHandlers {{{3
+
+		obj.prototype._initEventHandlers = function () {
+			var self = this;
+
+			if (self.eventHandlers == null) {
+				self.eventHandlers = {};
+
+				_.each(obj.events, function (evt) {
+					self.eventHandlers[evt] = [];
+				});
+			}
+
+			if (self.eventHandlersById == null) {
+				self.eventHandlersById = [];
+			}
+		};
+
+		// #on {{{3
+
+		obj.prototype.on = function (evt, cb, opts) {
+			var self = this
+				, myName = typeof name === 'function' ? name(self) : name;
+
+			opts = opts || {};
+
+			self._initEventHandlers();
+
+			if (!_.isArray(evt)) {
+				evt = [evt];
+			}
+
+			_.each(evt, function (e) {
+				if (obj.events[e] === undefined) {
+					throw new Error('Unable to register handler on ' + myName + ' for "' + e + '" event: no such event available');
+				}
+
+				var handler = {
+					id: HANDLER_ID++,
+					who: opts.who,
+					cb: cb,
+					limit: opts.limit
+				};
+
+				self.eventHandlers[e].push(handler);
+				self.eventHandlersById[handler.id] = handler;
+			});
+
+			return self;
+		};
+
+		// #off {{{3
+
+		obj.prototype.off = function (evt, who, opts) {
+			var self = this
+				, myName = typeof name === 'function' ? name(self) : name;
+
+			opts = opts || {};
+
+			self._initEventHandlers();
+
+			if (evt === '*') {
+				_.each(obj.events, function (e) {
+					self.off(e, who, opts);
+				});
+				return;
+			}
+
+			if (obj.events[evt] === undefined) {
+				throw new Error('Unable to register handler on ' + myName + ' for "' + evt + '" event: no such event available');
+			}
+
+			var newHandlers = [];
+
+			_.each(self.eventHandlers[evt], function (h) {
+				if (who == null || h.who === who) {
+					// Remove from the ID lookup.  This is used to allow event handlers to be removed while
+					// their event is being fired.
+
+					self.eventHandlersById[h.id] = null;
+				}
+				else {
+					newHandlers.push(h);
+				}
+			});
+
+			if (!opts.silent) {
+				debug.info(myName + ' // OFF', 'Removed ' + (self.eventHandlers[evt].length - newHandlers.length) + ' handlers from ' + who + ' on "' + evt + '" event');
+			}
+
+			self.eventHandlers[evt] = newHandlers;
+		};
+
+		// #fire {{{3
+
+		/**
+		* @param {string} event
+		*
+		* @param {object} opts
+		*
+		* @param {boolean} opts.silent
+		* If true, don't print a debugging log entry for sending the event.  This is useful for some
+		* really spammy events which would otherwise slow down the console.
+		*
+		* @param {object|Array.<object>|function} opts.notTo
+		* Indicates entities which should not receive the event.  Can either be the entity itself, a list
+		* of entities, or a function which returns true when passed an entity which shouldn't receive the
+		* event.  An entity here is registered in the `who` property of the handler.
+		*/
+
+		obj.prototype.fire = function () {
+			var self = this
+				, args = Array.prototype.slice.call(arguments)
+				, evt = args.shift()
+				, opts = args.shift() || {}
+				, myName = typeof name === 'function' ? name(self) : name;
+
+			self._initEventHandlers();
+
+			if (obj.events[evt] === undefined) {
+				throw new Error('Illegal event: ' + evt);
+			}
+
+			var handlers = [];
+
+			for (var i = 0; i < self.eventHandlers[evt].length; i += 1) {
+				var handler = self.eventHandlers[evt][i];
+
+				// Check to see if this handler is for someone we shouldn't be sending to.
+				//
+				//   - `notTo` is an array (check memberof)
+				//   - `notTo` is a function returning true
+				//   - `notTo` is an object (direct comparison)
+
+				if (handler.who && opts.notTo &&
+						((_.isArray(opts.notTo) && opts.notTo.indexOf(handler.who) >= 0)
+							|| (typeof opts.notTo === 'function' && opts.notTo(handler.who))
+							|| (typeof opts.notTo === 'object' && opts.notTo === handler.who))) {
+					continue;
+				}
+
+				handlers.push({
+					handler: handler,
+					index: i
+				});
+			}
+
+			// Print a debugging message unless invoked with the silent option (used internally to prevent
+			// spamming millions of messages, which slows down the console).
+
+			if (!opts.silent) {
+				debug.info(myName + ' // FIRE', 'Triggering "' + evt + '" event on ' + handlers.length + ' handlers:', args);
+			}
+
+			_.each(handlers, function (h) {
+				if (self.eventHandlersById[h.handler.id] == null) {
+					// This handler has been removed since we started firing for this event.  This happens one
+					// an earlier event handler removes a later one.
+					return;
+				}
+
+				h.handler.cb.apply(null, args);
+
+				// Remove the handler if we've hit the limit of how many times we're supposed to invoke it.
+				// Actually we just set the handler to null and remove it below.
+
+				if (h.handler.limit) {
+					h.handler.limit -= 1;
+					if (h.handler.limit <= 0) {
+						debug.info(myName + ' // FIRE', 'Removing "' + evt + '" event handler after reaching invocation limit');
+						self.eventHandlers[evt][h.index] = null;
+					}
+				}
+			});
+
+			// Clean up handlers we removed (because they reached the limit).
+
+			self.eventHandlers[evt] = _.without(self.eventHandlers[evt], null);
+		};
+	};
+})();
+
+// mixinDebugging {{{2
+
+function mixinDebugging(obj, tagStart) {
+	if (tagStart != null && typeof tagStart !== 'string' && typeof tagStart !== 'function') {
+		throw new Error('Call Error: `tagStart` must be null, a string, or a function');
+	}
+
+	var getTag = function (self) {
+		if (typeof tagStart === 'function') {
+			return tagStart.call(self);
+		}
+		else if (typeof tagStart === 'string') {
+			return tagStart;
+		}
+		else {
+			return null;
+		}
+	};
+
+	obj.prototype.debug = function () {
+		var args = Array.prototype.slice.call(arguments);
+		debug.info.apply(null, Array.prototype.concat.call([getTag(this)], args));
+	};
+	obj.prototype.debug_tag = function () {
+		var args = Array.prototype.slice.call(arguments);
+		var tag = args.shift();
+		debug.info.apply(null, Array.prototype.concat.call([getTag(this) + ' // ' + tag], args));
+	};
+}
 
 // Locking {{{1
 
@@ -1512,20 +1732,37 @@ function isLocked(defn, name) {
 	return defn.locks && !!defn.locks[name];
 }
 
+// Lock {{{1
+// Constructor {{{2
+
 /**
  * An implementation of a counting semaphore for JavaScript.
  * @class
  */
 
-var Lock = function (name) {
+var Lock = function (name, opts) {
 	var self = this;
+
+	self._opts = opts || {};
+
+	if (self._opts.debug == null) {
+		self._opts.debug = true;
+	}
 
 	self._name = name || '#' + (Lock._id++);
 	self._lockCount = 0;
 	self._onUnlock = [];
+
+	if (!self._opts.debug) {
+		self.debug = NOP;
+	}
 };
 
 Lock._id = 1;
+
+mixinDebugging(Lock, function () {
+	return 'LOCK (' + this._name + ' {level ' + this._lockCount + '})';
+});
 
 // #lock {{{2
 
@@ -1540,8 +1777,7 @@ Lock.prototype.lock = function () {
 	var self = this;
 
 	this._lockCount += 1;
-	debug.info('LOCK // ' + self._name + ' (' + self._lockCount + ')',
-		'Locking to level: ' + self._lockCount);
+	self.debug('Locking to level: ' + self._lockCount);
 };
 
 // #unlock {{{2
@@ -1557,8 +1793,7 @@ Lock.prototype.unlock = function () {
 	var self = this;
 
 	self._lockCount -= 1;
-	debug.info('LOCK // ' + self._name + ' (' + self._lockCount + ')',
-		'Unlocking to level: ' + self._lockCount);
+	self.debug('Unlocking to level: ' + self._lockCount);
 
 	// If we're completely unlocked, start going through the functions that were registered to be run.
 	// The only problem is that these functions can cause us to be locked again.  If that happens, we
@@ -1571,10 +1806,7 @@ Lock.prototype.unlock = function () {
 	while (self._onUnlock.length > 0 && !self.isLocked()) {
 		i += 1;
 		var onUnlock = self._onUnlock.shift();
-
-		debug.info('LOCK // ' + self._name + ' (' + self._lockCount + ')',
-			'Running onUnlock function (%d of %d) - %s', i, onUnlockLen, onUnlock.info || '[NO INFO]');
-
+		self.debug('Running onUnlock function (%d of %d) - %s', i, onUnlockLen, onUnlock.info || '[NO INFO]');
 		onUnlock.f();
 	}
 };
@@ -1621,8 +1853,7 @@ Lock.prototype.onUnlock = function (f, info) {
 		info: info
 	});
 
-	debug.info('LOCK // ' + self._name + ' (' + self._lockCount + ')',
-		'Saved onUnlock function (#%d) - %s', self._onUnlock.length, info || '[NO INFO]');
+	self.debug('Saved onUnlock function (#%d) - %s', self._onUnlock.length, info || '[NO INFO]');
 };
 
 // HTML {{{1
@@ -2757,228 +2988,6 @@ Timing.prototype.dump = function (subject) {
 	}
 };
 
-// Event Handling {{{1
-
-/**
- * @namespace util.events
- */
-
-var mixinEventHandling = (function () {
-	var HANDLER_ID = 0;
-
-	return function (obj, name, events) {
-		obj.events = objFromArray(events);
-
-		// #_initEventHandlers {{{2
-
-		obj.prototype._initEventHandlers = function () {
-			var self = this;
-
-			if (self.eventHandlers == null) {
-				self.eventHandlers = {};
-
-				_.each(obj.events, function (evt) {
-					self.eventHandlers[evt] = [];
-				});
-			}
-
-			if (self.eventHandlersById == null) {
-				self.eventHandlersById = [];
-			}
-		};
-
-		// #on {{{2
-
-		obj.prototype.on = function (evt, cb, opts) {
-			var self = this
-				, myName = typeof name === 'function' ? name(self) : name;
-
-			opts = opts || {};
-
-			self._initEventHandlers();
-
-			if (!_.isArray(evt)) {
-				evt = [evt];
-			}
-
-			_.each(evt, function (e) {
-				if (obj.events[e] === undefined) {
-					throw new Error('Unable to register handler on ' + myName + ' for "' + e + '" event: no such event available');
-				}
-
-				var handler = {
-					id: HANDLER_ID++,
-					who: opts.who,
-					cb: cb,
-					limit: opts.limit
-				};
-
-				self.eventHandlers[e].push(handler);
-				self.eventHandlersById[handler.id] = handler;
-			});
-
-			return self;
-		};
-
-		// #off {{{2
-
-		obj.prototype.off = function (evt, who, opts) {
-			var self = this
-				, myName = typeof name === 'function' ? name(self) : name;
-
-			opts = opts || {};
-
-			self._initEventHandlers();
-
-			if (evt === '*') {
-				_.each(obj.events, function (e) {
-					self.off(e, who, opts);
-				});
-				return;
-			}
-
-			if (obj.events[evt] === undefined) {
-				throw new Error('Unable to register handler on ' + myName + ' for "' + evt + '" event: no such event available');
-			}
-
-			var newHandlers = [];
-
-			_.each(self.eventHandlers[evt], function (h) {
-				if (who == null || h.who === who) {
-					// Remove from the ID lookup.  This is used to allow event handlers to be removed while
-					// their event is being fired.
-
-					self.eventHandlersById[h.id] = null;
-				}
-				else {
-					newHandlers.push(h);
-				}
-			});
-
-			if (!opts.silent) {
-				debug.info(myName + ' // OFF', 'Removed ' + (self.eventHandlers[evt].length - newHandlers.length) + ' handlers from ' + who + ' on "' + evt + '" event');
-			}
-
-			self.eventHandlers[evt] = newHandlers;
-		};
-
-		// #fire {{{2
-
-		/**
-		* @param {string} event
-		*
-		* @param {object} opts
-		*
-		* @param {boolean} opts.silent
-		* If true, don't print a debugging log entry for sending the event.  This is useful for some
-		* really spammy events which would otherwise slow down the console.
-		*
-		* @param {object|Array.<object>|function} opts.notTo
-		* Indicates entities which should not receive the event.  Can either be the entity itself, a list
-		* of entities, or a function which returns true when passed an entity which shouldn't receive the
-		* event.  An entity here is registered in the `who` property of the handler.
-		*/
-
-		obj.prototype.fire = function () {
-			var self = this
-				, args = Array.prototype.slice.call(arguments)
-				, evt = args.shift()
-				, opts = args.shift() || {}
-				, myName = typeof name === 'function' ? name(self) : name;
-
-			self._initEventHandlers();
-
-			if (obj.events[evt] === undefined) {
-				throw new Error('Illegal event: ' + evt);
-			}
-
-			var handlers = [];
-
-			for (var i = 0; i < self.eventHandlers[evt].length; i += 1) {
-				var handler = self.eventHandlers[evt][i];
-
-				// Check to see if this handler is for someone we shouldn't be sending to.
-				//
-				//   - `notTo` is an array (check memberof)
-				//   - `notTo` is a function returning true
-				//   - `notTo` is an object (direct comparison)
-
-				if (handler.who && opts.notTo &&
-						((_.isArray(opts.notTo) && opts.notTo.indexOf(handler.who) >= 0)
-							|| (typeof opts.notTo === 'function' && opts.notTo(handler.who))
-							|| (typeof opts.notTo === 'object' && opts.notTo === handler.who))) {
-					continue;
-				}
-
-				handlers.push({
-					handler: handler,
-					index: i
-				});
-			}
-
-			// Print a debugging message unless invoked with the silent option (used internally to prevent
-			// spamming millions of messages, which slows down the console).
-
-			if (!opts.silent) {
-				debug.info(myName + ' // FIRE', 'Triggering "' + evt + '" event on ' + handlers.length + ' handlers:', args);
-			}
-
-			_.each(handlers, function (h) {
-				if (self.eventHandlersById[h.handler.id] == null) {
-					// This handler has been removed since we started firing for this event.  This happens one
-					// an earlier event handler removes a later one.
-					return;
-				}
-
-				h.handler.cb.apply(null, args);
-
-				// Remove the handler if we've hit the limit of how many times we're supposed to invoke it.
-				// Actually we just set the handler to null and remove it below.
-
-				if (h.handler.limit) {
-					h.handler.limit -= 1;
-					if (h.handler.limit <= 0) {
-						debug.info(myName + ' // FIRE', 'Removing "' + evt + '" event handler after reaching invocation limit');
-						self.eventHandlers[evt][h.index] = null;
-					}
-				}
-			});
-
-			// Clean up handlers we removed (because they reached the limit).
-
-			self.eventHandlers[evt] = _.without(self.eventHandlers[evt], null);
-		};
-	};
-})();
-
-function mixinDebugging(obj, tagStart) {
-	if (tagStart != null && typeof tagStart !== 'string' && typeof tagStart !== 'function') {
-		throw new Error('Call Error: `tagStart` must be null, a string, or a function');
-	}
-
-	var getTag = function (self) {
-		if (typeof tagStart === 'function') {
-			return tagStart.call(self);
-		}
-		else if (typeof tagStart === 'string') {
-			return tagStart;
-		}
-		else {
-			return null;
-		}
-	};
-
-	obj.prototype.debug = function () {
-		var args = Array.prototype.slice.call(arguments);
-		debug.info.apply(null, Array.prototype.concat.call([getTag(this)], args));
-	};
-	obj.prototype.debug_tag = function () {
-		var args = Array.prototype.slice.call(arguments);
-		var tag = args.shift();
-		debug.info.apply(null, Array.prototype.concat.call([getTag(this) + ' // ' + tag], args));
-	};
-}
-
 // Delegate {{{1
 
 function delegate(from, to, methods) {
@@ -3176,20 +3185,4 @@ function dataURItoBlob(dataURI) {
   var blob = new Blob([ab], {type: mimeString});
   return blob;
 
-}
-
-function makeColConfigFromTypeInfo(typeInfo) {
-	if (!(typeInfo instanceof OrdMap)) {
-		throw new Error('Call Error: `typeInfo` must be an OrdMap');
-	}
-
-	var colConfig = new OrdMap();
-
-	typeInfo.each(function (fti, fieldName) {
-		colConfig.set(fieldName, {
-			field: fieldName
-		});
-	});
-
-	return colConfig;
 }

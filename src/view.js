@@ -220,7 +220,7 @@ var View = function (source, name, opts) {
 
 	self.timing = new Timing();
 
-	self.lock = new Lock('View Lock (' + self.name + ')');
+	self.lock = new Lock('View');
 
 	self.aggregateSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: 'count'}]]);
 

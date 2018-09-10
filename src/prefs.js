@@ -89,7 +89,7 @@ var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
 	self.id = id;
 	self.modules = {};
 	self.bardo = {};
-	self.primeLock = new Lock();
+	self.primeLock = new Lock('Prefs Prime');
 
 	opts = deepDefaults(opts, {
 		saveCurrent: true,
@@ -1807,7 +1807,10 @@ PrefsModuleGrid.prototype.load = function (config) {
 	}
 
 	if (config.colConfig != null) {
-		self.target.setColConfig(OrdMap.deserialize(config.colConfig));
+		self.target.setColConfig(OrdMap.deserialize(config.colConfig), {
+			redraw: false,
+			savePrefs: false
+		});
 	}
 };
 

@@ -23,7 +23,7 @@
 var GridRenderer = (function () {
 	UNIQUE_ID = 0;
 	
-	return makeSubclass(Object, function (grid, defn, view, features, opts, timing, id) {
+	return makeSubclass(Object, function (grid, defn, view, features, opts, timing, id, colConfig) {
 		var self = this;
 
 		self.UNIQUE_ID = UNIQUE_ID++;
@@ -37,6 +37,15 @@ var GridRenderer = (function () {
 		self.timing = timing;
 
 		self._validateFeatures();
+
+		self.drawLock = new Lock('Draw');
+
+		self.grid.on('colConfigUpdate', function (newColConfig) {
+			self.colConfig = newColConfig;
+			if (self.root != null) {
+				self.draw(self.root, self.drawOpts);
+			}
+		});
 	});
 })();
 
@@ -65,14 +74,24 @@ GridRenderer.prototype.canRender = function () {
 
 GridRenderer.prototype.draw = function (root, opts, cont) {
 	var self = this;
+	var args = Array.prototype.slice.call(arguments);
 
 	debug.info('GRID RENDERER // DRAW', 'Beginning draw operation; opts = %O', opts);
 
-	self.colConfig = self.grid.colConfig;
-
-	opts = opts || self.drawOpts;
+	opts = opts || {};
 
 	self.root = root;
+	self.drawOpts = opts;
+
+	if (self.drawLock.isLocked()) {
+		return self.drawLock.onUnlock(function () {
+			self.draw.apply(self, args);
+		});
+	}
+
+	self.drawLock.lock();
+
+	self.clear();
 
 	return self.view.getData(function (data) {
 		debug.info('GRID RENDERER // DRAW', 'Data = %O', data);
@@ -258,7 +277,6 @@ GridRendererHandlebars.prototype.addWorkHandler = function () {
 	var self = this;
 
 	self.view.on(View.events.workEnd, function (info, ops) {
-		self.clear();
-		self.draw(self.root);
+		self.draw(self.root, self.drawOpts);
 	}, { who: self, limit: 1 });
 };
