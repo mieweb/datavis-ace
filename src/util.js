@@ -1773,11 +1773,18 @@ mixinDebugging(Lock, function () {
  * @method
  */
 
-Lock.prototype.lock = function () {
+Lock.prototype.lock = function (why) {
 	var self = this;
 
 	this._lockCount += 1;
-	self.debug('Locking to level: ' + self._lockCount);
+
+	var msg = 'Locking to level: ' + self._lockCount;
+
+	if (why != null) {
+		msg += ' - ' + why;
+	}
+
+	self.debug(msg);
 };
 
 // #unlock {{{2

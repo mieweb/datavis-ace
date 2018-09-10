@@ -35,14 +35,17 @@ var GridRenderer = (function () {
 		self.features = deepCopy(features);
 		self.opts = opts;
 		self.timing = timing;
+		self.hasRendered = false;
 
 		self._validateFeatures();
 
 		self.drawLock = new Lock('Draw');
 
 		self.grid.on('colConfigUpdate', function (newColConfig) {
+			debug.info('GRID RENDERER', 'Received new colConfig: %O', newColConfig);
 			self.colConfig = newColConfig;
-			if (self.root != null) {
+			if (self.hasRendered) {
+				debug.info('GRID RENDERER', 'Redrawing with new colConfig');
 				self.draw(self.root, self.drawOpts);
 			}
 		});
@@ -62,6 +65,8 @@ mixinEventHandling(GridRenderer, 'GridRenderer', [
 	, 'unlimited'           // The grid table is rendering all possible rows.
 	, 'csvReady'            // CSV data has been generated.
 	, 'generateCsvProgress' // CSV generation progress.
+	, 'renderBegin'
+	, 'renderEnd'
 ]);
 
 // #canRender {{{2
@@ -108,6 +113,7 @@ GridRenderer.prototype.draw = function (root, opts, cont) {
 				return self.fire('unableToRender');
 			}
 
+			self.hasRendered = true;
 			self.fire('renderBegin');
 
 			self.data = data;

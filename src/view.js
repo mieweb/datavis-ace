@@ -3013,20 +3013,19 @@ View.prototype.prime = function (cont) {
 	}
 
 	if (self.lock.isLocked()) {
-		self.lock.onUnlock(function () {
+		return self.lock.onUnlock(function () {
 			self.prime.apply(self, args);
 		});
 	}
-	else {
-		self.lock.lock();
 
-		self.prefs.prime(function () {
-			self.source.getData(function () {
-				self.prefs.bind('view', self);
-				self.isPrimed = true;
-				self.lock.unlock();
-				cont(true);
-			});
+	self.lock.lock('Priming!');
+
+	self.prefs.prime(function () {
+		self.source.getData(function () {
+			self.prefs.bind('view', self);
+			self.isPrimed = true;
+			self.lock.unlock();
+			cont(true);
 		});
-	}
+	});
 };
