@@ -17,7 +17,6 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	var self = this;
 
 	var current = self.colConfig.clone();
-	console.log(current.asMap());
 
 	var orderWinEffect = {
 		effect: 'fade',
@@ -40,7 +39,10 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 				// Overwrite the "initial" configuration with one derived from the current one, based on the
 				// order of the keys saved by the reordering the table rows.
 
-				self.colConfig.replaceWith(current);
+				self.colConfig.clear();
+				_.each(keys, function (k) {
+					self.colConfig.set(k, current.get(k));
+				});
 
 				orderWin.dialog('close');
 				onSave(self.colConfig);
@@ -66,14 +68,14 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	var colTableHeader = jQuery('<thead><th></th><th>Field</th><th>Display</th><th></th><th></th>')
 		.appendTo(colTable);
 
+	var keys = current.keys();
+
 	var colTableBody = jQuery('<tbody>')
 		._makeSortableTable(function (oldIndex, newIndex) {
 			colTableBody.children('tr').eq(newIndex).effect('highlight', 750);
 			moveArrayElement(keys, oldIndex, newIndex);
 		})
 		.appendTo(colTable);
-
-	var keys = current.keys();
 
 	current.each(function (colConfig, field) {
 		var tr, td;

@@ -256,8 +256,8 @@ OrdMap.prototype.asMap = function () {
 
 OrdMap.prototype.serialize = function () {
 	return {
-		_keys: this._keys,
-		_map: this._map
+		_keys: this.keys(),
+		_map: this.asMap()
 	};
 };
 
@@ -371,4 +371,14 @@ OrdMap.prototype.mergeWith = function (o) {
 			self.set(k, v);
 		}
 	});
+};
+
+// #_changeKeyIndex {{{2
+
+OrdMap.prototype._changeKeyIndex = function (oldIndex, newIndex) {
+	var self = this;
+
+	var key = self._keys[oldIndex];
+	self._keys.splice(oldIndex, 1);
+	self._keys.splice(newIndex, 0, key);
 };
