@@ -49,7 +49,7 @@ var GridRenderer = (function () {
 				debug.info('GRID RENDERER', 'Redrawing with new colConfig');
 				self.draw(self.root, self.drawOpts);
 			}
-		});
+		}, { who: self });
 	});
 })();
 
@@ -137,6 +137,23 @@ GridRenderer.prototype.clear = function () {
 	var self = this;
 
 	self.root.children().remove();
+};
+
+// #destroy {{{2
+
+GridRenderer.prototype.destroy = function () {
+	var self = this;
+
+	self.clear();
+	self.grid.off('*', self);
+};
+
+// #toString {{{2
+
+GridRenderer.prototype.toString = function () {
+	var self = this;
+
+	return '#<GridRenderer ' + self.UNIQUE_ID + '>';
 };
 
 // #_validateFeatures {{{2

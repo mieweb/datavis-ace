@@ -746,6 +746,7 @@ GridControl.prototype.destroy = function () {
 	debug.info('GRID // CONTROL', 'Good-bye, cruel world!');
 
 	self.view.off('*', self);
+	self.grid.off('*', self);
 	self.ui.root.remove();
 };
 

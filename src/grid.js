@@ -1523,7 +1523,7 @@ Grid.prototype.redraw = function () {
 		}
 
 		if (self.renderer) {
-			self.renderer.clear();
+			self.renderer.destroy();
 		}
 
 		rendererCtorOpts.generateCsv = self.generateCsv;

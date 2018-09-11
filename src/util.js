@@ -1506,6 +1506,12 @@ var mixinEventHandling = (function () {
 
 				self.eventHandlers[e].push(handler);
 				self.eventHandlersById[handler.id] = handler;
+
+				var msg = 'Adding "' + evt + '" event handler on ' + myName;
+				if (opts.who != null) {
+					msg += ' from ' + opts.who;
+				}
+				debug.info(myName + ' // ON', msg);
 			});
 
 			return self;
@@ -1611,16 +1617,17 @@ var mixinEventHandling = (function () {
 			// spamming millions of messages, which slows down the console).
 
 			if (!opts.silent) {
-				debug.info(myName + ' // FIRE', 'Triggering "' + evt + '" event on ' + handlers.length + ' handlers:', args);
+				debug.info(myName + ' // FIRE', 'Triggering "%s" event on %d handlers: %O', evt, handlers.length, args);
 			}
 
-			_.each(handlers, function (h) {
+			_.each(handlers, function (h, i) {
 				if (self.eventHandlersById[h.handler.id] == null) {
 					// This handler has been removed since we started firing for this event.  This happens one
 					// an earlier event handler removes a later one.
 					return;
 				}
 
+				debug.info(myName + ' // FIRE', 'Executing "%s" handler: [%d/%d]', evt, i, handlers.length - 1);
 				h.handler.cb.apply(null, args);
 
 				// Remove the handler if we've hit the limit of how many times we're supposed to invoke it.
@@ -1629,7 +1636,7 @@ var mixinEventHandling = (function () {
 				if (h.handler.limit) {
 					h.handler.limit -= 1;
 					if (h.handler.limit <= 0) {
-						debug.info(myName + ' // FIRE', 'Removing "' + evt + '" event handler after reaching invocation limit');
+						debug.info(myName + ' // FIRE', 'Removing "%s" handler [%d] after reaching invocation limit', evt, i);
 						self.eventHandlers[evt][h.index] = null;
 					}
 				}

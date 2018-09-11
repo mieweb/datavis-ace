@@ -219,9 +219,6 @@ var GridTable = makeSubclass(GridRenderer, function () {
 	});
 });
 
-GridTable.prototype = Object.create(Object.prototype);
-GridTable.prototype.constructor = GridTable;
-
 // Events {{{2
 
 /**
@@ -396,14 +393,6 @@ GridTable.prototype._validateFloatTableHeader = function () {
 	}
 
 	self.defn.table.floatingHeader = config;
-};
-
-// #toString {{{2
-
-GridTable.prototype.toString = function () {
-	var self = this;
-
-	return 'GridTable{id="' + self.id + '"}';
 };
 
 // #setCss {{{2
@@ -1107,16 +1096,16 @@ GridTable.prototype.draw = function (root, opts, cont) {
 					floatTheadConfig.scrollContainer = true;
 					self.grid.on(Grid.events.showControls, function () {
 						self.ui.tbl.floatThead('reflow');
-					});
+					}, { who: self });
 					self.grid.on(Grid.events.hideControls, function () {
 						self.ui.tbl.floatThead('reflow');
-					});
+					}, { who: self });
 					self.grid.filterControl.on(['fieldAdded', 'fieldRemoved'], function () {
 						self.ui.tbl.floatThead('reflow');
-					});
+					}, { who: self });
 					self.grid.aggregateControl.on(['fieldAdded', 'fieldRemoved'], function () {
 						self.ui.tbl.floatThead('reflow');
-					});
+					}, { who: self });
 				}
 				self.ui.tbl.floatThead(floatTheadConfig);
 				break;
