@@ -2150,8 +2150,8 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
 
-	if (document.getElementById(self.id + '_footer')) {
-		tr.append(jQuery('<td>', {'colspan': columns.length}).append(document.getElementById(self.id + '_footer')));
+	if (self.opts.footer) {
+		tr.append(jQuery('<td>', {'colspan': columns.length}).append(self.opts.footer));
 	}
 	else {
 		var didFooterCell = false;

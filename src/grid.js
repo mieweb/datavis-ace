@@ -1525,6 +1525,10 @@ Grid.prototype.redraw = function () {
 			rendererCtor = GridRenderer.registry.get(getPropDef('table_plain', self.defn, 'whenPlain', 'renderer')).cls;
 			rendererCtorOpts = deepCopy(self.defn.table.whenPlain);
 
+			if (self.ui.footer) {
+				rendererCtorOpts.footer = self.ui.footer;
+			}
+
 			debug.info('GRID', 'Creating plain grid table');
 
 			self.ui.toolbar_plain.show();
