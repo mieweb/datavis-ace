@@ -289,6 +289,7 @@ mixinEventHandling(GridTable, 'GridTable', [
 	, 'generateCsvProgress' // CSV generation progress.
 	, 'renderBegin'
 	, 'renderEnd'
+	, 'selectionChange'
 ]);
 
 // #_validateFeatures {{{2
@@ -1426,7 +1427,9 @@ GridTable.prototype.getSelection = function () {
 // #setSelection {{{2
 
 /**
- * Set the currently selected rows.
+ * Set the currently selected rows.  This is different from {@link GridTable#select} and {@link
+ * GridTable#unselect} because this straight-up sets the selection (the other methods add to and
+ * remove from the selection).
  *
  * @param {number[]} [what]
  * Set the selection to the specified row IDs, or select nothing if not specified.
@@ -1434,6 +1437,15 @@ GridTable.prototype.getSelection = function () {
 
 GridTable.prototype.setSelection = function (what) {
 	var self = this;
+	var data = self.data.data;
+
+	if (self.data.isGroup) {
+		data = _.flatten(data);
+	}
+	else if (self.data.isPivot) {
+		log.error('Selection is not supported for pivotted data, because there is no way to see or change the selection in the user interface');
+		return;
+	}
 
 	if (what == null) {
 		self.selection = [];
@@ -1446,7 +1458,15 @@ GridTable.prototype.setSelection = function (what) {
 		return false;
 	}
 
-	self._updateSelectionGui();
+	// Try to reflect these changes in the user interface.
+
+	if (typeof self._updateSelectionGui === 'function') {
+		self._updateSelectionGui();
+	}
+
+	self.fire('selectionChange', null, _.map(self.selection, function (i) {
+		return data[i];
+	}));
 };
 
 // #select {{{2
@@ -1470,7 +1490,6 @@ GridTable.prototype.setSelection = function (what) {
 
 GridTable.prototype.select = function (what) {
 	var self = this;
-
 	var data = self.data.data;
 
 	if (self.data.isGroup) {
@@ -1506,6 +1525,10 @@ GridTable.prototype.select = function (what) {
 	if (typeof self._updateSelectionGui === 'function') {
 		self._updateSelectionGui();
 	}
+
+	self.fire('selectionChange', null, _.map(self.selection, function (i) {
+		return data[i];
+	}));
 };
 
 // #unselect {{{2
@@ -1529,6 +1552,15 @@ GridTable.prototype.select = function (what) {
 
 GridTable.prototype.unselect = function (what) {
 	var self = this;
+	var data = self.data.data;
+
+	if (self.data.isGroup) {
+		data = _.flatten(data);
+	}
+	else if (self.data.isPivot) {
+		log.error('Selection is not supported for pivotted data, because there is no way to see or change the selection in the user interface');
+		return;
+	}
 
 	if (what == null) {
 		// Unselect all.
@@ -1549,7 +1581,15 @@ GridTable.prototype.unselect = function (what) {
 		self.selection = _.without(self.selection, what);
 	}
 
-	self._updateSelectionGui();
+	// Try to reflect these changes in the user interface.
+
+	if (typeof self._updateSelectionGui === 'function') {
+		self._updateSelectionGui();
+	}
+
+	self.fire('selectionChange', null, _.map(self.selection, function (i) {
+		return data[i];
+	}));
 };
 
 // #isSelected {{{2
@@ -2110,88 +2150,93 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
 
-	var didFooterCell = false;
+	if (document.getElementById(self.id + '_footer')) {
+		tr.append(jQuery('<td>', {'colspan': columns.length}).append(document.getElementById(self.id + '_footer')));
+	}
+	else {
+		var didFooterCell = false;
 
-	tr.append(_.map(columns, function (field, colIndex) {
-		var fcc = self.colConfig.get(field) || {};
-		var colTypeInfo = typeInfo.get(field);
-		var td = jQuery('<td>');
-		var footerConfig = getProp(self.defn, 'table', 'footer', field);
-		var agg;
-		var aggFun;
-		var aggResult;
-		var footerVal;
+		tr.append(_.map(columns, function (field, colIndex) {
+			var fcc = self.colConfig.get(field) || {};
+			var colTypeInfo = typeInfo.get(field);
+			var td = jQuery('<td>');
+			var footerConfig = getProp(self.defn, 'table', 'footer', field);
+			var agg;
+			var aggFun;
+			var aggResult;
+			var footerVal;
 
-		self.setCss(td, field);
-		self.setAlignment(td, fcc, typeInfo.get(field));
+			self.setCss(td, field);
+			self.setAlignment(td, fcc, typeInfo.get(field));
 
-		if (footerConfig == null) {
-			if (didFooterCell) {
-				td.addClass('wcdv_divider');
-			}
+			if (footerConfig == null) {
+				if (didFooterCell) {
+					td.addClass('wcdv_divider');
+				}
 
-			didFooterCell = false;
-		}
-		else {
-			if (colIndex > 0) {
-				td.addClass('wcdv_divider');
-			}
-
-			didFooterCell = true;
-
-			// Although the footer config is an aggregate spec, there is one place we allow more
-			// flexibility.  If the fields aren't set, use the field for the column in which we're
-			// displaying this footer.  This is merely a convenience for the most common case.
-
-			if (footerConfig.fields == null) {
-				footerConfig.fields = [field];
-			}
-
-			debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
-
-			var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, null /* TODO */);
-			var aggResult = aggInfo.instance.calculate(data.data);
-			var aggResult_formatted;
-
-			if (aggInfo.instance.inheritFormatting) {
-				aggResult_formatted = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-					overrideType: aggInfo.instance.getType(),
-					debug: true
-				});
+				didFooterCell = false;
 			}
 			else {
-				aggResult_formatted = format(null, null, aggResult, {
-					overrideType: aggInfo.instance.getType(),
-					debug: true
-				});
+				if (colIndex > 0) {
+					td.addClass('wcdv_divider');
+				}
+
+				didFooterCell = true;
+
+				// Although the footer config is an aggregate spec, there is one place we allow more
+				// flexibility.  If the fields aren't set, use the field for the column in which we're
+				// displaying this footer.  This is merely a convenience for the most common case.
+
+				if (footerConfig.fields == null) {
+					footerConfig.fields = [field];
+				}
+
+				debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
+
+				var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, null /* TODO */);
+				var aggResult = aggInfo.instance.calculate(data.data);
+				var aggResult_formatted;
+
+				if (aggInfo.instance.inheritFormatting) {
+					aggResult_formatted = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+						overrideType: aggInfo.instance.getType(),
+						debug: true
+					});
+				}
+				else {
+					aggResult_formatted = format(null, null, aggResult, {
+						overrideType: aggInfo.instance.getType(),
+						debug: true
+					});
+				}
+
+				if (aggInfo.debug) {
+					debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Aggregate result: %s',
+						JSON.stringify(aggResult));
+				}
+
+				switch (typeof footerConfig.format) {
+				case 'function':
+					footerVal = footerConfig.format(aggResult_formatted);
+					break;
+				case 'string':
+					footerVal = sprintf(footerConfig.format, aggResult_formatted);
+					break;
+				default:
+					throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
+				}
+
+				if (footerVal instanceof Element || footerVal instanceof jQuery) {
+					td.append(footerVal);
+				}
+				else {
+					td.text(footerVal);
+				}
 			}
 
-			if (aggInfo.debug) {
-				debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Aggregate result: %s',
-					JSON.stringify(aggResult));
-			}
-
-			switch (typeof footerConfig.format) {
-			case 'function':
-				footerVal = footerConfig.format(aggResult_formatted);
-				break;
-			case 'string':
-				footerVal = sprintf(footerConfig.format, aggResult_formatted);
-				break;
-			default:
-				throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
-			}
-
-			if (footerVal instanceof Element || footerVal instanceof jQuery) {
-				td.append(footerVal);
-			}
-			else {
-				td.text(footerVal);
-			}
-		}
-
-		return td;
-	}));
+			return td;
+		}));
+	}
 
 	if (self.features.rowReorder) {
 		tr.append(jQuery('<td>').text('Options'));

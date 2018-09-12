@@ -68,6 +68,7 @@ mixinEventHandling(GridRenderer, 'GridRenderer', [
 	, 'generateCsvProgress' // CSV generation progress.
 	, 'renderBegin'
 	, 'renderEnd'
+	, 'selectionChange'
 ]);
 
 // #canRender {{{2

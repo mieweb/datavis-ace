@@ -702,12 +702,22 @@ Grid.prototype.constructor = Grid;
  * @event Grid#colConfigUpdate
  */
 
+/**
+ * Fired when selection is changed.
+ *
+ * @event Grid#selectionChange
+ *
+ * @param {Array.<View~Data_Row>} selected
+ * Data from rows that are selected.
+ */
+
 mixinEventHandling(Grid, 'Grid', [
 		'showControls'
 	, 'hideControls'
 	, 'renderBegin'
 	, 'renderEnd'
 	, 'colConfigUpdate'
+	, 'selectionChange'
 ]);
 
 // Delegate {{{2
@@ -1567,6 +1577,13 @@ Grid.prototype.redraw = function () {
 				self.ui.limit_div.hide();
 			});
 		}
+
+		if (self.features.rowSelect) {
+			self.renderer.on('selectionChange', function (selection) {
+				self.fire('selectionChange', null, selection);
+			});
+		}
+
 		self.renderer.draw(self.ui.grid, null, function () {
 			self.ui.exportBtn.attr('disabled', false);
 			self.tableDoneCont();
