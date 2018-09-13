@@ -3002,7 +3002,8 @@ View.prototype.setColConfig = function (colConfig) {
 // #prime {{{2
 
 View.prototype.prime = function (cont) {
-	var self = this;
+	var self = this
+		, args = Array.prototype.slice.call(arguments);
 
 	if (typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be a function');
