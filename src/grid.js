@@ -843,6 +843,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 	notHeader.append(' ');
 
 	self.ui.rowCount = jQuery('<span>').appendTo(notHeader);
+	self.ui.selectionInfo = jQuery('<span>').appendTo(notHeader);
 
 	/*
 	 * For SOME REASON, doing 'clearfilters' messes up our whole fragile logic around the filter
@@ -1591,6 +1592,15 @@ Grid.prototype.redraw = function () {
 
 		if (self.features.rowSelect) {
 			self.renderer.on('selectionChange', function (selection) {
+				if (selection.length === 0) {
+					self.ui.selectionInfo.text('');
+				}
+				else {
+					var addComma = self.ui.rowCount.text().length > 0;
+					var str = addComma ? ', ' : '';
+					str += selection.length + ' ' + (selection.length === 1 ? 'record' : 'records') + ' selected';
+					self.ui.selectionInfo.text(str);
+				}
 				self.fire('selectionChange', null, selection);
 			});
 		}
