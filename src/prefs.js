@@ -1628,7 +1628,9 @@ PrefsBackendTemporary.prototype.reset = function (cont) {
 
 	self.debug('Resetting perspectives');
 
-	delete self.storage;
+	self.storage = {
+		perspectives: {}
+	};
 
 	return typeof cont === 'function' ? cont(true) : true;
 };
