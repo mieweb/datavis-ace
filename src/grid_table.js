@@ -1058,7 +1058,10 @@ GridTable.prototype.draw = function (root, opts, cont) {
 			}
 		}
 
-		self.root.append(self.ui.tbl);
+		// IMPORTANT: We use appendChild() here instead of jQuery's append() because the latter will
+		// re-run any <script> elements in the footer, which we don't want.
+
+		self.root.get(0).appendChild(self.ui.tbl.get(0));
 
 		/*
 		 * Draw the body.
@@ -1327,6 +1330,10 @@ GridTable.prototype.clear = function () {
 	}
 
 	self.view.off('*', self, {silent: true});
+
+	if (self.opts.footer != null && self.opts.stealGridFooter) {
+		self.grid.ui.content.get(0).appendChild(self.opts.footer.get(0));
+	}
 
 	self.root.children().remove();
 };
@@ -2151,7 +2158,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 	}
 
 	if (self.opts.footer != null && self.opts.stealGridFooter) {
-		tr.append(jQuery('<td>', {'colspan': columns.length}).append(self.opts.footer));
+		jQuery('<td>', {'colspan': columns.length}).appendTo(tr).get(0).appendChild(self.opts.footer.get(0));
 	}
 	else {
 		var didFooterCell = false;
