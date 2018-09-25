@@ -777,6 +777,17 @@ GridControl.prototype.addViewConfigChangeHandler = function (event, sync) {
 			.appendTo(self.ui.dropdown);
 	};
 
+	// There are two main things that we sync:
+	//
+	// 1. The dropdown that shows all the fields.  (Not used by aggregate control.)  This is done when
+	//    the column configuration is updated.  Interactive column configuration can change the names
+	//    shown for the fields in the dropdown.
+	//
+	// 2. The list of elements applied in the control; for group & pivot these are the fields with
+	//    arrows connecting them; for filter it's the list of filters; for aggregate it's the list of
+	//    aggregate functions.  It's up to the caller (i.e. the subclass) to provide a function that
+	//    does this synchronization.
+
 	var sync_colConfig = function (colConfig) {
 		debug.info('GRID (' + self.grid.id + ') // ' + self.controlType.toUpperCase() + ' CONTROL', 'Synchronizing column configuration with grid');
 		self.colConfig = colConfig;
@@ -792,6 +803,22 @@ GridControl.prototype.addViewConfigChangeHandler = function (event, sync) {
 		debug.info('GRID (' + self.grid.id + ') // ' + self.controlType.toUpperCase() + ' CONTROL', 'Synchronizing user interface with view');
 		sync();
 	};
+
+	// To fully sync, you need column configuration and type info.  Obviously you need column config
+	// because that says what all the available fields' names are.  Type info is only needed right now
+	// for the filter control, to determine what type of control to show (e.g. the widget used for
+	// numbers is different from that used for dates).
+	//
+	// We need to do things in that order: sync #1 (column config) first, then #2 (view).  The reason
+	// is that synchronizing #2 may cause us to modify the dropdown, i.e. to disable a field that must
+	// already exist due to synchronizing #1.
+	//
+	// BUT we don't know that any of this code will necessarily execute *before* the column config
+	// and/or type info has been determined.  This code may run before either of those are known, or
+	// it may be afterwards (because column config could come directly from the JS instantiating the
+	// grid, from prefs, or from the source itself).  So we need to always take that info account ---
+	// if the column config is already known, use it; otherwise register an event handler to capture
+	// it when it's decided.  Similarly with type info.
 
 	if (self.grid.colConfig != null) {
 		sync_colConfig(self.grid.colConfig);
