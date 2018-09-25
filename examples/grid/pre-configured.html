@@ -119,27 +119,10 @@ $(document).ready(function () {
 		title: 'Fruit Sales',
 		showControls: true
 	});
-
-	jQuery('#feature_header').on('click', function () {
-		jQuery('#feature_list').toggle();
-	});
 });
 		</script>
-		<style>
-#feature_header {
-	font-size: 1em;
-	cursor: pointer;
-}
-		</style>
 	</head>
 	<body>
-		<h1 id="feature_header">What features are in this example? (click to see)</h1>
-		<ul id="feature_list" style="display: none">
-			<li>Dates and Currency</li>
-			<li>Fixed height grid</li>
-			<li>Filter, Group, Pivot, Sort</li>
-			<li>Saved Views</li>
-		</ul>
 		<div id="grid" style="height: 600px"></div>
 	</body>
 </html>

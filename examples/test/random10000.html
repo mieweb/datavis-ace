@@ -39,9 +39,17 @@ $(document).ready(function () {
 		type: 'http',
 		url: 'random10000.json'
 	});
-	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink');
-	new MIE.WC_DataVis.Grid('grid', view, {
+	var prefs = new MIE.WC_DataVis.Prefs('example_random10000', null, {
+		backend: {
+			type: 'temporary'
+		}
+	});
+	var view = new MIE.WC_DataVis.View(source, 'Random 10000', {
+		prefs: prefs
+	});
+	var grid = new MIE.WC_DataVis.Grid('grid', view, {
 		id: 'grid',
+		prefs: prefs,
 		table: {
 			features: {
 				rowSelect: true,

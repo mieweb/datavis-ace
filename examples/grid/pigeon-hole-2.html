@@ -66,9 +66,12 @@ $(document).ready(function () {
 				}
 			}
 		}
+	}, {
+		isTemporary: true,
+		isEssential: true
 	});
 
-	var view = new MIE.WC_DataVis.View(source, 'Kitchen Sink', {
+	var view = new MIE.WC_DataVis.View(source, 'view', {
 		prefs: prefs
 	});
 
@@ -82,10 +85,7 @@ $(document).ready(function () {
 		},
 	}, {
 		title: 'Pigeonhole Sorting #2',
-	});
-
-	jQuery('#feature_header').on('click', function () {
-		jQuery('#feature_list').toggle();
+		showControls: true
 	});
 });
 		</script>
