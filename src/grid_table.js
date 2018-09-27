@@ -78,6 +78,13 @@ Csv.prototype.addRow = function (rowId) {
 Csv.prototype.addCol = function (x) {
 	var self = this;
 
+	if (x == null) {
+		x = '';
+	}
+	else if (typeof x !== 'string') {
+		x = x.toString();
+	}
+
 	// In case you didn't add a row before you added the first column.  Shame on you.
 
 	if (self.lastRow == null) {
@@ -1796,7 +1803,7 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		self._addSortingToHeader(data, 'vertical', {field: field}, headingThControls);
 
 		self._addFilterToHeader(headingThControls, field, headingText);
-		
+
 
 		if (self.opts.drawInternalBorders) {
 			headingTh.addClass('wcdv_pivot_colval_boundary');
@@ -2751,6 +2758,12 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	}
 
+	if (self.opts.generateCsv) {
+		self.addDataToCsv(data);
+	}
+
+	// percolateUp() {{{3
+
 	function percolateUp(node /* groupInfo elt */) {
 		var disabled = false;
 		var checked = false;
@@ -2796,6 +2809,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	}
 
+	// percolateDown() {{{3
+
 	function percolateDown(node /* groupInfo elt */, isChecked) {
 		node.checkbox.prop('disabled', false);
 		node.checkbox.prop('checked', isChecked);
@@ -2823,6 +2838,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			});
 		}
 	}
+
+	// }}}3
 
 	/*
 	self.ui.tbody.on('change', 'input[type="checkbox"].wcdv_select_row', function () {
@@ -2856,6 +2873,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 	var isRendered = [];
 
 	var lastRowVal = [];
+
+	// render() {{{3
 
 	/*
 	 * Render the rows that are in a group.
@@ -2973,6 +2992,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		}
 	};
 
+	// groupInfo {{{3
+
 	// groupInfo[id] -> {
 	//   metadata
 	//   numSelected
@@ -2996,6 +3017,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		mapping[0].checkbox = self.ui.checkAll_thead;
 		return mapping;
 	})();
+
+	// toggleGroup() {{{3
 
 	/*
 	 * Toggle a sub-group open/closed.  This is meant to be used as a jQuery event handler, e.g. for a
@@ -3073,6 +3096,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		elt.html(fontAwesome(wasCollapsed === '1' ? 'F147' : 'F196'));
 	};
 
+	// }}}3
+
 	_.each(data.data, function (rowGroup, groupNum) {
 		var tr;
 		var rowVal = data.rowVals[groupNum];
@@ -3106,7 +3131,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			//   1. rowVal = ['Elric', 'Alphonse']
 			//     -> rowValEltIndex = 0, render 'Elric' <---+
 			//     -> rowValEltIndex = 1, render 'Alphonse'  |
-			//   2. rowVal = ['Elric', 'Edward']        |
+			//   2. rowVal = ['Elric', 'Edward']             |
 			//     -> rowValEltIndex = 0, SKIP 'Elric' ------+
 			//     -> rowValEltIndex = 1, render 'Edward'
 			//
@@ -3231,8 +3256,6 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			break;
 		}
 	}
-
-	self.fire('csvReady');
 
 	if (typeof cont === 'function') {
 		return cont();
@@ -3448,6 +3471,85 @@ GridTableGroupDetail.prototype.checkAll = function (evt) {
 		self.unselect();
 	}
 }
+
+// #addDataToCsv {{{2
+
+/**
+ * Add all data to the CSV file.  Because plain tables frequently don't show all the data, it's not
+ * enough to perform the CSV generation inside the `render()` method like we do with other GridTable
+ * implementations.
+ *
+ * @param {object} data
+ */
+
+GridTableGroupDetail.prototype.addDataToCsv = function (data) {
+	var self = this;
+	var columns = determineColumns(self.colConfig, data, self.typeInfo);
+
+	debug.info('GRID TABLE - GROUP DETAIL // GENERATE CSV', 'Started generating CSV file');
+	self.fire('generateCsvProgress', null, 0);
+
+	self.csv.clear();
+
+	self.csv.addRow();
+
+	_.each(data.groupFields, function (fieldName) {
+		var fcc = self.colConfig.get(fieldName) || {};
+		self.csv.addCol(fcc.displayText || fieldName);
+	});
+	_.each(_.difference(columns, data.groupFields), function (fieldName) {
+		var fcc = self.colConfig.get(fieldName) || {};
+		self.csv.addCol(fcc.displayText || fieldName);
+	});
+
+	function recur(depth, metadataNode) {
+		if (metadataNode.children != null) {
+			_.each(_.keys(metadataNode.children).sort(), function (childName) {
+				self.csv.addRow();
+				for (var j = 0; j < depth; j += 1) {
+					self.csv.addCol();
+				}
+				self.csv.addCol(childName);
+				for (var j = depth + 1; j < columns.length; j += 1) {
+					self.csv.addCol();
+				}
+				recur(depth + 1, metadataNode.children[childName]);
+			});
+		}
+		else {
+			_.each(metadataNode.rows, function (row) {
+				self.csv.addRow();
+				for (var j = 0; j < depth; j += 1) {
+					self.csv.addCol();
+				}
+				_.each(_.difference(columns, data.groupFields), function (field, colIndex) {
+					var fcc = self.colConfig.get(field) || {};
+					var cell = row.rowData[field];
+					var value = format(fcc, self.typeInfo.get(field), cell);
+
+					if (value instanceof Element) {
+						self.csv.addCol(jQuery(value).text());
+					}
+					else if (value instanceof jQuery) {
+						self.csv.addCol(value.text());
+					}
+					else if (fcc.allowHtml && self.typeInfo.get(field).type === 'string' && value.charAt(0) === '<') {
+						self.csv.addCol(jQuery(value).text());
+					}
+					else {
+						self.csv.addCol(value);
+					}
+				});
+			});
+		}
+	}
+
+	recur(0, data.groupMetadata);
+
+	debug.info('GRID TABLE - PLAIN // GENERATE CSV', 'Finished generating CSV file');
+	self.fire('generateCsvProgress', null, 100);
+	self.fire('csvReady');
+};
 
 // GridTableGroupSummary {{{1
 // Constructor {{{2
