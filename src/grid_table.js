@@ -3255,6 +3255,8 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		lastRowVal = arrayCopy(rowVal);
 	});
 
+	self._updateSelectionGui();
+
 	if (self.features.floatingHeader) {
 		switch (getProp(self.defn, 'table', 'floatingHeader', 'method')) {
 		case 'tabletool':
@@ -3389,7 +3391,14 @@ GridTableGroupDetail.prototype._updateSelectionGui = function () {
 
 	for (var i = 0; i < self.selection.length; i += 1) {
 		var s = self.selection[i];
-		var id = self.data.groupMetadata.lookup.byRowNum[s].id;
+		var id = getProp(self.data, 'groupMetadata', 'lookup', 'byRowNum', s, 'id');
+
+		if (id == null) {
+			// This can happen when the selected row has been filtered out, so there's no group metadata
+			// entry for that row number.
+
+			continue;
+		}
 
 		if (numSelected[id] == null) {
 			numSelected[id] = 0;
