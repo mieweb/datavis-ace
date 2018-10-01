@@ -3070,7 +3070,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				.each(function (i, elt) {
 					elt = jQuery(elt);
 					if (elt.attr('data-wcdv-toggles-group')) {
-						toggle(elt.attr('data-wcdv-toggles-group'), show && elt.attr('data-wcdv-collapsed') === '0', elt);
+						toggle(elt.attr('data-wcdv-toggles-group'), show && elt.attr('data-wcdv-expanded') === '1', elt);
 					}
 					if (show) {
 						elt.show();
@@ -3088,12 +3088,13 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 		var elt = jQuery(this);
 		var tr = elt.closest('tr');
-		var wasCollapsed = tr.attr('data-wcdv-collapsed');
+		var wasExpanded = tr.attr('data-wcdv-expanded');
 
-		toggle(tr.attr('data-wcdv-toggles-group'), wasCollapsed === '1', tr);
+		toggle(tr.attr('data-wcdv-toggles-group'), wasExpanded === '0', tr);
 
-		tr.attr('data-wcdv-collapsed', wasCollapsed === '1' ? '0' : '1');
-		elt.html(fontAwesome(wasCollapsed === '1' ? 'F147' : 'F196'));
+		tr.attr('data-wcdv-expanded', wasExpanded === '0' ? '1' : '0');
+		elt.attr('data-wcdv-expanded', wasExpanded === '0' ? '1' : '0');
+		elt.html(fontAwesome(wasExpanded === '0' ? 'fa-minus-square-o' : 'fa-plus-square-o'));
 	};
 
 	// }}}3
@@ -3155,7 +3156,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			tr = jQuery('<tr>')
 				.attr('data-wcdv-in-group', parentMetadata.id)
 				.attr('data-wcdv-toggles-group', childMetadata.id)
-				.attr('data-wcdv-collapsed', '1')
+				.attr('data-wcdv-expanded', '0')
 			;
 
 			if (rowValEltIndex > 0) {
