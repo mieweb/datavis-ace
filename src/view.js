@@ -1848,11 +1848,16 @@ View.prototype.group = function () {
 	// event to notify the user interface about it so a warning can be shown.
 
 	_.each(self.groupSpec.fieldNames, function (field, fieldIdx) {
-		if (!self.typeInfo.isSet(field)) {
+		var fti = self.typeInfo.get(field);
+		if (fti == null) {
 			log.error('Group field does not exist in the source: ' + field);
 			self.fire('invalidGroupField', null, field);
 		}
+		else if (fti.type == null) {
+			log.error('Unable to group by field "%s": type is undefined');
+		}
 		else {
+			self._maybeDecode('GROUP', fti);
 			groupFields.push(field);
 		}
 	});
@@ -2353,11 +2358,16 @@ View.prototype.pivot = function () {
 	// Go through every pivot field and make sure it exists in the source.
 
 	_.each(self.pivotSpec.fieldNames, function (field, fieldIdx) {
-		if (!self.typeInfo.isSet(field)) {
+		var fti = self.typeInfo.get(field);
+		if (fti == null) {
 			log.error('Pivot field does not exist in the source: ' + field);
 			self.fire('invalidPivotField', null, field);
 		}
+		else if (fti.type == null) {
+			log.error('Unable to pivot by field "%s": type is undefined');
+		}
 		else {
+			self._maybeDecode('PIVOT', fti);
 			pivotFields.push(field);
 		}
 	});
