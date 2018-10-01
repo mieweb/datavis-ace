@@ -3169,15 +3169,20 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				tr.append(jQuery('<th>', { 'class': 'wcdv_group_col_spacer' }));
 			}
 
-			// Create the button that expands this grouping.
+			var expandBtn = jQuery('<button>', {
+				'type': 'button',
+				'class': 'wcdv_icon_button wcdv_expand_button',
+				'data-wcdv-expanded': '0'
+			})
+				.html(fontAwesome('fa-plus-square-o'))
+				.on('click', toggleGroup)
+			;
 
-			tr
-				.append(jQuery('<th>', { 'class': 'wcdv_group_col_spacer' })
-					.append(jQuery('<div>', { 'class': 'wcdv_button wcdv_expand_button' })
-						.html(fontAwesome('F196'))
-						.on('click', toggleGroup)
-					)
-				);
+			var expandBtnTh = jQuery('<th>', {
+				'class': 'wcdv_group_col_spacer'
+			});
+
+			tr.append(expandBtnTh.append(expandBtn));
 
 			// Create the check box which selects the row.
 

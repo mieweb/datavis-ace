@@ -42,9 +42,16 @@ li.wcdv_aggregate_field {
 	padding-bottom: 0.25ex;
 }
 
-.wcdv_expand_button {
+button.wcdv_expand_button {
 	display: inline-block;
 	vertical-align: middle;
+}
+
+button.wcdv_expand_button > span.fa {
+	cursor: pointer;
+	margin-right: inherit;
+	font-size: 15px;
+	color: #737373;
 }
 
 .wcdv_grid, .wcdv_graph {
