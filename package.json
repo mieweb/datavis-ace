@@ -6,12 +6,10 @@
   "devDependencies": {
     "eslint": "latest",
     "jsdoc": "latest",
-    "jshint": "latest"
+    "jshint": "latest",
+    "json5": "latest"
   },
   "scripts": {
     "lint": "eslint ."
-  },
-  "dependencies": {
-    "json5": "^1.0.1"
   }
 }
