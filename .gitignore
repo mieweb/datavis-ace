@@ -1,10 +1,14 @@
 .*.swp
 .python-version
+.vscode
+TAGS
 jsdoc
 node_modules
 doc/_build
 doc/.python-version
+doc/html
 dist/wcdatavis.js
 examples/wcdatavis.js
 examples/wcdatavis.css
 examples/wcdatavis-extra.css
+examples/test/random*.json
