@@ -12,6 +12,7 @@ import re
 import time
 import sys
 import inspect
+import argparse
 
 from jsoncomment import JsonComment
 
@@ -93,6 +94,8 @@ def random_seed(n):
     RANDOM_SEED['seed'] = n
 
 def repeat(times, val):
+    if isinstance(times, str):
+        times = int(times)
     result = []
     for i in range(times):
         if i % 100 == 0:
@@ -140,6 +143,7 @@ def process(node):
             if len(node) == 2:
                 match = r.fullmatch(node[0])
                 if match:
+                    env['ARGS'] = args.args
                     env['VALUE'] = node[1]
                     return eval(match.group(1), env)
             for index, elt in enumerate(node):
@@ -155,5 +159,20 @@ def parse(input, output):
     obj = JsonComment(json).load(input)
     process(obj)
     json.dump(obj, output, indent=2)
+
+class DefineAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(DefineAction, self).__init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        values = values.split('=', 1)
+        if getattr(namespace, self.dest) == None:
+            setattr(namespace, self.dest, {})
+        getattr(namespace, self.dest)[values[0]] = values[1]
+
+cliArgsParser = argparse.ArgumentParser(description='Generate JSON test files')
+cliArgsParser.add_argument('-D', action=DefineAction, dest='args')
+args = cliArgsParser.parse_args()
 
 parse(sys.stdin, sys.stdout)
