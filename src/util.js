@@ -408,7 +408,7 @@ var stringValueType = (function () {
 })();
 
 var parseNumber = (function () {
-  var re_number = new RegExp(/(^-?[1-9]{1}[0-9]{0,2}(,?\d{3})*(\.\d+)?(e[+-]?\d+)?$)|(^-?0?\.\d+(e[+-]?\d+)?$)/);
+  var re_number = new RegExp(/(^-?[1-9]{1}[0-9]{0,2}(,?\d{3})*(\.\d+)?(e[+-]?\d+)?$)|(^0(e[+-]?\d+)?$)|(^-?0?\.\d+(e[+-]?\d+)?$)/);
 	var re_comma = new RegExp(/,/g);
   return function p(s) {
     if (s.charAt(0) === '$') {
