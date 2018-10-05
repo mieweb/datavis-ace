@@ -3012,9 +3012,12 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 		var limitConfig = self.defn.table.limit;
 
-		if (startIndex > 0) {
-			// Remove the "show more rows" button.
-			afterElement.next('tr.wcdvgrid_more').remove();
+		var showMoreTr;
+
+		if (afterElement != null && startIndex > 0) {
+			showMoreTr = afterElement.nextAll('tr.wcdvgrid_more[data-wcdv-in-group="' + metadataId + '"]');
+			afterElement = showMoreTr.prev();
+			showMoreTr.remove();
 		}
 
 		if (metadataNode.children) {
@@ -3030,7 +3033,6 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			var rowValElt, rowValEltSpan, rowValEltTh;
 			var showMoreTd;
 			var colSpan;
-			var showMoreTr;
 
 			var trans = {
 				'group:singular': 'group',
@@ -3156,6 +3158,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				// Not all children were rendered.
 
 				lastRenderedTr[metadataNode.id] = childTr;
+				for (var p = metadataNode.parent; p != null; p = p.parent) {
+					lastRenderedTr[p.id] = childTr;
+				}
 
 				showMoreTr = jQuery('<tr>', {'class': 'wcdvgrid_more', 'data-wcdv-in-group': metadataNode.id});
 
@@ -3207,7 +3212,6 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			var rowTr;
 			var showMoreTd;
 			var colSpan;
-			var showMoreTr;
 
 			var howMany = (!self.features.limit || showAll) ? metadataNode.rows.length - startIndex
 				: startIndex === 0 ? limitConfig.threshold
@@ -3300,6 +3304,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				// Not all children were rendered.
 
 				lastRenderedTr[metadataNode.id] = rowTr;
+				for (var p = metadataNode.parent; p != null; p = p.parent) {
+					lastRenderedTr[p.id] = rowTr;
+				}
 
 				showMoreTr = jQuery('<tr>', {'class': 'wcdvgrid_more', 'data-wcdv-in-group': metadataNode.id});
 
@@ -3362,7 +3369,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 		var startIndex = +(elt.attr('data-wcdv-show-more-start'));
 		var afterElement = lastRenderedTr[metadataId];
 
-		afterElement.next('tr.wcdvgrid_more').find('.spinner').show();
+		afterElement.nextAll('tr.wcdvgrid_more[data-wcdv-in-group="' + metadataId + '"]').find('.spinner').show();
 
 		window.setTimeout(function () {
 			render(metadataId, startIndex, afterElement, showAll);
