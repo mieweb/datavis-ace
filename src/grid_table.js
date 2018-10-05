@@ -3039,7 +3039,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				'row:plural': 'rows'
 			};
 
-			var childRowValElts = _.keys(metadataNode.children).sort();
+			var childRowValElts = mergeSort2(_.pluck(metadataNode.children, 'rowValElt'));
 			var childRowValEltsLen = childRowValElts.length;
 
 			var howMany = !self.features.limit || showAll ? childRowValEltsLen

@@ -1963,6 +1963,7 @@ View.prototype.group = function () {
 			var rowVal = rowVals[rowValIndex];
 			var metadataLeaf = {
 				rowValIndex: rowValIndex,
+				rowValElt: rowVal[rowVal.length - 1],
 				parent: null,
 				numRows: 0,
 				rows: []
@@ -2021,6 +2022,10 @@ View.prototype.group = function () {
 					node.numRows += child.numRows;
 					node.rows = node.rows.concat(child.rows);
 				});
+				if (depth > 0) {
+					node.rowValIndex = node.children[_.keys(node.children)[0]].rowValIndex;
+					node.rowValElt = rowVals[node.rowValIndex][depth - 1];
+				}
 			}
 
 			if (depth > 0) {
