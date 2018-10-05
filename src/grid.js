@@ -473,6 +473,7 @@ var Grid = function (id, view, defn, tagOpts, cb) {
 	self.ui.toolbar = jQuery('<div>')
 		.addClass('wcdv_grid_toolbar')
 		.droppable({
+			accept: '.wcdv_drag_handle',
 			over: function (evt, ui) {
 				self.ui.controls.show();
 
