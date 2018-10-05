@@ -1957,7 +1957,8 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var row = data.data[rowNum];
 			var tr;
 
-			if (useLimit
+			if (!self.features.incremental
+					&& useLimit
 					&& limitConfig.method === 'more'
 					&& ((startIndex === 0 && rowNum === limitConfig.threshold - 1) // [1]
 							|| (startIndex > 0 && rowNum === startIndex + limitConfig.chunkSize - 1))) { // [2]
