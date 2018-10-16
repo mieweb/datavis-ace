@@ -79,7 +79,7 @@ button.wcdv_expand_button > span.fa {
 	padding: 0 0 0 8px;
         cursor: pointer;
 	color: #737373;
-	flex: 0 0 0;
+	flex: 0 0 auto;
 }
 
 .wcdv_grid_titlebar strong {
@@ -135,7 +135,7 @@ button.wcdv_expand_button > span.fa {
 /******************************************************************************/
 
 .wcdv_grid_content {
-	flex: auto;
+	flex: 1 1 0px;
 	display: flex;
 	flex-direction: column;
 	border: 1px solid #c7c7c7;
@@ -147,7 +147,7 @@ button.wcdv_expand_button > span.fa {
 .wcdv_grid_toolbar {
 	border-bottom: 1px solid #c7c7c7;
 	padding: 0 4px;
-	flex: 0 0 0;
+	flex: 0 0 auto;
 	font-size: 0.85em;
 	padding: 0 8px;
 }
@@ -259,7 +259,7 @@ button.wcdv_expand_button > span.fa {
 	text-transform: uppercase;
 	font-weight: bold;
 	display: inline-block;
-	flex: auto;
+	flex: 1 1 0px;
 }
 
 .wcdv_control_clear_button {
@@ -394,7 +394,7 @@ button.wcdv_expand_button > span.fa {
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container {
 	margin-left: 1ex;
-	flex: auto;
+	flex: 1 1 0px;
 }
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div {
@@ -409,7 +409,7 @@ button.wcdv_expand_button > span.fa {
 
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div > input,
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container > div > div.SumoSelect {
-	flex: auto;
+	flex: 1 1 0px;
 }
 
 /*
@@ -429,7 +429,7 @@ div.SumoSelect > div.optWrapper {
 
 .wcdv_grid_table,
 .wcdv_graph_render {
-	flex: auto;
+	flex: 1 1 0px;
 }
 
 .wcdv_grid_table th {
