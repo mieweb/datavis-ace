@@ -7,7 +7,7 @@
  * @extends DataVisError
  */
 
-var ViewError = makeSubclass(DataVisError);
+var ViewError = makeSubclass('ViewError', DataVisError);
 
 // InvalidAggregateError {{{1
 
@@ -18,7 +18,7 @@ var ViewError = makeSubclass(DataVisError);
  * @extends ViewError
  */
 
-var InvalidAggregateError = makeSubclass(ViewError);
+var InvalidAggregateError = makeSubclass('InvalidAggregateError', ViewError);
 
 // View {{{1
 // JSDoc Types {{{2

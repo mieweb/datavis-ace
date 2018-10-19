@@ -787,7 +787,7 @@ Graph.prototype.setUserConfig = function (config) {
 
 // GraphRenderer {{{1
 
-GraphRenderer = makeSubclass(Object, function (graph, elt, view, opts) {
+var GraphRenderer = makeSubclass('GraphRenderer', Object, function (graph, elt, view, opts) {
 	var self = this;
 
 	self.graph = graph;
@@ -856,7 +856,7 @@ GraphRenderer.prototype.draw = function (devConfig, userConfig) {
 
 // GraphRendererGoogle {{{1
 
-GraphRendererGoogle = makeSubclass(GraphRenderer);
+var GraphRendererGoogle = makeSubclass('GraphRendererGoogle', GraphRenderer);
 
 // #draw_plain {{{2
 
@@ -1260,7 +1260,7 @@ GraphRendererGoogle.prototype._draw = function (devConfig, userConfig) {
 
 // GraphRendererJit {{{1
 
-GraphRendererJit = makeSubclass(GraphRenderer);
+var GraphRendererJit = makeSubclass('GraphRendererJit', GraphRenderer);
 
 // #draw {{{2
 

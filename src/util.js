@@ -569,6 +569,16 @@ function eachUntilObj(o, f, r, extra) {
 }
 
 function asyncEach(args, fun, done) {
+	if (!_.isArray(args)) {
+		throw new Error('Call Error: `args` must be an array');
+	}
+	if (typeof fun !== 'function') {
+		throw new Error('Call Error: `fun` must be a function');
+	}
+	if (typeof done !== 'function') {
+		throw new Error('Call Error: `done` must be a function');
+	}
+
 	args = shallowCopy(args);
 	function g() {
 		if (args.length === 0) {
@@ -1399,7 +1409,7 @@ function walkObj(o, f, opts) {
  * Create a function representing a subclass.
  *
  * ```
- * var Animal = makeSubclass(Object, function (name) {
+ * var Animal = makeSubclass('Animal', Object, function (name) {
  *   this.name = name;
  * }, {
  *   species: 'unknown species'
@@ -1409,7 +1419,7 @@ function walkObj(o, f, opts) {
  *   console.log(this.name + ' is a ' + this.species + '.');
  * };
  *
- * var HouseFinch = makeSubclass(Animal, null, {
+ * var HouseFinch = makeSubclass('HouseFinch', Animal, null, {
  *   species: 'Haemorhous mexicanus'
  * });
  *
@@ -1443,8 +1453,21 @@ function walkObj(o, f, opts) {
  * property which can be used to invoke the superclass' methods on itself.
  */
 
-var makeSubclass = function (parent, ctor, ptype) {
+var makeSubclass = function (name, parent, ctor, ptype) {
 	// Default constructor just calls the super constructor.
+
+	if (typeof name !== 'string') {
+		throw new Error('Call Error: `name` must be a string');
+	}
+	if (typeof parent !== 'function') {
+		throw new Error('Call Error: `parent` must be a function');
+	}
+	if (ctor != null && typeof ctor !== 'function') {
+		throw new Error('Call Error: `ctor` must be null or a function');
+	}
+	if (ptype != null && typeof ptype !== 'object') {
+		throw new Error('Call Error: `ptype` must be null or an object');
+	}
 
 	if (ctor == null && parent !== Object) {
 		ctor = function () {
@@ -1462,6 +1485,7 @@ var makeSubclass = function (parent, ctor, ptype) {
 		}
 	};
 
+	Object.defineProperty(subclass, 'name', {value: name});
 	subclass.prototype = Object.create(parent.prototype);
 	subclass.prototype.constructor = subclass;
 
@@ -1725,6 +1749,40 @@ function mixinDebugging(obj, tagStart) {
 		var tag = args.shift();
 		debug.info.apply(null, Array.prototype.concat.call([getTag(this) + ' // ' + tag], args));
 	};
+}
+
+// mixinLogging {{{2
+
+function mixinLogging(obj, tagPrefix) {
+	if (tagPrefix != null && typeof tagPrefix !== 'string' && typeof tagPrefix !== 'function') {
+		throw new Error('Call Error: `tagPrefix` must be null, a string, or a function');
+	}
+
+	var getTag = function (self) {
+		if (typeof tagPrefix === 'function') {
+			return tagPrefix.call(self);
+		}
+		else if (typeof tagPrefix === 'string') {
+			return tagPrefix;
+		}
+		else {
+			return null;
+		}
+	};
+
+	makeLogger = function (loggerType) {
+		return function () {
+			var args = Array.prototype.slice.call(arguments);
+			var tag = args.shift();
+			var msg = args.shift();
+			var prefix = ['[' + getTag(this) + ' // ' + tag + '] ' + msg];
+			console[loggerType].apply(null, prefix.concat(args));
+		};
+	};
+
+	obj.prototype.logInfo = makeLogger('log');
+	obj.prototype.logWarning = makeLogger('warn');
+	obj.prototype.logError = makeLogger('error');
 }
 
 // Locking {{{1
@@ -3257,4 +3315,15 @@ function dataURItoBlob(dataURI) {
   var blob = new Blob([ab], {type: mimeString});
   return blob;
 
+}
+
+// Misc {{{1
+
+// https://stackoverflow.com/a/2117523
+
+function uuid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+		return v.toString(16);
+	});
 }

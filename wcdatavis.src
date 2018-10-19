@@ -99,7 +99,7 @@
 	$INCLUDE('src/util.js');
 	$INCLUDE('src/ordmap.js');
 
-	var DataVisError = makeSubclass(Error, function (msg) {
+	var DataVisError = makeSubclass('DataVisError', Error, function (msg) {
 		this.message = msg;
 	});
 
@@ -125,16 +125,6 @@
 	window.MIE.trans        = trans;
 	window.MIE.makeSubclass = makeSubclass;
 
-	window.MIE.Util                    = window.MIE.Util || {};
-	window.MIE.Util.objFromArray       = objFromArray;
-	window.MIE.Util.asyncEach          = asyncEach;
-	window.MIE.Util.mixinEventHandling = mixinEventHandling;
-	window.MIE.Util.mixinDebugging     = mixinDebugging;
-	window.MIE.Util.getProp            = getProp;
-	window.MIE.Util.getPropDef         = getPropDef;
-	window.MIE.Util.setProp            = setProp;
-	window.MIE.Util.parseNumber        = parseNumber;
-
 	window.MIE.WC_DataVis                        = window.MIE.WC_DataVis || {};
 	window.MIE.WC_DataVis.Aggregate              = Aggregate;
 	window.MIE.WC_DataVis.AGGREGATE_REGISTRY     = AGGREGATE_REGISTRY;
@@ -145,6 +135,7 @@
 	window.MIE.WC_DataVis.grids                  = {};
 	window.MIE.WC_DataVis.Graph                  = Graph;
 	window.MIE.WC_DataVis.graphs                 = {};
+	window.MIE.WC_DataVis.Perspective            = Perspective;
 	window.MIE.WC_DataVis.Prefs                  = Prefs;
 	window.MIE.WC_DataVis.PrefsBackend           = PrefsBackend;
 	window.MIE.WC_DataVis.PrefsModule            = PrefsModule;
@@ -154,6 +145,17 @@
 	window.MIE.WC_DataVis.EXPORT_URL             = 'export.php';
 	window.MIE.WC_DataVis.Error                  = DataVisError;
 
+	window.MIE.WC_DataVis.Util                    = window.MIE.WC_DataVis.Util || {};
+	window.MIE.WC_DataVis.Util.objFromArray       = objFromArray;
+	window.MIE.WC_DataVis.Util.asyncEach          = asyncEach;
+	window.MIE.WC_DataVis.Util.mixinEventHandling = mixinEventHandling;
+	window.MIE.WC_DataVis.Util.mixinDebugging     = mixinDebugging;
+	window.MIE.WC_DataVis.Util.mixinLogging       = mixinLogging;
+	window.MIE.WC_DataVis.Util.getProp            = getProp;
+	window.MIE.WC_DataVis.Util.getPropDef         = getPropDef;
+	window.MIE.WC_DataVis.Util.setProp            = setProp;
+	window.MIE.WC_DataVis.Util.parseNumber        = parseNumber;
+	window.MIE.WC_DataVis.Util.deepDefaults       = deepDefaults;
 })(jQuery);
 
 // vim:set ft=javascript:

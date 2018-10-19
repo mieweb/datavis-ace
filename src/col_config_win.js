@@ -1,6 +1,6 @@
 // ColConfigWin {{{1
 
-var ColConfigWin = makeSubclass(Object, function (grid, colConfig) {
+var ColConfigWin = makeSubclass('ColConfigWin', Object, function (grid, colConfig) {
 	var self = this;
 
 	self.grid = grid;

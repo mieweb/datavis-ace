@@ -144,7 +144,7 @@ function checkAggregate(defn, agg, source) {
  * makeSubclass makeSubclass()} like this:
  *
  * ```
- * var MyAggregate = MIE.makeSubclass(MIE.WC_DataVis.Aggregate, function () {
+ * var MyAggregate = makeSubclass('MyAggregate', MIE.WC_DataVis.Aggregate, function () {
  *   // constructor (optional)
  * }, {
  *   name: 'My Aggregate',
@@ -199,7 +199,7 @@ function checkAggregate(defn, agg, source) {
  * If false, then the aggregate function will not be shown in the user interface.
  */
 
-var Aggregate = makeSubclass(Object, function (opts) {
+var Aggregate = makeSubclass('Aggregate', Object, function (opts) {
 	var self = this;
 
 	self.opts = deepDefaults(opts, {
@@ -508,7 +508,7 @@ Aggregate.prototype.getType = function () {
 
 // Count {{{1
 
-var CountAggregate = makeSubclass(Aggregate, null, {
+var CountAggregate = makeSubclass('CountAggregate', Aggregate, null, {
 	name: 'Count',
 	fieldCount: 0,
 	type: 'number',
@@ -530,7 +530,7 @@ CountAggregate.prototype.calculate = function (data) {
 
 // Count Distinct {{{1
 
-var CountDistinctAggregate = makeSubclass(Aggregate, function () {
+var CountDistinctAggregate = makeSubclass('CountDistinctAggregate', Aggregate, function () {
 	var self = this;
 
 	self.set = {};
@@ -570,7 +570,7 @@ CountDistinctAggregate.prototype.calculateDone = function (obj) {
 
 // Values {{{1
 
-ValuesAggregate = makeSubclass(Aggregate, null, {
+var ValuesAggregate = makeSubclass('ValuesAggregate', Aggregate, null, {
 	name: 'Values',
 	fieldCount: 1,
 	inheritFormatting: false,
@@ -604,7 +604,7 @@ ValuesAggregate.prototype.calculateDone = function (acc) {
 
 // Values w/ Counts {{{1
 
-ValuesWithCountsAggregate = makeSubclass(Aggregate, null, {
+var ValuesWithCountsAggregate = makeSubclass('ValuesWithCountsAggregate', Aggregate, null, {
 	name: 'Values w/ Counts',
 	fieldCount: 1,
 	inheritFormatting: false,
@@ -650,7 +650,7 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 
 // Distinct Values {{{1
 
-DistinctValuesAggregate = makeSubclass(Aggregate, null, {
+var DistinctValuesAggregate = makeSubclass('DistinctValuesAggregate', Aggregate, null, {
 	name: 'Distinct Values',
 	fieldCount: 1,
 	inheritFormatting: false,
@@ -693,7 +693,7 @@ DistinctValuesAggregate.prototype.calculateDone = function (acc) {
 
 // Sum {{{1
 
-var SumAggregate = makeSubclass(Aggregate, null, {
+var SumAggregate = makeSubclass('SumAggregate', Aggregate, null, {
 	name: 'Sum',
 	fieldCount: 1,
 	type: 'number',
@@ -739,7 +739,7 @@ SumAggregate.prototype.calculateStep = function (acc, next) {
 
 // Average {{{1
 
-var AverageAggregate = makeSubclass(Aggregate, function (opts) {
+var AverageAggregate = makeSubclass('AverageAggregate', Aggregate, function (opts) {
 	var self = this;
 
 	self.sumAgg = new SumAggregate(opts);
@@ -768,7 +768,7 @@ AverageAggregate.prototype.calculate = function (data) {
 
 // Min {{{1
 
-MinAggregate = makeSubclass(Aggregate, null, {
+var MinAggregate = makeSubclass('MinAggregate', Aggregate, null, {
 	name: 'Min',
 	fieldCount: 1,
 	inheritFormatting: true
@@ -807,7 +807,7 @@ MinAggregate.prototype.calculateStep = function (acc, next) {
 
 // Max {{{1
 
-MaxAggregate = makeSubclass(Aggregate, null, {
+var MaxAggregate = makeSubclass('MaxAggregate', Aggregate, null, {
 	name: 'Max',
 	fieldCount: 1,
 	inheritFormatting: true
@@ -846,7 +846,7 @@ MaxAggregate.prototype.calculateStep = function (acc, next) {
 
 // First {{{1
 
-FirstAggregate = makeSubclass(Aggregate, null, {
+var FirstAggregate = makeSubclass('FirstAggregate', Aggregate, null, {
 	name: 'First',
 	fieldCount: 1,
 	inheritFormatting: true
@@ -879,7 +879,7 @@ FirstAggregate.prototype.calculate = function (data) {
 
 // Last {{{1
 
-LastAggregate = makeSubclass(Aggregate, null, {
+var LastAggregate = makeSubclass('LastAggregate', Aggregate, null, {
 	name: 'Last',
 	fieldCount: 1,
 	inheritFormatting: true
@@ -912,7 +912,7 @@ LastAggregate.prototype.calculate = function (data) {
 
 // Nth {{{1
 
-NthAggregate = makeSubclass(Aggregate, null, {
+var NthAggregate = makeSubclass('NthAggregate', Aggregate, null, {
 	name: 'Nth',
 	enabled: false,
 	fieldCount: 1,
@@ -969,7 +969,7 @@ NthAggregate.prototype.calculate = function (data) {
 
 // Sum / Sum {{{1
 
-SumOverSumAggregate = makeSubclass(Aggregate, null, {
+var SumOverSumAggregate = makeSubclass('SumOverSumAggregate', Aggregate, null, {
 	name: 'Sum/Sum',
 	fieldCount: 2,
 	type: 'string',
@@ -1030,7 +1030,7 @@ SumOverSumAggregate.prototype.getFullName = function () {
 
 // Count / Count {{{1
 
-CountOverCountAggregate = makeSubclass(Aggregate, null, {
+var CountOverCountAggregate = makeSubclass('CountOverCountAggregate', Aggregate, null, {
 	name: 'Count/Count',
 	fieldCount: 2,
 	type: 'number',
@@ -1114,7 +1114,7 @@ AGGREGATE_REGISTRY.set('sumOverSum', SumOverSumAggregate);
  * If true, then debugging messages are output for this aggregate.
  */
 
-var AggregateInfo = makeSubclass(Object, function (aggType, spec, aggNum, colConfig, typeInfo, decode) {
+var AggregateInfo = makeSubclass('AggregateInfo', Object, function (aggType, spec, aggNum, colConfig, typeInfo, decode) {
 	var self = this;
 
 	self.aggNum = aggNum;

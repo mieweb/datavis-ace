@@ -52,28 +52,40 @@
  * @property {string} id
  * Unique identifier for this Prefs instance; used as the primary key by the backend.
  *
- * @property {Perspective[]} bardo
+ * @property {boolean} isInitialized
+ * If true, this Prefs instance has already been initialized.
+ *
+ * @property {boolean} isPrimed
+ * If true, this Prefs instance has already been primed.
+ *
+ * @property {PrefsBackend} backend
  *
  * @property {object} moduleBindings
  * How perspectives know how to load/save their configurations to/from real things.  Keys are module
  * names, values are targets that are bound to the module.  The actual load/save functionality is
  * contained within PrefsModule subclasses.
  *
- * @property {Object.<string,Perspective>} perspectives
- *
- * @property {PrefsBackend} backend
- *
  * @property {string[]} availablePerspectives
  * List of all the perspective names that we know about.
  *
- * @property {boolean} isInitialized
- * If true, this Prefs instance has already been initialized.
+ * @property {Object.<string,Perspective>} perspectives
  *
- * @property {boolean} isPrimed
- * If true, this Prefs instance has already been primed.
+ * @property {Perspective} currentPerspective
+ * The current perspective.
+ *
+ * @property {Perspective[]} bardo
+ * List of perspectives to be preserved when resetting prefs.  Any perspectives which are both
+ * temporary and essential are saved here, and restored automatically after removing all other
+ * perspectives.
+ *
+ * @property {Array.<Perspective>} history
+ * List of perspectives in the history.
+ *
+ * @property {number} historyIndex
+ * Pointer to where we currently are in the history list.
  */
 
-var Prefs = makeSubclass(Object, function (id, moduleBindings, opts) {
+var Prefs = makeSubclass('Prefs', Object, function (id, moduleBindings, opts) {
 	var self = this;
 
 	if (typeof id !== 'string') {
@@ -151,8 +163,8 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  *
  * @event Prefs#perspectiveAdded
  *
- * @param {string} newName
- * Name of the new perspective.
+ * @param {string} id
+ * ID of the new perspective.
  */
 
 /**
@@ -160,11 +172,11 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  *
  * @event Prefs#perspectiveDeleted
  *
- * @param {string} deletedName
- * Name of the perspective being deleted.
+ * @param {string} deletedId
+ * ID of the perspective being deleted.
  *
- * @param {string} newCurrentName
- * Name of the new current perspective.
+ * @param {string} newCurrentId
+ * ID of the new current perspective.
  */
 
 /**
@@ -172,8 +184,8 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  *
  * @event Prefs#perspectiveRenamed
  *
- * @param {string} oldName
- * Original name of the perspective.
+ * @param {string} id
+ * ID of the perspective being renamed.
  *
  * @param {string} newName
  * New name of the perspective.
@@ -184,8 +196,8 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  *
  * @event Prefs#perspectiveChanged
  *
- * @param {string} newCurrentName
- * Name of the new current perspective.
+ * @param {string} newCurrentId
+ * ID of the new current perspective.
  */
 
 /**
@@ -237,6 +249,10 @@ mixinEventHandling(Prefs, function (self) {
 ]);
 
 mixinDebugging(Prefs, function () {
+	return 'PREFS (' + this.id + ')';
+});
+
+mixinLogging(Prefs, function () {
 	return 'PREFS (' + this.id + ')';
 });
 
@@ -304,7 +320,7 @@ Prefs.prototype.prime = function (cont) {
 
 	self.primeLock.lock();
 
-	var finish = function (status) {
+	var makeFinishCont = function (status) {
 		return function () {
 			self.isPrimed = true;
 			self.primeLock.unlock();
@@ -314,44 +330,50 @@ Prefs.prototype.prime = function (cont) {
 
 	self.init();
 
-	self.debug('Priming prefs system');
+	self.debug('Priming');
 
-	return self.backend.getPerspectives(function (names) {
-		self.availablePerspectives = _.union(self.availablePerspectives, names);
+	return self.backend.getPerspectives(function (ids) {
+		self.availablePerspectives = _.union(self.availablePerspectives, ids);
+		self.backend.loadAll(function (perspectives) {
+			asyncEach(_.values(perspectives), function (x, next) {
+				self.addPerspective(x.id, x.name, x.config, null, next, {
+					switch: false
+				});
+			}, function () {
+				// When there's already a current perspective (as would be the case when prefs have been
+				// pre-configured), we don't have to do anything else.
 
-		// When there's already a current perspective (as would be the case when prefs have been
-		// pre-configured), we don't have to do anything else.
+				self.debug('Priming: Finished adding all perspectives');
 
-		if (self.currentPerspective != null) {
-			return finish(true)();
-		}
-		else if (self.availablePerspectives.length === 0) {
+				if (self.currentPerspective != null) {
+					return makeFinishCont(true)();
+				}
+				else if (self.availablePerspectives.length === 0) {
+					// There are no perspectives available, so we need to make a basic one.
 
-			// There are no perspectives available, so we need to make a basic one.
+					self.debug('Priming: No perspectives exist, creating one');
 
-			return self.addPerspective(Prefs.MAIN_PERSPECTIVE_NAME, {
-				grid: {},
-				view: {}
-			}, null, finish(true));
-		}
-		else {
-			// Otherwise, we need to figure out what the last current perspective was and load it.
-
-			return self.backend.getCurrent(function (currentName) {
-				if (currentName == null) {
-					return self.addPerspective(Prefs.MAIN_PERSPECTIVE_NAME, {
-						grid: {},
-						view: {}
-					}, null, finish(true));
+					return self.addMainPerspective(makeFinishCont(true));
 				}
 				else {
-					return self.backend.load(currentName, function (currentConfig) {
-						return self.addPerspective(currentName, currentConfig, null, finish(true));
-					});
+					// Otherwise, we need to figure out what the last current perspective was and load it.
+
+					return self.backend.getCurrent(function (currentId) {
+						if (currentId == null) {
+							// There's no current perspective, somehow, so again just create one.
+
+							self.debug('Priming: No current perspective set, creating one');
+
+							return self.addMainPerspective(makeFinishCont(true));
+						}
+						else {
+							self.setCurrentPerspective(currentId, makeFinishCont(true));
+						}
+					}); // self.backend.getCurrent()
 				}
-			});
-		}
-	});
+			}); // asyncEach()
+		}); // self.backend.loadAll()
+	}); // self.backend.getPerspectives()
 };
 
 // #_firePrefsHistoryStatus {{{2
@@ -381,7 +403,7 @@ Prefs.prototype.back = function () {
 	self.historyIndex += 1;
 	//self._historyDebug();
 	self._firePrefsHistoryStatus();
-	self.setCurrentPerspective(self.history[self.historyIndex].getName(), null, {
+	self.setCurrentPerspective(self.history[self.historyIndex].id, null, {
 		resetHistory: false
 	});
 };
@@ -405,7 +427,7 @@ Prefs.prototype.forward = function () {
 	self.historyIndex -= 1;
 	//self._historyDebug();
 	self._firePrefsHistoryStatus();
-	self.setCurrentPerspective(self.history[self.historyIndex].getName(), null, {
+	self.setCurrentPerspective(self.history[self.historyIndex].id, null, {
 		resetHistory: false
 	});
 };
@@ -439,7 +461,7 @@ Prefs.prototype._resetHistory = function (p) {
 Prefs.prototype._historyDebug = function () {
 	var self = this;
 
-	console.log('### HISTORY ### [%d] %O', self.historyIndex, self.history.map(function (x) { return x.getName(); }));
+	console.log('### HISTORY ### [%d] %O', self.historyIndex, self.history.map(function (x) { return x.name; }));
 };
 
 // #bind {{{2
@@ -453,13 +475,13 @@ Prefs.prototype._historyDebug = function () {
  * @param {object} target
  * The object that will be controlled by the module.
  *
- * @param {object} opts
+ * @param {object} moduleBoundUserData
  * Userdata forwarded to the `moduleBound` event handler.
  *
  * @fires Prefs#moduleBound
  */
 
-Prefs.prototype.bind = function (moduleName, target, opts) {
+Prefs.prototype.bind = function (moduleName, target, moduleBoundUserData) {
 	var self = this;
 
 	if (typeof moduleName !== 'string') {
@@ -479,7 +501,7 @@ Prefs.prototype.bind = function (moduleName, target, opts) {
 	var moduleCtor = PREFS_MODULE_REGISTRY.get(moduleName);
 	self.modules[moduleName] = new moduleCtor(target);
 
-	self.fire('moduleBound', null, moduleName, self.modules[moduleName], target, opts);
+	self.fire('moduleBound', null, moduleName, self.modules[moduleName], target, moduleBoundUserData);
 
 	// When we're adding a binding with a perspective already loaded, reload it for the new binding.
 
@@ -502,10 +524,20 @@ Prefs.prototype.getPerspectives = function (cont) {
 
 // #getPerspective {{{2
 
-Prefs.prototype.getPerspective = function (name) {
+/**
+ * Gets the perspective by ID.
+ *
+ * @param {string} id
+ * ID of the perspective to get.
+ *
+ * @returns {Perspective}
+ * The perspective with the requested ID.
+ */
+
+Prefs.prototype.getPerspective = function (id) {
 	var self = this;
 
-	return self.perspectives[name];
+	return self.perspectives[id];
 };
 
 // #addPerspective {{{2
@@ -513,7 +545,9 @@ Prefs.prototype.getPerspective = function (name) {
 /**
  * Add a new perspective.
  *
- * @param {string} name
+ * @param {string} [id]
+ *
+ * @param {string} [name=id]
  *
  * @param {object} [config]
  * If missing, the configuration of the current perspective is used.
@@ -535,12 +569,15 @@ Prefs.prototype.getPerspective = function (name) {
  * @fires Prefs#perspectiveAdded
  */
 
-Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, opts) {
+Prefs.prototype.addPerspective = function (id, name, config, perspectiveOpts, cont, opts) {
 	var self = this;
 	var needToLoad = true; // Will need to load perspective after we add it.
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (id != null && typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be null or a string');
+	}
+	if (name != null && typeof name !== 'string') {
+		throw new Error('Call Error: `name` must be null or a string');
 	}
 	if (config != null && typeof config !== 'object') {
 		throw new Error('Call Error: `config` must be null or an object');
@@ -550,6 +587,10 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	}
 	if (opts != null && typeof opts !== 'object') {
 		throw new Error('Call Error: `opts` must be null or an object');
+	}
+
+	if (name == null) {
+		name = id;
 	}
 
 	opts = deepDefaults(opts, {
@@ -564,7 +605,7 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 
 	var maybeSwitch = function () {
 		if (opts.switch) {
-			return self.setCurrentPerspective(name, cont, {
+			return self.setCurrentPerspective(id, cont, {
 				loadPerspective: needToLoad
 			});
 		}
@@ -572,30 +613,34 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 		return typeof cont === 'function' ? cont(true) : true;
 	};
 
-	if (self.perspectives[name] != null) {
+	if (self.perspectives[id] != null) {
 		switch (opts.onDuplicate) {
 		case 'error':
-			throw new Error('Perspective already exists: ' + name);
+			throw new Error('Perspective already exists: ' + id);
 		case 'nothing':
 			return maybeSwitch();
 		}
 	}
 
 	var addPerspective = function () {
-		var p;
+		var p = new Perspective(id, name, config, self.modules, perspectiveOpts);
 
-		self.debug('Adding new perspective: name = "%s" ; config = %O', name, config);
-
-		if (self.availablePerspectives.indexOf(name) < 0) {
-			self.availablePerspectives.push(name);
+		if (id == null) {
+			id = p.id;
 		}
 
-		self.perspectives[name] = new Perspective(name, config, self.modules, perspectiveOpts);
+		self.debug('Adding new perspective: id = "%s" ; name = "%s" ; config = %O', id, name, config);
+
+		if (self.availablePerspectives.indexOf(id) < 0) {
+			self.availablePerspectives.push(id);
+		}
+
+		self.perspectives[id] = p;
 
 		if (opts.sendEvent) {
 			self.fire('perspectiveAdded', {
 				notTo: opts.dontSendEventTo
-			}, name);
+			}, id);
 		}
 
 		return maybeSwitch();
@@ -604,7 +649,7 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	if (self.currentPerspective) {
 		return self.save(function () {
 			if (config == null) {
-				config = deepCopy(self.currentPerspective.getConfig());
+				config = deepCopy(self.currentPerspective.config);
 				needToLoad = false; // Don't need to load, because this is the current config.
 			}
 			return addPerspective();
@@ -617,14 +662,21 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
 	return addPerspective();
 };
 
+// #addMainPerspective {{{2
+
+Prefs.prototype.addMainPerspective = function (cont) {
+	var self = this;
+
+	self.addPerspective(null, Prefs.MAIN_PERSPECTIVE_NAME, null, null, cont);
+};
+
 // #deletePerspective {{{2
 
 /**
- * Delete a perspective.  The "Main" perspective cannot be deleted.
+ * Delete a perspective.  Perspectives flagged "essential" cannot be deleted.
  *
- * @param {string} [name]
- * The name of the perspective to delete.  If missing, the current perspective is deleted, if it's
- * not the "Main" perspective.
+ * @param {string} [id]
+ * The ID of the perspective to delete.  If missing, the current perspective is deleted.
  *
  * @param {function} [cont]
  * Continuation callback.
@@ -637,29 +689,30 @@ Prefs.prototype.addPerspective = function (name, config, perspectiveOpts, cont, 
  * @fires Prefs#prefsHistoryStatus
  */
 
-Prefs.prototype.deletePerspective = function (name, cont, opts) {
+Prefs.prototype.deletePerspective = function (id, cont, opts) {
 	var self = this;
 
 	opts = deepDefaults(opts, {
 		sendEvent: true
 	});
 
-	// When the name wasn't provided, use the current perspective.
+	// When the ID wasn't provided, use the current perspective.
 
-	if (name == null) {
-		name = self.currentPerspective.getName();
+	if (id == null) {
+		id = self.currentPerspective.id;
 	}
 
-	// Make sure that we're not trying to delete "Main."
+	// Make sure that we're not trying to delete an essential perspective.
 
-	if (name == Prefs.MAIN_PERSPECTIVE_NAME) {
-		log.error('Not allowed to delete "Main" perspective');
+	if (self.perspectives[id].opts.isEssential) {
+		self.logError('DELETE PERSPECTIVE', 'Not allowed to delete essential perspective: id = "%s" ; name = "%s"',
+			id, self.perspectives[id].name);
 		return typeof cont === 'function' ? cont(false) : false;
 	}
 
 	// Delete the perspective in the backend.
 
-	self.backend.deletePerspective(name, function (ok) {
+	self.backend.deletePerspective(id, function (ok) {
 		var newCurrent;
 		var i;
 
@@ -667,18 +720,29 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
 			return typeof cont === 'function' ? cont(false) : false;
 		}
 
-		delete self.perspectives[name];
+		// Delete it from our internal data structures.
+
+		delete self.perspectives[id];
+		self.availablePerspectives = _.without(self.availablePerspectives, id);
+
+		// Let everybody else know that it's been deleted.
 
 		if (opts.sendEvent) {
 			self.fire('perspectiveDeleted', {
 				notTo: opts.dontSendEventTo
-			}, name, newCurrent);
+			}, id, newCurrent);
 		}
 
-		if (self.currentPerspective.getName() === name) {
+		// When we've deleted all the perspectives, we need to make a new one.
+
+		if (self.availablePerspectives.length === 0) {
+			return self.addMainPerspective(cont);
+		}
+
+		if (self.currentPerspective.id === id) {
 			// Go back in history until we've found a different perspective.
 
-			while (self.historyIndex < self.history.length && self.history[self.historyIndex].getName() === name) {
+			while (self.historyIndex < self.history.length && self.history[self.historyIndex].id === id) {
 				self.historyIndex += 1;
 			};
 
@@ -700,25 +764,25 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
 				//   [ C D ]
 				//     ^ (history index)
 
-				self.setCurrentPerspective(self.history[0].getName(), null, {
+				self.setCurrentPerspective(self.history[0].id, null, {
 					resetHistory: false
 				});
 			}
 			else {
 
-				// We've removed all items from history, so put "Main" back on the stack.  In this example,
-				// even though there are different things in the future, everything in the past is the same
-				// as what we're deleting, so you end up with empty history.
+				// We've removed all items from history, so put something else back on the stack.  In this
+				// example, even though there are different things in the future, everything in the past is
+				// the same as what we're deleting, so you end up with empty history.
 				//
 				// BEFORE -------------------------
 				//   [ A B B B ]
 				//       ^ (history index)
 				//
 				// AFTER --------------------------
-				//   [ Main ]
+				//   [ Something ]
 				//     ^ (history index)
 
-				self.setCurrentPerspective(Prefs.MAIN_PERSPECTIVE_NAME);
+				self.setCurrentPerspective(self.availablePerspectives[0]);
 			}
 
 			//var currentIndex;
@@ -759,7 +823,7 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
 /**
  * Rename a perspective.
  *
- * @param {string} [oldName]
+ * @param {string} [id]
  * When null or undefined, uses the current perspective.
  *
  * @param {string} newName
@@ -773,7 +837,7 @@ Prefs.prototype.deletePerspective = function (name, cont, opts) {
  * @fires Prefs#perspectiveRenamed
  */
 
-Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
+Prefs.prototype.renamePerspective = function (id, newName, cont, opts) {
 	var self = this;
 
 	var isCurrent = false;
@@ -782,8 +846,8 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 		sendEvent: true
 	});
 
-	if (oldName != null && typeof oldName !== 'string') {
-		throw new Error('Call Error: `oldName` must be null or a string');
+	if (id != null && typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be null or a string');
 	}
 	if (typeof newName !== 'string') {
 		throw new Error('Call Error: `newName` must be a string');
@@ -792,28 +856,45 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	// When the `oldName` is missing, use the current perspective's name.
+	// When the `id` is missing, use the current perspective's name.
 
-	if (oldName == null) {
-		oldName = self.currentPerspective.getName();
+	if (id == null) {
+		id = self.currentPerspective.id;
 	}
 
-	if (oldName === self.currentPerspective.getName()) {
+	if (id === self.currentPerspective.id) {
 		isCurrent = true;
 	}
 
 	// Make sure a perspective with the old name exists.
 
-	if (self.perspectives[oldName] == null) {
-		throw new Error('Perspective does not exist: ' + oldName);
+	if (self.perspectives[id] == null) {
+		throw new Error(sprintf('Perspective does not exist: id = "%s"', id));
 	}
 
-	// Make sure a perspective with the new name doesn't already exist.
+	// Check to see if there are any other perspectives with the same name.
 
-	if (self.perspectives[newName] != null) {
-		throw new Error('Perspective already exists: ' + newName);
-	}
+	_.each(self.perspectives, function (p) {
+		if (p.name === newName) {
+			log.warn(sprintf('Renaming perspective (id = "%s") now shares the name "%s" with a different perspective (id = "%s")',
+				id, newName, p.id));
+		}
+	});
 
+	self.perspectives[id].name = newName;
+	self.perspectives[id].save(function () {
+		self.backend.save(self.currentPerspective, function () {
+			if (opts.sendEvent) {
+				self.fire('perspectiveRenamed', {
+					notTo: opts.dontSendEventTo
+				}, id, newName);
+			}
+
+			return typeof cont === 'function' ? cont(true) : true;
+		});
+	});
+
+	/*
 	// Rename the perspective in the backend.
 
 	self.backend.rename(oldName, newName, function (ok) {
@@ -844,6 +925,7 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 				? cont(true)
 				: true;
 	});
+	*/
 };
 
 // #setCurrentPerspective {{{2
@@ -851,8 +933,8 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
 /**
  * Switch to a different perspective.
  *
- * @param {string} name
- * Name of the perspective to switch to.
+ * @param {string} id
+ * ID of the perspective to switch to.
  *
  * @param {function} [cont]
  * Continuation callback.
@@ -867,12 +949,12 @@ Prefs.prototype.renamePerspective = function (oldName, newName, cont, opts) {
  * @fires Prefs#perspectiveChanged
  */
 
-Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
+Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
@@ -884,29 +966,35 @@ Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 		resetHistory: true
 	});
 
-	if (self.perspectives[name] == null) {
-		if (self.availablePerspectives.indexOf(name) < 0) {
-			throw new Error('Perspective does not exist: ' + name);
+	if (self.perspectives[id] == null) {
+		if (self.availablePerspectives.indexOf(id) < 0) {
+			self.logError('SET CURRENT PERSPECTIVE', 'Perspective does not exist: id = "%s"', id);
+			if (self.availablePerspectives.length === 0) {
+				return self.addMainPerspective(cont);
+			}
+			else {
+				id = self.availablePerspectives[0];
+			}
 		}
 
 		// Try to load the perspective config from the backend, and create a new Perspective from it.
 		// Adding in this way will cause it to be switched to immediately, so there's no need for us to
 		// do it again here.
 
-		return self.backend.load(name, function (config) {
-			return self.addPerspective(name, config);
+		return self.backend.load(id, function (config) {
+			return self.addPerspective(id, null, config, null, cont);
 		});
 	}
 
-	self.debug('Switching to perspective: name = "%s"', name);
+	self.debug('Switching to perspective: id = "%s"', id);
 
-	self.currentPerspective = self.perspectives[name];
+	self.currentPerspective = self.perspectives[id];
 
 	if (opts.resetHistory) {
 		self._resetHistory(self.currentPerspective);
 	}
 
-	self.backend.setCurrent(name, function (ok) {
+	self.backend.setCurrent(id, function (ok) {
 		if (!ok) {
 			return typeof cont === 'function' ? cont(false) : false;
 		}
@@ -915,7 +1003,7 @@ Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 			if (opts.sendEvent) {
 				self.fire('perspectiveChanged', {
 					notTo: opts.dontSendEventTo
-				}, name);
+				}, id);
 			}
 
 			return typeof cont === 'function' ? cont(true) : true;
@@ -927,14 +1015,6 @@ Prefs.prototype.setCurrentPerspective = function (name, cont, opts) {
 
 		return f();
 	});
-};
-
-// #getCurrentPerspective {{{2
-
-Prefs.prototype.getCurrentPerspective = function () {
-	var self = this;
-
-	return self.currentPerspective.getName();
 };
 
 // #save {{{2
@@ -954,8 +1034,8 @@ Prefs.prototype.save = function (cont) {
 		return typeof cont === 'function' ? cont(false) : false;
 	}
 
-	self.currentPerspective.save(function (config) {
-		self.backend.save(self.currentPerspective.getName(), config, cont);
+	self.currentPerspective.save(function () {
+		self.backend.save(self.currentPerspective, cont);
 	});
 };
 
@@ -989,16 +1069,17 @@ Prefs.prototype.reset = function (cont) {
 
 	_.each(self.perspectives, function (p) {
 		if (p.opts.isTemporary && p.opts.isEssential) {
-			self.debug('Saving temporary essential perspective: %s', p.name);
-			self.bardo[p.name] = {
-				name: p.name,
+			self.debug('Saving temporary essential perspective: %s', p.id);
+			self.bardo[p.id] = {
+				id: p.id,
+				name: p.meta.displayName,
 				config: p.config,
 				opts: p.opts
 			};
 		}
 	});
 
-	var current = self.getCurrentPerspective();
+	var current = self.currentPerspective.id;
 
 	self.backend.reset(function () {
 		self.isInitialized = false;
@@ -1016,7 +1097,7 @@ Prefs.prototype.reset = function (cont) {
 		self.debug('Restoring temporary essential perspectives: %s', _.keys(self.bardo).join(', '));
 
 		_.each(self.bardo, function (p) {
-			self.addPerspective(p.name, p.config, p.opts, null, { switch: false });
+			self.addPerspective(p.id, p.name, p.config, p.opts, null, { switch: false });
 		});
 
 		if (self.perspectives[current]) {
@@ -1049,7 +1130,7 @@ Prefs.prototype.reset = function (cont) {
  * @param {object} [opts]
  */
 
-var PrefsBackend = makeSubclass(Object, function (id, prefs, opts) {
+var PrefsBackend = makeSubclass('PrefsBackend', Object, function (id, prefs, opts) {
 	var self = this;
 
 	self.id = id;
@@ -1067,12 +1148,26 @@ var PrefsBackend = makeSubclass(Object, function (id, prefs, opts) {
  *
  * @abstract
  *
- * @param {string} name
+ * @param {string} id
  * @param {function} cont
  */
 
-PrefsBackend.prototype.load = function (name, cont) {
-	throw new Error('ABSTRACT');
+PrefsBackend.prototype.load = function (id, cont) {
+	throw new Error('Abstract method load() not implemented by subclass ' + this.constructor.name);
+};
+
+// #loadAll {{{2
+
+/**
+ * Loads all perspectives.
+ *
+ * @abstract
+ *
+ * @param {function} cont
+ */
+
+PrefsBackend.prototype.loadAll = function (cont) {
+	throw new Error('Abstract method loadAll() not implemented by subclass ' + this.constructor.name);
 };
 
 // #save {{{2
@@ -1080,45 +1175,44 @@ PrefsBackend.prototype.load = function (name, cont) {
 /**
  * Saves the configuration for the specified perspective.  A subclass implementation need not
  * support saving perspectives individually, but that's how this function is called.  (For example,
- * an implementation could update the `name` perspective in a big object containing all available
+ * an implementation could update the `id` perspective in a big object containing all available
  * perspectives, and store the whole thing somewhere.)
  *
  * @abstract
  *
- * @param {string} name
- * @param {object} config
+ * @param {Perspective} perspective
  * @param {function} [cont]
  */
 
-PrefsBackend.prototype.save = function (name, config, cont) {
-	throw new Error('ABSTRACT');
+PrefsBackend.prototype.save = function (perspective, cont) {
+	throw new Error('Abstract method save() not implemented by subclass ' + this.constructor.name);
 };
 
 // #getPerspectives {{{2
 
 /**
  * @callback PrefsBackend~getPerspectives_cont
- * @param {string[]} names
- * List of the names of all currently available perspectives.
+ * @param {string[]} ids
+ * List of the IDs of all currently available perspectives.
  */
 
 /**
- * Get the names of all the available perspectives.
+ * Get the IDs of all the available perspectives.
  *
  * @abstract
  *
  * @param {PrefsBackend~getPerspectives_cont} cont
- * Callback function to receive the perspective names.
+ * Callback function to receive the perspective IDs.
  */
 
 PrefsBackend.prototype.getPerspectives = function (cont) {
-	throw new Error('ABSTRACT');
+	throw new Error('Abstract method getPerspectives() not implemented by subclass ' + this.constructor.name);
 };
 
 // #getCurrent {{{2
 
 /**
- * Get the name of the current perspective.
+ * Get the ID of the current perspective.
  *
  * @abstract
  *
@@ -1126,22 +1220,22 @@ PrefsBackend.prototype.getPerspectives = function (cont) {
  */
 
 PrefsBackend.prototype.getCurrent = function (cont) {
-	throw new Error('ABSTRACT');
+	throw new Error('Abstract method getCurrent() not implemented by subclass ' + this.constructor.name);
 };
 
 // #setCurrent {{{2
 
 /**
- * Set the name of the current perspective.
+ * Set the ID of the current perspective.
  *
  * @abstract
  *
- * @param {string} name
+ * @param {string} id
  * @param {function} [cont]
  */
 
-PrefsBackend.prototype.setCurrent = function (name, cont) {
-	throw new Error('ABSTRACT');
+PrefsBackend.prototype.setCurrent = function (id, cont) {
+	throw new Error('Abstract method setCurrent() not implemented by subclass ' + this.constructor.name);
 };
 
 // #rename {{{2
@@ -1158,7 +1252,7 @@ PrefsBackend.prototype.setCurrent = function (name, cont) {
  */
 
 PrefsBackend.prototype.rename = function (oldName, newName, cont) {
-	throw new Error('ABSTRACT');
+	throw new Error('Abstract method rename() not implemented by subclass ' + this.constructor.name);
 };
 
 // #delete {{{2
@@ -1168,12 +1262,12 @@ PrefsBackend.prototype.rename = function (oldName, newName, cont) {
  *
  * @abstract
  *
- * @param {string} name
+ * @param {string} id
  * @param {function} [cont]
  */
 
-PrefsBackend.prototype.deletePerspective = function (name, cont) {
-	throw new Error('ABSTRACT');
+PrefsBackend.prototype.deletePerspective = function (id, cont) {
+	throw new Error('Abstract method deletePerspective() not implemented by subclass ' + this.constructor.name);
 };
 
 // #reset {{{2
@@ -1187,7 +1281,7 @@ PrefsBackend.prototype.deletePerspective = function (name, cont) {
  */
 
 PrefsBackend.prototype.reset = function (cont) {
-	throw new Error('ABSTRACT');
+	throw new Error('Abstract method reset() not implemented by subclass ' + this.constructor.name);
 };
 
 // PrefsBackendLocalStorage {{{1
@@ -1204,7 +1298,7 @@ PrefsBackend.prototype.reset = function (cont) {
  * @param {string} [opts.key="WC_DataVis_Prefs"]
  */
 
-var PrefsBackendLocalStorage = makeSubclass(PrefsBackend, function () {
+var PrefsBackendLocalStorage = makeSubclass('PrefsBackendLocalStorage', PrefsBackend, function () {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -1224,7 +1318,7 @@ var PrefsBackendLocalStorage = makeSubclass(PrefsBackend, function () {
 
 	self.localStorageKey = self.opts.key;
 }, {
-	version: 1
+	version: 2
 });
 
 mixinDebugging(PrefsBackendLocalStorage, function () {
@@ -1233,30 +1327,77 @@ mixinDebugging(PrefsBackendLocalStorage, function () {
 
 // #load {{{2
 
-PrefsBackendLocalStorage.prototype.load = function (name, cont) {
+PrefsBackendLocalStorage.prototype.load = function (id, cont) {
 	var self = this;
+	var storedPrefStr, storedPrefObj;
+	var version;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be a function');
 	}
 
-	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
-	var version = getPropDef(0, storedPrefData, self.id, 'version');
+	storedPrefStr = localStorage.getItem(self.localStorageKey);
 
-	if (storedPrefData[self.id] != null && version < self.version) {
-		self.migrate(version, function () {
-			self.load(name, cont);
-		});
+	if (storedPrefStr != null) {
+		storedPrefObj = JSON.parse(storedPrefStr);
+		version = getPropDef(0, storedPrefObj, self.id, 'version');
+
+		if (version < self.version) {
+			return self.migrate(version, function () {
+				return self.loadAll(cont);
+			});
+		}
+	}
+	else {
+		storedPrefObj = {};
 	}
 
-	var config = getPropDef({}, storedPrefData, self.id, 'perspectives', name);
+	var perspective = getProp(storedPrefObj, self.id, 'perspectives', id);
 
-	self.debug('Loaded preferences: name = "%s" ; config = %O', name, config);
-	
-	return cont(config);
+	if (perspective == null) {
+		self.debug('Perspective does not exist: id = "%s"', id);
+		return cont(null);
+	}
+
+	self.debug('Loaded perspective: id = "%s" ; name = "%s" ; config = %O',
+		perspective.id, perspective.name, perspective.config);
+
+	return cont(perspective);
+};
+
+// #loadAll {{{2
+
+PrefsBackendLocalStorage.prototype.loadAll = function (cont) {
+	var self = this;
+	var storedPrefStr, storedPrefObj;
+	var version;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	storedPrefStr = localStorage.getItem(self.localStorageKey);
+
+	if (storedPrefStr != null) {
+		storedPrefObj = JSON.parse(storedPrefStr);
+		version = getPropDef(0, storedPrefObj, self.id, 'version');
+
+		if (version < self.version) {
+			return self.migrate(version, function () {
+				return self.loadAll(cont);
+			});
+		}
+	}
+	else {
+		storedPrefObj = {};
+	}
+
+	var perspectives = getPropDef({}, storedPrefObj, self.id, 'perspectives');
+	self.debug('Loaded all perspectives: %O', perspectives);
+	return cont(perspectives);
 };
 
 // #migrate {{{2
@@ -1276,7 +1417,7 @@ PrefsBackendLocalStorage.prototype.migrate = function (version, cont) {
 			newPrefs[self.id] = {
 				version: i + 1,
 				current: oldCurrent[self.id],
-				perspectives: _.mapObject(oldPrefs[self.id], function (config, name) {
+				perspectives: _.mapObject(oldPrefs[self.id], function (config, id) {
 					return {
 						view: config
 					};
@@ -1311,6 +1452,46 @@ PrefsBackendLocalStorage.prototype.migrate = function (version, cont) {
 
 			localStorage.setItem(self.localStorageKey, JSON.stringify(newPrefs));
 			break;
+		case 1:
+			var localStorageStr = localStorage.getItem(self.localStorageKey);
+
+			if (localStorageStr == null) {
+				throw new Error('Unable to migrate local storage prefs to version 2: '
+					+ 'Found no prefs to migrate');
+			}
+
+			try {
+				var localStorageObj = JSON.parse(localStorageStr);
+			}
+			catch (e) {
+				throw new Error('Unable to migrate local storage prefs to version 2: '
+					+ 'Prefs stored are not valid JSON');
+			}
+
+			if (localStorageObj[self.id] == null) {
+				throw new Error('Unable to migrate local storage prefs to version 2: '
+					+ 'No prefs registered for this system ("' + self.id + '")');
+			}
+
+			if (localStorageObj[self.id].perspectives == null) {
+				throw new Error('Unable to migrate local storage prefs to version 2: '
+					+ 'Prefs do not contain a `perspectives` object');
+			}
+
+			_.each(localStorageObj[self.id].perspectives, function (p, id) {
+				var config = {};
+				_.each(p, function (v, k) {
+					config[k] = v;
+					p[k] = null;
+				});
+				p.config = config;
+				p.id = id;
+				p.name = id;
+			});
+
+			localStorageObj[self.id].version = i + 1;
+			localStorage.setItem(self.localStorageKey, JSON.stringify(localStorageObj));
+			break;
 		}
 	}
 
@@ -1319,24 +1500,26 @@ PrefsBackendLocalStorage.prototype.migrate = function (version, cont) {
 
 // #save {{{2
 
-PrefsBackendLocalStorage.prototype.save = function (name, config, cont) {
+PrefsBackendLocalStorage.prototype.save = function (perspective, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
-	}
-	if (typeof config !== 'object') {
-		throw new Error('Call Error: `config` must be an object');
+	if (!(perspective instanceof Perspective)) {
+		throw new Error('Call Error: `perspective` must be a Perspective');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Saving preferences: name = "%s" ; config = %O', name, config);
+	self.debug('Saving perspective: id = "%s" ; name = "%s" ; config = %O',
+		perspective.id, perspective.name, perspective.config);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	setProp(self.version, storedPrefData, self.id, 'version');
-	setProp(config, storedPrefData, self.id, 'perspectives', name);
+	setProp({
+		id: perspective.id,
+		name: perspective.name,
+		config: perspective.config
+	}, storedPrefData, self.id, 'perspectives', perspective.id);
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
 	if (typeof cont === 'function') {
@@ -1380,21 +1563,21 @@ PrefsBackendLocalStorage.prototype.getCurrent = function (cont) {
 
 // #setCurrent {{{2
 
-PrefsBackendLocalStorage.prototype.setCurrent = function (name, cont) {
+PrefsBackendLocalStorage.prototype.setCurrent = function (id, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Setting current perspective to "%s"', name);
+	self.debug('Setting current perspective to "%s"', id);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	setProp(self.version, storedPrefData, self.id, 'version');
-	setProp(name, storedPrefData, self.id, 'current');
+	setProp(id, storedPrefData, self.id, 'current');
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
 	return typeof cont === 'function' ? cont(true) : true;
@@ -1427,20 +1610,20 @@ PrefsBackendLocalStorage.prototype.rename = function (oldName, newName, cont) {
 
 // #delete {{{2
 
-PrefsBackendLocalStorage.prototype.deletePerspective = function (name, cont) {
+PrefsBackendLocalStorage.prototype.deletePerspective = function (id, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Deleting perspective: "%s"', name);
+	self.debug('Deleting perspective: "%s"', id);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
-	delete storedPrefData[self.id]['perspectives'][name];
+	delete storedPrefData[self.id]['perspectives'][id];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
 	return typeof cont === 'function' ? cont(true) : true;
@@ -1471,7 +1654,7 @@ PrefsBackendLocalStorage.prototype.reset = function (cont) {
  * @param {string} id
  */
 
-var PrefsBackendTemporary = makeSubclass(PrefsBackend, function () {
+var PrefsBackendTemporary = makeSubclass('PrefsBackendTemporary', PrefsBackend, function () {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
@@ -1487,41 +1670,63 @@ mixinDebugging(PrefsBackendTemporary, function () {
 
 // #load {{{2
 
-PrefsBackendTemporary.prototype.load = function (name, cont) {
+PrefsBackendTemporary.prototype.load = function (id, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be a function');
 	}
 
-	config = self.storage.perspectives[name];
+	var perspective = self.storage.perspectives[id];
 
-	self.debug('Loaded preferences: name = "%s" ; config = %O', name, config);
-	
-	return cont(config);
+	if (perspective == null) {
+		self.debug('Perspective does not exist: id = "%s"', id);
+		return cont(null);
+	}
+
+	self.debug('Loaded perspective: id = "%s" ; name = "%s" ; config = %O',
+		perspective.id, perspective.name, perspective.config);
+
+	return cont(perspective);
+};
+
+// #loadAll {{{2
+
+PrefsBackendTemporary.prototype.loadAll = function (cont) {
+	var self = this;
+
+	if (typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be a function');
+	}
+
+	perspectives = self.storage.perspectives;
+	self.debug('Loaded all perspectives: %O', perspectives);
+	return cont(perspectives);
 };
 
 // #save {{{2
 
-PrefsBackendTemporary.prototype.save = function (name, config, cont) {
+PrefsBackendTemporary.prototype.save = function (perspective, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
-	}
-	if (typeof config !== 'object') {
-		throw new Error('Call Error: `config` must be an object');
+	if (!(perspective instanceof Perspective)) {
+		throw new Error('Call Error: `perspective` must be a Perspective');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Saving preferences: name = "%s" ; config = %O', name, config);
+	self.debug('Saving perspective: id = "%s" ; name = "%s" ; config = %O',
+		perspective.id, perspective.name, perspective.config);
 
-	self.storage.perspectives[name] = config;
+	self.storage.perspectives[perspective.id] = {
+		id: perspective.id,
+		name: perspective.name,
+		config: perspective.config
+	};
 
 	if (typeof cont === 'function') {
 		return cont(true);
@@ -1562,19 +1767,19 @@ PrefsBackendTemporary.prototype.getCurrent = function (cont) {
 
 // #setCurrent {{{2
 
-PrefsBackendTemporary.prototype.setCurrent = function (name, cont) {
+PrefsBackendTemporary.prototype.setCurrent = function (id, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Setting current perspective to "%s"', name);
+	self.debug('Setting current perspective to "%s"', id);
 
-	self.storage.current = name;
+	self.storage.current = id;
 
 	return typeof cont === 'function' ? cont(true) : true;
 };
@@ -1604,19 +1809,19 @@ PrefsBackendTemporary.prototype.rename = function (oldName, newName, cont) {
 
 // #delete {{{2
 
-PrefsBackendTemporary.prototype.deletePerspective = function (name, cont) {
+PrefsBackendTemporary.prototype.deletePerspective = function (id, cont) {
 	var self = this;
 
-	if (typeof name !== 'string') {
-		throw new Error('Call Error: `name` must be a string');
+	if (typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be a string');
 	}
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
-	self.debug('Deleting perspective: "%s"', name);
+	self.debug('Deleting perspective: "%s"', id);
 
-	delete self.storage.perspectives[name];
+	delete self.storage.perspectives[id];
 
 	return typeof cont === 'function' ? cont(true) : true;
 };
@@ -1638,10 +1843,23 @@ PrefsBackendTemporary.prototype.reset = function (cont) {
 // PrefsModule {{{1
 
 /**
+ * Superclass for prefs modules, which provide a way to:
+ *
+ *   1. Save the configuration from a bound object to a perspective.
+ *   2. Load the configuration from a perspective to a bound object.
+ *
+ * Each prefs module subclass typically works on a single class for its bound object.
+ *
+ * @param {object} target
+ * What bound object to interact with.
+ *
  * @class
+ *
+ * @property {object} target
+ * What bound object to interact with.
  */
 
-var PrefsModule = makeSubclass(Object, function (target) {
+var PrefsModule = makeSubclass('PrefsModule', Object, function (target) {
 	var self = this;
 
 	self.target = target;
@@ -1654,6 +1872,7 @@ var PrefsModule = makeSubclass(Object, function (target) {
  */
 
 PrefsModule.prototype.load = function (config) {
+	throw new Error('Abstract method load() not implemented by subclass ' + this.constructor.name);
 };
 
 // #save {{{2
@@ -1664,15 +1883,33 @@ PrefsModule.prototype.load = function (config) {
  */
 
 PrefsModule.prototype.save = function () {
+	throw new Error('Abstract method save() not implemented by subclass ' + this.constructor.name);
 };
 
 // PrefsModuleView {{{1
 
 /**
+ * Manages configuration of a view.
+ *
+ * @param {View} target
+ * What bound object to interact with.
+ *
  * @class
+ *
+ * @property {View} target
+ * What bound object to interact with.
  */
 
-var PrefsModuleView = makeSubclass(PrefsModule);
+var PrefsModuleView = makeSubclass('PrefsModuleView', PrefsModule, function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments);
+
+	self.super.ctor.apply(self, args);
+
+	if (!(self.target instanceof View)) {
+		throw new Error('Call Error: `target` must be an instance of View');
+	}
+});
 
 // #load {{{2
 
@@ -1798,10 +2035,27 @@ PrefsModuleView.prototype.reset = function () {
 // PrefsModuleGrid {{{1
 
 /**
+ * Manages configuration of a grid.
+ *
+ * @param {Grid} target
+ * What bound object to interact with.
+ *
  * @class
+ *
+ * @property {Grid} target
+ * What bound object to interact with.
  */
 
-var PrefsModuleGrid = makeSubclass(PrefsModule);
+var PrefsModuleGrid = makeSubclass('PrefsModuleGrid', PrefsModule, function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments);
+
+	self.super.ctor.apply(self, args);
+
+	if (!(self.target instanceof Grid)) {
+		throw new Error('Call Error: `target` must be an instance of Grid');
+	}
+});
 
 // #load {{{2
 
@@ -1847,10 +2101,27 @@ PrefsModuleGrid.prototype.reset = function () {
 // PrefsModuleGraph {{{1
 
 /**
+ * Manages configuration of a graph.
+ *
+ * @param {Graph} target
+ * What bound object to interact with.
+ *
  * @class
+ *
+ * @property {Graph} target
+ * What bound object to interact with.
  */
 
-var PrefsModuleGraph = makeSubclass(PrefsModule);
+var PrefsModuleGraph = makeSubclass('PrefsModuleGraph', PrefsModule, function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments);
+
+	self.super.ctor.apply(self, args);
+
+	if (!(self.target instanceof Graph)) {
+		throw new Error('Call Error: `target` must be an instance of Graph');
+	}
+});
 
 // #load {{{2
 
@@ -1875,7 +2146,7 @@ PrefsModuleGraph.prototype.save = function () {
 		pivot: {}
 	});
 
-	
+
 
 	return prefs;
 };
@@ -1886,32 +2157,115 @@ PrefsModuleGraph.prototype.reset = function () {
 	var self = this;
 };
 
+// PrefsModuleMeta {{{1
+
+/**
+ * Manages configuration of a perspective.  It sounds really weird, but this is a way to store
+ * additional information on the perspective which must be serialized.
+ *
+ * @param {Perspective} target
+ * What bound object to interact with.
+ *
+ * @class
+ *
+ * @property {Perspective} target
+ * What bound object to interact with.
+ */
+
+var PrefsModuleMeta = makeSubclass('PrefsModuleMeta', PrefsModule, function () {
+	var self = this
+		, args = Array.prototype.slice.call(arguments);
+
+	self.super.ctor.apply(self, args);
+
+	if (!(self.target instanceof Perspective)) {
+		throw new Error('Call Error: `target` must be an instance of Perspective');
+	}
+});
+
+// #load {{{2
+
+PrefsModuleMeta.prototype.load = function (config) {
+	var self = this;
+
+	if (config != null) {
+		self.target.meta = config;
+	}
+};
+
+// #save {{{2
+
+PrefsModuleMeta.prototype.save = function () {
+	var self = this;
+
+	return self.target.meta;
+};
+
+// #reset {{{2
+
+PrefsModuleMeta.prototype.reset = function () {
+	var self = this;
+};
+
 // Perspective {{{1
 
 // Constructor {{{2
 
 /**
- * @class
+ * Create a perspective.
  *
- * @property {string} name
- * @property {object} config
- * @property {object} opts
+ * @param {string} [id=uuid()]
+ * The ID of the perspective.  If not provided, creates a new UUID for it.
  *
- * @property {boolean} opts.isTemporary
+ * @param {string} name
+ * The name of the perspective; this is what's shown in the user interface.
+ *
+ * @param {object} config
+ *
+ * @param {Object.<string,PrefsModule>} modules
+ *
+ * @param {object} [opts]
+ *
+ * @param {boolean} [opts.isTemporary=false]
  * If true, then the perspective will not be saved automatically, but it can be made permanent.
  *
- * @property {boolean} opts.isEssential
+ * @param {boolean} [opts.isEssential=false]
  * If true, then the perspective cannot be renamed or deleted.  A reset will not remove it.
  *
- * @property {boolean} opts.isConstant
+ * @param {boolean} [opts.isConstant=false]
  * If true, then the perspective will not be saved if it has been changed.
  *
- * @property {Object.<string,PrefsModule>} modules
+ * @class
+ *
+ * @property {string} id See above.
+ * @property {object} config See above.
+ * @property {Object.<string,PrefsModule>} modules See above.
+ * @property {object} opts See above.
+ *
+ * @property {object} meta
+ * @property {string} meta.displayName
+ * The name of the perspective.
  */
 
-var Perspective = makeSubclass(Object, function (name, config, modules, opts) {
+var Perspective = makeSubclass('Perspective', Object, function (id, name, config, modules, opts) {
 	var self = this;
 
+	if (id != null && typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be null or a string')
+	}
+	if (name != null && typeof name !== 'string') {
+		throw new Error('Call Error: `name` must be null or a string');
+	}
+
+	if (id == null) {
+		id = uuid();
+	}
+
+	if (name == null) {
+		name = id;
+	}
+
+	self.id = id;
 	self.name = name;
 	self.config = config;
 	self.modules = modules;
@@ -1923,32 +2277,8 @@ var Perspective = makeSubclass(Object, function (name, config, modules, opts) {
 });
 
 mixinDebugging(Perspective, function () {
-	return 'PREFS // PERSPECTIVE (' + this.name + ')';
+	return sprintf('PREFS // PERSPECTIVE (%s)', this.id);
 });
-
-// #getName {{{2
-
-Perspective.prototype.getName = function () {
-	var self = this;
-
-	return self.name;
-};
-
-// #setName {{{2
-
-Perspective.prototype.setName = function (name) {
-	var self = this;
-
-	self.name = name;
-};
-
-// #getConfig {{{2
-
-Perspective.prototype.getConfig = function () {
-	var self = this;
-
-	return self.config;
-};
 
 // #load {{{2
 
@@ -2026,3 +2356,4 @@ PREFS_BACKEND_REGISTRY.set('temporary', PrefsBackendTemporary);
 PREFS_MODULE_REGISTRY.set('view', PrefsModuleView);
 PREFS_MODULE_REGISTRY.set('grid', PrefsModuleGrid);
 PREFS_MODULE_REGISTRY.set('graph', PrefsModuleGraph);
+PREFS_MODULE_REGISTRY.set('meta', PrefsModuleMeta);

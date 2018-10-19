@@ -337,7 +337,7 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
  * @extends GridFilter
  */
 
-var StringTextboxGridFilter = makeSubclass(GridFilter, function () {
+var StringTextboxGridFilter = makeSubclass('StringTextboxGridFilter', GridFilter, function () {
 	var self = this;
 
 	self.ctor.apply(self, arguments);
@@ -374,7 +374,7 @@ var StringTextboxGridFilter = makeSubclass(GridFilter, function () {
  * @extends GridFilter
  */
 
-var StringDropdownGridFilterChosen = makeSubclass(GridFilter, function () {
+var StringDropdownGridFilterChosen = makeSubclass('StringDropdownGridFilterChosen', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -440,7 +440,7 @@ StringDropdownGridFilterChosen.prototype.getValue = function () {
  * @extends GridFilter
  */
 
-var StringDropdownGridFilterSumo = makeSubclass(GridFilter, function () {
+var StringDropdownGridFilterSumo = makeSubclass('StringDropdownGridFilterSumo', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -549,7 +549,7 @@ StringDropdownGridFilterSumo.prototype.setOperator = function (op) {
 
 // NumberTextboxGridFilter {{{2
 
-var NumberTextboxGridFilter = makeSubclass(GridFilter, function () {
+var NumberTextboxGridFilter = makeSubclass('NumberTextboxGridFilter', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -571,7 +571,7 @@ var NumberTextboxGridFilter = makeSubclass(GridFilter, function () {
 
 // NumberCheckboxGridFilter {{{2
 
-var NumberCheckboxGridFilter = makeSubclass(GridFilter, function () {
+var NumberCheckboxGridFilter = makeSubclass('NumberCheckboxGridFilter', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -608,7 +608,7 @@ NumberCheckboxGridFilter.prototype.getOperator = function () {
 
 // NumberTriBoolGridFilter {{{2
 
-var NumberTriBoolGridFilter = makeSubclass(GridFilter, function () {
+var NumberTriBoolGridFilter = makeSubclass('NumberTriBoolGridFilter', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -708,7 +708,7 @@ NumberTriBoolGridFilter.prototype.getOperator = function () {
  * @extends GridFilter
  */
 
-var DateSingleGridFilter = makeSubclass(GridFilter, function () {
+var DateSingleGridFilter = makeSubclass('DateSingleGridFilter', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -744,7 +744,7 @@ var DateSingleGridFilter = makeSubclass(GridFilter, function () {
  * @extends GridFilter
  */
 
-var DateRangeGridFilter = makeSubclass(GridFilter, function () {
+var DateRangeGridFilter = makeSubclass('DateRangeGridFilter', GridFilter, function () {
 	var self = this;
 
 	GridFilter.apply(self, arguments);
@@ -836,7 +836,7 @@ DateRangeGridFilter.prototype.isRange = function () {
 
 // BooleanCheckboxGridFilter {{{2
 
-BooleanCheckboxGridFilter = makeSubclass(GridFilter, function (field, gridFilter) {
+var BooleanCheckboxGridFilter = makeSubclass('BooleanCheckboxGridFilter', GridFilter, function (field, gridFilter) {
 });
 
 // #getValue {{{3

@@ -958,7 +958,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		.click(function (evt) {
 			evt.stopPropagation();
 			if (evt.shiftKey) {
-				var p = self.prefs.getPerspective(self.prefs.getCurrentPerspective());
+				var p = self.prefs.getPerspective(self.prefs.currentPerspective);
 				if (p.opts.isTemporary) {
 					pWinWarning.text('This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.');
 					pWinWarning.show();
@@ -1294,18 +1294,15 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.append(jQuery('<option>', { value: 'NEW' }).text('New Perspective...'))
 		.on('change', function (evt) {
 			if (dropdown.val() === 'NEW') {
-				var name = prompt('Enter new view name', self.prefs.getCurrentPerspective());
+				var name = prompt('Enter new perspective name', self.prefs.currentPerspective.name);
 				if (name) {
-					if (options[name] != null) {
-						self.prefs.setCurrentPerspective(name);
-					}
-					else {
-						self.prefs.addPerspective(name);
-						self.prefs.save();
-					}
+					self.prefs.addPerspective(null, name);
+					self.prefs.save();
 				}
 				else {
-					dropdown.val(self.prefs.getCurrentPerspective());
+					// User cancelled the dialog, so just put the dropdown back to whatever the current
+					// perspective is.
+					dropdown.val(self.prefs.currentPerspective.id);
 				}
 				return;
 			}
@@ -1356,7 +1353,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 			content: saveBtnTooltipContent
 		})
 		.on('click', function () {
-			var name = prompt('Enter new view name', self.prefs.getCurrentPerspective());
+			var name = prompt('Enter new perspective name', self.prefs.currentPerspective.name);
 			if (name != null) {
 				self.prefs.addPerspective(name);
 				self.prefs.save();
@@ -1377,16 +1374,16 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.append(fontAwesome('fa-pencil'))
 		.on('click', function () {
-			var oldName = dropdown.val();
+			var id = dropdown.val();
+			var p = self.prefs.getPerspective(id);
 
-			if (oldName === Prefs.MAIN_PERSPECTIVE_NAME) {
-				alert('Cannot rename main perspective!');
+			if (p.opts.isEssential) {
+				alert('Cannot rename essential perspective!');
 			}
 			else {
-				var newName = prompt('Rename view "' + oldName + '" to what?');
-
+				var newName = prompt('Rename view "' + p.name + '" to what?');
 				if (newName) {
-					self.prefs.renamePerspective(oldName, newName);
+					self.prefs.renamePerspective(id, newName);
 				}
 			}
 		})
@@ -1401,12 +1398,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.append(fontAwesome('fa-trash'))
 		.on('click', function () {
-			if (dropdown.val() === Prefs.MAIN_PERSPECTIVE_NAME) {
-				alert('Cannot delete main perspective!');
-			}
-			else {
-				self.prefs.deletePerspective(dropdown.val());
-			}
+			self.prefs.deletePerspective(dropdown.val());
 		})
 		.appendTo(div)
 	;
@@ -1420,46 +1412,50 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 
 	setTimeout(function () {
 		self.prefs.prime(function () {
-			self.prefs.getPerspectives(function (perspectives) {
-				_.each(perspectives.sort(), function (name) {
-					if (options[name] == null) {
-						options[name] = jQuery('<option>', { 'value': name })
-							.text(name)
+			self.prefs.getPerspectives(function (ids) {
+				_.each(_.sortBy(_.map(ids, function (id) {
+					return self.prefs.getPerspective(id);
+				}), 'name'), function (o) {
+					if (options[o.id] == null) {
+						options[o.id] = jQuery('<option>', { 'value': o.id })
+							.text(o.name)
 							.appendTo(dropdown);
 					}
 				});
 
-				dropdown.val(self.prefs.getCurrentPerspective());
+				dropdown.val(self.prefs.currentPerspective.id);
 				showHideBtns();
 			});
 
-			self.prefs.on('perspectiveAdded', function (name) {
-				if (options[name] == null) {
-					options[name] = jQuery('<option>', {
-						value: name
-					}).text(name);
-					dropdown.append(options[name]);
+			self.prefs.on('perspectiveAdded', function (id) {
+				if (options[id] == null) {
+					var p = self.prefs.getPerspective(id);
+					options[id] = jQuery('<option>', { value: id })
+						.text(p.name)
+						.appendTo(dropdown);
 				}
 			});
 
-			self.prefs.on('perspectiveDeleted', function (name) {
-				if (options[name] != null) {
-					options[name].remove();
-					delete options[name];
+			self.prefs.on('perspectiveDeleted', function (id) {
+				if (options[id] == null) {
+					throw new Error(sprintf('Received `perspectiveDeleted` event that references unknown perspective: id = "%s"', id));
 				}
+				options[id].remove();
+				delete options[id];
 			});
 
-			self.prefs.on('perspectiveRenamed', function (oldName, newName) {
-				if (options[oldName] != null) {
-					options[oldName].attr('value', newName);
-					options[oldName].text(newName);
-					options[newName] = options[oldName];
-					delete options[oldName];
+			self.prefs.on('perspectiveRenamed', function (id, newName) {
+				if (options[id] == null) {
+					throw new Error(sprintf('Received `perspectiveRenamed` event that references unknown perspective: id = "%s"', id));
 				}
+				options[id].text(newName);
 			});
 
-			self.prefs.on('perspectiveChanged', function (name) {
-				dropdown.val(name);
+			self.prefs.on('perspectiveChanged', function (id) {
+				if (options[id] == null) {
+					throw new Error(sprintf('Received `perspectiveChanged` event that references unknown perspective: id = "%s"', id));
+				}
+				dropdown.val(id);
 				showHideBtns();
 				self.redraw();
 			});

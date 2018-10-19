@@ -131,6 +131,7 @@ jQuery.fn.extend({
 		self.hide();
 		self.before(button);
 		self.on('change', updateIcon);
+		self._updateIcon = updateIcon;
 
 		return self;
 	},

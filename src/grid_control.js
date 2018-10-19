@@ -56,7 +56,7 @@
  * A button that is used to remove the control field.
  */
 
-var GridControlField = makeSubclass(Object, function (control, field, displayText, colConfig, opts) {
+var GridControlField = makeSubclass('GridControlField', Object, function (control, field, displayText, colConfig, opts) {
 	var self = this;
 
 	self.control = control;
@@ -165,7 +165,7 @@ GridControlField.prototype._addErrorIndicator = function (parent, cls) {
  * @extends GridControlField
  */
 
-var GroupControlField = makeSubclass(GridControlField);
+var GroupControlField = makeSubclass('GroupControlField', GridControlField);
 
 // PivotControlField {{{1
 
@@ -176,7 +176,7 @@ var GroupControlField = makeSubclass(GridControlField);
  * @extends GridControlField
  */
 
-var PivotControlField = makeSubclass(GridControlField);
+var PivotControlField = makeSubclass('PivotControlField', GridControlField);
 
 // FilterControlField {{{1
 // Constructor {{{2
@@ -186,7 +186,7 @@ var PivotControlField = makeSubclass(GridControlField);
  * @extends GridControlField
  */
 
-var FilterControlField = makeSubclass(GridControlField);
+var FilterControlField = makeSubclass('FilterControlField', GridControlField);
 
 // #draw {{{2
 
@@ -219,7 +219,7 @@ FilterControlField.prototype.draw = function () {
  * Options passed to the aggregate function.
  */
 
-var AggregateControlField = makeSubclass(GridControlField, function () {
+var AggregateControlField = makeSubclass('AggregateControlField', GridControlField, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -475,7 +475,7 @@ AggregateControlField.prototype.getInfo = function () {
  * The SELECT element containing the available fields.
  */
 
-var GridControl = makeSubclass(Object, function (grid, colConfig, view, features, timing) {
+var GridControl = makeSubclass('GridControl', Object, function (grid, colConfig, view, features, timing) {
 	var self = this;
 
 	if (!(grid instanceof Grid)) {
@@ -903,7 +903,7 @@ GridControl.prototype.updateView = function () {
  * @extends GridControl
  */
 
-var GroupControl = makeSubclass(GridControl, function () {
+var GroupControl = makeSubclass('GroupControl', GridControl, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -1033,7 +1033,7 @@ GroupControl.prototype.toString = function () {
  * Names of the fields
  */
 
-var PivotControl = makeSubclass(GridControl, function () {
+var PivotControl = makeSubclass('PivotControl', GridControl, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -1166,7 +1166,7 @@ PivotControl.prototype.toString = function () {
  * Names of the fields
  */
 
-var AggregateControl = makeSubclass(GridControl, function () {
+var AggregateControl = makeSubclass('AggregateControl', GridControl, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -1461,7 +1461,7 @@ AggregateControl.prototype.toString = function () {
  * @extends GridControl
  */
 
-var FilterControl = makeSubclass(GridControl, function () {
+var FilterControl = makeSubclass('FilterControl', GridControl, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);

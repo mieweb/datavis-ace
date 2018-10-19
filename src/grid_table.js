@@ -29,7 +29,7 @@
  * Column separator used when serializing.
  */
 
-var Csv = makeSubclass(Object, function (opts) {
+var Csv = makeSubclass('Csv', Object, function (opts) {
 	var self = this;
 
 	self.lastRowId = -2;
@@ -211,7 +211,7 @@ Csv.prototype.setOrder = function (rowId, pos) {
  * @property {OrdMap} colConfig
  */
 
-var GridTable = makeSubclass(GridRenderer, function () {
+var GridTable = makeSubclass('GridTable', GridRenderer, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -1656,7 +1656,7 @@ GridTable.prototype._updateSelectionGui = function () {
  * working.
  */
 
-var GridTablePlain = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+var GridTablePlain = makeSubclass('GridTablePlain', GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -2559,7 +2559,7 @@ GridTablePlain.prototype._addRowSelectHandler = function () {
  * @extends GridTable
  */
 
-var GridTableGroupDetail = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+var GridTableGroupDetail = makeSubclass('GridTableGroupDetail', GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -3723,7 +3723,7 @@ GridTableGroupDetail.prototype.addDataToCsv = function (data) {
  * @extends GridTable
  */
 
-var GridTableGroupSummary = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+var GridTableGroupSummary = makeSubclass('GridTableGroupSummary', GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
@@ -3996,7 +3996,7 @@ GridTableGroupSummary.prototype.addWorkHandler = function () {
  * @extends GridTable
  */
 
-var GridTablePivot = makeSubclass(GridTable, function (grid, defn, view, features, opts, timing, id) {
+var GridTablePivot = makeSubclass('GridTablePivot', GridTable, function (grid, defn, view, features, opts, timing, id) {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);

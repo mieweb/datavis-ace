@@ -23,7 +23,7 @@
 var GridRenderer = (function () {
 	UNIQUE_ID = 0;
 	
-	return makeSubclass(Object, function (grid, defn, view, features, opts, timing, id, colConfig) {
+	return makeSubclass('GridRenderer', Object, function (grid, defn, view, features, opts, timing, id, colConfig) {
 		var self = this;
 
 		self.UNIQUE_ID = UNIQUE_ID++;
@@ -165,7 +165,7 @@ GridRenderer.prototype._validateFeatures = function () {
 
 // GridRendererHandlebars {{{1
 
-var GridRendererHandlebars = makeSubclass(GridRenderer, function () {
+var GridRendererHandlebars = makeSubclass('GridRendererHandlebars', GridRenderer, function () {
 	var self = this;
 
 	self.super.ctor.apply(self, arguments);
