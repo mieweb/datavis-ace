@@ -3207,7 +3207,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				childTr.after(showMoreTr);
 			}
 		}
-		else {
+		else if (metadataNode.rows) {
 			// We're rendering data rows.
 
 			var isSelected;
