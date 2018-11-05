@@ -1683,17 +1683,6 @@ PrefsModuleView.prototype.load = function (config) {
 		return;
 	}
 
-	if (config.sort == null) {
-		self.target.clearSort({
-			updateData: false
-		});
-	}
-	else {
-		self.target.setSort(config.sort, {
-			updateData: false
-		});
-	}
-
 	if (config.filter == null) {
 		self.target.clearFilter({
 			updateData: false
@@ -1701,6 +1690,17 @@ PrefsModuleView.prototype.load = function (config) {
 	}
 	else {
 		self.target.setFilter(config.filter, null, {
+			updateData: false
+		});
+	}
+
+	if (config.sort == null) {
+		self.target.clearSort({
+			updateData: false
+		});
+	}
+	else {
+		self.target.setSort(config.sort, {
 			updateData: false
 		});
 	}
