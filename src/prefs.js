@@ -1017,6 +1017,19 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 	});
 };
 
+// #setCurrentPerspectiveByName {{{2
+
+Prefs.prototype.setCurrentPerspectiveByName = function (name, cont, opts) {
+	var self = this;
+	var p = _.findWhere(self.perspectives, {name: name});
+
+	if (p != null) {
+		return self.setCurrentPerspective(p.id, cont, opts);
+	}
+
+	throw new Error('No such perspective: "' + name + '"');
+};
+
 // #save {{{2
 
 /**
@@ -1072,7 +1085,7 @@ Prefs.prototype.reset = function (cont) {
 			self.debug('Saving temporary essential perspective: %s', p.id);
 			self.bardo[p.id] = {
 				id: p.id,
-				name: p.meta.displayName,
+				name: p.name,
 				config: p.config,
 				opts: p.opts
 			};
@@ -2241,10 +2254,6 @@ PrefsModuleMeta.prototype.reset = function () {
  * @property {object} config See above.
  * @property {Object.<string,PrefsModule>} modules See above.
  * @property {object} opts See above.
- *
- * @property {object} meta
- * @property {string} meta.displayName
- * The name of the perspective.
  */
 
 var Perspective = makeSubclass('Perspective', Object, function (id, name, config, modules, opts) {
