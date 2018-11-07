@@ -308,8 +308,10 @@ Prefs.prototype.prime = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	if (self.isPrimed) {
-		return typeof cont === 'function' ? cont(false) : false;
+		return cont(false);
 	}
 
 	if (self.primeLock.isLocked()) {
@@ -324,7 +326,7 @@ Prefs.prototype.prime = function (cont) {
 		return function () {
 			self.isPrimed = true;
 			self.primeLock.unlock();
-			return typeof cont === 'function' ? cont(status) : status;
+			return cont(status);
 		};
 	};
 
@@ -593,6 +595,8 @@ Prefs.prototype.addPerspective = function (id, name, config, perspectiveOpts, co
 		name = id;
 	}
 
+	cont = cont || I;
+
 	opts = deepDefaults(opts, {
 		switch: true,
 		sendEvent: true,
@@ -610,7 +614,7 @@ Prefs.prototype.addPerspective = function (id, name, config, perspectiveOpts, co
 			});
 		}
 
-		return typeof cont === 'function' ? cont(true) : true;
+		return cont(true);
 	};
 
 	if (self.perspectives[id] != null) {
@@ -692,6 +696,15 @@ Prefs.prototype.addMainPerspective = function (cont) {
 Prefs.prototype.deletePerspective = function (id, cont, opts) {
 	var self = this;
 
+	if (id != null && typeof id !== 'string') {
+		throw new Error('Call Error: `id` must be null or a string');
+	}
+	if (cont != null && typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be null or a function');
+	}
+
+	cont = cont || I;
+
 	opts = deepDefaults(opts, {
 		sendEvent: true
 	});
@@ -707,7 +720,7 @@ Prefs.prototype.deletePerspective = function (id, cont, opts) {
 	if (self.perspectives[id].opts.isEssential) {
 		self.logError('DELETE PERSPECTIVE', 'Not allowed to delete essential perspective: id = "%s" ; name = "%s"',
 			id, self.perspectives[id].name);
-		return typeof cont === 'function' ? cont(false) : false;
+		return cont(false);
 	}
 
 	// Delete the perspective in the backend.
@@ -717,7 +730,7 @@ Prefs.prototype.deletePerspective = function (id, cont, opts) {
 		var i;
 
 		if (!ok) {
-			return typeof cont === 'function' ? cont(false) : false;
+			return cont(false);
 		}
 
 		// Delete it from our internal data structures.
@@ -862,6 +875,8 @@ Prefs.prototype.renamePerspective = function (id, newName, cont, opts) {
 		id = self.currentPerspective.id;
 	}
 
+	cont = cont || I;
+
 	if (id === self.currentPerspective.id) {
 		isCurrent = true;
 	}
@@ -890,7 +905,7 @@ Prefs.prototype.renamePerspective = function (id, newName, cont, opts) {
 				}, id, newName);
 			}
 
-			return typeof cont === 'function' ? cont(true) : true;
+			return cont(true);
 		});
 	});
 
@@ -960,6 +975,8 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	opts = deepDefaults(opts, {
 		loadPerspective: true,
 		sendEvent: true,
@@ -996,7 +1013,7 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 
 	self.backend.setCurrent(id, function (ok) {
 		if (!ok) {
-			return typeof cont === 'function' ? cont(false) : false;
+			return cont(false);
 		}
 
 		var f = function () {
@@ -1006,7 +1023,7 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 				}, id);
 			}
 
-			return typeof cont === 'function' ? cont(true) : true;
+			return cont(true);
 		};
 
 		if (opts.loadPerspective) {
@@ -1043,8 +1060,10 @@ Prefs.prototype.save = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	if (self.currentPerspective.opts.isTemporary) {
-		return typeof cont === 'function' ? cont(false) : false;
+		return cont(false);
 	}
 
 	self.currentPerspective.save(function () {
@@ -1075,6 +1094,8 @@ Prefs.prototype.reset = function (cont) {
 	if (cont != null && typeof cont !== 'function') {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
+
+	cont = cont || I;
 
 	// Save some info for all perspectives that are both temporary and essential, so we can restore
 	// them after everything else has been cleared.  The main use case for this is for pre-configured
@@ -1119,7 +1140,7 @@ Prefs.prototype.reset = function (cont) {
 
 		self.isPrimed = false;
 		self.prime(function () {
-			return typeof cont === 'function' ? cont(true) : true;
+			return cont(true);
 		});
 	});
 };
@@ -1523,6 +1544,8 @@ PrefsBackendLocalStorage.prototype.save = function (perspective, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Saving perspective: id = "%s" ; name = "%s" ; config = %O',
 		perspective.id, perspective.name, perspective.config);
 
@@ -1535,9 +1558,7 @@ PrefsBackendLocalStorage.prototype.save = function (perspective, cont) {
 	}, storedPrefData, self.id, 'perspectives', perspective.id);
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	if (typeof cont === 'function') {
-		return cont(true);
-	}
+	return cont(true);
 };
 
 // #getPerspectives {{{2
@@ -1586,6 +1607,8 @@ PrefsBackendLocalStorage.prototype.setCurrent = function (id, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Setting current perspective to "%s"', id);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
@@ -1593,7 +1616,7 @@ PrefsBackendLocalStorage.prototype.setCurrent = function (id, cont) {
 	setProp(id, storedPrefData, self.id, 'current');
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #rename {{{2
@@ -1611,6 +1634,8 @@ PrefsBackendLocalStorage.prototype.rename = function (oldName, newName, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Renaming perspective: "%s" -> "%s"', oldName, newName);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
@@ -1618,7 +1643,7 @@ PrefsBackendLocalStorage.prototype.rename = function (oldName, newName, cont) {
 	delete storedPrefData[self.id]['perspectives'][oldName];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #delete {{{2
@@ -1633,13 +1658,15 @@ PrefsBackendLocalStorage.prototype.deletePerspective = function (id, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Deleting perspective: "%s"', id);
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	delete storedPrefData[self.id]['perspectives'][id];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #reset {{{2
@@ -1647,13 +1674,19 @@ PrefsBackendLocalStorage.prototype.deletePerspective = function (id, cont) {
 PrefsBackendLocalStorage.prototype.reset = function (cont) {
 	var self = this;
 
+	if (cont != null && typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be null or a function');
+	}
+
+	cont = cont || I;
+
 	self.debug('Resetting perspectives');
 
 	var storedPrefData = JSON.parse(localStorage.getItem(self.localStorageKey) || '{}');
 	delete storedPrefData[self.id];
 	localStorage.setItem(self.localStorageKey, JSON.stringify(storedPrefData));
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // PrefsBackendTemporary {{{1
@@ -1732,6 +1765,8 @@ PrefsBackendTemporary.prototype.save = function (perspective, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Saving perspective: id = "%s" ; name = "%s" ; config = %O',
 		perspective.id, perspective.name, perspective.config);
 
@@ -1741,9 +1776,7 @@ PrefsBackendTemporary.prototype.save = function (perspective, cont) {
 		config: perspective.config
 	};
 
-	if (typeof cont === 'function') {
-		return cont(true);
-	}
+	return cont(true);
 };
 
 // #getPerspectives {{{2
@@ -1790,11 +1823,13 @@ PrefsBackendTemporary.prototype.setCurrent = function (id, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Setting current perspective to "%s"', id);
 
 	self.storage.current = id;
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #rename {{{2
@@ -1812,12 +1847,14 @@ PrefsBackendTemporary.prototype.rename = function (oldName, newName, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Renaming perspective: "%s" -> "%s"', oldName, newName);
 
 	self.storage.perspectives[newName] = self.storage.perspectives[oldName];
 	delete self.storage.perspectives[oldName];
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #delete {{{2
@@ -1832,11 +1869,13 @@ PrefsBackendTemporary.prototype.deletePerspective = function (id, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Deleting perspective: "%s"', id);
 
 	delete self.storage.perspectives[id];
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #reset {{{2
@@ -1844,13 +1883,19 @@ PrefsBackendTemporary.prototype.deletePerspective = function (id, cont) {
 PrefsBackendTemporary.prototype.reset = function (cont) {
 	var self = this;
 
+	if (cont != null && typeof cont !== 'function') {
+		throw new Error('Call Error: `cont` must be null or a function');
+	}
+
+	cont = cont || I;
+
 	self.debug('Resetting perspectives');
 
 	self.storage = {
 		perspectives: {}
 	};
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // PrefsModule {{{1
@@ -2304,6 +2349,8 @@ Perspective.prototype.load = function (modules, cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	if (modules == null) {
 		modules = _.keys(self.modules);
 	}
@@ -2317,7 +2364,7 @@ Perspective.prototype.load = function (modules, cont) {
 		self.modules[moduleName].load(self.config[moduleName]);
 	});
 
-	return typeof cont === 'function' ? cont(true) : true;
+	return cont(true);
 };
 
 // #save {{{2
@@ -2335,6 +2382,8 @@ Perspective.prototype.save = function (cont) {
 		throw new Error('Call Error: `cont` must be null or a function');
 	}
 
+	cont = cont || I;
+
 	self.debug('Saving perspective');
 
 	// Go through every module that we have preferences for and save them from the bound components.
@@ -2344,7 +2393,7 @@ Perspective.prototype.save = function (cont) {
 		self.debug('Saving module: moduleName = %s ; config = %O', moduleName, self.config[moduleName]);
 	});
 
-	return typeof cont === 'function' ? cont(self.config) : self.config;
+	return cont(self.config);
 };
 
 // Registries {{{1
