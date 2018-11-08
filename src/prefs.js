@@ -1500,8 +1500,7 @@ PrefsBackendLocalStorage.prototype.migrate = function (version, cont) {
 			}
 
 			if (localStorageObj[self.id].perspectives == null) {
-				throw new Error('Unable to migrate local storage prefs to version 2: '
-					+ 'Prefs do not contain a `perspectives` object');
+				localStorageObj[self.id].perspectives = {};
 			}
 
 			_.each(localStorageObj[self.id].perspectives, function (p, id) {
