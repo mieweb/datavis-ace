@@ -157,6 +157,8 @@
 	window.MIE.WC_DataVis.Util.parseNumber        = parseNumber;
 	window.MIE.WC_DataVis.Util.deepDefaults       = deepDefaults;
 	window.MIE.WC_DataVis.Util.logAsync           = logAsync;
+	window.MIE.WC_DataVis.Util.curry              = curry;
+	window.MIE.WC_DataVis.Util.EagerPipeline      = EagerPipeline;
 })(jQuery);
 
 // vim:set ft=javascript:
