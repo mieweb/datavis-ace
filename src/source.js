@@ -781,6 +781,12 @@ Source.prototype.postProcess = function (data, cont) {
 
 		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo.asMap());
 
+		typeInfo.each(function (fti) {
+			if (fti.type == null) {
+				fti.type = 'string';
+			}
+		});
+
 		// Post-processing involves converting the data received from the source into a form that will
 		// be used internally for sorting, filtering, and display.  This takes several steps.
 		//
