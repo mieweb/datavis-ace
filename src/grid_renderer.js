@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import Handlebars from 'handlebars';
 import jQuery from 'jquery';
 
 import {debug, deepCopy, I, Lock, makeSubclass, mixinEventHandling} from './util.js';
@@ -335,10 +336,7 @@ GridRendererHandlebars.prototype.addWorkHandler = function () {
 // Registry {{{1
 
 GridRenderer.registry = new OrdMap();
-
-if (window.Handlebars != null) {
-	GridRenderer.registry.set('handlebars', GridRendererHandlebars);
-}
+GridRenderer.registry.set('handlebars', GridRendererHandlebars);
 
 // Exports {{{1
 

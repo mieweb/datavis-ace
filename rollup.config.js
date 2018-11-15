@@ -11,16 +11,14 @@ export default {
 		'jquery-contextmenu',
 		'sumoselect',
 		'flatpickr',
-		'papaparse',
-		'handlebars',
 	],
 	output: {
 		file: 'dist/wcdatavis.js',
 		format: 'iife',
 		globals: {
 			jquery: 'jQuery',
-			papaparse: 'Papa',
-			handlebars: 'Handlebars',
+			fs: 'undefined',
+			stream: 'undefined',
 		}
 	},
 	plugins: [resolve(), commonjs()/*, builtins(), globals()*/]
