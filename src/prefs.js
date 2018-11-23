@@ -273,6 +273,7 @@ mixinEventHandling(Prefs, function (self) {
 	, 'prefsHistoryStatus'
 	, 'prefsReset'
 	, 'moduleBound'
+	, 'primed'
 ]);
 
 mixinDebugging(Prefs, function () {
@@ -373,6 +374,11 @@ Prefs.prototype.prime = function (cont) {
 				// pre-configured), we don't have to do anything else.
 
 				self.debug('Priming: Finished adding all perspectives');
+
+				// Fire the 'primed' event, which potentially gives a receiver the chance to set the current
+				// perspective before we try to do it ourselves.
+
+				self.fire('primed');
 
 				if (self.currentPerspective != null) {
 					return makeFinishCont(true)();
