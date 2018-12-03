@@ -2,6 +2,7 @@ import _ from 'underscore';
 import moment from 'moment';
 import numeral from 'numeral';
 import jQuery from 'jquery';
+import BigNumber from 'bignumber.js/bignumber.js';
 
 import {
 	debug,
@@ -147,6 +148,8 @@ GridFilter.prototype.getValue = function () {
 	case 'number':
 	case 'currency':
 		switch (fti.internalType) {
+		case 'bignumber':
+			return new BigNumber(self.input.val());
 		case 'numeral':
 			return numeral(self.input.val());
 		case 'primitive':
