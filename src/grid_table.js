@@ -247,6 +247,7 @@ var GridTable = makeSubclass('GridTable', GridRenderer, function () {
 
 	self.selection = [];
 	self.needsRedraw = false;
+	self.contextMenuSelectors = [];
 
 	_.defaults(self.opts, {
 		drawInternalBorders: true,
@@ -702,6 +703,8 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 		},
 		items: sortIcon_menu_items
 	});
+
+	self.contextMenuSelectors.push('.' + sortIcon_class);
 
 	container.append(sortIcon_span);
 
@@ -1360,6 +1363,12 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum, dis
 
 GridTable.prototype.clear = function () {
 	var self = this;
+
+	_.each(self.contextMenuSelectors, function (sel) {
+		jQuery.contextMenu('destroy', sel);
+	});
+
+	self.contextMenuSelectors = [];
 
 	if (self.features.limit && self.defn.table.limit.method === 'more') {
 		jQuery(self.scrollEventElement).off(self.scrollEvents);
