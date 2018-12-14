@@ -2706,9 +2706,15 @@ export function format(fcc, fti, cell, opts) {
 			result.groupSeparator = fmt.integerPart.groupSeparator;
 			result.groupSize = fmt.integerPart.groupSize;
 		}
+		else {
+			result.groupSize = 0;
+		}
 		if (fmt.fractionalPart.grouping) {
 			result.fractionGroupSeparator = fmt.fractionalPart.groupSeparator;
 			result.fractionGroupSize = fmt.fractionalPart.groupSize;
+		}
+		else {
+			result.fractionGroupSize = 0;
 		}
 
 		return result;
@@ -2753,7 +2759,7 @@ export function format(fcc, fti, cell, opts) {
 		result += fmt.integerPart.grouping ? '0,0' : '0';
 
 		if (fmt.decimalPlaces == null) {
-			result += '[.][00000000]';
+			result += '[.][0000000000000000]';
 		}
 		else if (fmt.decimalPlaces > 0) {
 			result += '.';
@@ -2909,12 +2915,7 @@ export function format(fcc, fti, cell, opts) {
 					newVal = cell.value;
 				}
 
-				if (format != null) {
-					result = newVal.toFormat(format.decimalPlaces, bigNumberRoundingMode(format), bigNumberFormat(format));
-				}
-				else {
-					result = newVal.toFormat();
-				}
+				result = newVal.toFormat(format.decimalPlaces, bigNumberRoundingMode(format), bigNumberFormat(format));
 			}
 			else if (numeral.isNumeral(cell.value)) {
 				if (cell.value.value() < 0) {
@@ -2925,12 +2926,7 @@ export function format(fcc, fti, cell, opts) {
 					newVal = cell.value;
 				}
 
-				if (format != null) {
-					result = cell.value.format(numeralFormat(format));
-				}
-				else {
-					result = cell.value.value() + '';
-				}
+				result = cell.value.format(numeralFormat(format));
 			}
 			else {
 				if (cell.value < 0) {
@@ -2941,12 +2937,7 @@ export function format(fcc, fti, cell, opts) {
 					newVal = cell.value;
 				}
 
-				if (format != null) {
-					result = numeral(newVal).format(numeralFormat(format));
-				}
-				else {
-					result = cell.value + '';
-				}
+				result = numeral(newVal).format(numeralFormat(format));
 			}
 
 			if (isNegative) {
