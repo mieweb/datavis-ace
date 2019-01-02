@@ -918,15 +918,14 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		.click(function (evt) {
 			evt.stopPropagation();
 			if (evt.shiftKey) {
-				var p = self.prefs.getPerspective(self.prefs.currentPerspective);
-				if (p.opts.isTemporary) {
+				if (self.prefs.currentPerspective.opts.isTemporary) {
 					pWinWarning.text('This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.');
 					pWinWarning.show();
 				}
 				else {
 					pWinWarning.hide();
 				}
-				pWinTextArea.val(JSON.stringify(p.getConfig(), null, 2));
+				pWinTextArea.val(JSON.stringify(self.prefs.currentPerspective.config, null, 2));
 				pWin.dialog('open');
 			}
 			else {
