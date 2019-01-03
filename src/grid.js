@@ -1393,6 +1393,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 						.text(p.name)
 						.appendTo(dropdown);
 				}
+			}, {
+				info: 'Adding new perspective to dropdown'
 			});
 
 			self.prefs.on('perspectiveDeleted', function (id) {
@@ -1401,6 +1403,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				}
 				options[id].remove();
 				delete options[id];
+			}, {
+				info: 'Removing perspective from dropdown'
 			});
 
 			self.prefs.on('perspectiveRenamed', function (id, newName) {
@@ -1408,6 +1412,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 					throw new Error(sprintf.sprintf('Received `perspectiveRenamed` event that references unknown perspective: id = "%s"', id));
 				}
 				options[id].text(newName);
+			}, {
+				info: 'Changing perspective name in dropdown'
 			});
 
 			self.prefs.on('perspectiveChanged', function (id) {
@@ -1417,6 +1423,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				dropdown.val(id);
 				showHideBtns();
 				self.redraw();
+			}, {
+				info: 'Changing dropdown to reflect new current perspective'
 			});
 
 			self.prefs.on('prefsReset', function () {
@@ -1424,6 +1432,8 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 					elt.remove();
 				});
 				options = {};
+			}, {
+				info: 'Deleting all perspectives from the dropdown'
 			});
 
 			self.prefs.on('prefsHistoryStatus', function (back, forward) {

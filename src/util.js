@@ -1643,6 +1643,7 @@ export var mixinEventHandling = (function () {
 				var handler = {
 					id: HANDLER_ID++,
 					who: opts.who,
+					info: opts.info,
 					cb: cb,
 					limit: opts.limit
 				};
@@ -1770,7 +1771,12 @@ export var mixinEventHandling = (function () {
 					return;
 				}
 
-				debug.info(myName + ' // FIRE', 'Executing "%s" handler: [%d/%d]', evt, i, handlers.length - 1);
+				if (h.handler.info != null) {
+					debug.info(myName + ' // FIRE', 'Executing "%s" handler [%d/%d]: %s', evt, i, handlers.length - 1, h.handler.info);
+				}
+				else {
+					debug.info(myName + ' // FIRE', 'Executing "%s" handler [%d/%d]', evt, i, handlers.length - 1);
+				}
 				h.handler.cb.apply(null, args);
 
 				// Remove the handler if we've hit the limit of how many times we're supposed to invoke it.

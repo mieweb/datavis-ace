@@ -782,6 +782,7 @@ Prefs.prototype.deletePerspective = function (id, cont, opts) {
 		// When we've deleted all the perspectives, we need to make a new one.
 
 		if (self.availablePerspectives.length === 0) {
+			self.currentPerspective = null;
 			return self.addMainPerspective(cont);
 		}
 
@@ -1044,19 +1045,26 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 		self._resetHistory(self.currentPerspective);
 	}
 
-	if (opts.loadPerspective) {
-		return self.currentPerspective.load(null, function () {
-			if (opts.sendEvent) {
-				self.fire('perspectiveChanged', {
-					notTo: opts.dontSendEventTo
-				}, id);
-			}
-			self.backend.setCurrent(id, function (ok) {
-				return cont(ok);
-			});
-		});
-	}
+	// FIXME: Firing `perspectiveChanged` causes the grid to be redrawn, which isn't necessary when
+	// we're not loading the perspective (e.g. because we've just created a new one).
 
+	var afterLoad = function () {
+		if (opts.sendEvent) {
+			self.fire('perspectiveChanged', {
+				notTo: opts.dontSendEventTo
+			}, id);
+		}
+		self.backend.setCurrent(id, function (ok) {
+			return cont(ok);
+		});
+	};
+
+	if (opts.loadPerspective) {
+		return self.currentPerspective.load(null, afterLoad);
+	}
+	else {
+		return afterLoad();
+	}
 };
 
 // #setCurrentPerspectiveByName {{{2
