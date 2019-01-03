@@ -1,4 +1,6 @@
 const _ = require('lodash');
+const {By} = require('selenium-webdriver');
+const child_process = require('child_process');
 
 async function asyncMap(data, f) {
 	return Promise.all(_.map(data, f));
@@ -83,6 +85,23 @@ async function asyncFilter(data, predicate, opts = {}) {
 	});
 }
 
+async function select(dropdown, text) {
+	let allOptions = await dropdown.findElements(By.css("option"));
+	let matchingOption = await asyncFilter(allOptions, async (o) => await o.getText() === text);
+
+	if (matchingOption.length !== 1) {
+		throw new Error('No such option: "' + text + '"');
+	}
+
+	return matchingOption[0].click();
+}
+
+function sleep(time) {
+	child_process.spawnSync('sleep', [time]);
+}
+
 exports.asyncMap = asyncMap;
 exports.asyncEach = asyncEach;
 exports.asyncFilter = asyncFilter;
+exports.select = select;
+exports.sleep = sleep;

@@ -1,7 +1,7 @@
 const _ = require('lodash');
 const {By} = require('selenium-webdriver');
-const {asyncMap, asyncFilter} = require('./util.js');
-const child_process = require('child_process');
+const until = require('selenium-webdriver/lib/until');
+const {asyncMap, asyncFilter, select, sleep} = require('./util.js');
 
 const {Type: LoggingType} = require('selenium-webdriver/lib/logging');
 
@@ -19,12 +19,17 @@ class Grid {
 	async waitForIdle(opts = {}) {
 		_.defaultsDeep(opts, {
 			showLogs: false,
+			debug: false,
 			timeout: 2000
 		});
 		let attempt = 1;
-		process.stdout.write('Waiting for idle');
+		if (opts.debug) {
+			process.stdout.write('Waiting for idle');
+		}
 		await this.driver.wait(async () => {
-			process.stdout.write('.');
+			if (opts.debug) {
+				process.stdout.write('.');
+			}
 			const x = await this.driver.executeScript(`console.log('### IDLE [${attempt}]'); return MIE.WC_DataVis.grids.grid.isIdle()`);
 			attempt += 1;
 			if (opts.showLogs) {
@@ -32,6 +37,10 @@ class Grid {
 			}
 			return x;
 		}, opts.timeout);
+	}
+
+	async toggleControls() {
+		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Options"]')).click();
 	}
 
 	// FIXME: For some reason, this takes longer and longer each time you call it.
@@ -72,6 +81,115 @@ class Grid {
 		const td = tds[th[0].pos];
 		return await td.getText();
 	}
+
+	// Group {{{2
+
+	async getGroup() {
+		const li = await this.driver.findElements(By.css('div.wcdv_group_control > div > ul > li[data-wcdv-field] > div.wcdv_field > span:first-of-type'));
+		return Promise.all(_.map(li, (elt) => elt.getText()));
+	}
+
+	async setGroup() {
+	}
+
+	async addGroup() {
+		const dropdown = this.driver.findElement(By.css('div.wcdv_group_control select'));
+		return select(dropdown, 'country');
+	}
+
+	async removeGroup(field) {
+		const groupFields = asyncFilter(this.driver.findElements(By.css('div.wcdv_group_control > div > ul > li[data-wcdv-field]')), async (li) => await li.getText() === field);
+
+		if (groupFields.length !== 1) {
+			throw new Error('grr');
+		}
+
+		return groupFields[0].findElements(By.css('button.wcdv_remove')).click();
+	}
+
+	async clearGroup() {
+		return this.driver.findElement(By.css('div.wcdv_group_control .wcdv_control_clear_button')).click();
+	}
+
+	// Pivot {{{2
+
+	async getPivot() {
+		const li = await this.driver.findElements(By.css('div.wcdv_pivot_control > div > ul > li[data-wcdv-field] > div.wcdv_field > span:first-of-type'));
+		return Promise.all(_.map(li, (elt) => elt.getText()));
+	}
+
+	async setPivot() {
+	}
+
+	async addPivot() {
+		const dropdown = this.driver.findElement(By.css('div.wcdv_pivot_control select'));
+		return select(dropdown, 'country');
+	}
+
+	async removePivot(field) {
+		const pivotFields = asyncFilter(this.driver.findElements(By.css('div.wcdv_pivot_control > div > ul > li[data-wcdv-field]')), async (li) => await li.getText() === field);
+
+		if (pivotFields.length !== 1) {
+			throw new Error('grr');
+		}
+
+		return pivotFields[0].findElements(By.css('button.wcdv_remove')).click();
+	}
+
+	async clearPivot() {
+		return this.driver.findElement(By.css('div.wcdv_pivot_control .wcdv_control_clear_button')).click();
+	}
+
+	// Perspective {{{2
+
+	async getPerspective() {
+		const dropdown = this.driver.findElement(By.css('div.wcdv_toolbar_view select'));
+		const value = await dropdown.getAttribute('value');
+		const options = await dropdown.findElements(By.css('option'));
+		const matchingOptions = await asyncFilter(options, async (o) => await o.getAttribute('value') === value);
+
+		if (matchingOptions.length === 0) {
+			throw new Error(`Select's value (${value}) does not correspond to any of its options`);
+		}
+		else if (matchingOptions.length > 1) {
+			throw new Error(`Select's value (${value}) corresponds to more than one of its options`);
+		}
+
+		return matchingOptions[0].getText();
+	}
+
+	async setPerspective(toWhat) {
+		const dropdown = await this.driver.findElement(By.css('div.wcdv_toolbar_view select'));
+		return await select(dropdown, toWhat);
+	}
+
+	async newPerspective(name) {
+		await this.setPerspective('New Perspective...');
+		let a = await this.driver.wait(until.alertIsPresent());
+		await a.sendKeys(name);
+		return a.accept();
+	}
+
+	async renamePerspective() {
+	}
+
+	async deletePerspective() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Delete"]')).click();
+	}
+
+	async resetPrefs() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Reset"]')).click();
+	}
+
+	async prevPerspective() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Back"]')).click();
+	}
+
+	async nextPerspective() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Forward"]')).click();
+	}
+
+	// }}}2
 }
 
 module.exports = Grid;
