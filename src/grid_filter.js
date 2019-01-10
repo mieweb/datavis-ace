@@ -823,6 +823,7 @@ DateRangeGridFilter.prototype.getValue = function () {
 DateRangeGridFilter.prototype.setValue = function (val) {
 	var self = this;
 
+	self.selectedDates = val;
 	self.widget.setDate(val);
 };
 
