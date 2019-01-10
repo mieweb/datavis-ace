@@ -818,6 +818,14 @@ DateRangeGridFilter.prototype.getValue = function () {
 	return result;
 };
 
+// #setValue {{{3
+
+DateRangeGridFilter.prototype.setValue = function (val) {
+	var self = this;
+
+	self.widget.setDate(val);
+};
+
 // #getOperator {{{3
 
 DateRangeGridFilter.prototype.getOperator = function () {
@@ -1289,19 +1297,28 @@ GridFilterSet.prototype.set = function (field, fieldSpec) {
 		fieldSpec = { '$eq': fieldSpec };
 	}
 
-	_.each(fieldSpec, function (val, op) {
-		debug.info('GRID FILTER SET',
-			'Setting filter: { field = %s ; operator = %s ; value = %s }',
-			field, op, typeof val === 'object' ? JSON.stringify(val) : val);
-		var filters = self.filters.byCol[field];
+	var filters = self.filters.byCol[field];
 
-		if (filters == null) {
-			return;
-		}
+	if (filters == null || filters.length == null || filters.length === 0) {
+		// ERROR: No filter exists for that field.
+		return;
+	}
 
-		filters[0].setOperator(op);
-		filters[0].setValue(val);
-	});
+	var widget = filters[0];
+
+	if (widget instanceof DateRangeGridFilter && '$lte' in fieldSpec && '$gte' in fieldSpec) {
+		widget.setValue([fieldSpec['$gte'], fieldSpec['$lte']]);
+	}
+	else {
+		_.each(fieldSpec, function (val, op) {
+			debug.info('GRID FILTER SET',
+				'Setting filter: { field = %s ; operator = %s ; value = %s }',
+				field, op, typeof val === 'object' ? JSON.stringify(val) : val);
+
+			widget.setOperator(op);
+			widget.setValue(val);
+		});
+	}
 };
 
 // Exports {{{1
