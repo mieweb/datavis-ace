@@ -3525,7 +3525,12 @@ GridTableGroupDetail.prototype.drawFooter = function (columns, data, typeInfo) {
 	var self = this;
 
 	var makeSelectAll = function (tr) {
-		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
+		self.ui.checkAll_tfoot = jQuery('<input>', {
+			'name': 'checkAll',
+			'type': 'checkbox',
+			'class': 'wcdv_select_group',
+			'data-group-id': '0'
+		})
 			.on('change', function (evt) {
 				self.checkAll(evt);
 			});
