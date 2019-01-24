@@ -252,7 +252,8 @@ var GridTable = makeSubclass('GridTable', GridRenderer, function () {
 	_.defaults(self.opts, {
 		drawInternalBorders: true,
 		zebraStriping: true,
-		generateCsv: true
+		generateCsv: true,
+		stealGridFooter: true
 	});
 });
 
@@ -2195,7 +2196,14 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 	var self = this;
-	var tr = jQuery('<tr>');
+	var tr, td;
+	var colspan;
+
+	// Create the footer row to show aggregate functions.
+
+	tr = jQuery('<tr>');
+
+	// Add the "select all" checkbox when row selection is enabled.
 
 	if (self.features.rowSelect) {
 		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
@@ -2205,108 +2213,124 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 		tr.append(jQuery('<td>').append(self.ui.checkAll_tfoot));
 	}
 
-	if (self.opts.footer != null && self.opts.stealGridFooter) {
-		jQuery('<td>', {'colspan': columns.length}).appendTo(tr).get(0).appendChild(self.opts.footer.get(0));
-	}
-	else {
-		var didFooterCell = false;
+	// Create the columns for the data fields, which contain aggregate function results over those
+	// fields.
 
-		tr.append(_.map(columns, function (field, colIndex) {
-			var fcc = self.colConfig.get(field) || {};
-			var colTypeInfo = typeInfo.get(field);
-			var td = jQuery('<td>');
-			var footerConfig = getProp(self.defn, 'table', 'footer', field);
-			var agg;
-			var aggFun;
-			var aggResult;
-			var footerVal;
+	var didFooterCell = false;
 
-			self.setCss(td, field);
-			self.setAlignment(td, fcc, typeInfo.get(field));
+	tr.append(_.map(columns, function (field, colIndex) {
+		var fcc = self.colConfig.get(field) || {};
+		var colTypeInfo = typeInfo.get(field);
+		var td = jQuery('<td>');
+		var footerConfig = getProp(self.defn, 'table', 'footer', field);
+		var agg;
+		var aggFun;
+		var aggResult;
+		var footerVal;
 
-			if (footerConfig == null) {
-				if (didFooterCell) {
-					td.addClass('wcdv_divider');
+		self.setCss(td, field);
+		self.setAlignment(td, fcc, typeInfo.get(field));
+
+		if (footerConfig == null) {
+			if (didFooterCell) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = false;
+		}
+		else {
+			if (colIndex > 0) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = true;
+
+			// Although the footer config is an aggregate spec, there is one place we allow more
+			// flexibility.  If the fields aren't set, use the field for the column in which we're
+			// displaying this footer.  This is merely a convenience for the most common case.
+
+			if (footerConfig.fields == null) {
+				footerConfig.fields = [field];
+			}
+
+			debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
+
+			var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, function (tag, fti) {
+				if (fti.needsDecoding) {
+					debug.info('GRID TABLE - PLAIN // FOOTER - ' + field + ' // ' + tag, 'Converting data: { field = "%s", type = "%s" }',
+						fti.field, fti.type);
+
+					self.view.source.convertAll(data.dataByRowId, fti.field);
 				}
 
-				didFooterCell = false;
+				fti.deferDecoding = false;
+				fti.needsDecoding = false;
+			});
+			aggResult = aggInfo.instance.calculate(data.data);
+			var aggResult_formatted;
+
+			if (aggInfo.instance.inheritFormatting) {
+				aggResult_formatted = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+					overrideType: aggInfo.instance.getType()
+				});
 			}
 			else {
-				if (colIndex > 0) {
-					td.addClass('wcdv_divider');
-				}
-
-				didFooterCell = true;
-
-				// Although the footer config is an aggregate spec, there is one place we allow more
-				// flexibility.  If the fields aren't set, use the field for the column in which we're
-				// displaying this footer.  This is merely a convenience for the most common case.
-
-				if (footerConfig.fields == null) {
-					footerConfig.fields = [field];
-				}
-
-				debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
-
-				var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, function (tag, fti) {
-					if (fti.needsDecoding) {
-						debug.info('GRID TABLE - PLAIN // FOOTER - ' + field + ' // ' + tag, 'Converting data: { field = "%s", type = "%s" }',
-							fti.field, fti.type);
-
-						self.view.source.convertAll(data.dataByRowId, fti.field);
-					}
-
-					fti.deferDecoding = false;
-					fti.needsDecoding = false;
+				aggResult_formatted = format(null, null, aggResult, {
+					overrideType: aggInfo.instance.getType(),
+					convert: false
 				});
-				aggResult = aggInfo.instance.calculate(data.data);
-				var aggResult_formatted;
-
-				if (aggInfo.instance.inheritFormatting) {
-					aggResult_formatted = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
-						overrideType: aggInfo.instance.getType()
-					});
-				}
-				else {
-					aggResult_formatted = format(null, null, aggResult, {
-						overrideType: aggInfo.instance.getType(),
-						convert: false
-					});
-				}
-
-				if (aggInfo.debug) {
-					debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Aggregate result: %s',
-						JSON.stringify(aggResult));
-				}
-
-				switch (typeof footerConfig.format) {
-				case 'function':
-					footerVal = footerConfig.format(aggResult_formatted);
-					break;
-				case 'string':
-					footerVal = sprintf.sprintf(footerConfig.format, aggResult_formatted);
-					break;
-				default:
-					throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
-				}
-
-				if (footerVal instanceof Element || footerVal instanceof jQuery) {
-					td.append(footerVal);
-				}
-				else {
-					td.text(footerVal);
-				}
 			}
 
-			return td;
-		}));
-	}
+			if (aggInfo.debug) {
+				debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Aggregate result: %s',
+					JSON.stringify(aggResult));
+			}
+
+			switch (typeof footerConfig.format) {
+			case 'function':
+				footerVal = footerConfig.format(aggResult_formatted);
+				break;
+			case 'string':
+				footerVal = sprintf.sprintf(footerConfig.format, aggResult_formatted);
+				break;
+			default:
+				throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
+			}
+
+			if (footerVal instanceof Element || footerVal instanceof jQuery) {
+				td.append(footerVal);
+			}
+			else {
+				td.text(footerVal);
+			}
+		}
+
+		return td;
+	}));
+
+	// ...
 
 	if (self.features.rowReorder) {
 		tr.append(jQuery('<td>').text('Options'));
 	}
 
+	// Finish the row that contains the aggregate functions.
+
 	self.ui.tfoot.append(tr);
+
+	// Create a new footer row for an external footer that we've absorbed into the grid.
+
+	if (self.opts.footer != null && self.opts.stealGridFooter) {
+		tr = jQuery('<tr>');
+		if (self.features.rowSelect) {
+			tr.append(jQuery('<td>'));
+		}
+		tr.append(jQuery('<td>', {'colspan': columns.length}).append(self.opts.footer));
+		if (self.features.rowReorder) {
+			tr.append(jQuery('<td>'));
+		}
+		self.ui.tfoot.append(tr);
+	}
 };
 
 // #makeRowReorderBtn {{{2
@@ -2603,7 +2627,7 @@ var GridTableGroupDetail = makeSubclass('GridTableGroupDetail', GridTable, funct
 
 	self.super.ctor.apply(self, arguments);
 
-	self.features.footer = false;
+	self.features.sort = false;
 
 	debug.info('GRID TABLE - GROUP - DETAIL', 'Constructing grid table; features = %O', features);
 });
@@ -3283,9 +3307,13 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 					'data-wcdv-rowValIndex': metadataNode.rowValIndex
 				});
 
-				// Spacer to "indent" the data.
+				// Insert some space to "indent" the data.
+				// TODO When does one of these work differently from the other?
 
-				jQuery('<td>', {'colspan': data.groupFields.length + 1}).appendTo(rowTr);
+				//jQuery('<td>', {'colspan': data.groupFields.length + 1}).appendTo(rowTr);
+				for (var spacerIndex = 0; spacerIndex < data.groupFields.length + 1; spacerIndex += 1) {
+					jQuery('<td>', {'class': 'wcdv_group_col_spacer'}).appendTo(rowTr);
+				}
 
 				// Create the check box which selects the row.
 
@@ -3457,6 +3485,148 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 	if (typeof cont === 'function') {
 		return cont();
+	}
+};
+
+// #drawFooter {{{2
+
+GridTableGroupDetail.prototype.drawFooter = function (columns, data, typeInfo) {
+	var self = this;
+	var tr, td;
+	var colspan;
+
+	// Create the footer row to show aggregate functions.
+
+	tr = jQuery('<tr>');
+
+	// Add the "select all" checkbox when row selection is enabled.
+
+	if (self.features.rowSelect) {
+		self.ui.checkAll_tfoot = jQuery('<input>', { 'name': 'checkAll', 'type': 'checkbox' })
+			.on('change', function (evt) {
+				self.checkAll(evt);
+			});
+		jQuery('<td>', {'class': 'wcdv_group_col_spacer'}).append(self.ui.checkAll_tfoot).appendTo(tr);
+	}
+
+	for (var spacerIndex = 0; spacerIndex < data.groupFields.length + 1; spacerIndex += 1) {
+		jQuery('<td>', {'class': 'wcdv_group_col_spacer'}).appendTo(tr);
+	}
+
+	// Create the columns for the data fields, which contain aggregate function results over those
+	// fields.
+
+	var didFooterCell = false;
+
+	tr.append(_.map(columns, function (field, colIndex) {
+		if (data.groupFields.indexOf(field) >= 0) {
+			return;
+		}
+
+		var fcc = self.colConfig.get(field) || {};
+		var colTypeInfo = typeInfo.get(field);
+		var td = jQuery('<td>');
+		var footerConfig = getProp(self.defn, 'table', 'footer', field);
+		var agg;
+		var aggFun;
+		var aggResult;
+		var footerVal;
+
+		self.setCss(td, field);
+		self.setAlignment(td, fcc, typeInfo.get(field));
+
+		if (footerConfig == null) {
+			if (didFooterCell) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = false;
+		}
+		else {
+			if (colIndex > 0) {
+				td.addClass('wcdv_divider');
+			}
+
+			didFooterCell = true;
+
+			// Although the footer config is an aggregate spec, there is one place we allow more
+			// flexibility.  If the fields aren't set, use the field for the column in which we're
+			// displaying this footer.  This is merely a convenience for the most common case.
+
+			if (footerConfig.fields == null) {
+				footerConfig.fields = [field];
+			}
+
+			debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Creating footer using config: %O', footerConfig);
+
+			var aggInfo = new AggregateInfo('all', footerConfig, 0, self.colConfig, typeInfo, function (tag, fti) {
+				if (fti.needsDecoding) {
+					debug.info('GRID TABLE - PLAIN // FOOTER - ' + field + ' // ' + tag, 'Converting data: { field = "%s", type = "%s" }',
+						fti.field, fti.type);
+
+					self.view.source.convertAll(data.dataByRowId, fti.field);
+				}
+
+				fti.deferDecoding = false;
+				fti.needsDecoding = false;
+			});
+			aggResult = aggInfo.instance.calculate(data.groupMetadata.rows);
+			var aggResult_formatted;
+
+			if (aggInfo.instance.inheritFormatting) {
+				aggResult_formatted = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {
+					overrideType: aggInfo.instance.getType()
+				});
+			}
+			else {
+				aggResult_formatted = format(null, null, aggResult, {
+					overrideType: aggInfo.instance.getType(),
+					convert: false
+				});
+			}
+
+			if (aggInfo.debug) {
+				debug.info('GRID TABLE - PLAIN // FOOTER - ' + field, 'Aggregate result: %s',
+					JSON.stringify(aggResult));
+			}
+
+			switch (typeof footerConfig.format) {
+			case 'function':
+				footerVal = footerConfig.format(aggResult_formatted);
+				break;
+			case 'string':
+				footerVal = sprintf.sprintf(footerConfig.format, aggResult_formatted);
+				break;
+			default:
+				throw new Error('Footer config for field "' + field + '": `format` must be a function or a string');
+			}
+
+			if (footerVal instanceof Element || footerVal instanceof jQuery) {
+				td.append(footerVal);
+			}
+			else {
+				td.text(footerVal);
+			}
+		}
+
+		return td;
+	}));
+
+	// Finish the row that contains the aggregate functions.
+
+	self.ui.tfoot.append(tr);
+
+	// Create a new footer row for an external footer that we've absorbed into the grid.
+
+	if (self.opts.footer != null && self.opts.stealGridFooter) {
+		tr = jQuery('<tr>');
+		if (self.features.rowSelect) {
+			// Takes place of "select all" checkbox.
+			tr.append(jQuery('<td>', {'class': 'wcdv_group_col_spacer'}));
+		}
+		// colspan = (spacers: # groupFields + 1) + (columns: # fields - # groupFields) = (# fields) + 1
+		tr.append(jQuery('<td>', {'colspan': columns.length + 1}).append(self.opts.footer));
+		self.ui.tfoot.append(tr);
 	}
 };
 

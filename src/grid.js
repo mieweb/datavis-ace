@@ -1499,6 +1499,10 @@ Grid.prototype.redraw = function () {
 
 			rendererCtorOpts = deepCopy(self.defn.table.whenGroup);
 
+			if (self.ui.footer) {
+				rendererCtorOpts.footer = self.ui.footer;
+			}
+
 			debug.info('GRID', 'Creating group grid table');
 
 			self.ui.toolbar_plain.hide();
