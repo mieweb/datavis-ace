@@ -1179,10 +1179,10 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		}
 
 		if (p.opts.isTemporary) {
-			saveBtn.show();
+			saveAsBtn.show();
 		}
 		else {
-			saveBtn.hide();
+			saveAsBtn.hide();
 		}
 
 		if (p.opts.isEssential) {
@@ -1295,14 +1295,38 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 		warnMsg.show();
 	}
 
-	var saveBtnTooltipContent = jQuery('<div>')
+	var saveAsBtnTooltipContent = jQuery('<div>')
 		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
 		.append('This pre-defined perspective cannot be saved with this name.  Click to save with a new name.  After that, any changes will be saved under the new name.');
 
-	var saveBtn = jQuery('<button>', {'type': 'button', 'title': 'XXX'})
+	var saveAsBtn = jQuery('<button>', {'type': 'button', 'title': 'Save As...'})
 		.append(fontAwesome('fa-save'))
-		.attr('title', 'Save...')
 		.addClass('wcdv_icon_button wcdv_text-primary')
+		.tooltip({
+			classes: {
+				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
+			},
+			show: { delay: 1000 },
+			content: saveAsBtnTooltipContent
+		})
+		.on('click', function () {
+			var name = prompt('Enter new perspective name', self.prefs.currentPerspective.name);
+			if (name != null) {
+				self.prefs.addPerspective(name);
+				self.prefs.save();
+			}
+		})
+		.appendTo(div)
+	;
+
+	var saveBtnTooltipContent = jQuery('<div>')
+		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
+		.append('Click to save the current configuration.  The next time this grid is visited, the previously saved configuration will automatically be used.');
+
+	var saveBtn = jQuery('<button>', {'type': 'button', 'title': 'Save'})
+		.append(fontAwesome('fa-save'))
+		.addClass('wcdv_icon_button wcdv_text-primary')
+		.hide()
 		.tooltip({
 			classes: {
 				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
@@ -1311,11 +1335,7 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 			content: saveBtnTooltipContent
 		})
 		.on('click', function () {
-			var name = prompt('Enter new perspective name', self.prefs.currentPerspective.name);
-			if (name != null) {
-				self.prefs.addPerspective(name);
-				self.prefs.save();
-			}
+			self.prefs.reallySave();
 		})
 		.appendTo(div)
 	;
@@ -1433,6 +1453,14 @@ Grid.prototype._addPrefsButtons = function (toolbar) {
 				options = {};
 			}, {
 				info: 'Deleting all perspectives from the dropdown'
+			});
+
+			self.prefs.on('prefsChanged', function () {
+				saveBtn.show();
+			});
+
+			self.prefs.on('prefsSaved', function () {
+				saveBtn.hide();
 			});
 
 			self.prefs.on('prefsHistoryStatus', function (back, forward) {
