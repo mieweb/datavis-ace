@@ -237,6 +237,14 @@ var View = function (source, name, opts) {
 
 	self.lock = new Lock('View');
 
+	// Set the default configuration for a new View.  Setting explicit defaults is a good practice to
+	// maintain, but it also makes sure that when prefs are loaded later, any `null` values they set
+	// compare correctly to what we already have, and not make it look like something has changed.
+
+	self.sortSpec = null;
+	self.filterSpec = null;
+	self.groupSpec = null;
+	self.pivotSpec = null;
 	self.aggregateSpec = objFromArray(['group', 'pivot', 'cell', 'all'], [[{fun: 'count'}]]);
 
 	if (self.opts.prefs != null) {
@@ -557,7 +565,8 @@ View.prototype.getTotalRowCount = function () {
 
 View.prototype.setSort = function (spec, opts) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, isDifferent = false;
 
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
@@ -573,12 +582,18 @@ View.prototype.setSort = function (spec, opts) {
 
 	debug.info('VIEW (' + self.name + ') // SET SORT', 'spec = %O', spec);
 
+	isDifferent = !_.isEqual(self.sortSpec, spec);
+
 	self.sortSpec = spec;
 
 	if (opts.sendEvent) {
 		self.fire('sortSet', {
 			notTo: opts.dontSendEventTo
 		}, spec);
+	}
+
+	if (isDifferent && self.prefs != null) {
+		self.prefs.save();
 	}
 
 	self.clearCache();
@@ -1309,7 +1324,8 @@ View.prototype.sort = function (cont) {
 
 View.prototype.setFilter = function (spec, progress, opts) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, isDifferent = false;
 
 	opts = deepCopy(opts) || {};
 
@@ -1326,6 +1342,8 @@ View.prototype.setFilter = function (spec, progress, opts) {
 	});
 
 	debug.info('VIEW (' + self.name + ') // SET FILTER', 'spec = %O ; options = %O', spec, opts);
+
+	isDifferent = !_.isEqual(self.filterSpec, spec);
 
 	if (self.filterSpec != null && spec == null) {
 		self.wasPreviouslyFiltered = true;
@@ -1355,6 +1373,10 @@ View.prototype.setFilter = function (spec, progress, opts) {
 		self.fire('filterSet', {
 			notTo: opts.dontSendEventTo
 		}, spec);
+	}
+
+	if (isDifferent && self.prefs != null) {
+		self.prefs.save();
 	}
 
 	self.clearCache();
@@ -1696,7 +1718,8 @@ View.prototype.filter = function (cont) {
 
 View.prototype.setGroup = function (spec, opts, cont) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, isDifferent = false;
 
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
@@ -1745,12 +1768,18 @@ View.prototype.setGroup = function (spec, opts, cont) {
 	}
 	*/
 
+	isDifferent = !_.isEqual(self.groupSpec, spec);
+
 	self.groupSpec = spec;
 
 	if (opts.sendEvent) {
 		self.fire('groupSet', {
 			notTo: opts.dontSendEventTo
 		}, spec);
+	}
+
+	if (isDifferent && self.prefs != null) {
+		self.prefs.save();
 	}
 
 	self.clearCache();
@@ -2151,7 +2180,8 @@ View.prototype.group = function () {
 
 View.prototype.setPivot = function (spec, opts) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, isDifferent = false;
 
 	if (self.lock.isLocked()) {
 		return self.lock.onUnlock(function () {
@@ -2201,12 +2231,18 @@ View.prototype.setPivot = function (spec, opts) {
 	}
 	*/
 
+	isDifferent = !_.isEqual(self.pivotSpec, spec);
+
 	self.pivotSpec = spec;
 
 	if (opts.sendEvent) {
 		self.fire('pivotSet', {
 			notTo: opts.dontSendEventTo
 		}, spec);
+	}
+
+	if (isDifferent && self.prefs != null) {
+		self.prefs.save();
 	}
 
 	self.clearCache();
@@ -2603,7 +2639,8 @@ View.prototype.pivot = function () {
 
 View.prototype.setAggregate = function (spec, opts) {
 	var self = this
-		, args = Array.prototype.slice.call(arguments);
+		, args = Array.prototype.slice.call(arguments)
+		, isDifferent = false;
 
 	var shouldGraph = {
 		group: [],
@@ -2631,6 +2668,8 @@ View.prototype.setAggregate = function (spec, opts) {
 		}]]);
 	}
 	*/
+
+	isDifferent = !_.isEqual(self.aggregateSpec, spec);
 
 	if (spec == null) {
 		self.aggregateSpec = null;
@@ -2688,6 +2727,10 @@ View.prototype.setAggregate = function (spec, opts) {
 		self.fire('aggregateSet', {
 			notTo: opts.dontSendEventTo
 		}, spec, shouldGraph);
+	}
+
+	if (isDifferent && self.prefs != null) {
+		self.prefs.save();
 	}
 
 	self.clearCache();
@@ -2961,9 +3004,12 @@ View.prototype.getData = function (cont) {
 							workEndObj.numPivots = self.data.colVals.length;
 						}
 
-						if (self.prefs != null) {
-							self.prefs.save();
-						}
+						// FIXME Why does this need to save prefs?  They should be saved when the configuration
+						// changes, not when we retrieve data.
+						//
+						// if (self.prefs != null) {
+						// 	self.prefs.save();
+						// }
 
 						self.lastOps = ops;
 						self.fire('workEnd', null, workEndObj, ops);
