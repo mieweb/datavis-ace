@@ -2187,7 +2187,8 @@ PrefsModuleView.prototype.reset = function () {
 	var self = this;
 
 	self.target.reset({
-		updateData: false
+		updateData: false,
+		savePrefs: false
 	});
 };
 

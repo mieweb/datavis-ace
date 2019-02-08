@@ -3098,30 +3098,21 @@ View.prototype.reset = function (opts) {
 	opts = deepDefaults(opts, {
 		sendEvent: true,
 		dontSendEventTo: [],
-		updateData: true
+		updateData: true,
+		savePrefs: true
+	});
+
+	var clearOpts = jQuery.extend({}, opts, {
+		updateData: false
 	});
 
 	debug.info('VIEW (' + self.name + ')', 'RESET!');
 
-	self.clearSort({
-		updateData: false
-	});
-
-	self.clearFilter({
-		updateData: false
-	});
-
-	self.clearAggregate({
-		updateData: false
-	});
-
-	self.clearPivot({
-		updateData: false
-	});
-
-	self.clearGroup({
-		updateData: false
-	});
+	self.clearSort(clearOpts);
+	self.clearFilter(clearOpts);
+	self.clearAggregate(clearOpts);
+	self.clearPivot(clearOpts);
+	self.clearGroup(clearOpts);
 
 	if (!opts.updateData) {
 		delete self.lastOps;
