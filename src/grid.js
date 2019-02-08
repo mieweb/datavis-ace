@@ -2137,13 +2137,26 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		}
 		else {
 			// Delete fields from existing colConfig which aren't in the source.
-			colConfig.each(function (fieldName) {
-				self.colConfig.unset(fieldName);
-				updated = true;
+
+			var notInSource = [];
+
+			self.colConfig.each(function (fcc, fieldName) {
+				if (!colConfig.isSet(fieldName)) {
+					notInSource.push(fieldName);
+				}
 			});
+
+			if (notInSource.length > 0) {
+				debug.info('GRID // COLCONFIG', 'Removing %d fields from existing column config which are missing from source: %O', notInSource.length, notInSource);
+				_.each(notInSource, function (fieldName) {
+					self.colConfig.unset(fieldName);
+				});
+				updated = true;
+			}
 
 			// Add fields from source that are missing from existing colConfig.  Columns set explicitly in
 			// the grid's definition are there to limit what we see, so don't try to add to them.
+
 			if (self.colConfigSource !== 'defn' && self.colConfig.mergeWith(colConfig) > 0) {
 				updated = true;
 			}
