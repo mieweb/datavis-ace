@@ -5,9 +5,40 @@ const {asyncMap, asyncFilter, select, sleep} = require('./util.js');
 
 const {Type: LoggingType} = require('selenium-webdriver/lib/logging');
 
+// Grid UI {{{1
+
+class GridUi {
+	constructor(driver) {
+		this.driver = driver;
+	}
+
+	get prefsDeleteBtn() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Delete"]'));
+	}
+
+	get prefsResetBtn() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Reset"]'));
+	}
+
+	get prefsBackBtn() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Back"]'));
+	}
+
+	get prefsForwardBtn() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Forward"]'));
+	}
+
+	get prefsSaveBtn() {
+		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Save"]'));
+	}
+}
+
+// Grid {{{1
+
 class Grid {
 	constructor(driver) {
 		this.driver = driver;
+		this.ui = new GridUi(this.driver);
 	}
 
 	async dumpLogs() {
@@ -43,7 +74,25 @@ class Grid {
 		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Options"]')).click();
 	}
 
-	// FIXME: For some reason, this takes longer and longer each time you call it.
+	async getCell(column, row) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		const headers = await table.findElements(By.css('thead > tr > th'));
+		const th = await asyncFilter(headers, async (elt) => await elt.getText() === column, {reportPosition: true});
+		if (th.length === 0) {
+			throw new Error(`No such column: ${column}`);
+		}
+		// Using the 'data-row-num' attribute here to prevent counting the "show more rows" TR.
+		const trs = await table.findElements(By.css('tbody > tr[data-row-num]'));
+		const tr = trs[row >= 0 ? row : trs.length + row];
+		if (tr == null) {
+			throw new Error(`No such row: ${row}`);
+		}
+		const tds = await tr.findElements(By.css('td'));
+		const td = tds[th[0].pos];
+		return await td.getText();
+	}
+
+	// Sorting {{{2
 
 	async sortBy(column, ordering) {
 		const start = new Date();
@@ -64,24 +113,6 @@ class Grid {
 		return await orderingOptions[0].click();
 	}
 
-	async getCell(column, row) {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		const headers = await table.findElements(By.css('thead > tr > th'));
-		const th = await asyncFilter(headers, async (elt) => await elt.getText() === column, {reportPosition: true});
-		if (th.length === 0) {
-			throw new Error(`No such column: ${column}`);
-		}
-		// Using the 'data-row-num' attribute here to prevent counting the "show more rows" TR.
-		const trs = await table.findElements(By.css('tbody > tr[data-row-num]'));
-		const tr = trs[row >= 0 ? row : trs.length + row];
-		if (tr == null) {
-			throw new Error(`No such row: ${row}`);
-		}
-		const tds = await tr.findElements(By.css('td'));
-		const td = tds[th[0].pos];
-		return await td.getText();
-	}
-
 	// Group {{{2
 
 	async getGroup() {
@@ -92,9 +123,9 @@ class Grid {
 	async setGroup() {
 	}
 
-	async addGroup() {
+	async addGroup(field) {
 		const dropdown = this.driver.findElement(By.css('div.wcdv_group_control select'));
-		return select(dropdown, 'country');
+		return select(dropdown, field);
 	}
 
 	async removeGroup(field) {
@@ -121,9 +152,9 @@ class Grid {
 	async setPivot() {
 	}
 
-	async addPivot() {
+	async addPivot(field) {
 		const dropdown = this.driver.findElement(By.css('div.wcdv_pivot_control select'));
-		return select(dropdown, 'country');
+		return select(dropdown, field);
 	}
 
 	async removePivot(field) {
@@ -174,22 +205,28 @@ class Grid {
 	}
 
 	async deletePerspective() {
-		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Delete"]')).click();
+		return this.ui.prefsDeleteBtn.click();
 	}
 
 	async resetPrefs() {
-		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Reset"]')).click();
+		return this.ui.prefsResetBtn.click();
 	}
 
 	async prevPerspective() {
-		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Back"]')).click();
+		return this.ui.prefsBackBtn.click();
 	}
 
 	async nextPerspective() {
-		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Forward"]')).click();
+		return this.ui.prefsForwardBtn.click();
+	}
+
+	async savePrefs() {
+		return this.ui.prefsSaveBtn.click();
 	}
 
 	// }}}2
 }
+
+// }}}1
 
 module.exports = Grid;

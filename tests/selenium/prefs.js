@@ -123,65 +123,111 @@ describe('Preferences', function() {
 		assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
 	});
 
-	it('can switch between perspectives with dropdown', async function () {
-		let grid = new Grid(driver);
-		await grid.waitForIdle();
+	describe('Perspective Switching', function () {
+		it('using dropdown', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
 
-		// Create new perspective.
+			// Create new perspective.
 
-		await grid.newPerspective('Test');
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Test');
+			await grid.newPerspective('Test');
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
 
-		// Group by something.
+			// Group by something.
 
-		await grid.addGroup('country');
-		await grid.waitForIdle();
-		assert.deepEqual(await grid.getGroup(), ['country']);
+			await grid.addGroup('country');
+			await grid.waitForIdle();
+			assert.deepEqual(await grid.getGroup(), ['country']);
 
-		// Switch to previous perspective.
+			// Switch to previous perspective.
 
-		await grid.setPerspective('Main Perspective');
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Main Perspective');
-		assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
+			await grid.setPerspective('Main Perspective');
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Main Perspective');
+			assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
 
-		// Switch to next perspective.
+			// Switch to next perspective.
 
-		await grid.setPerspective('Test');
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Test');
-		assert.deepEqual(await grid.getGroup(), ['country']);
-	});
+			await grid.setPerspective('Test');
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
+			assert.deepEqual(await grid.getGroup(), ['country']);
+		});
 
-	it('can switch between perspectives with back/forward buttons', async function () {
-		let grid = new Grid(driver);
-		await grid.waitForIdle();
+		it('using back/forward buttons', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
 
-		// Create new perspective.
+			// Create new perspective.
 
-		await grid.newPerspective('Test');
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Test');
+			await grid.newPerspective('Test');
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
 
-		// Group by something.
+			// Group by something.
 
-		await grid.addGroup('country');
-		await grid.waitForIdle();
-		assert.deepEqual(await grid.getGroup(), ['country']);
+			await grid.addGroup('country');
+			await grid.waitForIdle();
+			assert.deepEqual(await grid.getGroup(), ['country']);
 
-		// Switch to previous perspective.
+			// Switch to previous perspective.
 
-		await grid.prevPerspective();
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Main Perspective');
-		assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
+			await grid.prevPerspective();
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Main Perspective');
+			assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
 
-		// Switch to next perspective.
+			// Switch to next perspective.
 
-		await grid.nextPerspective();
-		await grid.waitForIdle();
-		assert.equal(await grid.getPerspective(), 'Test');
-		assert.deepEqual(await grid.getGroup(), ['country']);
+			await grid.nextPerspective();
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
+			assert.deepEqual(await grid.getGroup(), ['country']);
+		});
+
+		// See DV-130 for a bug involving this test.
+
+		it('after deleting', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
+
+			// Create new perspective.
+
+			await grid.newPerspective('Test');
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
+
+			// Group by something.
+
+			await grid.addGroup('country');
+			await grid.waitForIdle();
+			assert.deepEqual(await grid.getGroup(), ['country']);
+
+			// Switch to previous perspective.
+
+			await grid.prevPerspective();
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Main Perspective');
+			assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
+
+			// Switch to next perspective.
+
+			await grid.nextPerspective();
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Test');
+			assert.deepEqual(await grid.getGroup(), ['country']);
+
+			// Delete new perspective.
+
+			await grid.deletePerspective();
+			await grid.waitForIdle();
+			assert.equal(await grid.getPerspective(), 'Main Perspective');
+			assert.deepEqual(await grid.getGroup(), [], 'Expected no groups to be set');
+
+			// Should not be able to go back.
+
+			assert.equal(await grid.ui.prefsBackBtn.isEnabled, false, 'Expected back button to be disabled');
+		});
 	});
 });
