@@ -289,6 +289,8 @@ Aggregate.prototype.calculate = function (data) {
 		return self.bottomValue;
 	}
 
+	self.numItems = 0;
+
 	len = data.length;
 
 	// Determine the initial value of the accumulator.  When there's an `init` property, prefer it.
@@ -324,7 +326,6 @@ Aggregate.prototype.calculate = function (data) {
 	for (i = i0; i < len; i += 1) {
 		try {
 			acc = self.calculateStep(acc, data[i].rowData, data, i);
-			console.log('Aggregate#calculate: acc = %O , numItems = %O', acc, self.numItems);
 		}
 		catch (e) {
 			log.error('Aggregate ' + self.name + ': Error occurred at data index [' + i + ']: ' + e.toString());
@@ -752,7 +753,6 @@ var SumAggregate = makeSubclass('SumAggregate', Aggregate, null, {
 SumAggregate.prototype.calculateStep = function (acc, next) {
 	var self = this;
 	var val = self.getRealValue(next[self.opts.fields[0]]);
-	console.log('SumAggregate#calculateStep: acc = %O , val = %O', acc, val);
 
 	if (val == null) {
 		return acc;
