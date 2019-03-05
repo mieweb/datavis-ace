@@ -8,7 +8,11 @@ const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = requ
 describe('Selection', function() {
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
-	const driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	let driver;
+
+	before(function () {
+		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	});
 
 	// We need to clear the local storage before each test.  However:
 	//
@@ -20,15 +24,19 @@ describe('Selection', function() {
 	//
 	// Therefore, we clear local storage after the test is done instead.  SO DON'T MOVE IT HERE!
 
-	beforeEach(async () => {
+	beforeEach(async function () {
 		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/default.html');
 	});
 
-	afterEach(async () => {
+	afterEach(async function () {
 		await driver.executeScript('window.localStorage.clear()');
 	});
 
-	after(() => driver && driver.quit());
+	after(function () {
+		if (driver != null) {
+			driver.quit();
+		}
+	});
 
 	it('is correct without selection', async function () {
 		let grid = new Grid(driver);

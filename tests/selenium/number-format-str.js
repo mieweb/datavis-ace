@@ -6,15 +6,41 @@ const child_process = require('child_process');
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
-describe('number formatting', function() {
+describe('Number Formatting', function() {
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
-	const driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
-	const grid = new Grid(driver);
+	let driver;
+	
+	before(function () {
+		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	});
 
-	before(() => driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/number-format-str.html'));
+	// We need to clear the local storage before each test.  However:
+	//
+	//   1. It can't be done before navigating to the page, because the browser starts on a data: URL
+	//   and you're not allowed to mess with local storage there.
+	//
+	//   2. It can't be done after navigating to the page, because some stuff is written there before
+	//   we get to run any code, which removes the prefs initialization.
+	//
+	// Therefore, we clear local storage after the test is done instead.  SO DON'T MOVE IT HERE!
+
+	beforeEach(async function () {
+		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/number-format-str.html');
+	});
+
+	afterEach(async function () {
+		await driver.executeScript('window.localStorage.clear()');
+	});
+
+	after(function () {
+		if (driver != null) {
+			driver.quit();
+		}
+	});
 
 	it('formats numbers represented as primitives', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('number-primitive-0', 0), '8443.374093398956');
 		assert.equal(await grid.getCell('number-primitive-1', 0), '8443');
@@ -26,6 +52,7 @@ describe('number formatting', function() {
 	});
 
 	it('formats numbers represented as numeral objects', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('number-numeral-0', 0), '8443.374093398956');
 		assert.equal(await grid.getCell('number-numeral-1', 0), '8443');
@@ -37,6 +64,7 @@ describe('number formatting', function() {
 	});
 
 	it('formats numbers represented as bignumber objects', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('number-bignumber-0', 0), '8443.374093398956');
 		assert.equal(await grid.getCell('number-bignumber-1', 0), '8443');
@@ -48,6 +76,7 @@ describe('number formatting', function() {
 	});
 
 	it('formats currency represented as primitives', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('currency-primitive-0', 0), '$8,443.37');
 		assert.equal(await grid.getCell('currency-primitive-1', 0), '$8443');
@@ -59,6 +88,7 @@ describe('number formatting', function() {
 	});
 
 	it('formats currency represented as numeral objects', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('currency-numeral-0', 0), '$8,443.37');
 		assert.equal(await grid.getCell('currency-numeral-1', 0), '$8443');
@@ -70,6 +100,7 @@ describe('number formatting', function() {
 	});
 
 	it('formats currency represented as bignumber objects', async function() {
+		const grid = new Grid(driver);
 		await grid.waitForIdle();
 		assert.equal(await grid.getCell('currency-bignumber-0', 0), '$8,443.37');
 		assert.equal(await grid.getCell('currency-bignumber-1', 0), '$8443');

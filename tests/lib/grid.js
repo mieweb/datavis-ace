@@ -112,7 +112,7 @@ class Grid {
 		const orderingOptions = await asyncFilter(validSortItems, async (elt) => await elt.getText() === ordering);
 		const end = new Date();
 
-		console.log(`Took ${end.valueOf() - start.valueOf()}ms to find sort menu item.`);
+		//console.log(`Took ${end.valueOf() - start.valueOf()}ms to find sort menu item.`);
 
 		if (orderingOptions.length !== 1) {
 			throw new Error(`Invalid ordering "${ordering}", found: ${JSON.stringify(await asyncMap(validSortItems, (elt) => elt.getText()))}`);

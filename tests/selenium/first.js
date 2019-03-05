@@ -9,7 +9,17 @@ const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = requ
 describe('Kitchen Sink', function() {
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
-	const driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	let driver;
+	
+	before(function () {
+		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	});
+
+	after(function () {
+		if (driver != null) {
+			driver.quit();
+		}
+	});
 
 	it('sorts', async function() {
 		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/default.html');
@@ -54,6 +64,4 @@ describe('Kitchen Sink', function() {
 			assert.equal(await grid.getCell(field, -1), min);
 		});
 	});
-
-	after(() => driver && driver.quit());
 });
