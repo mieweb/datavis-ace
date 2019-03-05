@@ -4,7 +4,9 @@
 
 ## Traditional Web Site
 
-* Run `make`.
+* Run `npm install` to get dependencies.
+* Run `npm run rollup` to build the JS file.
+* Run `npm run uglify` to compress the JS and CSS files.
 * Copy `dist/wcdatavis.js` and `dist/wcdatavis.css` to your server.
 * Include them like any other JS and CSS files.
 
@@ -36,6 +38,10 @@ The number one convention is to avoid making unnecessary diffs.  Follow the styl
 * Never use `this` unless within an event handler or something like that.  Always use `self` to refer to the instance that the method is being invoked on.
 * Use `makeSubclass` to create class hierarchies.  Toplevel classes should have `Object` as their superclass.
 * Use `self.super` to access methods in superclasses.
+
+## Testing
+
+DataVis uses Mocha + Selenium for browser testing.  Run `npm test` to run all available Selenium tests.  Since tests run in Node.js, please use any available JavaScript features you want (e.g. async/await, destructuring assignment, etc).
 
 # Tree Structure
 
