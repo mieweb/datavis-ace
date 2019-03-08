@@ -12,7 +12,7 @@ describe('Aggregate', function() {
 	let driver;
 	
 	before(function () {
-		driver = new Builder().forBrowser('firefox').setLoggingPrefs(logging).build();
+		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
 	});
 
 	after(function () {
@@ -202,54 +202,61 @@ describe('Aggregate', function() {
 			]
 		}, {
 			fun: 'min',
-			resultType: 'number',
 			tests: [
-				{ fields: ['int1'], results: intMins },
-				{ fields: ['int2'], results: intMins },
-				{ fields: ['int3'], results: intMins },
-				{ fields: ['int4'], results: intMins },
-				{ fields: ['int5'], results: intMins },
-				{ fields: ['int6'], results: intMins },
-				{ fields: ['int7'], results: intMins },
-				{ fields: ['int8'], results: intMins },
-				{ fields: ['int9'], results: intMins },
-				{ fields: ['float1'], results: floatMins, match: 'approximately' },
-				{ fields: ['float2'], results: floatMins, match: 'approximately' },
-				{ fields: ['float3'], results: floatMins, match: 'approximately', assertArgs: [0.01] },
-				{ fields: ['float4'], results: floatMins, match: 'approximately' },
-				{ fields: ['float5'], results: floatMins, match: 'approximately' },
-				{ fields: ['float6'], results: floatMins, match: 'approximately', assertArgs: [0.01] },
-				{ fields: ['float7'], results: floatMins, match: 'approximately' },
-				{ fields: ['float8'], results: floatMins, match: 'approximately' },
-				{ fields: ['float9'], results: floatMins, match: 'approximately', assertArgs: [0.01] }
+				{ fields: ['string1'], results: ['Hasinai', 'apiarists', 'Erotes', 'Karlsbad', 'Hydrachna', 'U', 'Leontina', 'biali', 'malpighian'] },
+				{ fields: ['int1'], results: intMins, resultType: 'number' },
+				{ fields: ['int2'], results: intMins, resultType: 'number' },
+				{ fields: ['int3'], results: intMins, resultType: 'number' },
+				{ fields: ['int4'], results: intMins, resultType: 'number' },
+				{ fields: ['int5'], results: intMins, resultType: 'number' },
+				{ fields: ['int6'], results: intMins, resultType: 'number' },
+				{ fields: ['int7'], results: intMins, resultType: 'number' },
+				{ fields: ['int8'], results: intMins, resultType: 'number' },
+				{ fields: ['int9'], results: intMins, resultType: 'number' },
+				{ fields: ['float1'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float2'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float3'], results: floatMins, resultType: 'number', match: 'approximately', assertArgs: [0.01] },
+				{ fields: ['float4'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float5'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float6'], results: floatMins, resultType: 'number', match: 'approximately', assertArgs: [0.01] },
+				{ fields: ['float7'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float8'], results: floatMins, resultType: 'number', match: 'approximately' },
+				{ fields: ['float9'], results: floatMins, resultType: 'number', match: 'approximately', assertArgs: [0.01] },
+				{ fields: ['date1'], results: ['September 15, 1913', 'November 30, 1901', 'December 3, 1964', 'December 12, 1902', 'March 19, 1911', 'January 29, 1933', 'April 5, 1945', 'May 18, 1935', 'May 10, 2089'] },
+				{ fields: ['date2'], results: ['September 15, 1913', 'November 30, 1901', 'December 3, 1964', 'December 12, 1902', 'March 19, 1911', 'January 29, 1933', 'April 5, 1945', 'May 18, 1935', 'May 10, 2089'] },
+				{ fields: ['date3'], results: ['September 15, 1913', 'November 30, 1901', 'December 3, 1964', 'December 12, 1902', 'March 19, 1911', 'January 29, 1933', 'April 5, 1945', 'May 18, 1935', 'May 10, 2089'] },
 			]
 		}, {
 			fun: 'max',
-			resultType: 'number',
 			tests: [
-				{ fields: ['int1'], results: intMaxs },
-				{ fields: ['int2'], results: intMaxs },
-				{ fields: ['int3'], results: intMaxs },
-				{ fields: ['int4'], results: intMaxs },
-				{ fields: ['int5'], results: intMaxs },
-				{ fields: ['int6'], results: intMaxs },
-				{ fields: ['int7'], results: intMaxs },
-				{ fields: ['int8'], results: intMaxs },
-				{ fields: ['int9'], results: intMaxs },
-				{ fields: ['float1'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float2'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float3'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float4'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float5'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float6'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float7'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float8'], results: floatMaxs, match: 'approximately' },
-				{ fields: ['float9'], results: floatMaxs, match: 'approximately' }
+				{ fields: ['string1'], results: ['well-enacted', 'zigzagged', 'uneligibility', 'wegotism', 'yellow-tailed', 'unwarier', 'solifidian', 'wolfskin', 'malpighian'] },
+				{ fields: ['int1'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int2'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int3'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int4'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int5'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int6'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int7'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int8'], results: intMaxs, resultType: 'number' },
+				{ fields: ['int9'], results: intMaxs, resultType: 'number' },
+				{ fields: ['float1'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float2'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float3'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float4'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float5'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float6'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float7'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float8'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['float9'], results: floatMaxs, resultType: 'number', match: 'approximately' },
+				{ fields: ['date1'], results: ['March 13, 2070', 'May 20, 2077', 'April 11, 2061', 'June 24, 2086', 'May 12, 2080', 'May 19, 2090', 'January 10, 2094', 'January 19, 2047', 'May 10, 2089'] },
+				{ fields: ['date2'], results: ['March 13, 2070', 'May 20, 2077', 'April 11, 2061', 'June 24, 2086', 'May 12, 2080', 'May 19, 2090', 'January 10, 2094', 'January 19, 2047', 'May 10, 2089'] },
+				{ fields: ['date3'], results: ['March 13, 2070', 'May 20, 2077', 'April 11, 2061', 'June 24, 2086', 'May 12, 2080', 'May 19, 2090', 'January 10, 2094', 'January 19, 2047', 'May 10, 2089'] },
 			]
 		}];
 
 		_.each(ts, function ({fun, resultType = 'string', match = 'equal', tests}) {
 			let outerMatch = match;
+			let outerResultType = resultType;
 			describe(fun, function () {
 				before(async function () {
 					await grid.clearAggregates();
@@ -257,7 +264,7 @@ describe('Aggregate', function() {
 					await grid.addAggregate(fun);
 					await grid.waitForIdle();
 				});
-				_.each(tests, function ({fields, match = outerMatch, message, assertArgs = [], results}) {
+				_.each(tests, function ({fields, resultType = outerResultType, match = outerMatch, message, assertArgs = [], results}) {
 					if (fields != null) {
 						it(JSON.stringify(fields), async function () {
 							await Promise.all(_.map(fields, async function (field) {
