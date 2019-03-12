@@ -989,7 +989,7 @@ GroupControl.prototype.draw = function (parent) {
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
+	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
 		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
 	});
@@ -1120,7 +1120,7 @@ PivotControl.prototype.draw = function (parent) {
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
+	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
 		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
 	});
@@ -1228,7 +1228,7 @@ AggregateControl.prototype.draw = function (parent) {
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
+	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
 		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
 	});
@@ -1542,7 +1542,7 @@ FilterControl.prototype.draw = function (parent) {
 	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>').appendTo(dropdownContainer);
+	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
 		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
 	});
