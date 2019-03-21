@@ -3,6 +3,7 @@ import jQuery from 'jquery';
 
 import {
 	debug,
+	deepCopy,
 	deepDefaults,
 	determineColumns,
 	fontAwesome,
@@ -17,9 +18,10 @@ import {
 
 import './jquery.js';
 import {AGGREGATE_REGISTRY} from './aggregates.js';
-import {View} from './view.js';
+import {View, GROUP_FUNCTION_REGISTRY} from './view.js';
 import {Grid} from './grid.js';
 import {GridFilterSet} from './grid_filter.js';
+import {GroupFunWin} from './group_fun_win.js';
 
 /*
  * Grid controls are the rounded boxes that appear between the toolbar and the grid.  They allow
@@ -61,7 +63,9 @@ import {GridFilterSet} from './grid_filter.js';
  *
  * @property {GridControl} control
  *
- * @property {string} field
+ * @property {string|object} spec
+ * If a string, simply the field to add.  If an object, should contain a `field` property along with
+ * anything else that this instance needs to carry.
  *
  * @property {string} displayText
  *
@@ -79,11 +83,19 @@ import {GridFilterSet} from './grid_filter.js';
  * A button that is used to remove the control field.
  */
 
-var GridControlField = makeSubclass('GridControlField', Object, function (control, field, displayText, colConfig, opts) {
+var GridControlField = makeSubclass('GridControlField', Object, function (control, spec, displayText, colConfig, opts) {
 	var self = this;
 
 	self.control = control;
-	self.field = field;
+
+	if (typeof spec === 'string') {
+		self.field = {
+			field: spec
+		};
+	}
+	else {
+		self.field = deepCopy(spec);
+	}
 	self.displayText = displayText;
 	self.colConfig = colConfig;
 	self.opts = opts;
@@ -111,9 +123,12 @@ GridControlField.prototype.draw = function () {
 		})
 	;
 
+	self.ui.fieldLabel = jQuery('<span>')
+		.text(self.displayText || (self.colConfig && self.colConfig.displayText) || self.field.field);
+
 	self.ui.root = jQuery('<div>', { 'class': 'wcdv_field' })
 		.append(self.ui.removeButton)
-		.append(jQuery('<span>').text(self.displayText || (self.colConfig && self.colConfig.displayText) || self.field))
+		.append(self.ui.fieldLabel)
 	;
 
 	self._addErrorIndicator(self.ui.root, 'wcdv_aggregate_control_error');
@@ -179,6 +194,16 @@ GridControlField.prototype._addErrorIndicator = function (parent, cls) {
 		.appendTo(parent);
 };
 
+// #getSpec {{{2
+
+GridControlField.prototype.getSpec = function () {
+	var self = this;
+
+	return {
+		field: self.field.field
+	};
+};
+
 // GroupControlField {{{1
 
 // Constructor {{{2
@@ -189,6 +214,76 @@ GridControlField.prototype._addErrorIndicator = function (parent, cls) {
  */
 
 var GroupControlField = makeSubclass('GroupControlField', GridControlField);
+
+// #draw {{{2
+
+GroupControlField.prototype.draw = function () {
+	var self = this;
+
+	self.super.draw();
+
+	// Let's find out what group functions there are that work on the type of the field that we
+	// represent, e.g. if we are a date, find out what group functions work on dates.
+
+	var applicableGroupFuns = GROUP_FUNCTION_REGISTRY.filter(function (gf) {
+		var fti = self.control.typeInfo.get(self.field.field);
+		if (fti == null) {
+			return false;
+		}
+		return gf.allowedTypes.indexOf(fti.type) >= 0;
+	});
+
+	if (applicableGroupFuns.size() > 0) {
+		// When there are some group functions for the type of this field, we need to create a window to
+		// choose between them, plus a button to show the window.
+
+		self.ui.groupFunWin = new GroupFunWin(applicableGroupFuns, function (groupFunName) {
+			if (groupFunName != null) {
+				if (groupFunName === 'none') {
+					self.field.fun = null;
+					self.ui.fieldLabel.text(self.field.field);
+				}
+				else {
+					self.field.fun = groupFunName;
+					var gf = GROUP_FUNCTION_REGISTRY.get(self.field.fun);
+					self.ui.fieldLabel.text(self.field.field + ' (' + gf.displayName + ')');
+				}
+				self.control.updateView();
+			}
+		});
+
+		self.ui.groupFunWinBtn = jQuery('<button>', {
+			'type': 'button',
+			title: 'Show functions available for this field'
+		})
+			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
+			.on('click', function () {
+				self.ui.groupFunWin.show(self.field.fun || 'none');
+			})
+			.append(fontAwesome('fa-bolt'))
+			.appendTo(self.ui.root)
+		;
+
+		if (self.field.fun != null) {
+			var gf = GROUP_FUNCTION_REGISTRY.get(self.field.fun);
+			self.ui.fieldLabel.text(self.field.field + ' (' + gf.displayName + ')');
+		}
+		self.ui.fieldLabel.after(self.ui.groupFunWinBtn);
+	}
+
+	return self.ui.root;
+};
+
+// #getSpec {{{2
+
+GroupControlField.prototype.getSpec = function () {
+	var self = this;
+
+	return {
+		field: self.field.field,
+		fun: self.field.fun
+	}
+};
 
 // PivotControlField {{{1
 
@@ -220,7 +315,7 @@ FilterControlField.prototype.draw = function () {
 	self.ui.filterContainer = jQuery('<div>')
 		.addClass('wcdv_filter_control_filter_container')
 		.appendTo(self.ui.root);
-	self.control.gfs.add(self.field, self.ui.filterContainer, {
+	self.control.gfs.add(self.field.field, self.ui.filterContainer, {
 		filterType: self.colConfig && self.colConfig.filter
 	});
 
@@ -259,7 +354,7 @@ AggregateControlField.prototype.draw = function () {
 
 	self._addErrorIndicator(self.ui.root, 'wcdv_aggregate_control_error');
 
-	var aggDefn = AGGREGATE_REGISTRY.get(self.field);
+	var aggDefn = AGGREGATE_REGISTRY.get(self.field.field);
 
 	self.ui.isHiddenCheckbox = jQuery('<input>', {
 		'type': 'checkbox'
@@ -437,7 +532,7 @@ AggregateControlField.prototype.getInfo = function () {
 	var self = this;
 
 	return {
-		fun: self.field,
+		fun: self.field.field,
 		name: null,
 		fields: _.map(self.fieldDropdowns, function (dropdown) {
 			return dropdown.val();
@@ -599,18 +694,39 @@ GridControl.prototype.makeClearButton = function (target) {
  */
 
 GridControl.prototype.addField = function (field, displayText, opts, controlFieldOpts) {
-	var self = this;
+	var self = this
+		, args = Array.prototype.slice.call(arguments)
+		, fieldName;
 
-	opts = opts || {};
-
-	_.defaults(opts, {
+	opts = deepDefaults(opts, {
 		updateView: true,
 		silent: false,
 		openControls: false
 	});
 
-	if (field == null || field === '' || (self.disableUsedItems && self.fields.indexOf(field) >= 0)) {
+	if (field == null || field === '') {
 		return;
+	}
+
+	fieldName = typeof field === 'string' ? field : field.field;
+
+	if (fieldName == null || fieldName === '' || (self.disableUsedItems && self.fields.indexOf(fieldName) >= 0)) {
+		return;
+	}
+
+	// Make sure we have access to typeinfo before continuing.  The typeinfo is used for:
+	//
+	//   1. Making sure aggregates are only applied to certain fields.
+	//   2. Showing group/pivot functions for applicable fields only.
+
+	if (self.typeInfo == null) {
+		return self.view.getTypeInfo(function (ok, typeInfo) {
+			if (!ok) {
+				return;
+			}
+			self.typeInfo = typeInfo;
+			return self.addField.apply(self, args);
+		});
 	}
 
 	if (opts.openControls) {
@@ -620,25 +736,25 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 	// Check to see if we are supposed to update the 'canHide' property of the column config.  Since
 	// we're adding the field, we mark it so that the field can't be hidden.
 
-	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(field)) {
-		self.colConfig.get(field).isHidden = false;
-		self.colConfig.get(field).canHide = false;
+	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(fieldName)) {
+		self.colConfig.get(fieldName).isHidden = false;
+		self.colConfig.get(fieldName).canHide = false;
 	}
 
-	var cf = new self.controlFieldCtor(self, field, displayText, self.useColConfig ? self.colConfig.get(field) : null, controlFieldOpts);
+	var cf = new self.controlFieldCtor(self, field, displayText, self.useColConfig ? self.colConfig.get(fieldName) : null, controlFieldOpts);
 
 	self.controlFields.push(cf);
 
-	if (self.controlFieldsByField[field] == null) {
-		self.controlFieldsByField[field] = [];
+	if (self.controlFieldsByField[fieldName] == null) {
+		self.controlFieldsByField[fieldName] = [];
 	}
-	self.controlFieldsByField[field].push(cf);
+	self.controlFieldsByField[fieldName].push(cf);
 
 	self.ui.clearBtn.show();
 
 	var li = jQuery('<li>')
 		.attr({
-			'data-wcdv-field': field,
+			'data-wcdv-field': fieldName,
 			'data-wcdv-draggable-origin': 'GRID_CONTROL_FIELD'
 		});
 
@@ -651,14 +767,14 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 
 	if (self.disableUsedItems) {
 		self.ui.dropdown.find('option').filter(function () {
-			return jQuery(this).val() === field;
+			return jQuery(this).val() === fieldName;
 		}).prop('disabled', true);
 	}
 
 	self.ui.dropdown.val('');
 
 	if (self.disableUsedItems) {
-		self.fields.push(field); // Add it to the fields array.
+		self.fields.push(fieldName); // Add it to the fields array.
 	}
 
 	if (typeof self.updateView === 'function' && opts.updateView) {
@@ -666,7 +782,7 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 	}
 
 	if (!opts.silent) {
-		self.fire(GridControl.events.fieldAdded, null, field, self.fields);
+		self.fire('fieldAdded', null, fieldName, self.fields);
 	}
 
 	return cf;
@@ -1012,15 +1128,12 @@ GroupControl.prototype.draw = function (parent) {
 
 GroupControl.prototype.updateView = function () {
 	var self = this;
+	var fieldNames = _.map(self.controlFields, function (cf) {
+		return cf.getSpec();
+	});
 
-	var fields = self.ui.fields.children('li').map(function (index, elt) {
-		return jQuery(elt).attr('data-wcdv-field');
-	}).get();
-
-	debug.info('GRID // GROUP CONTROL', 'Setting group fields to: %O', fields);
-
-	if (fields.length > 0) {
-		self.view.setGroup({fieldNames: fields}, {
+	if (fieldNames.length > 0) {
+		self.view.setGroup({fieldNames: fieldNames}, {
 			dontSendEventTo: self
 		});
 	}
@@ -1440,25 +1553,6 @@ AggregateControl.prototype.updateFieldDropdowns = function () {
 			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(f.dropdown);
 		});
 	});
-};
-
-// #addField {{{2
-
-AggregateControl.prototype.addField = function () {
-	var self = this;
-	var args = Array.prototype.slice.call(arguments);
-
-	if (self.typeInfo == null) {
-		return self.view.getTypeInfo(function (ok, typeInfo) {
-			if (!ok) {
-				return;
-			}
-			self.typeInfo = typeInfo;
-			return self.addField.apply(self, args);
-		});
-	}
-
-	self.super.addField.apply(self, args);
 };
 
 // #toString {{{2

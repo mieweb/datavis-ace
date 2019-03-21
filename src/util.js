@@ -139,6 +139,19 @@ export var getComparisonFn = (function () {
 	cmpFn.time = cmpFn.date;
 	cmpFn.datetime = cmpFn.date;
 
+	cmpFn.day_of_week = function (a, b) {
+		var trans = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6};
+
+		var a_num = trans[a];
+		var b_num = trans[b];
+
+		return a_num == null ? -1
+			: b_num == null ? 1
+			: a_num < b_num ? -1
+			: a_num > b_num ? 1
+			: 0;
+	};
+
 	// Strings, numbers, and currency are stored as JavaScript primitives, so using the builtin
 	// operators to compare them is OK.
 
@@ -984,6 +997,36 @@ export function setPropDef() {
 	if (o[args[args.length - 1]] === undefined) {
 		o[args[args.length - 1]] = x;
 	}
+}
+
+/**
+ * Copy properties from one object to another.
+ *
+ * @param {object} src
+ * Where to copy properties from.
+ *
+ * @param {object} dest
+ * Where to copy properties to.
+ *
+ * @param {string[]} props
+ * Array of properties to copy.
+ *
+ * @param {object} opts
+ * Additional options.
+ *
+ * @param {boolean} [opts.followPrototype=false]
+ * If true, follow the prototype chain; the default behavior is that `src` must have its own
+ * property with the specified name for it to be copied.
+ */
+
+export function copyProps(src, dest, props, opts) {
+	opts = opts || {};
+
+	_.each(props, function (p) {
+		if (src.hasOwnProperty(p) || (opts.followPrototype && p in src)) {
+			dest[p] = src[p];
+		}
+	});
 }
 
 /**

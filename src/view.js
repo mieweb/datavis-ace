@@ -9,6 +9,7 @@ import {
 	arrayEqual,
 	car,
 	cdr,
+	copyProps,
 	debug,
 	deepCopy,
 	deepDefaults,
@@ -24,6 +25,7 @@ import {
 	Lock,
 	log,
 	logAsync,
+	makeSubclass,
 	mergeSort4,
 	mixinEventHandling,
 	objFromArray,
@@ -107,18 +109,44 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
 
 /**
  * @typedef {object} View~GroupSpec
- * An object telling how to group the data.
+ * Specifies how to group the data.
  *
- * @property {string[]} fieldNames
- * List of the fields to group by.
+ * @property {Array.<View~GroupSpecElt|string>} fieldNames
+ * List of the fields to group by.  When an element is a string, that's the same as being an object
+ * with only the `field` property, i.e. `['foo'] = [{field: 'foo'}]`.
+ *
+ * @property {Array.<Array.<string>>} addRowVals
+ * Additional rowvals to add, even if they don't exist in the data naturally.
+ */
+
+/**
+ * @typedef {object} View~GroupSpecElt
+ *
+ * @property {string} field
+ * Name of the field to use for grouping.
+ *
+ * @property {function} [fun]
+ * Name of a {@link GroupFunction} from the {@link GROUP_FUNCTION_REGISTRY} to change how we group
+ * by this field.
  */
 
 /**
  * @typedef {object} View~PivotSpec
  * An object telling how to pivot the data.
  *
- * @property {string[]} fieldNames
- * List of the fields to pivot by.
+ * @property {Array.<object|string>} fieldNames
+ * List of the fields to pivot by.  When an element is a string, that's the same as being an object
+ * with only the `field` property, i.e. `['foo'] = [{field: 'foo'}]`.
+ *
+ * @property {string} fieldNames[].field
+ * Name of the field to use for pivotting.
+ *
+ * @property {function} [fieldNames[].fun]
+ * Name of a {@link GroupFunction} from the {@link GROUP_FUNCTION_REGISTRY} to change how we pivot
+ * by this field.
+ *
+ * @property {Array.<Array.<string>>} addColVals
+ * Additional colvals to add, even if they don't exist in the data naturally.
  */
 
 /**
@@ -195,13 +223,13 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  *
  * @property {Source} source
  *
- * @property {Object} sortSpec
+ * @property {View~FilterSpec} filterSpec
  *
- * @property {Object} groupSpec
+ * @property {View~SortSpec} sortSpec
  *
- * @property {Array.<string>} groupSpec.fieldNames
+ * @property {View~GroupSpec} groupSpec
  *
- * @property {Function} groupSpec.aggregate
+ * @property {View~PivotSpec} pivotSpec
  *
  * @property {Timing} timing For keeping track of how long it takes to do things in the view.
  */
@@ -982,6 +1010,15 @@ View.prototype.sort = function (cont) {
 				if (spec.values) {
 					sortAlgorithm = 'pigeonHole';
 				}
+				else if (self.data.groupSpec[spec.groupFieldIndex].fun != null) {
+					// The values that we're sorting came from a function applied to the value of the group
+					// field in the row, e.g. "Day of Week."  Therefore, we can't sort them based on the type
+					// of the group field, e.g. date.
+
+					fti = {
+						type: GROUP_FUNCTION_REGISTRY.get(self.data.groupSpec[spec.groupFieldIndex].fun).sortType
+					};
+				}
 				else {
 					fti = self.typeInfo.get(self.data.groupFields[spec.groupFieldIndex]);
 				}
@@ -1067,6 +1104,15 @@ View.prototype.sort = function (cont) {
 
 				if (spec.values) {
 					sortAlgorithm = 'pigeonHole';
+				}
+				else if (self.data.groupSpec[spec.groupFieldIndex].fun != null) {
+					// The values that we're sorting came from a function applied to the value of the group
+					// field in the row, e.g. "Day of Week."  Therefore, we can't sort them based on the type
+					// of the group field, e.g. date.
+
+					fti = {
+						type: GROUP_FUNCTION_REGISTRY.get(self.data.groupSpec[spec.groupFieldIndex].fun).sortType
+					};
 				}
 				else {
 					fti = self.typeInfo.get(self.data.groupFields[spec.groupFieldIndex]);
@@ -1503,8 +1549,8 @@ View.prototype.filter = function (cont) {
 			return false;
 		}
 
-		var isMoment = window.moment && window.moment.isMoment(datum);
-		var isNumeral = window.numeral && window.numeral.isNumeral(datum);
+		var isMoment = moment.isMoment(datum);
+		var isNumeral = numeral.isNumeral(datum);
 		var isString = typeof datum === 'string';
 		var isNumber = typeof datum === 'number';
 
@@ -1744,6 +1790,21 @@ View.prototype.setGroup = function (spec, opts, cont) {
 		self.clearPivot(opts);
 	}
 
+	if (spec != null) {
+		if (!_.isArray(spec.fieldNames)) {
+			log.warn('VIEW (' + self.name + ') // SET GROUP', '`spec.fieldNames` is not an array');
+			spec.fieldNames = [];
+		}
+
+		// Convert the `fieldNames` property elements from strings to objects.
+
+		for (var i = 0; i < spec.fieldNames.length; i += 1) {
+			if (typeof spec.fieldNames[i] === 'string') {
+				spec.fieldNames[i] = { field: spec.fieldNames[i] };
+			}
+		}
+	}
+
 	/*
 	if (spec != null) {
 		// Make sure we have typeInfo so we can perform the next check.
@@ -1853,6 +1914,10 @@ View.prototype.clearGroup = function (opts) {
 
 /**
  * @typedef {object} metadataNode
+ * Node within the tree used to store grouping metadata for detailed group output.  This structure
+ * drives the display and expand/collapse behavior of the UI.  The root is a fake metadataNode (does
+ * not correspond to anything actually in the data) with `id = 0` and all toplevel groups are
+ * children of the root.  Every path through the tree represents a rowVal.
  *
  * @property {number} id
  * A unique identifier for this node.
@@ -1872,6 +1937,18 @@ View.prototype.clearGroup = function (opts) {
  * @property {Array} rows
  * All the rows in the rowVal this rowValElt completes.  Only in leaf nodes.
  *
+ * @property {string} rowValElt
+ * The part of the current rowVal represented by the node at the current depth in the tree.
+ *
+ * ```
+ * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
+ * tree = <ORIGIN>
+ *       /        \
+ *      A1        A2 <- rowValElt = A2
+ *     /  \      /  \
+ *    B1  B2    B1  B2 <- rowValElt = B2
+ * ```
+ *
  * @property {number} rowValIndex
  * What rowVal this rowValElt completes. Only in leaf nodes.  Example:
  *
@@ -1884,6 +1961,14 @@ View.prototype.clearGroup = function (opts) {
  *    B1  B2    B1  B2
  *    0   1     2   3   <- rowValIndex
  * ```
+ *
+ * @property {object} rowValCell
+ *
+ * @property {string} groupField
+ * Name of the field that we're grouping by at this level.
+ *
+ * @property {View~GroupSpecElt} groupSpec
+ * The full group spec for the grouping done at this level.
  */
 
 /**
@@ -1893,7 +1978,7 @@ View.prototype.clearGroup = function (opts) {
 
 View.prototype.group = function () {
 	var self = this
-		, groupFields = []
+		, finalGroupSpec = []
 		, newData
 		, rowVals;
 
@@ -1914,25 +1999,25 @@ View.prototype.group = function () {
 	// Go through every group field and make sure it exists in the source.  If it doesn't, we use an
 	// event to notify the user interface about it so a warning can be shown.
 
-	_.each(self.groupSpec.fieldNames, function (field, fieldIdx) {
-		var fti = self.typeInfo.get(field);
+	_.each(self.groupSpec.fieldNames, function (fieldObj) {
+		var fti = self.typeInfo.get(fieldObj.field);
 		if (fti == null) {
-			log.error('Group field does not exist in the source: ' + field);
-			self.fire('invalidGroupField', null, field);
+			log.error('Group field does not exist in the source: ' + fieldObj.field);
+			self.fire('invalidGroupField', null, fieldObj.field);
 		}
 		else if (fti.type == null) {
 			log.error('Unable to group by field "%s": type is undefined');
 		}
 		else {
 			self._maybeDecode('GROUP', fti);
-			groupFields.push(field);
+			finalGroupSpec.push(fieldObj);
 		}
 	});
 
 	// It's possible now that we've eliminated *all* the group fields because they're invalid; if
 	// that's the case, we just abort as if no grouping was requested at all.
 
-	if (groupFields.length === 0) {
+	if (finalGroupSpec.length === 0) {
 		return false;
 	}
 
@@ -1945,7 +2030,7 @@ View.prototype.group = function () {
 
 	var origKeys = []; // groupFieldIndex[] → natRep → value
 
-	// buildRowVals(groupFields) => rowVals
+	// buildRowVals(addRowVals) => rowVals {{{3
 	//
 	//   Create the list of the native representations of all combinations of the values of the group
 	//   fields.  Here's a simple example with strings, where the natrep transform is identity.
@@ -1961,7 +2046,7 @@ View.prototype.group = function () {
 	//   As a side effect, the `origKeys[groupFieldIndex]` object is updated with how to reverse the
 	//   natrep transform.  This will be used later.
 
-	var buildRowVals = function (groupFields, addRowVals) {
+	var buildRowVals = function (addRowVals) {
 		var rowVals = []
 			, rowVal
 			, row
@@ -1969,16 +2054,24 @@ View.prototype.group = function () {
 			, groupField
 			, groupFieldIndex
 			, value
-			, natRep;
+			, natRep
+			, groupFun;
 
 		for (rowIndex = 0; rowIndex < self.data.data.length; rowIndex += 1) {
 			row = self.data.data[rowIndex];
 			rowVal = [];
-			for (groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
-				groupField = groupFields[groupFieldIndex];
-				value = row.rowData[groupField].value;
-				natRep = getNatRep(value);
-				origKeys[groupFieldIndex][natRep] = value;
+			for (groupFieldIndex = 0; groupFieldIndex < finalGroupSpec.length; groupFieldIndex += 1) {
+				groupField = finalGroupSpec[groupFieldIndex];
+				value = row.rowData[groupField.field].value;
+				if (groupField.fun == null) {
+					natRep = getNatRep(value);
+					origKeys[groupFieldIndex][natRep] = value;
+				}
+				else {
+					groupFun = GROUP_FUNCTION_REGISTRY.get(groupField.fun);
+					natRep = groupFun.applyValueFun(value);
+					origKeys[groupFieldIndex][natRep] = natRep;
+				}
 				rowVal[groupFieldIndex] = natRep;
 			}
 			if (_.findIndex(rowVals, function (x) {
@@ -1992,9 +2085,9 @@ View.prototype.group = function () {
 			for (var arvIndex = 0; arvIndex < addRowVals.length; arvIndex += 1) {
 				rowVal = addRowVals[arvIndex];
 
-				if (rowVal.length != groupFields.length) {
+				if (rowVal.length != finalGroupSpec.length) {
 					log.error('Unable to add rowVal %s when grouping by %s: the lengths must be the same',
-						JSON.stringify(rowVal), JSON.stringify(groupFields));
+						JSON.stringify(rowVal), JSON.stringify(finalGroupSpec));
 					continue;
 				}
 
@@ -2020,13 +2113,18 @@ View.prototype.group = function () {
 		return rowVals;
 	};
 
+	// buildData(data, rowVals) => ... {{{3
+
 	var buildData = function (data, rowVals) {
 		var rowVal
 			, rowValIndex
 			, metadataLeaf
 			, row
 			, rowIndex
-			, groupFieldIndex;
+			, groupField
+			, groupFieldIndex
+			, value
+			, groupFun;
 
 		var result = new Array(rowVals.length);
 		var metadataTree = {
@@ -2065,10 +2163,18 @@ View.prototype.group = function () {
 
 		for (rowIndex = 0; rowIndex < data.length; rowIndex += 1) {
 			row = data[rowIndex];
-			rowVal = new Array(groupFields.length);
+			rowVal = new Array(finalGroupSpec.length);
 
-			for (groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
-				rowVal[groupFieldIndex] = getNatRep(row.rowData[groupFields[groupFieldIndex]].value);
+			for (groupFieldIndex = 0; groupFieldIndex < finalGroupSpec.length; groupFieldIndex += 1) {
+				groupField = finalGroupSpec[groupFieldIndex];
+				value = row.rowData[groupField.field].value;
+				if (groupField.fun == null) {
+					rowVal[groupFieldIndex] = getNatRep(value);
+				}
+				else {
+					groupFun = GROUP_FUNCTION_REGISTRY.get(groupField.fun);
+					rowVal[groupFieldIndex] = groupFun.applyValueFun(value);
+				}
 			}
 
 			metadataLeaf = getProp(metadataTree, 'children', interleaveWith(rowVal, 'children'));
@@ -2111,7 +2217,8 @@ View.prototype.group = function () {
 
 			if (depth > 0) {
 				node.groupFieldIndex = depth - 1;
-				node.groupField = groupFields[node.groupFieldIndex];
+				node.groupField = finalGroupSpec[node.groupFieldIndex].field;
+				node.groupSpec = finalGroupSpec[node.groupFieldIndex];
 				if (node.rows != null && node.rows.length > 0) {
 					node.rowValCell = node.rows[0].rowData[node.groupField];
 				}
@@ -2126,13 +2233,15 @@ View.prototype.group = function () {
 		};
 	};
 
+	// convertRowVals(rowVals) => rowVals (no longer natRep) {{{3
+
 	var convertRowVals = function (rowVals) {
 		var result = [];
 
 		for (var rowValIndex = 0; rowValIndex < rowVals.length; rowValIndex += 1) {
 			var rowVal = rowVals[rowValIndex];
 			result[rowValIndex] = [];
-			for (var groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
+			for (var groupFieldIndex = 0; groupFieldIndex < finalGroupSpec.length; groupFieldIndex += 1) {
 				result[rowValIndex][groupFieldIndex] = origKeys[groupFieldIndex][rowVal[groupFieldIndex]];
 			}
 		}
@@ -2140,21 +2249,24 @@ View.prototype.group = function () {
 		return result;
 	};
 
-	for (var groupFieldIndex = 0; groupFieldIndex < groupFields.length; groupFieldIndex += 1) {
+	// }}}3
+
+	for (var groupFieldIndex = 0; groupFieldIndex < finalGroupSpec.length; groupFieldIndex += 1) {
 		origKeys[groupFieldIndex] = {};
 	}
 
-	rowVals = buildRowVals(groupFields, self.groupSpec.addRowVals);
+	rowVals = buildRowVals(self.groupSpec.addRowVals);
 	newData = buildData(self.data.data, rowVals);
 	rowVals = convertRowVals(rowVals);
 
-	debug.info('VIEW (' + self.name + ') // GROUP', 'Group Fields: %O', groupFields);
+	debug.info('VIEW (' + self.name + ') // GROUP', 'Group Spec: %O', finalGroupSpec);
 	debug.info('VIEW (' + self.name + ') // GROUP', 'Row Vals: %O', rowVals);
 	debug.info('VIEW (' + self.name + ') // GROUP', 'New Data: %O', newData.data);
 
 	self.data.isPlain = false;
 	self.data.isGroup = true;
-	self.data.groupFields = groupFields;
+	self.data.groupFields = _.pluck(finalGroupSpec, 'field');
+	self.data.groupSpec = finalGroupSpec;
 	self.data.rowVals = rowVals;
 	self.data.data = newData.data;
 	self.data.groupMetadata = newData.metadata;
@@ -3197,8 +3309,125 @@ View.prototype.prime = function (cont) {
 	});
 };
 
+// GroupFunction {{{1
+
+/**
+ * Represents a function that can be applied to the value of a field when grouping or pivotting.
+ *
+ * @param {object} spec
+ * @param {string} spec.displayName
+ * @param {Array.<string>} [spec.allowedTypes]
+ * @param {function} [spec.valueFun]
+ * @param {string} [spec.resultType="string"]
+ * @param {string} [spec.sortType=spec.resultType]
+ */
+
+var GroupFunction = makeSubclass('GroupFunction', Object, function (spec) {
+	var self = this;
+
+	spec = deepDefaults(spec, {});
+
+	if (spec.displayName == null || typeof spec.displayName !== 'string') {
+		throw new Error('Call Error: `displayName` must be a string');
+	}
+
+	if (spec.allowedTypes != null && !_.isArray(spec.allowedTypes)) {
+		throw new Error('Call Error: `allowedTypes` must be null or an array');
+	}
+
+	if (spec.valueFun != null && typeof spec.valueFun !== 'function') {
+		throw new Error('Call Error: `valueFun` must be null or a function');
+	}
+
+	if (spec.resultType != null && typeof spec.resultType !== 'string') {
+		throw new Error('Call Error: `resultType` must be null or a string');
+	}
+
+	if (spec.sortType != null && typeof spec.sortType !== 'string') {
+		throw new Error('Call Error: `sortType` must be null or a string');
+	}
+
+	spec = deepDefaults(spec, {
+		resultType: 'string'
+	});
+
+	if (spec.sortType == null) {
+		spec.sortType = spec.resultType;
+	}
+
+	copyProps(spec, self, ['displayName', 'allowedTypes', 'valueFun', 'resultType', 'sortType']);
+});
+
+// #applyValueFun {{{2
+
+GroupFunction.prototype.applyValueFun = function (x) {
+	return this.valueFun ? this.valueFun(x) : x;
+};
+
+// Group Function Registry {{{1
+
+var GROUP_FUNCTION_REGISTRY = new OrdMap();
+
+GROUP_FUNCTION_REGISTRY.set('day_of_week', new GroupFunction({
+	displayName: 'Day of Week',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('ddd');
+	},
+	sortType: 'day_of_week'
+}));
+
+GROUP_FUNCTION_REGISTRY.set('year', new GroupFunction({
+	displayName: 'Year',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY');
+	}
+}));
+
+GROUP_FUNCTION_REGISTRY.set('year_and_quarter', new GroupFunction({
+	displayName: 'Year & Quarter',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY [Q]Q');
+	}
+}));
+
+GROUP_FUNCTION_REGISTRY.set('year_and_month', new GroupFunction({
+	displayName: 'Year & Month',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY MMM');
+	}
+}));
+
 // Exports {{{1
 
 export {
-	View
+	View,
+	GROUP_FUNCTION_REGISTRY
 };

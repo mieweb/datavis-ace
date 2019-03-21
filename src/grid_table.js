@@ -24,7 +24,7 @@ import {
 import {OrdMap} from './ordmap.js';
 import {AggregateInfo} from './aggregates.js';
 import {GridRenderer} from './grid_renderer.js';
-import {View} from './view.js';
+import {View, GROUP_FUNCTION_REGISTRY} from './view.js';
 import {Grid} from './grid.js';
 
 // Csv {{{1
@@ -1284,9 +1284,17 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 
 	_.each(data.rowVals[groupNum], function (rowVal, rowValIndex) {
 		var groupField = data.groupFields[rowValIndex];
+		var groupSpec = data.groupSpec[rowValIndex];
 		var fcc = self.colConfig.get(groupField) || {};
+		var t = self.typeInfo.get(groupField);
 
-		rowVal = format(fcc, self.typeInfo.get(groupField), rowVal);
+		if (groupSpec.fun != null) {
+			t = {
+				type: GROUP_FUNCTION_REGISTRY.get(groupSpec.fun).resultType
+			};
+		}
+
+		rowVal = format(fcc, t, rowVal);
 
 		var th = jQuery('<th>');
 		var span = jQuery('<span>').addClass('wcdv_heading_title');
@@ -3146,6 +3154,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 			var expandBtn;
 			var infoText, infoTextSpan;
 			var fcc;
+			var t, v;
 			var rowValElt, rowValEltSpan, rowValEltTh;
 			var showMoreTd;
 			var colSpan;
@@ -3209,8 +3218,17 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 				}
 
 				fcc = self.colConfig.get(childMetadataNode.groupField) || {};
+				t = self.typeInfo.get(childMetadataNode.groupField);
+				v = childMetadataNode.rowValCell || childMetadataNode.rowValElt;
 
-				rowValElt = format(fcc, self.typeInfo.get(childMetadataNode.groupField), childMetadataNode.rowValCell || childMetadataNode.rowValElt);
+				if (childMetadataNode.groupSpec.fun != null) {
+					t = {
+						type: GROUP_FUNCTION_REGISTRY.get(childMetadataNode.groupSpec.fun).resultType
+					};
+					v = childMetadataNode.rowValElt;
+				}
+
+				rowValElt = format(fcc, t, v);
 				rowValEltSpan = jQuery('<span>');
 
 				if (rowValElt instanceof Element || rowValElt instanceof jQuery) {
