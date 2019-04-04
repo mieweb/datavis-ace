@@ -24,6 +24,11 @@ import {
 import {View} from './view.js';
 import {Prefs} from './prefs.js';
 import {AggregateInfo} from './aggregates';
+import {
+	GraphRenderer,
+	GraphRendererGoogle,
+	GraphRendererJit,
+} from './graph_renderer.js';
 
 // Graph {{{1
 
@@ -90,6 +95,7 @@ var Graph = function (id, view, devConfig, opts) {
 		showToolbar: true,
 		showOnDataChange: false,
 	});
+	self.hasRun = false;
 
 	if (typeof id !== 'string') {
 		throw new Error('Call Error: `id` must be a string');
@@ -119,93 +125,23 @@ var Graph = function (id, view, devConfig, opts) {
 
 	self.view.addClient(self, 'graph');
 
-	self.prefs.prime(function () {
-		self.view.prime(function () {
-			self.view.on('dataUpdated', function () {
-				if (self.opts.showOnDataChange && !self.isVisible()) {
-					self.view.off('dataUpdated', self.renderer);
-					self.show();
-				}
-			});
+	if (self.opts.runImmediately) {
+		self.show();
+	}
+	else {
+		self.hide();
+	}
 
-			self.view.on('fetchDataBegin', function () {
-				self._setSpinner('loading');
-				self._showSpinner();
-			});
-			self.view.on('fetchDataEnd', function () {
-				self._hideSpinner();
-			});
-
-			self.view.on('workBegin', function () {
-				self._setSpinner('working');
-				self._showSpinner();
-			});
-			self.view.on('workEnd', function (info, ops) {
-				self._hideSpinner();
-			});
-
-			self.view.on('workEnd', function (info, ops) {
-				var config;
-
-				if (ops.pivot) {
-					config = getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current'))
-						|| self.devConfig.whenPivot;
-				}
-				else if (ops.group) {
-					config = getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current'))
-						|| self.devConfig.whenGroup;
-				}
-				else {
-					config = getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current'))
-						|| self.devConfig.whenPlain;
-				}
-
-				if (config != null) {
-					debug.info('GRAPH // HANDLER (View.workEnd)',
-						'Matching configuration: %O', config);
-
-					var graphType = config.graphType;
-					var axis = graphType === 'bar' ? 'hAxis' : 'vAxis';
-					self.ui.graphTypeDropdown.val(config.graphType);
-				}
-
-				if (ops.group) {
-					self.ui.toolbar_aggregates.show();
-					if (config != null) {
-						self.ui.aggDropdown.val(config.aggNum);
-						self.ui.zeroAxisCheckbox.prop('checked', getProp(config, 'options', axis, 'minValue') == 0);
-					}
-				}
-				else {
-					self.ui.toolbar_aggregates.hide();
-				}
-
-				if (ops.pivot) {
-					self.ui.toolbar_pivot.show();
-					if (config != null) {
-						self.ui.stackCheckbox.prop('checked', !!getProp(config, 'options', 'isStacked'));
-					}
-				}
-				else {
-					self.ui.toolbar_pivot.hide();
-				}
-			});
-
-			self.checkGraphConfig();
-			self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
-
-			if (self.opts.runImmediately) {
-				self.show();
-			}
-			else {
-				self.hide();
-			}
-		});
-	});
 };
 
 Graph.prototype = Object.create(Object.prototype);
 Graph.prototype.constructor = Graph;
+
+// #toString {{{2
+
+Graph.prototype.toString = function () {
+	return 'Graph(id="' + this.id + '")';
+};
 
 // #_makeUserInterface {{{2
 
@@ -371,7 +307,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 		.attr('title', MIE.trans('SHOWHIDEOPTS'))
 		.click(function (evt) {
 			evt.stopPropagation();
-			self.toggleControls();
+			self.ui.toolbar.toggle();
 		})
 		.append(jQuery(fontAwesome('fa-cog')))
 		.appendTo(self.ui.titlebar_controls)
@@ -457,24 +393,64 @@ Graph.prototype._addPivotButtons = function (toolbar) {
 Graph.prototype._updateAggDropdown = function () {
 	var self = this;
 
-	var addOption = function (aggInfo) {
-		var name = aggInfo.name || aggInfo.instance.getFullName();
-		var num = aggInfo.aggNum;
-		var option = jQuery('<option>', { 'value': num }).text(name);
+	// options : [obj]
+	// obj : {
+	//   name : string
+	//   type : string ('group', 'pivot', 'cell')
+	//   num : int
+	// }
 
-		self.ui.aggDropdown.append(option);
+	var options = [];
+
+	// addOption : AggregateInfo, string -> ()
+
+	var addOption = function (aggInfo, appendToName) {
+		var name = aggInfo.name || aggInfo.instance.getFullName();
+		if (appendToName != null) {
+			name += appendToName;
+		}
+		options.push({
+			name: name,
+			type: aggInfo.aggType,
+			num: aggInfo.aggNum
+		});
 	};
 
 	self.view.getData(function (ok, data) {
+		console.error('UPDATING AGGREGATE DROPDOWN: %s - %O', ok, data);
 		self.ui.aggDropdown.children().remove();
 
 		if (data.isGroup) {
-			_.each(getPropDef([], data, 'agg', 'info', 'group'), addOption);
+			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
+				addOption(ai);
+			});
 		}
 		else if (data.isPivot) {
-			_.each(getPropDef([], data, 'agg', 'info', 'pivot'), addOption);
+			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
+				addOption(ai, ' by ' + data.groupFields.join(', '));
+			});
+			_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (ai) {
+				addOption(ai, ' by ' + data.pivotFields.join(', '));
+			});
+			_.each(getPropDef([], data, 'agg', 'info', 'cell'), function (ai) {
+				addOption(ai);
+			});
 		}
-	});
+
+		// For pivotted data, there are three different aggregates we could graph.  We list them
+		// separately in the dropdown, and we want them in the order: cell, group, pivot.  It just so
+		// happens that this is also alphabetical order, so we just sort by the aggType first before
+		// sorting by the aggNum so the dropdown will be in the right order.
+
+		_.each(_.sortBy(_.sortBy(options, 'type'), 'num'), function (opt) {
+			var option = jQuery('<option>', {
+				'value': opt.name,
+				'data-wcdv-agg-type': opt.type,
+				'data-wcdv-agg-num': opt.num,
+			}).text(opt.name);
+			self.ui.aggDropdown.append(option);
+		});
+	}, 'Updating graph aggregate dropdown');
 };
 
 // #export {{{2
@@ -538,9 +514,13 @@ Graph.prototype.drawInteractive = function () {
 	// NOTE The `graphType` field here is useless except that it makes the rendering function (e.g.
 	// GraphRendererGoogle#draw_plain) more convenient to implement.
 
+	var selOptIdx = self.ui.aggDropdown.get(0).selectedIndex;
+	var selOpt = self.ui.aggDropdown.get(0).options[selOptIdx];
+
 	config.group.graphs[graphType] = {
 		graphType: graphType,
-		aggNum: toInt(self.ui.aggDropdown.val()),
+		aggType: selOpt.getAttribute('data-wcdv-agg-type'),
+		aggNum: toInt(selOpt.getAttribute('data-wcdv-agg-num')),
 		options: {}
 	};
 
@@ -658,6 +638,119 @@ Graph.prototype.refresh = function () {
 	self.view.clearSourceData();
 };
 
+// #monitorView {{{2
+
+Graph.prototype.monitorView = function () {
+	var self = this;
+
+	if (self.monitorDone) {
+		return;
+	}
+
+	self.monitorDone = true;
+
+	self.view.on('dataUpdated', function () {
+		if (self.opts.showOnDataChange && !self.isVisible()) {
+			self.view.off('dataUpdated', self.renderer);
+			self.show();
+		}
+	}, {
+		who: self
+	});
+
+	self.view.on('fetchDataBegin', function () {
+		self._setSpinner('loading');
+		self._showSpinner();
+	}, {
+		who: self
+	});
+	self.view.on('fetchDataEnd', function () {
+		self._hideSpinner();
+	}, {
+		who: self
+	});
+
+	self.view.on('workBegin', function () {
+		self._setSpinner('working');
+		self._showSpinner();
+	}, {
+		who: self
+	});
+	self.view.on('workEnd', function (info, ops) {
+		self._hideSpinner();
+	}, {
+		who: self
+	});
+
+	self.view.on('workEnd', function (info, ops) {
+		var config;
+
+		if (ops.pivot) {
+			config = getProp(self.userConfig, 'pivot', 'graphs', getProp(self.userConfig, 'pivot', 'current'))
+				|| self.devConfig.whenPivot;
+		}
+		else if (ops.group) {
+			config = getProp(self.userConfig, 'group', 'graphs', getProp(self.userConfig, 'group', 'current'))
+				|| self.devConfig.whenGroup;
+		}
+		else {
+			config = getProp(self.userConfig, 'plain', 'graphs', getProp(self.userConfig, 'plain', 'current'))
+				|| self.devConfig.whenPlain;
+		}
+
+		if (config != null) {
+			debug.info('GRAPH // HANDLER (View.workEnd)',
+				'Matching configuration: %O', config);
+
+			var graphType = config.graphType;
+			var axis = graphType === 'bar' ? 'hAxis' : 'vAxis';
+			self.ui.graphTypeDropdown.val(config.graphType);
+		}
+
+		if (ops.group) {
+			self.ui.toolbar_aggregates.show();
+			if (config != null) {
+				self.ui.aggDropdown.val(config.aggNum);
+				self.ui.zeroAxisCheckbox.prop('checked', getProp(config, 'options', axis, 'minValue') == 0);
+			}
+		}
+		else {
+			self.ui.toolbar_aggregates.hide();
+		}
+
+		if (ops.pivot) {
+			self.ui.toolbar_pivot.show();
+			if (config != null) {
+				self.ui.stackCheckbox.prop('checked', !!getProp(config, 'options', 'isStacked'));
+			}
+		}
+		else {
+			self.ui.toolbar_pivot.hide();
+		}
+	}, {
+		who: self
+	});
+};
+
+// #redraw {{{2
+
+Graph.prototype.redraw = function () {
+	var self = this;
+
+	self.prefs.prime(function () {
+		self.view.prime(function () {
+			self.monitorView();
+			self.checkGraphConfig();
+			self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
+			self.drawFromConfig();
+		}, {
+			who: self
+		});
+	}, {
+		who: self
+	});
+};
+
 // #hide {{{2
 
 /**
@@ -709,8 +802,8 @@ Graph.prototype.show = function (opts) {
 			if (self.opts.title) {
 				self.ui.showHideButton.addClass('open fa-rotate-180');
 			}
-			if (opts.redraw) {
-				self.drawFromConfig();
+			if (!self.hasRun) {
+				self.redraw();
 			}
 		}
 	});
@@ -810,527 +903,6 @@ Graph.prototype.setUserConfig = function (config) {
 	if (self.renderer != null) {
 		self.renderer.draw(self.devConfig, self.userConfig);
 	}
-};
-
-// GraphRenderer {{{1
-
-var GraphRenderer = makeSubclass('GraphRenderer', Object, function (graph, elt, view, opts) {
-	var self = this;
-
-	self.graph = graph;
-	self.elt = elt;
-	self.view = view;
-	self.opts = opts;
-});
-
-// #toString {{{2
-
-GraphRenderer.prototype.toString = function () {
-	var self = this;
-
-	return '#<GraphRenderer "' + self.graph.id + '">';
-};
-
-// #_validateConfig {{{2
-
-GraphRenderer.prototype._validateConfig = function (config) {
-	var self = this;
-
-	_.each(['Plain', 'Group', 'Pivot'], function (kind) {
-		var propName = 'when' + kind;
-
-		if (config[propName] == null) {
-			return; // It's OK to be undefined.
-		}
-
-		var config = config[propName];
-
-		if (typeof config !== 'function' && typeof config !== 'object') {
-			//self.error(kind + ' configuration must be a function or an object');
-			config[propName] = null;
-			return;
-		}
-	});
-};
-
-// #addRedrawHandlers {{{2
-
-GraphRenderer.prototype.addRedrawHandlers = function (f) {
-	var self = this;
-
-	debug.info('GRAPH // RENDER (GOOGLE)', 'Adding redraw handlers');
-
-	self.view.off('dataUpdated', self);
-	self.view.on('dataUpdated', function () {
-		debug.info('GRAPH RENDERER // HANDLER (View.dataUpdated)',
-			'Redrawing graph because the view has finished doing work');
-		f();
-	}, { who: self });
-};
-
-// #draw {{{2
-
-GraphRenderer.prototype.draw = function (devConfig, userConfig) {
-	var self = this;
-
-	var reallyDraw = function () {
-		self._draw(devConfig, userConfig);
-	};
-
-	self.addRedrawHandlers(reallyDraw);
-	reallyDraw();
-};
-
-// GraphRendererGoogle {{{1
-
-var GraphRendererGoogle = makeSubclass('GraphRendererGoogle', GraphRenderer);
-
-// #draw_plain {{{2
-
-GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config) {
-	var self = this;
-
-	if (config == null) {
-		return null;
-	}
-
-	var convertType = function (t) {
-		switch (t) {
-		case 'currency':
-			return 'number';
-		default:
-			return t;
-		}
-	};
-
-	var getRealValue = function (f, x) {
-		if (typeInfo.get(f).type === 'date' && moment.isMoment(x.value)) {
-			return {v: x.value.toDate(), f: x.orig};
-		}
-		else if (['number', 'currency'].indexOf(typeInfo.get(f).type) >= 0 && numeral.isNumeral(x.value)) {
-			return {v: x.value._value, f: x.orig};
-		}
-		else {
-			return x.value;
-		}
-	};
-
-	switch (config.graphType) {
-	case 'gantt':
-		if (config.nameField == null) {
-			throw new Error('Configuration option `nameField` must exist');
-		}
-
-		var timeConfigStr = '' + (+config.startField) + (+config.endField) + (+config.durationField);
-		if (timeConfigStr === '100' || timeConfigStr === '010' || timeConfigStr === '000') {
-			throw new Error('Time configuration is insufficient to determine offsets');
-		}
-
-		dt.addColumn('string', 'ID');
-		dt.addColumn('string', 'Name');
-		dt.addColumn('string', 'Resource');
-		dt.addColumn('date', 'Start');
-		dt.addColumn('date', 'End');
-		dt.addColumn('number', 'Duration');
-		dt.addColumn('number', 'Completion');
-		dt.addColumn('string', 'Dependencies');
-
-		var configOpts = [
-			{ name: 'id', default: (function () { var x = 0; return function () { return x++; }; }) },
-			{ name: 'name' },
-			{ name: 'resource', default: null },
-			{ name: 'start', default: null },
-			{ name: 'end', default: null },
-			{ name: 'duration', default: null },
-			{ name: 'completion', default: 0 },
-			{ name: 'dependencies', default: null }
-		];
-
-		_.each(configOpts, function (opt) {
-			if (config[opt.name + 'Field'] != null) {
-				self.view.source.convertAll(data.dataByRowId, config[opt.name + 'Field']);
-			}
-		});
-
-		_.each(data.data, function (row) {
-			var newRow = [];
-			_.each(configOpts, function (opt) {
-				if (config[opt.name + 'Field'] != null) {
-					newRow.push(getRealValue(config[opt.name + 'Field'], row.rowData[config[opt.name + 'Field']]));
-				}
-				else if (opt.default === undefined) {
-					throw new Error();
-				}
-				else if (typeof opt.default === 'function') {
-					newRow.push(opt.default());
-				}
-				else {
-					newRow.push(opt.default);
-				}
-			});
-			dt.addRow(newRow);
-		});
-
-		break;
-	default:
-		dt.addColumn(convertType(typeInfo.get(config.categoryField).type), config.categoryField);
-
-		_.each(config.valueFields, function (field) {
-			dt.addColumn(convertType(typeInfo.get(field).type), field);
-		});
-
-		_.each(config.valueFields, function (field) {
-			self.view.source.convertAll(data.dataByRowId, field);
-		});
-
-		_.each(data.data, function (row) {
-			var newRow;
-
-			newRow = _.map([config.categoryField].concat(config.valueFields), function (f) {
-				return getRealValue(f, row.rowData[f]);
-			});
-
-			dt.addRow(newRow);
-		});
-	}
-
-	return config;
-};
-
-// #draw_group {{{2
-
-GraphRendererGoogle.prototype.draw_group = function (data, typeInfo, dt, config) {
-	var self = this;
-
-	if (typeof config === 'function') {
-		config = config(data.groupFields);
-	}
-
-	config = deepDefaults(config, {
-		graphType: 'column',
-		categoryField: data.groupFields[0],
-		valueFields: [{
-			name: 'Count',
-			fun: 'count'
-		}]
-	});
-
-	var valueAxis = config.graphType === 'bar' ? 'hAxis' : 'vAxis';
-
-	// dt.addColumn(typeInfo.get(config.categoryField).type, config.categoryField);
-	dt.addColumn('string', config.categoryField);
-
-	if (config.aggNum != null) {
-		var aggInfo = data.agg.info.group[config.aggNum];
-		var name = aggInfo.name || aggInfo.instance.getFullName();
-		var aggType = aggInfo.instance.getType();
-
-		if (aggType === 'currency') {
-			aggType = 'number';
-			setProp('currency', config, 'options', valueAxis, 'format');
-		}
-
-		dt.addColumn(aggType, name);
-		setProp(name, config, 'options', valueAxis, 'title');
-
-		_.each(data.rowVals, function (rowVal, rowValIdx) {
-			var newRow = [rowVal.join(', ')];
-
-			var aggResult = data.agg.results.group[config.aggNum][rowValIdx];
-			newRow.push(aggResult);
-			dt.addRow(newRow);
-		});
-	}
-	else {
-		var ai = [];
-
-		// For each value field, create the AggregateInfo instance that will manage it.  Also create a
-		// column for the result in the data table.
-
-		_.each(config.valueFields, function (v) {
-			var aggInfo = new AggregateInfo('group', v, 0, null /* colConfig */, self.typeInfo, null /* convert */);
-			dt.addColumn(aggInfo.instance.getType(), v.name || aggInfo.instance.getFullName());
-			ai.push(aggInfo);
-		});
-
-		// Go through each rowval and create a row for it in the data table.  Every value field gets its
-		// own column, which is the result of the corresponding aggregate function specified above.
-
-		_.each(data.rowVals, function (rowVal, rowValIdx) {
-			var newRow = [rowVal.join(', ')];
-
-			_.each(ai, function (aggInfo) {
-				var aggResult = aggInfo.instance.calculate(_.flatten(data.data[rowValIdx]));
-				newRow.push(aggResult);
-				if (aggInfo.debug) {
-					debug.info('GRAPH // GROUP // AGGREGATE', 'Group aggregate (%s) : Group [%s] = %s',
-						aggInfo.instance.name + (aggInfo.name ? ' -> ' + aggInfo.name : ''),
-						rowVal.join(', '),
-						JSON.stringify(aggResult));
-				}
-			});
-
-			dt.addRow(newRow);
-		});
-	}
-
-	return config;
-};
-
-// #draw_pivot {{{2
-
-GraphRendererGoogle.prototype.draw_pivot = function (data, typeInfo, dt, config) {
-	var self = this
-
-	if (typeof config === 'function') {
-		config = config(data.groupFields, data.pivotFields);
-	}
-
-	config = deepDefaults(config, {
-		graphType: 'column',
-		categoryField: data.groupFields[0],
-		valueFields: [{
-			fun: 'count'
-		}],
-		options: {
-			isStacked: true
-		}
-	});
-
-	var valueAxis = config.graphType === 'bar' ? 'hAxis' : 'vAxis';
-
-	dt.addColumn('string', config.categoryField);
-
-	if (config.aggNum != null) {
-		var aggInfo = data.agg.info.cell[config.aggNum];
-		var name = aggInfo.name || aggInfo.instance.getFullName();
-		var aggType = aggInfo.instance.getType();
-
-		if (aggType === 'currency') {
-			aggType = 'number';
-			setProp('currency', config, 'options', valueAxis, 'format');
-		}
-
-		_.each(data.colVals, function (colVal) {
-			dt.addColumn(aggType, colVal.join(', '));
-		});
-
-		setProp(name, config, 'options', valueAxis, 'title');
-
-		_.each(data.rowVals, function (rowVal, rowValIdx) {
-			var newRow = [rowVal.join(', ')];
-
-			_.each(data.colVals, function (colVal, colValIdx) {
-				var aggResult = data.agg.results.cell[config.aggNum][rowValIdx][colValIdx];
-				newRow.push(aggResult);
-			});
-
-			dt.addRow(newRow);
-		});
-	}
-	else {
-		var ai = [];
-
-		// For each value field, create the AggregateInfo instance that will manage it.  Also create
-		// columns for the results (one for each colval) in the data table.
-
-		_.each(config.valueFields, function (v) {
-			var aggInfo = new AggregateInfo('cell', v, 0, null /* colConfig */, self.typeInfo, null /* convert */);
-
-			_.each(data.colVals, function (colVal) {
-				dt.addColumn(aggInfo.instance.getType(), colVal.join(', '));
-			});
-
-			ai.push(aggInfo);
-		});
-
-		_.each(data.rowVals, function (rowVal, rowValIndex) {
-			var newRow = [rowVal.join(', ')];
-
-			_.each(data.colVals, function (colVal, colValIndex) {
-				_.each(ai, function (aggInfo) {
-					var aggResult = aggInfo.instance.calculate(data.data[rowValIndex][colValIndex]);
-					newRow.push(aggResult);
-					if (aggInfo.debug) {
-						debug.info('GRAPH // GROUP // AGGREGATE', 'Group aggregate (%s) : RowVal [%s] x ColVal [%s] = %s',
-							aggInfo.instance.name + (aggInfo.name ? ' -> ' + aggInfo.name : ''),
-							rowVal.join(', '),
-							colVal.join(', '),
-							JSON.stringify(aggResult));
-					}
-				});
-			});
-
-			dt.addRow(newRow);
-		});
-	}
-
-	return config;
-};
-
-// #_ensureGoogleChartsLoaded {{{2
-
-GraphRendererGoogle.prototype._ensureGoogleChartsLoaded = function (cont) {
-	return loadScript('https://www.gstatic.com/charts/loader.js', function (wasAlreadyLoaded, k) {
-		var cb = function () {
-			k();
-			cont();
-		};
-		if (!wasAlreadyLoaded) {
-			debug.info('GRAPH // GOOGLE // DRAW', 'Loading support for Google Charts');
-			google.charts.load('current', {'packages': ['corechart', 'gantt']});
-			google.charts.setOnLoadCallback(cb);
-		}
-		else {
-			cb();
-		}
-	}, {
-		needAsyncSetup: true
-	});
-};
-
-// #draw {{{2
-
-GraphRendererGoogle.prototype._draw = function (devConfig, userConfig) {
-	var self = this;
-
-	devConfig = devConfig || {};
-	userConfig = userConfig || {};
-
-	self._ensureGoogleChartsLoaded(function () {
-		self.view.getData(function (ok, data) {
-			self.view.getTypeInfo(function (ok, typeInfo) {
-				self.elt.children().remove();
-
-				var makeMessage = function (msg) {
-					jQuery('<div>')
-						.css({
-							'height': self.opts.height + 'px'
-						})
-						.append(
-							jQuery('<div>', { 'class': 'wcdv_graph_message' })
-							.text(msg)
-						)
-						.appendTo(self.elt);
-				};
-
-				if (data.data.length === 0) {
-					makeMessage('No Data');
-					return;
-				}
-
-				var config = null;
-				var dt = new google.visualization.DataTable();
-
-				if (data.isPlain) {
-					config = self.draw_plain(data, typeInfo, dt, getProp(userConfig, 'plain', 'graphs', getProp(userConfig, 'plain', 'current')) || devConfig.whenPlain);
-				}
-				else if (data.isGroup) {
-					config = self.draw_group(data, typeInfo, dt, getProp(userConfig, 'group', 'graphs', getProp(userConfig, 'group', 'current')) || devConfig.whenGroup);
-				}
-				else if (data.isPivot) {
-					config = self.draw_pivot(data, typeInfo, dt, getProp(userConfig, 'pivot', 'graphs', getProp(userConfig, 'pivot', 'current')) || devConfig.whenPivot);
-				}
-
-				if (config == null) {
-					makeMessage('Nothing to Graph');
-					return;
-				}
-
-				var ctor = {
-					area: 'AreaChart',
-					bar: 'BarChart',
-					column: 'ColumnChart',
-					pie: 'PieChart',
-					gantt: 'Gantt'
-				};
-
-				// This is the object that's actually passed to the chart's draw() method.  All the options
-				// in the Google documentation should go into this object.
-
-				var options = {
-					title: self.opts.title,
-					width: self.opts.width,
-					height: self.opts.height,
-					isStacked: config.stacked,
-					chartArea: {
-						top: '5%',
-						left: '5%',
-						width: '90%',
-						height: '90%'
-					}
-				};
-
-				var categoryAxis = config.graphType === 'bar' ? 'vAxis' : 'hAxis';
-
-				setProp(config.categoryField, options, categoryAxis, 'title');
-
-				jQuery.extend(true, options, config.options);
-
-				var chart = new google.visualization[ctor[config.graphType]](self.elt.get(0));
-
-				google.visualization.events.addListener(chart, 'ready', function () {
-					var blob = null;
-					if (typeof chart.getImageURI === 'function') {
-						blob = dataURItoBlob(chart.getImageURI());
-					}
-					self.graph._setExportBlob(blob);
-				});
-
-				debug.info('GRAPH // GOOGLE // DRAW', 'Starting draw: [config = %O ; options = %O]', config, options);
-
-				chart.draw(dt, options);
-			});
-		});
-	});
-};
-
-// GraphRendererJit {{{1
-
-var GraphRendererJit = makeSubclass('GraphRendererJit', GraphRenderer);
-
-// #draw {{{2
-
-GraphRendererJit.prototype.draw = function () {
-	var self = this;
-
-	elt.children().remove();
-
-	self.view.getData(function (ok, data) {
-		self.view.getTypeInfo(function (ok, typeInfo) {
-			var ctor = {
-				area: 'AreaChart',
-				bar: 'BarChart'
-			};
-
-			var json = {
-				label: [],
-				values: []
-			};
-
-			_.each(self.opts.valueFields, function (f) {
-				json.label.push(f);
-			});
-
-			_.each(data.data, function (row) {
-				var newRow = {};
-				newRow.label = row.rowData[self.opts.categoryField].value;
-				newRow.values = _.map(self.opts.valueFields, function (f) {
-					return row.rowData[f].value;
-				});
-				json.values.push(newRow);
-			});
-
-			var options = {
-				injectInto: elt.attr('id')
-			};
-
-			jQuery.extend(true, options, self.opts.options);
-
-			var chart = new $jit[ctor[self.opts.type]](options);
-			chart.loadJSON(json);
-		});
-	});
 };
 
 // GraphControl {{{1
@@ -1467,5 +1039,5 @@ var GRAPH_TYPES = OrdMap.fromArray([{
 // Exports {{{1
 
 export {
-	Graph
+	Graph,
 };
