@@ -68,7 +68,7 @@ var GridRenderer = (function () {
 // quick workaround, we just put all the events that any subclass may use here.  But the real fix
 // should be to make mixinEventHandling() traverse up the superclass chain.
 
-mixinEventHandling(GridRenderer, 'GridRenderer', [
+mixinEventHandling(GridRenderer, [
 		'columnResize'        // A column is resized.
 	, 'unableToRender'      // A grid renderer can't render the data in the view it's bound to.
 	, 'limited'             // The grid table isn't rendering all possible rows.

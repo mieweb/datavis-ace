@@ -321,7 +321,7 @@ var GridTable = makeSubclass('GridTable', GridRenderer, function () {
  * @event GridTable#renderEnd
  */
 
-mixinEventHandling(GridTable, 'GridTable', [
+mixinEventHandling(GridTable, [
 		'columnResize'        // A column is resized.
 	, 'unableToRender'      // A grid table can't render the data in the view it's bound to.
 	, 'limited'             // The grid table isn't rendering all possible rows.

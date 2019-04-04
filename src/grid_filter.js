@@ -998,7 +998,7 @@ GridFilterSet.prototype.constructor = GridFilterSet;
  * @event GridFilterSet#filterRemoved
  */
 
-mixinEventHandling(GridFilterSet, 'GridFilterSet', [
+mixinEventHandling(GridFilterSet, [
 		'filterAdded'
 	, 'filterRemoved'
 	, 'widgetResizedHoriz'

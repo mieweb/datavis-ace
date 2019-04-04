@@ -268,9 +268,7 @@ Prefs.DEFAULT_BACKEND_TYPE = 'localStorage';
  * Any additional options passed by the target when it bound itself to a module in the prefs system.
  */
 
-mixinEventHandling(Prefs, function (self) {
-	return 'PREFS (' + self.id + ')';
-}, [
+mixinEventHandling(Prefs, [
 		'perspectiveAdded'   // Fired when a perspective is added.
 	, 'perspectiveDeleted' // Fired when a perspective is deleted.
 	, 'perspectiveRenamed' // Fired when a perspective is renamed.

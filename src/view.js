@@ -264,7 +264,7 @@ var View = function (source, name, opts) {
 
 	self.timing = new Timing();
 
-	self.lock = new Lock('View');
+	self.lock = new Lock('VIEW // ' + self.name);
 
 	// Set the default configuration for a new View.  Setting explicit defaults is a good practice to
 	// maintain, but it also makes sure that when prefs are loaded later, any `null` values they set
@@ -442,9 +442,7 @@ View.prototype.constructor = View;
  * @event View#invalidAggregate
  */
 
-mixinEventHandling(View, function (self) {
-	return 'VIEW (' + self.name + ')';
-}, [
+mixinEventHandling(View, [
 		'fetchDataBegin'      // Started fetching data from the source.
 	, 'fetchDataEnd'        // Done fetching data from the source.
 	, 'getTypeInfo'         // Type information has been retrieved from the source.
@@ -475,6 +473,12 @@ mixinEventHandling(View, function (self) {
 // Delegate {{{2
 
 delegate(View, 'source', ['getUniqueVals', 'convertAll', 'setToolbar']);
+
+// #toString {{{2
+
+View.prototype.toString = function () {
+	return 'View(name="' + this.name + '")';
+};
 
 // #_maybeDecode {{{2
 
@@ -3072,9 +3076,12 @@ View.prototype.aggregate = function (cont) {
  * Retrieves a fresh copy of the data for this view from the data source.
  *
  * @param {function} cont What to do next.
+ *
+ * @param {string} reason
+ * Why are you calling this function?  (Used to save debugging information for onUnlock handlers.)
  */
 
-View.prototype.getData = function (cont) {
+View.prototype.getData = function (cont, reason) {
 	var self = this;
 
 	if (cont != null && typeof cont !== 'function') {
@@ -3084,9 +3091,20 @@ View.prototype.getData = function (cont) {
 	cont = cont || I;
 
 	if (self.lock.isLocked()) {
+		var lockMsg = 'Waiting to get data';
+		if (reason != null) {
+			lockMsg += ': ' + reason;
+		}
 		return self.lock.onUnlock(function () {
 			self.getData(cont);
-		}, 'Waiting to get data');
+		}, lockMsg);
+	}
+	else {
+		var lockMsg = 'Getting data';
+		if (reason != null) {
+			lockMsg += ': ' + reason;
+		}
+		debug.info('VIEW (' + self.name + ')', lockMsg);
 	}
 
 	if (self.data !== undefined) {

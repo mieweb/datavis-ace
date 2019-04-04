@@ -556,7 +556,7 @@ var Source = function (spec, params, userTypeInfo, opts) {
 
 	self.conversion = spec.conversion;
 
-	self.locks.getData = new Lock('Get Data');
+	self.locks.getData = new Lock('SOURCE // ' + self.name);
 };
 
 Source.prototype = Object.create(Object.prototype);
@@ -576,7 +576,7 @@ Source.prototype.constructor = Source;
  * @event Source#getTypeInfo
  */
 
-mixinEventHandling(Source, 'Source', [
+mixinEventHandling(Source, [
 		'dataUpdated'
 	, 'getTypeInfo'
 ]);
