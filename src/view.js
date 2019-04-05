@@ -3476,6 +3476,20 @@ GROUP_FUNCTION_REGISTRY.set('month', new GroupFunction({
 	sortType: 'month'
 }));
 
+GROUP_FUNCTION_REGISTRY.set('week_iso', new GroupFunction({
+	displayName: 'Week (ISO)',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('[W]WW');
+	}
+}));
+
 GROUP_FUNCTION_REGISTRY.set('day_of_week', new GroupFunction({
 	displayName: 'Day of Week',
 	allowedTypes: ['date', 'datetime'],
@@ -3518,6 +3532,20 @@ GROUP_FUNCTION_REGISTRY.set('year_and_month', new GroupFunction({
 		return d.format('YYYY MMM');
 	},
 	sortType: 'year_and_month'
+}));
+
+GROUP_FUNCTION_REGISTRY.set('year_and_week_iso', new GroupFunction({
+	displayName: 'Year & Week (ISO)',
+	allowedTypes: ['date', 'datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY [W]WW');
+	}
 }));
 
 // Exports {{{1
