@@ -2030,14 +2030,15 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 				self.fire('limited');
 
-				tr = jQuery('<tr>').addClass('wcdvgrid_more');
+				tr = document.createElement('tr');
+				tr.classList.add('wcdvgrid_more');
 
 				var colSpan = columns.length
 					+ (self.features.rowSelect ? 1 : 0)
 					+ (self.features.rowReorder ? 1 : 0);
 
 				var showMore = function () {
-					tr.remove(); // Eliminate the "more" row.
+					tr.parentNode.removeChild(tr); // Eliminate the "more" row.
 					render(rowNum, limitConfig.chunkSize, nextChunk);
 				};
 
@@ -2069,10 +2070,12 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					}
 				});
 
-				tr.append(td);
+				tr.appendChild(td.get(0));
 			}
 			else {
-				tr = jQuery('<tr>', {id: self.defn.table.id + '_' + rowNum, 'data-row-num': row.rowNum});
+				tr = document.createElement('tr');
+				tr.setAttribute('id', self.defn.table.id + '_' + rowNum);
+				tr.setAttribute('data-row-num', row.rowNum);
 
 				// Create the check box which selects the row.
 
@@ -2093,40 +2096,43 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					var fcc = self.colConfig.get(field) || {};
 					var cell = row.rowData[field];
 
-					var td = jQuery('<td>');
+					var td = document.createElement('td');
 					var value = format(fcc, typeInfo.get(field), cell);
 
-					if (value instanceof Element || value instanceof jQuery) {
-						td.append(value);
+					if (value instanceof Element) {
+						td.appendChild(value);
+					}
+					else if (value instanceof jQuery) {
+						td.appendChild(value.get(0));
 					}
 					else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
-						td.html(value);
+						td.innerHTML = value;
 					}
 					else if (value === '') {
-						td.html('&nbsp;');
+						td.innerText = '\u00A0';
 					}
 					else {
-						td.text(value);
+						td.innerText = value;
 					}
 
-					self.setCss(td, field);
-					self.setAlignment(td, fcc, typeInfo.get(field));
+					self.setCss(jQuery(td), field);
+					self.setAlignment(jQuery(td), fcc, typeInfo.get(field));
 
 					if (self.opts.drawInternalBorders) {
-						td.addClass('wcdv_pivot_colval_boundary');
+						td.classList.add('wcdv_pivot_colval_boundary');
 					}
 
-					tr.append(td);
+					tr.appendChild(td);
 				});
 
 				// Create button used as the "handle" for dragging/dropping rows.
 
 				if (self.features.rowReorder) {
-					tr.append(jQuery('<td>').append(self.makeRowReorderBtn()));
+					jQuery('<td>').append(self.makeRowReorderBtn()).appendTo(tr);
 				}
 			}
 
-			self.ui.tr[rowNum] = tr;
+			self.ui.tr[rowNum] = jQuery(tr);
 			self.ui.tbody.append(tr);
 		}
 
