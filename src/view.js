@@ -2659,13 +2659,14 @@ View.prototype.pivot = function () {
 					value = row.rowData[pivotSpecElt.field].value;
 					if (pivotSpecElt.fun == null) {
 						natRep = getNatRep(value);
+						origKeys[pivotFieldIndex][natRep] = value;
 					}
 					else {
 						groupFun = GROUP_FUNCTION_REGISTRY.get(pivotSpecElt.fun);
 						natRep = groupFun.applyValueFun(value);
+						origKeys[pivotFieldIndex][natRep] = natRep;
 					}
-					origKeys[pivotFieldIndex][natRep] = natRep;
-					row.rowData[pivotSpecElt.field].natRep = natRep;
+					setProp(natRep, row.rowData[pivotSpecElt.field], 'natRep', 'pivot', pivotFieldIndex);
 					colVal[pivotFieldIndex] = natRep;
 				}
 				if (_.findIndex(colVals, function (x) {
@@ -2721,7 +2722,7 @@ View.prototype.pivot = function () {
 				_.each(groupedRows, function (row) {
 					if (_.every(colVal, function (colValElt, colValIndex) {
 						var pivotSpecElt = finalPivotSpec[colValIndex];
-						return colValElt === row.rowData[pivotSpecElt.field].natRep;
+						return colValElt === row.rowData[pivotSpecElt.field].natRep.pivot[colValIndex];
 					})) {
 						tmp.push(row);
 					}
