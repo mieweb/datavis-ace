@@ -140,6 +140,21 @@ export var getComparisonFn = (function () {
 	cmpFn.datetime = cmpFn.date;
 
 	// TODO: i18n
+	cmpFn.month = function (a, b) {
+		var trans = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+			'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+
+		var a_month = trans[a];
+		var b_month = trans[b];
+
+		return a_month == null ? -1
+			: b_month == null ? 1
+			: a_month < b_month ? -1
+			: a_month > b_month ? 1
+			: 0;
+	};
+
+	// TODO: i18n
 	cmpFn.day_of_week = function (a, b) {
 		var trans = {'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6};
 
