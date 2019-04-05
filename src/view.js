@@ -2083,6 +2083,7 @@ View.prototype.group = function () {
 					origKeys[groupFieldIndex][natRep] = natRep;
 				}
 				rowVal[groupFieldIndex] = natRep;
+				setProp(natRep, row.rowData[groupSpecElt.field], 'natRep', 'group', groupFieldIndex);
 			}
 			if (_.findIndex(rowVals, function (x) {
 				return arrayEqual(rowVal, x);
@@ -2177,14 +2178,7 @@ View.prototype.group = function () {
 
 			for (groupFieldIndex = 0; groupFieldIndex < finalGroupSpec.length; groupFieldIndex += 1) {
 				groupSpecElt = finalGroupSpec[groupFieldIndex];
-				value = row.rowData[groupSpecElt.field].value;
-				if (groupSpecElt.fun == null) {
-					rowVal[groupFieldIndex] = getNatRep(value);
-				}
-				else {
-					groupFun = GROUP_FUNCTION_REGISTRY.get(groupSpecElt.fun);
-					rowVal[groupFieldIndex] = groupFun.applyValueFun(value);
-				}
+				rowVal[groupFieldIndex] = row.rowData[groupSpecElt.field].natRep.group[groupFieldIndex];
 			}
 
 			metadataLeaf = getProp(metadataTree, 'children', interleaveWith(rowVal, 'children'));
