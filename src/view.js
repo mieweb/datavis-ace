@@ -2659,13 +2659,13 @@ View.prototype.pivot = function () {
 					value = row.rowData[pivotSpecElt.field].value;
 					if (pivotSpecElt.fun == null) {
 						natRep = getNatRep(value);
-						origKeys[pivotFieldIndex][natRep] = value;
 					}
 					else {
 						groupFun = GROUP_FUNCTION_REGISTRY.get(pivotSpecElt.fun);
 						natRep = groupFun.applyValueFun(value);
-						origKeys[pivotFieldIndex][natRep] = natRep;
 					}
+					origKeys[pivotFieldIndex][natRep] = natRep;
+					row.rowData[pivotSpecElt.field].natRep = natRep;
 					colVal[pivotFieldIndex] = natRep;
 				}
 				if (_.findIndex(colVals, function (x) {
@@ -2721,17 +2721,7 @@ View.prototype.pivot = function () {
 				_.each(groupedRows, function (row) {
 					if (_.every(colVal, function (colValElt, colValIndex) {
 						var pivotSpecElt = finalPivotSpec[colValIndex];
-						var value = row.rowData[pivotSpecElt.field].value;
-						var natRep;
-						var groupFun;
-						if (pivotSpecElt.fun == null) {
-							natRep = getNatRep(value);
-						}
-						else {
-							groupFun = GROUP_FUNCTION_REGISTRY.get(pivotSpecElt.fun);
-							natRep = groupFun.applyValueFun(value);
-						}
-						return colValElt === natRep;
+						return colValElt === row.rowData[pivotSpecElt.field].natRep;
 					})) {
 						tmp.push(row);
 					}
