@@ -414,7 +414,6 @@ Graph.prototype._updateAggDropdown = function () {
 	};
 
 	self.view.getData(function (ok, data) {
-		console.error('UPDATING AGGREGATE DROPDOWN: %s - %O', ok, data);
 		self.ui.aggDropdown.children().remove();
 
 		if (data.isGroup) {
