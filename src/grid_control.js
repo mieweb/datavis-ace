@@ -841,13 +841,13 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 
 GridControl.prototype.removeField = function (cf) {
 	var self = this
-		, field = cf.field;
+		, fieldName = cf.field.field;
 
 	// Check to see if we are supposed to update the 'canHide' property of the column config.  Since
 	// we're removing the field, we mark it so that the field can be hidden.
 
-	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(field)) {
-		self.colConfig.get(field).canHide = true;
+	if (self.updateCanHide && self.colConfig != null && self.colConfig.isSet(fieldName)) {
+		self.colConfig.get(fieldName).canHide = true;
 	}
 
 	// Remove it from the UI.
@@ -859,15 +859,15 @@ GridControl.prototype.removeField = function (cf) {
 
 	self.controlFields = _.without(self.controlFields, cf);
 	self.controlFieldsById[cf.id] = undefined;
-	self.controlFieldsByField[field] = _.without(self.controlFieldsByField[field], cf);
+	self.controlFieldsByField[fieldName] = _.without(self.controlFieldsByField[fieldName], cf);
 
 	// Re-enable the option in the dropdown, if necessary.
 
-	self.fields.splice(self.fields.indexOf(cf.field), 1);
+	self.fields.splice(self.fields.indexOf(fieldName), 1);
 
 	if (self.disableUsedItems) {
 		self.ui.dropdown.find('option').filter(function () {
-			return jQuery(this).val() === cf.field;
+			return jQuery(this).val() === fieldName;
 		}).prop('disabled', false);
 	}
 
@@ -878,7 +878,7 @@ GridControl.prototype.removeField = function (cf) {
 	}
 
 	self.updateView();
-	self.fire(GridControl.events.fieldRemoved, null, cf.field, self.fields);
+	self.fire(GridControl.events.fieldRemoved, null, fieldName, self.fields);
 };
 
 // #clear {{{2
@@ -1791,7 +1791,7 @@ FilterControl.prototype.addField = function (field, displayText, opts) {
 FilterControl.prototype.removeField = function (cf) {
 	var self = this;
 
-	self.gfs.removeField(cf.field);
+	self.gfs.removeField(cf.field.field);
 	self.super.removeField(cf);
 };
 
