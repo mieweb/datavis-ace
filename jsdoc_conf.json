@@ -4,7 +4,8 @@
     ],
     "opts": {
         "template": "jaguarjs-jsdoc",
-        "destination": "jsdoc"
+        "destination": "jsdoc",
+        "readme": "README.md"
     },
     "templates": {
         "systemName": "WC DataVis",
@@ -18,6 +19,9 @@
         "applicationName": "DataVis",
         "meta": {
             "title": "DataVis JSDoc"
+        },
+        "default": {
+            "outputSourceFiles": true
         }
     }
 }
