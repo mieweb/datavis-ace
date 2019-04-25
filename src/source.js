@@ -99,7 +99,7 @@ LocalSource.prototype.getName = function () {
 // HttpSource {{{1
 // Constructor {{{2
 
-var HttpSource = makeSubclass('HttpSource', Object, function (spec, params, userTypeInfo) {
+var HttpSource = makeSubclass('HttpSource', Object, function (spec, userTypeInfo) {
 	var self = this;
 
 	self.url = spec.url;
@@ -294,11 +294,10 @@ HttpSource.prototype.clearCachedData = function () {
 // FileSource {{{1
 // Constructor {{{2
 
-var FileSource = makeSubclass('FileSource', Object, function (spec, params, userTypeInfo, source) {
+var FileSource = makeSubclass('FileSource', Object, function (spec, userTypeInfo, source) {
 	var self = this;
 
 	self.spec = spec;
-	self.params = params;
 	self.userTypeInfo = userTypeInfo;
 	self.source = source;
 
@@ -514,7 +513,7 @@ var Source = makeSubclass('Source', Object, function (spec, params, userTypeInfo
 		throw new SourceError('Unsupported data source type: ' + self.type);
 	}
 
-	self.origin = new Source.sources[self.type](spec, params, userTypeInfo, self);
+	self.origin = new Source.sources[self.type](spec, userTypeInfo, self);
 
 	var checkConversionArray = function (convs, field) {
 		// Check the validity of all the specified conversions.

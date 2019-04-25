@@ -3581,7 +3581,13 @@ Timing.prototype.dump = function (subject) {
 // }}}1
 
 export function delegate(from, to, methods) {
-	_.each(methods, function (m) {
+	if (!_.isArray(methods)) {
+		methods = [methods];
+	}
+	_.each(methods, function (m, i) {
+		if (typeof m !== 'string') {
+			throw new Error('Call Error: `methods[' + i + ']` must be a string');
+		}
 		from.prototype[m] = function () {
 			var args = Array.prototype.slice.call(arguments);
 			return this[to][m].apply(this[to], args);

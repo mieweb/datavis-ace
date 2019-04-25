@@ -20,6 +20,29 @@ import {
 	toInt,
 } from './util.js';
 
+/**
+ * @file
+ * Contains the implementation of "grid filters" which are the dynamically applied filters that are
+ * shown in the filter control of a grid.  They set the filter on the {@link View} associated with
+ * the {@link Grid}.
+ *
+ * If you're looking for the parameters that get sent to the {@link Source} then you want {@link
+ * source_param.js} instead.
+ *
+ * ## Classes
+ *
+ * - {@link GridFilter}
+ *   - {@link StringTextboxGridFilter}
+ *   - {@link StringDropdownGridFilterChosen}
+ *   - {@link StringDropdownGridFilterSumo}
+ *   - {@link NumberTextboxGridFilter}
+ *   - {@link NumberCheckboxGridFilter}
+ *   - {@link DateSingleGridFilter}
+ *   - {@link DateRangeGridFilter}
+ *   - {@link BooleanCheckboxGridFilter}
+ * - {@link GridFilterSet}
+ */
+
 // GridFilter {{{1
 
 // Superclass {{{2

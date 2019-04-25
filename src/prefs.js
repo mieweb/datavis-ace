@@ -29,7 +29,7 @@ import {Graph} from './graph.js';
  * @file
  * This file contains the implementation of the prefs system.
  *
- * ### Terminology
+ * ## Terminology
  *
  * - **Perspective**:
  *
@@ -41,12 +41,23 @@ import {Graph} from './graph.js';
  *
  * - **Reset**:
  *
- * ### Responsibilities
+ * ## Responsibilities
  *
  * - Take configuration from bound components and store it in a backend.
  * - Retrieve configuration from a backend and load it into bound components.
  * - Allow management of perspectives, e.g. create new, rename, and delete.
  * - Facilitate switching between perspectives, including via history stack.
+ *
+ * ## Classes
+ *
+ * - {@link Prefs}
+ * - {@link PrefsBackend}
+ *   - {@link PrefsBackendLocalStorage}
+ *   - {@link PrefsBackendTemporary}
+ * - {@link PrefsModule}
+ *   - {@link PrefsModuleView}
+ *   - {@link PrefsModuleGrid}
+ *   - {@link PrefsModuleGraph}
  */
 
 // Prefs {{{1

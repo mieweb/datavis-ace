@@ -1,7 +1,58 @@
 import _ from 'underscore';
 import jQuery from 'jquery';
 
-import {arrayCopy, debug, getProp, isEmpty, makeSubclass, setProp} from './util.js';
+import {arrayCopy, debug, delegate, getProp, isEmpty, makeSubclass, setProp} from './util.js';
+
+/**
+ * @file
+ * Implements parameters and filters that can be sent to the origin by a {@link Source}.
+ *
+ * ## Classes
+ *
+ * - {@link Filter}
+ * - {@link FilterSet}
+ * - {@link FilterInput}
+ * - {@link ParamInput}
+ */
+
+// JSDoc {{{1
+
+/**
+ * @typedef {object} Filter~Config
+ *
+ * @property {string} inputName Name of an input element from a form.
+ *
+ * @property {string} type What kind of widget to get input from.  If this is undefined, the default
+ * value will be used for storing (from the page), and loading (into the page) will do nothing.
+ *
+ * @property {boolean} required If true, an error will be issued if this filter is used on a data
+ * source, when the user has not entered anything into the input element.
+ *
+ * @property {string} method How the input should be sent to the server.  Allowed values: [cgi,
+ * json_where, json_having].
+ *
+ * @property {string} paramName When method = "cgi", the name of the CGI parameter to send.
+ *
+ * @property {any} value The value that will be sent to the server.
+ *
+ * @property {any} internalValue An internal representation of the value sent (e.g. an object
+ * storing extra information).
+ *
+ * @property {any} defaultValue A default value to send when the user has not specified anything.
+ *
+ * @property {object} json When method = "json_where" or method = "json_having", specifies details
+ * about that method.
+ *
+ * @property {string} json.name Name of the constraint set.
+ *
+ * @property {string} json.column Name of the column to add a constraint for.
+ *
+ * @property {string} json.operator Operator to use for the constraint.  Allowed values: [$eq, $ne,
+ * $in, $nin, $gt, $gte, $lt, $lte, $like].
+ *
+ * @property {string} json.operand When absent, the user's input is sent as the value.  When
+ * present, this is sent instead, and any empty array is replaced with the user's input.
+ */
 
 // FilterError {{{1
 
@@ -15,8 +66,18 @@ var FilterError = makeSubclass('FilterError', Error, function (msg) {
 
 // Filter {{{1
 
+// Constructor {{{2
+
 /**
+ * Create a new Filter.
+ *
+ * @param {Filter~Config} config
+ * Specify the properties of this Filter.
+ *
  * @class
+ *
+ * Represents a value that can be sent to an origin by a {@link Source}.  Usually (but not always)
+ * associated with some input element in the page where the user provides the value.
  *
  * @property {string} inputName Name of an input element from a form.
  *
@@ -51,8 +112,6 @@ var FilterError = makeSubclass('FilterError', Error, function (msg) {
  *
  * @property {any} defaultValue A default value to send when the user has not specified anything.
  */
-
-// Constructor {{{2
 
 var Filter = function (config) {
 	var self = this
@@ -154,26 +213,27 @@ Filter.prototype.store = function (id) {
 // #load {{{2
 
 /**
- * Loads a filter from memory into a form in the page. Any existing content in
- * the form is cleared first. This is a lot more complicated than it sounds,
- * because every type has to be loaded differently.
+ * Loads a filter from memory into a form in the page. Any existing content in the form is cleared
+ * first. This is a lot more complicated than it sounds, because every type has to be loaded
+ * differently.
  *
- * @param id The ID of the form to populate.
+ * @param {string} [id]
+ * The ID of the form to populate.  If missing, look for inputs on the whole page.
  *
- * @param opts Additional configuration options:
+ * @param {object} [opts] Additional configuration options:
  *
- * - animate: If true, use an animation to pulse the background color of the
- *   input that's being changed from its currently value. When this is true,
- *   the values bgAccentIn and bgAccountOut must also be provided. (The
- *   default is false, do not show animation.)
+ * @param {boolean} [opts.animate=false]
+ * If true, use an animation to pulse the background color of the input that's being changed from
+ * its currently value. When this is true, the values `bgAccentIn` and `bgAccountOut` must also be
+ * provided.
  *
- * - bgAccentIn: Hex string for the color to use for fading into the animation
- *   (e.g. if you want something to highlight in yellow briefly and then go
- *   back to white, use a yellow color here).
+ * @param {string} [opts.bgAccentIn]
+ * Hex string for the color to use for fading into the animation (e.g. if you want something to
+ * highlight in yellow briefly and then go back to white, use a yellow color here).
  *
- * - bgAccentOut: Hex string for the color to use for fading out of the
- *   animation (in the example above, you'd use white). Also supports the
- *   special value "transparent" to remove the highlight.
+ * @param {string} [opts.bgAccentOut]
+ * Hex string for the color to use for fading out of the animation (in the example above, you'd use
+ * white). Also supports the special value "transparent" to remove the highlight.
  */
 
 Filter.prototype.load = function (id, opts) {
@@ -325,11 +385,11 @@ Filter.prototype.load = function (id, opts) {
 // #buildInput {{{2
 
 /**
- * Constructs a hidden input within the specified form which can be used to
- * submit the filter's value to the server.
+ * Constructs a hidden input within the specified form which can be used to submit the filter's
+ * value to the server.
  *
- * @param form DOM node (optionally wrapped by jQuery) of the form element in
- * which to place the input.
+ * @param {Element|jQuery} form
+ * DOM node (optionally wrapped by jQuery) of the form element in which to place the input.
  */
 
 Filter.prototype.buildInput = function (form) {
@@ -345,6 +405,13 @@ Filter.prototype.buildInput = function (form) {
 };
 
 // #addJsonParam {{{2
+
+/**
+ * Add the value of this Filter to the specified JSON object.
+ *
+ * @param {object} obj
+ * The object to which this Filter will add itself.
+ */
 
 Filter.prototype.addJsonParam = function (obj) {
 	var self = this
@@ -442,15 +509,17 @@ Filter.prototype.toParams = function (params) {
 
 // FilterSet {{{1
 
-/**
- * @class
- */
-
 // Constructor {{{2
 
 /**
+ * Create a new {@link FilterSet}.
+ *
  * @param {string} name
  * @param {object} template
+ *
+ * @class
+ *
+ * Links multiple filters together.
  */
 
 var FilterSet = function (name, template) {
@@ -466,7 +535,10 @@ var FilterSet = function (name, template) {
 // #copyTo {{{2
 
 /**
- * @param {Filter} target
+ * Copies the values of the Filters from this FilterSet to another.  Mainly useful for initializing
+ * a new FilterSet based on the existing one, e.g. when a FilterInput switches the active set.
+ *
+ * @param {FilterSet} target
  */
 
 FilterSet.prototype.copyTo = function (target) {
@@ -490,8 +562,8 @@ FilterSet.prototype.copyTo = function (target) {
 /**
  * Adds a new filter with the specified configuration to this filter set.
  *
- * @param config Configuration for the filter, giving input name, parameter
- * name, and other information (see Filter() for details).
+ * @param {Filter~Config} config
+ * Configuration for the filter, giving input name, parameter name, and other information.
  */
 
 FilterSet.prototype.add = function (config) {
@@ -505,8 +577,9 @@ FilterSet.prototype.add = function (config) {
 /**
  * Remove a filter from this filter set.
  *
- * @param paramName Parameter name of the filter to remove. All filters should
- * have unique parameter names, so this works.
+ * @param {string} paramName
+ * Parameter name of the filter to remove. All filters should have unique parameter names, so this
+ * works.
  */
 
 FilterSet.prototype.remove = function (paramName) {
@@ -533,9 +606,11 @@ FilterSet.prototype.get = function (name) {
 /**
  * Load all filters in this set into a form.
  *
- * @param id The ID of the form to load filter data into.
+ * @param {string} id
+ * The ID of the form to load filter data into.
  *
- * @param opts Various options to pass along to Filter#load().
+ * @param {object} opts
+ * Various options to pass along to Filter#load().
  */
 
 FilterSet.prototype.load = function (id, opts) {
@@ -546,6 +621,13 @@ FilterSet.prototype.load = function (id, opts) {
 
 // #store {{{2
 
+/**
+ * Store inputs from a form into the corresponding filters in this set.
+ *
+ * @param {string} [id]
+ * ID of the form to look for inputs in.  If missing, look for inputs on the whole page.
+ */
+
 FilterSet.prototype.store = function (id) {
 	_.each(this.filters, function (fltr) {
 		fltr.store(id);
@@ -555,10 +637,10 @@ FilterSet.prototype.store = function (id) {
 // #buildForm {{{2
 
 /**
- * Builds an invisible form containing the parameters for this filter set. The
- * form can then be submitted in order to send the parameters to the server.
- * This is useful in cases where you want to make a request but you don't want
- * to use AJAX (for example, to open the result of a POST in a new window).
+ * Builds an invisible form containing the parameters for this filter set. The form can then be
+ * submitted in order to send the parameters to the server.  This is useful in cases where you want
+ * to make a request but you don't want to use AJAX (for example, to open the result of a POST in a
+ * new window).
  */
 
 FilterSet.prototype.buildForm = function () {
@@ -600,14 +682,27 @@ FilterSet.prototype.toParams = function () {
 
 // FilterInput {{{1
 
-/**
- * @class
- */
-
 // Constructor {{{2
 
 /**
+ * Creates a new FilterInput.
+ *
  * @param {string} formId
+ *
+ * @class
+ *
+ * Admittedly not well-named, the `FilterInput` associates multiple {@link FilterSet} instances with
+ * a form in the page.  This allows the values of a `FilterSet` to be stored in — or loaded from —
+ * that form, effectively linking the UI with the internal data structure of the filter.
+ *
+ * @property {string} formId
+ *
+ * @property {FilterSet} activeFilterSet
+ * The FilterSet that is currently active.  Methods like {@link FilterInput#store} and {@link
+ * FilterInput#load} affect the active FilterSet.
+ *
+ * @property {Object.<string,FilterSet>} availableFilterSets
+ * Map of all the FilterSets that this FilterInput is managing.
  */
 
 var FilterInput = function (formId) {
@@ -619,6 +714,7 @@ var FilterInput = function (formId) {
 // #store {{{2
 
 /**
+ * Stores the active FilterSet.
  */
 
 FilterInput.prototype.store = function () {
@@ -629,6 +725,8 @@ FilterInput.prototype.store = function () {
 // #load {{{2
 
 /**
+ * Loads the active FilterSet.
+ *
  * @param {object} opts
  */
 
@@ -640,8 +738,17 @@ FilterInput.prototype.load = function (opts) {
 // #change {{{2
 
 /**
+ * Changes the active FilterSet.
+ *
  * @param {string} name
- * @param {object} opts
+ * Name of the FilterSet to switch to.
+ *
+ * @param {object} [opts]
+ *
+ * @param {boolean} [opts.copy=false]
+ * If true, copy values from the current active FilterSet to the new one.
+ *
+ * @returns {FilterInput} This instance (chainable).
  */
 
 FilterInput.prototype.change = function (name, opts) {
@@ -662,7 +769,10 @@ FilterInput.prototype.change = function (name, opts) {
 // #activeName {{{2
 
 /**
+ * Get the name of the active FilterSet.
+ *
  * @returns {string}
+ * Name of the active FilterSet.
  */
 
 FilterInput.prototype.activeName = function () {
@@ -672,7 +782,11 @@ FilterInput.prototype.activeName = function () {
 // #add {{{2
 
 /**
+ * Create a new FilterSet and add it to this FilterInput.
+ *
  * @param {string} name
+ * Name of the new FilterSet.
+ *
  * @param {object} template
  */
 
@@ -826,19 +940,7 @@ var ParamInput = function (sourceType, opts) {
 	self.filter = new Filter(filterOpts);
 };
 
-// #toParams {{{2
-
-/**
- * Place this parameter's value(s) into an object to be sent to the data source.
- *
- * @param {object} obj The object to place our values into.
- */
-
-ParamInput.prototype.toParams = function (obj) {
-	var self = this;
-
-	return self.filter.toParams(obj);
-};
+delegate(ParamInput, 'filter', ['toParams']);
 
 // Exports {{{1
 
