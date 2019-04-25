@@ -828,18 +828,6 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		})
 		.appendTo(titlebar);
 
-	if (typeof self.tagOpts.helpText === 'string' && self.tagOpts.helpText !== '') {
-		notHeader.append(' ');
-		jQuery(fontAwesome('F059'))
-			.jqxTooltip({
-				content: self.tagOpts.helpText,
-				width: '400',
-				autoHideDelay: 10000,
-				opacity: 1
-			})
-			.appendTo(notHeader);
-	}
-
 	notHeader.append(' ');
 
 	self.ui.rowCount = jQuery('<span>').appendTo(notHeader);
@@ -859,6 +847,19 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 		)
 		.append(')')
 		.appendTo(notHeader);
+
+	if (typeof self.tagOpts.helpText === 'string' && self.tagOpts.helpText !== '') {
+		notHeader.append(' ');
+		fontAwesome('F059')
+			.tooltip({
+				classes: {
+					'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
+				},
+				show: { delay: 1000 },
+				content: self.tagOpts.helpText
+			})
+			.appendTo(notHeader);
+	}
 
 	// Create container to hold all the controls in the titlebar
 
