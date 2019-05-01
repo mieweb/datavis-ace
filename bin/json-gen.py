@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 from babel.dates import format_date
 from babel.numbers import format_decimal
 from datetime import date
@@ -16,7 +18,7 @@ import argparse
 
 from jsoncomment import JsonComment
 
-WORDS = open('/usr/share/dict/words').read().splitlines()
+WORDS = open(os.getenv('DICT_FILE', '/usr/share/dict/words')).read().splitlines()
 STATES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
 RANDOMS = {}
 RANDOM_SEED = { 'seed': None }
