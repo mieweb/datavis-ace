@@ -39,6 +39,7 @@
     "moment": "^2.22.2",
     "numeral": "^2.0.6",
     "papaparse": "^4.6.2",
+    "serve-handler": "^6.0.0",
     "sprintf-js": "^1.1.1",
     "sumoselect": "^3.0.5",
     "underscore": "^1.9.1"

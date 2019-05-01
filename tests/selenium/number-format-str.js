@@ -2,11 +2,13 @@ const assert = require('assert');
 const Grid = require('../lib/grid.js');
 const {asyncEach} = require('../lib/util.js');
 const child_process = require('child_process');
+const setup = require ('../lib/setup.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Number Formatting', function() {
+	setup.server();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
@@ -26,7 +28,7 @@ describe('Number Formatting', function() {
 	// Therefore, we clear local storage after the test is done instead.  SO DON'T MOVE IT HERE!
 
 	beforeEach(async function () {
-		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/number-format-str.html');
+		await driver.get('http://localhost:3000/grid/number-format-str.html');
 	});
 
 	afterEach(async function () {

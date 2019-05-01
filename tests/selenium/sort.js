@@ -2,11 +2,13 @@ const assert = require('assert');
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
 const {sleep} = require('../lib/util.js');
+const setup = require('../lib/setup.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Sort', function() {
+	setup.server();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
@@ -14,7 +16,7 @@ describe('Sort', function() {
 	
 	before(async function () {
 		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
-		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/default.html');
+		await driver.get('http://localhost:3000/grid/default.html');
 		grid = new Grid(driver);
 		await grid.waitForIdle();
 	});

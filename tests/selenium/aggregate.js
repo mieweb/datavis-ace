@@ -2,11 +2,13 @@ const {assert} = require('chai');
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
 const {sleep} = require('../lib/util.js');
+const setup = require('../lib/setup.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Aggregate', function() {
+	setup.server();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
@@ -34,7 +36,7 @@ describe('Aggregate', function() {
 		let floatMaxs = [9096.552813426433, 9826.871974900494, 9020.757338445388, 9665.097071339816, 9229.901315761948, 9637.421621192036, 6183.071597756641, 9961.582135696373, 9327.40540844484];
 
 		before(async function () {
-			await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/default.html');
+			await driver.get('http://localhost:3000/grid/default.html');
 			grid = new Grid(driver);
 			await grid.waitForIdle();
 			await grid.addGroup('fruit');

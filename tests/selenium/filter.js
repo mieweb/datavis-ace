@@ -2,11 +2,13 @@ const assert = require('assert');
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
 const {sleep} = require('../lib/util.js');
+const setup = require('../lib/setup.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Filter', function() {
+	setup.server();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
@@ -26,7 +28,7 @@ describe('Filter', function() {
 	// Therefore, we clear local storage after the test is done instead.  SO DON'T MOVE IT HERE!
 
 	beforeEach(async function () {
-		await driver.get('https://zeus.med-web.com/~tvenable/datavis/tests/grid/default.html');
+		await driver.get('http://localhost:3000/grid/default.html');
 	});
 
 	afterEach(async function () {
