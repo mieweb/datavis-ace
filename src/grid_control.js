@@ -1130,7 +1130,9 @@ GroupControl.prototype.draw = function (parent) {
 
 			if (ui.draggable.attr('data-wcdv-draggable-origin') === 'GRID_TABLE_HEADER') {
 				var field = ui.draggable.attr('data-wcdv-field');
-				self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
+				self.addField(field, getProp(self.colConfig.get(field), 'displayText'), {
+					autoShowFunWin: true
+				});
 			}
 		}
 	})
@@ -1151,7 +1153,9 @@ GroupControl.prototype.draw = function (parent) {
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
+		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text(), {
+			autoShowFunWin: true
+		});
 	});
 
 	self.addViewConfigChangeHandler('groupSet', function () {
@@ -1217,6 +1221,7 @@ GroupControl.prototype.addField = function (field, displayText, opts) {
 	var self = this;
 
 	opts = deepDefaults(opts, {
+		autoShowFunWin: false,
 		updateView: true
 	});
 	var updateView = opts.updateView;
@@ -1226,7 +1231,7 @@ GroupControl.prototype.addField = function (field, displayText, opts) {
 		if (!ok) {
 			return;
 		}
-		if (cf.fti != null && ['date', 'datetime'].indexOf(cf.fti.type) >= 0 && cf.field.fun === undefined) {
+		if (opts.autoShowFunWin && cf.fti != null && ['date', 'datetime'].indexOf(cf.fti.type) >= 0 && cf.field.fun === undefined) {
 			cf.showFunWin();
 		}
 		else if (updateView) {
@@ -1298,7 +1303,9 @@ PivotControl.prototype.draw = function (parent) {
 
 			if (ui.draggable.attr('data-wcdv-draggable-origin') === 'GRID_TABLE_HEADER') {
 				var field = ui.draggable.attr('data-wcdv-field');
-				self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
+				self.addField(field, getProp(self.colConfig.get(field), 'displayText'), {
+					autoShowFunWin: true
+				});
 			}
 		}
 	})
@@ -1320,7 +1327,9 @@ PivotControl.prototype.draw = function (parent) {
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
+		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text(), {
+			autoShowFunWin: true
+		});
 	});
 
 	self.addViewConfigChangeHandler('pivotSet', function (spec) {
@@ -1392,6 +1401,7 @@ PivotControl.prototype.addField = function (field, displayText, opts) {
 	var self = this;
 
 	opts = deepDefaults(opts, {
+		autoShowFunWin: false,
 		updateView: true
 	});
 	var updateView = opts.updateView;
@@ -1401,7 +1411,7 @@ PivotControl.prototype.addField = function (field, displayText, opts) {
 		if (!ok) {
 			return;
 		}
-		if (cf.fti != null && ['date', 'datetime'].indexOf(cf.fti.type) >= 0 && cf.field.fun === undefined) {
+		if (opts.autoShowFunWin && cf.fti != null && ['date', 'datetime'].indexOf(cf.fti.type) >= 0 && cf.field.fun === undefined) {
 			cf.showFunWin();
 		}
 		else if (updateView) {
