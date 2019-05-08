@@ -39,6 +39,11 @@ The number one convention is to avoid making unnecessary diffs.  Follow the styl
 * Use `makeSubclass` to create class hierarchies.  Toplevel classes should have `Object` as their superclass.
 * Use `self.super` to access methods in superclasses.
 
+## Building Documentation
+
+* Run `git submodule update --init` to get the JSDoc templates that this project uses.
+* Run `make jsdoc` to build the documentation.
+
 ## Testing
 
 DataVis uses Mocha + Selenium for browser testing.  Run `npm install` and then `make test` to run all available Selenium tests.  Since tests run in Node.js, please use any available JavaScript features you want (e.g. async/await, destructuring assignment, etc).
