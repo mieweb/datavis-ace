@@ -87,20 +87,46 @@ jQuery.fn.extend({
 		return this.css('display') === 'none' || this.css('visibility') !== 'visible';
 	},
 
+	// _makeIconCheckbox('foo') -->
+	//   off = fontawesome('foo'), class = 'wcdv_icon_checkbox_off'
+	//   on = fontawesome('foo'), class = 'wcdv_icon_checkbox_on'
+	// _makeIconCheckbox('foo', 'bar') -->
+	//   off = fontawesome('foo')
+	//   on = fontawesome('bar')
+	// _makeIconCheckbox(obj) -->
+	//   off = fontawesome(obj.off.icon), class = obj.off.classes
+	//   on = fontawesome(obj.on.icon), class = obj.on.classes
+
 	_makeIconCheckbox: function () {
 		var self = this
 			, args = Array.prototype.slice.call(arguments)
 			, opts = {};
 
 		if (args.length === 1) {
-			opts = args[0];
+			if (typeof args[0] === 'string') {
+				opts = {
+					on: {
+						icon: args[0],
+						classes: 'wcdv_icon_checkbox_on'
+					},
+					off: {
+						icon: args[0],
+						classes: 'wcdv_icon_checkbox_off'
+					}
+				};
+			}
+			else {
+				opts = args[0];
+			}
 		}
 		else if (args.length === 2) {
-			opts.on = {
-				icon: args[0]
-			};
-			opts.off = {
-				icon: args[1]
+			opts = {
+				on: {
+					icon: args[0]
+				},
+				off: {
+					icon: args[1]
+				}
 			};
 		}
 
@@ -115,8 +141,8 @@ jQuery.fn.extend({
 			})
 		;
 
-		var onIcon = fontAwesome(opts.on.icon).hide().appendTo(button);
-		var offIcon = fontAwesome(opts.off.icon).hide().appendTo(button);
+		var onIcon = fontAwesome(opts.on.icon, opts.on.classes).css('display', 'inline-block').hide().appendTo(button);
+		var offIcon = fontAwesome(opts.off.icon, opts.off.classes).css('display', 'inline-block').hide().appendTo(button);
 
 		var updateIcon = function () {
 			if (self._isChecked()) {

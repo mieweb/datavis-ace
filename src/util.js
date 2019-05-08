@@ -3683,9 +3683,16 @@ export function determineColumns(colConfig, data, typeInfo) {
 	validateColConfig(colConfig, data);
 
 	if (colConfig.size() > 0) {
-		columns = colConfig.filter(function (cc) {
+		var notHidden = colConfig.filter(function (cc) {
 			return !cc.isHidden;
+		});
+		var pinned = notHidden.filter(function (cc) {
+			return cc.isPinned;
 		}).keys();
+		var notPinned = notHidden.filter(function (cc) {
+			return !cc.isPinned;
+		}).keys();
+		columns = pinned.concat(notPinned);
 	}
 	else if (typeInfo.size() > 0) {
 		columns = _.reject(typeInfo.keys(), function (field) {

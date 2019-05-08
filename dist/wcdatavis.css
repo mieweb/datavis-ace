@@ -27,6 +27,17 @@ button.wcdv_icon_button span.fa {
 	font-size: 18px;
 }
 
+/*
+ * Styles for checkboxes which are displayed using FontAwesome icons.
+ */
+
+button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_off {
+	color: #000;
+}
+button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_on {
+	color: #0095D6;
+}
+
 button.wcdv_option {
 	width: 100%;
 	padding-top: 1ex;
@@ -78,6 +89,17 @@ button.wcdv_expand_button > span.fa {
     padding: 4px;
     margin-bottom: 4px;
     background-color: #fadfdb;
+}
+
+.wcdv_info_banner {
+	border: solid 2px #2196F3;
+	background-color: #E3F2FD;
+	color: #0D47A1;
+    padding: 1ex;
+}
+
+.wcdv_bottom_border_teal {
+	border-bottom: solid 2px #009688;
 }
 
 hr.wcdv_hr_gradient {
@@ -884,6 +906,11 @@ tr.wcdvgrid_more td {
 
 .wcdv_minimal_width {
 	width: 1px;
+}
+
+.wcdv_width_1em {
+	text-align: center;
+	width: 1em;
 }
 
 /******************************************************************************/

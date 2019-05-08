@@ -75,11 +75,23 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		}
 	});
 
-	var colTable = jQuery('<table>')
-		.addClass('wcdv_colconfigwin_table')
+	var pinnedMsg = jQuery('<div>')
+		.addClass('wcdv_info_banner')
+		.append(fontAwesome('fa-info-circle'))
+		.append(' Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown below.')
+		.hide()
 		.appendTo(orderWin);
 
-	var colTableHeader = jQuery('<thead><th></th><th>Field</th><th>Display</th><th></th><th></th>')
+	var pinnedCount = 0;
+
+	var colTable = jQuery('<table>')
+		.addClass('wcdv_colconfigwin_table')
+		.appendTo(jQuery('<div>').css({
+			'max-height': '40ex',
+			'overflow-y': 'scroll'
+		}).appendTo(orderWin));
+
+	var colTableHeader = jQuery('<thead><th class="wcdv_bottom_border_teal">Field</th><th class="wcdv_bottom_border_teal">Display</th><th colspan="4" class="wcdv_bottom_border_teal">Options</th>')
 		.appendTo(colTable);
 
 	var keys = current.keys();
@@ -96,15 +108,6 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		tr = jQuery('<tr>');
 		td = jQuery('<td>')
-			.addClass('wcdv_minimal_width')
-			.appendTo(tr);
-
-		var dragButton = jQuery('<button>', {'type': 'button', 'title': 'Click and drag to reorder columns'})
-			.addClass('wcdv_icon_button drag-handle')
-			.append(fontAwesome('fa-bars'))
-			.appendTo(td);
-
-		td = jQuery('<td>')
 			.text(field)
 			.appendTo(tr);
 
@@ -115,7 +118,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		var displayTextTd = td;
 
 		td = jQuery('<td>')
-			.addClass('wcdv_minimal_width')
+			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
 		var renameBtn = jQuery('<button>', {'type': 'button', 'title': 'Rename'})
@@ -135,7 +138,44 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		;
 
 		td = jQuery('<td>')
-			.addClass('wcdv_minimal_width')
+			.addClass('wcdv_width_1em')
+			.appendTo(tr);
+
+		var isPinnedCheckbox = jQuery('<input>', {'type': 'checkbox'})
+			.prop('checked', getPropDef(false, colConfig, 'isPinned'))
+			.on('change', function () {
+				colConfig.isPinned = isPinnedCheckbox.prop('checked');
+				if (colConfig.isPinned) {
+					pinnedCount += 1;
+				}
+				else {
+					pinnedCount -= 1;
+				}
+				if (pinnedCount > 0) {
+					pinnedMsg.show();
+				}
+				else {
+					pinnedMsg.hide();
+				}
+			})
+			.appendTo(td)
+			._makeIconCheckbox({
+				off: {
+					icon: 'fa-thumb-tack',
+					classes: 'wcdv_icon_checkbox_off'
+				},
+				on: {
+					icon: 'fa-thumb-tack',
+					classes: 'wcdv_icon_checkbox_on fa-rotate-90'
+				}
+			});
+
+		if (getPropDef(false, colConfig, 'isPinned')) {
+			pinnedCount += 1;
+		}
+
+		td = jQuery('<td>')
+			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
 		var isHiddenCheckbox = jQuery('<input>', {'type': 'checkbox'})
@@ -149,7 +189,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		/*
 		td = jQuery('<td>')
-			.addClass('wcdv_minimal_width')
+			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
 		var configBtn = jQuery('<button>', {'type': 'button', 'title': 'Click to configure column'})
@@ -161,8 +201,21 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(td);
 		*/
 
+		td = jQuery('<td>')
+			.addClass('wcdv_width_1em')
+			.appendTo(tr);
+
+		var dragButton = jQuery('<button>', {'type': 'button', 'title': 'Click and drag to reorder columns'})
+			.addClass('wcdv_icon_button drag-handle')
+			.append(fontAwesome('fa-arrows-v'))
+			.appendTo(td);
+
 		tr.appendTo(colTableBody);
 	});
+
+	if (pinnedCount > 0) {
+		pinnedMsg.show();
+	}
 
 	orderWin.dialog('open');
 };

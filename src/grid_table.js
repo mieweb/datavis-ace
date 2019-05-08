@@ -1167,6 +1167,22 @@ GridTable.prototype.draw = function (root, opts, cont) {
 				else {
 					self.ui.tbl.attr('data-tttype', 'sticky');
 				}
+				if (data.isPlain) {
+					var pinnedColumns = 0;
+					_.each(columns, function (field) {
+						var fcc = self.colConfig.get(field);
+						if (fcc != null && fcc.isPinned) {
+							pinnedColumns += 1;
+						}
+					});
+					if (pinnedColumns > 0) {
+						if (self.features.rowSelect) {
+							pinnedColumns += 1;
+						}
+						self.ui.tbl.attr('data-tttype', 'sidescroll');
+						self.ui.tbl.attr('data-ttsidecells', pinnedColumns);
+					}
+				}
 				break;
 			}
 		}
