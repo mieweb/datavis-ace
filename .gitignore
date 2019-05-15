@@ -20,3 +20,4 @@ tests/pages/wcdatavis.css
 tests/pages/*.json
 npm-debug.log
 reports
+package-lock.json
