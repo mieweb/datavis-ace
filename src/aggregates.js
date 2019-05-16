@@ -729,7 +729,7 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 		var a = [];
 
 		acc.map.each(function (v, k) {
-			a.push(k + ' (' + v + ')');
+			a.push(k + ' (' + v.count + ')');
 		});
 
 		return a.join(self.opts.separator || ', ');
