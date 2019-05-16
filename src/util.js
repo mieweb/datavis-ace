@@ -2953,7 +2953,6 @@ export function format(fcc, fti, cell, opts) {
 	// When we've already rendered this cell before, just reuse that.
 
 	if (cell.cachedRender != null) {
-		console.log(cell);
 		return cell.cachedRender;
 	}
 

@@ -1313,7 +1313,6 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 		}
 
 		rowVal = format(fcc, t, rowVal);
-		console.log(rowVal);
 
 		var th = jQuery('<th>');
 		var span = jQuery('<span>').addClass('wcdv_heading_title');
