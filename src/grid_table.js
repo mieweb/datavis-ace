@@ -1165,6 +1165,7 @@ GridTable.prototype.draw = function (root, opts, cont) {
 			case 'tabletool':
 				if (self.opts.fixedHeight) {
 					self.ui.tbl.attr('data-tttype', 'fixed');
+					self.ui.tbl.attr('data-ttheight', self.grid.rootHeight);
 				}
 				else {
 					self.ui.tbl.attr('data-tttype', 'sticky');
