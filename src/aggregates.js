@@ -658,7 +658,7 @@ ValuesAggregate.prototype.calculateDone = function (acc) {
 			// FIXME: Subsequent calls to #calculate() from a different instance of ValuesAggregate can
 			// change the elements of acc and therefore wrapper.  I cannot figure out why, so cloning the
 			// element will have to do for now.
-			wrapper.append(elt.clone());
+			wrapper.append(isElement(elt) ? elt.clone() : elt);
 		});
 		return wrapper;
 	}
@@ -720,7 +720,7 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 			if (i > 0) {
 				div.append(self.opts.separator || ', ');
 			}
-			div.append(v.formatted.clone());
+			div.append(isElement(v.formatted) ? v.formatted.clone() : v.formatted);
 			div.append(' (' + v.count + ')');
 		});
 		return div;
@@ -753,7 +753,7 @@ DistinctValuesAggregate.prototype.calculateDone = function (acc) {
 			if (i > 0) {
 				div.append(self.opts.separator || ', ');
 			}
-			div.append(v.formatted.clone());
+			div.append(isElement(v.formatted) ? v.formatted.clone() : v.formatted);
 		});
 		return div;
 	}
