@@ -2,9 +2,9 @@
 
 import os
 
-from babel.dates import format_date
+from babel.dates import format_date, format_datetime, format_time
 from babel.numbers import format_decimal
-from datetime import date
+from datetime import date, datetime, time
 
 import copy
 import decimal
@@ -72,6 +72,16 @@ def random_date(name='random_date', min='1900-01-01', max='2100-01-01', **opts):
     else:
         return str(val)
 
+def random_datetime(name='random_datetime', min='1900-01-01 00:00:00', max='2099-12-31 23:59:59', **opts):
+    r = init_random(name)
+    min = time.mktime(time.strptime(min, '%Y-%m-%d %H:%M:%S'))
+    max = time.mktime(time.strptime(max, '%Y-%m-%d %H:%M:%S'))
+    val = datetime.fromtimestamp(r.randint(min, max))
+    if 'format' in opts:
+        return format_datetime(val, opts['format'])
+    else:
+        return str(val)
+
 def random_element(name, set, dist='uniform'):
     r = init_random(name)
     if dist == 'triangular':
@@ -123,6 +133,7 @@ def process(node):
     env = { 'random_int': random_int,
             'random_float': random_float,
             'random_date': random_date,
+            'random_datetime': random_datetime,
             'random_element': random_element,
             'repeat': repeat,
             'word_dict': word_dict,
