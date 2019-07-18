@@ -100,6 +100,71 @@ class Grid {
 		return tds[colNum].getText();
 	}
 
+	/**
+	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
+	 *
+	 * @param {string} rowVal The rowval we're looking for.
+	 * @param {string} [colVal] The colval we're looking for.
+	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
+	 */
+
+	async getAggResult_byVal(rowVal, colVal, aggNum = 0) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		if (colVal != null) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else if (rowVal.length > 1) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else {
+			const trs = await table.findElements(By.css('tbody > tr'));
+			const rowValHeaders = await table.findElements(By.css('tbody > tr > th'));
+			const th = await asyncFilter(rowValHeaders, async (elt) => await elt.getText() === rowVal[0], {reportPosition: true});
+			if (th.length === 0) {
+				throw new Error(`No such rowval: ${rowVal[0]}`);
+			}
+			if (th.length > 1) {
+				throw new Error(`Too many matching rowvals: ${rowVal[0]}`);
+			}
+			const tds = await trs[th[0].pos].findElements(By.css(`tbody > tr > td[data-rowval-index]`));
+			if (tds.length === 0) {
+				throw new Error(`No cell for rowval: ${rowVal[0]}`);
+			}
+			if (tds.length < aggNum + 1) {
+				throw new Error(`No such aggnum: ${aggNum}`);
+			}
+			return tds[aggNum].getText();
+		}
+	}
+
+	/**
+	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
+	 *
+	 * @param {number} rowValIdx Index of the rowval we're looking for.
+	 * @param {number} [colValIdx] Index of the colval we're looking for.
+	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
+	 */
+
+	async getAggResult_byNum(rowValIdx, colValIdx, aggNum = 0) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		if (colValIdx != null) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else {
+			const tds = await table.findElement(By.css(`tbody > tr > td[data-rowval-index=${rowValIdx}]`));
+			if (tds.length === 0) {
+				throw new Error(`No such rowval index: ${rowValIdx}`);
+			}
+			if (tds.length < aggNum + 1) {
+				throw new Error(`No such aggnum: ${aggNum}`);
+			}
+			return tds[aggNum].getText();
+		}
+	}
+
 	async getNumRows() {
 		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
 		//const visible = await asyncFilter(trs, async (elt) => await elt.isDisplayed());
