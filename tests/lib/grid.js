@@ -206,10 +206,28 @@ class Grid {
 	async setGroup() {
 	}
 
-	async addGroup(field) {
+	async addGroup(field, groupFun) {
 		const control = this.driver.findElement(By.css('div.wcdv_group_control'));
 		const dropdown = control.findElement(By.css('select.wcdv_control_addField'));
-		return selectByText(dropdown, field);
+		if (groupFun == null) {
+			return selectByText(dropdown, field);
+		}
+		else {
+			await selectByText(dropdown, field);
+
+			const wins = await this.driver.findElements(By.css('div.ui-dialog'));
+			if (wins.length === 0) {
+				throw new Error('Unable to find any jQuery UI windows');
+			}
+			const visibleWins = await asyncFilter(wins, (elt) => elt.isDisplayed());
+			if (visibleWins.length === 0) {
+				throw new Error('Unable to find any visible jQuery UI windows');
+			}
+			if (visibleWins.length > 1) {
+				throw new Error('Found too many visible jQuery UI windows');
+			}
+			return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname=${groupFun}]`)).click();
+		}
 	}
 
 	async removeGroup(field) {
@@ -224,6 +242,25 @@ class Grid {
 
 	async clearGroup() {
 		return this.driver.findElement(By.css('div.wcdv_group_control .wcdv_control_clear_button')).click();
+	}
+
+	async setGroupFun(field, groupFunName) {
+		const groupField = this.driver.findElement(By.css(`div.wcdv_group_control > div > ul > li[data-wcdv-field="${field}"]`));
+
+		await groupField.findElement(By.css('button[data-wcdv-role=set-group-fun]')).click();
+
+		const wins = await this.driver.findElements(By.css('div.ui-dialog'));
+		if (wins.length === 0) {
+			throw new Error('Unable to find any jQuery UI windows');
+		}
+		const visibleWins = await asyncFilter(wins, (elt) => elt.isDisplayed());
+		if (visibleWins.length === 0) {
+			throw new Error('Unable to find any visible jQuery UI windows');
+		}
+		if (visibleWins.length > 1) {
+			throw new Error('Found too many visible jQuery UI windows');
+		}
+		return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname=${groupFunName}]`)).click();
 	}
 
 	// Pivot {{{2
