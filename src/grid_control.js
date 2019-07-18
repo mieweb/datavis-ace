@@ -247,6 +247,7 @@ FunGridControlField.prototype.draw = function () {
 
 		self.ui.groupFunWinBtn = jQuery('<button>', {
 			'type': 'button',
+			'data-wcdv-role': 'set-group-fun',
 			title: 'Show functions available for this field'
 		})
 			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')

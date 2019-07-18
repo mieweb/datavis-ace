@@ -48,6 +48,7 @@ var GroupFunWin = makeSubclass('GroupFunWin', Object, function (title, groupFuns
 		self.buttons[gfName] = jQuery('<button>', {
 			'type': 'button',
 			'class': 'wcdv_option',
+			'data-wcdv-groupfunname': gfName,
 			'title': gf.displayName
 		})
 			.text(gf.displayName)
@@ -64,6 +65,7 @@ var GroupFunWin = makeSubclass('GroupFunWin', Object, function (title, groupFuns
 	self.buttons['none'] = jQuery('<button>', {
 		'type': 'button',
 		'class': 'wcdv_option',
+		'data-wcdv-groupfunname': 'none',
 		'title': 'None'
 	})
 		.text('None')
