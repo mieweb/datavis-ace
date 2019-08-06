@@ -1,7 +1,15 @@
 import _ from 'underscore';
 import jQuery from 'jquery';
 
-import {arrayCopy, debug, delegate, getProp, isEmpty, makeSubclass, setProp} from './util.js';
+import {
+	arrayCopy,
+	debug,
+	delegate,
+	getProp,
+	isEmpty,
+	makeSubclass,
+	setProp,
+} from './util/misc.js';
 
 /**
  * @file

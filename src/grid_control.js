@@ -14,9 +14,9 @@ import {
 	mapLimit,
 	mixinEventHandling,
 	objFromArray,
-} from './util.js';
+} from './util/misc.js';
 
-import './jquery.js';
+import './util/jquery.js';
 import {AGGREGATE_REGISTRY} from './aggregates.js';
 import {View, GROUP_FUNCTION_REGISTRY} from './view.js';
 import {Grid} from './grid.js';

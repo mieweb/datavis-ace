@@ -2,11 +2,8 @@ import _ from 'underscore';
 import jQuery from 'jquery';
 
 import {
-	fontAwesome,
-	getPropDef,
 	makeSubclass,
-	moveArrayElement,
-} from './util.js';
+} from './util/misc.js';
 
 // GroupFunWin {{{1
 

@@ -18,7 +18,7 @@ import {
 	mixinEventHandling,
 	toFloat,
 	toInt,
-} from './util.js';
+} from './util/misc.js';
 
 /**
  * @file

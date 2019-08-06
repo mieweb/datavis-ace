@@ -21,13 +21,11 @@ import {
 	objFromArray,
 	onVisibilityChange,
 	setPropDef,
-} from './util.js';
+} from './util/misc.js';
 
-import {OrdMap} from './ordmap.js';
 import {AggregateInfo} from './aggregates.js';
 import {GridRenderer} from './grid_renderer.js';
 import {View, GROUP_FUNCTION_REGISTRY} from './view.js';
-import {Grid} from './grid.js';
 
 // Csv {{{1
 

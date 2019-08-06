@@ -1,5 +1,6 @@
-import * as Util from './src/util.js';
-import { OrdMap } from './src/ordmap.js';
+import * as Util from './src/util/misc.js';
+import OrdMap from './src/util/ordmap.js';
+import Lock from './src/util/lock.js';
 import { Aggregate, AGGREGATE_REGISTRY } from './src/aggregates.js';
 import { ParamInput } from './src/source_param.js';
 import { Source } from './src/source.js';
@@ -17,7 +18,7 @@ import { trans } from './src/trans.js';
 	window.MIE.log          = Util.log;
 	window.MIE.debug        = Util.debug;
 	window.MIE.OrdMap       = OrdMap;
-	window.MIE.Lock         = Util.Lock;
+	window.MIE.Lock         = Lock;
 	window.MIE.trans        = trans;
 	window.MIE.makeSubclass = Util.makeSubclass;
 

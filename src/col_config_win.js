@@ -6,7 +6,7 @@ import {
 	getPropDef,
 	makeSubclass,
 	moveArrayElement,
-} from './util.js';
+} from './util/misc.js';
 
 // ColConfigWin {{{1
 

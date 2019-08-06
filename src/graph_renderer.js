@@ -3,27 +3,16 @@ import moment from 'moment';
 import numeral from 'numeral';
 import jQuery from 'jquery';
 
-import {OrdMap} from './ordmap.js';
 import {
 	dataURItoBlob,
 	debug,
-	deepCopy,
 	deepDefaults,
-	determineColumns,
-	fontAwesome,
-	gensym,
 	getProp,
-	getPropDef,
 	loadScript,
 	log,
 	makeSubclass,
-	makeToggleCheckbox,
-	presentDownload,
 	setProp,
-	toInt,
-} from './util.js';
-import {View} from './view.js';
-import {Prefs} from './prefs.js';
+} from './util/misc.js';
 import {AggregateInfo} from './aggregates';
 
 // GraphRenderer {{{1
@@ -47,8 +36,7 @@ GraphRenderer.prototype.toString = function () {
 
 // #_validateConfig {{{2
 
-GraphRenderer.prototype._validateConfig = function (config) {
-	var self = this;
+GraphRenderer.prototype._validateConfig = function () {
 
 	_.each(['Plain', 'Group', 'Pivot'], function (kind) {
 		var propName = 'when' + kind;
@@ -570,7 +558,7 @@ GraphRendererJit.prototype.draw = function () {
 	elt.children().remove();
 
 	self.view.getData(function (ok, data) {
-		self.view.getTypeInfo(function (ok, typeInfo) {
+		self.view.getTypeInfo(function () {
 			var ctor = {
 				area: 'AreaChart',
 				bar: 'BarChart'

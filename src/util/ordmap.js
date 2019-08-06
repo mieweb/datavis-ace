@@ -1,4 +1,4 @@
-import { deepCopy } from './util.js';
+import { deepCopy } from './misc.js';
 
 // OrdMap {{{1
 
@@ -394,6 +394,4 @@ OrdMap.prototype._changeKeyIndex = function (oldIndex, newIndex) {
 
 // Exports {{{1
 
-export {
-	OrdMap
-};
+export default OrdMap;

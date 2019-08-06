@@ -1,11 +1,7 @@
 import _ from 'underscore';
-import moment from 'moment';
-import numeral from 'numeral';
 import jQuery from 'jquery';
 
-import {OrdMap} from './ordmap.js';
 import {
-	dataURItoBlob,
 	debug,
 	deepCopy,
 	deepDefaults,
@@ -14,20 +10,17 @@ import {
 	gensym,
 	getProp,
 	getPropDef,
-	loadScript,
 	makeSubclass,
 	makeToggleCheckbox,
 	presentDownload,
-	setProp,
 	toInt,
-} from './util.js';
+} from './util/misc.js';
+import OrdMap from './util/ordmap.js';
+
 import {View} from './view.js';
 import {Prefs} from './prefs.js';
-import {AggregateInfo} from './aggregates';
 import {
-	GraphRenderer,
 	GraphRendererGoogle,
-	GraphRendererJit,
 } from './graph_renderer.js';
 
 // Graph {{{1
@@ -139,7 +132,7 @@ var Graph = makeSubclass('Graph', Object, function (id, view, devConfig, opts) {
 		self._setSpinner('working');
 		self._showSpinner();
 	});
-	self.view.on('workEnd', function (info, ops) {
+	self.view.on('workEnd', function () {
 		self._hideSpinner();
 	});
 
@@ -332,16 +325,6 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 		.text(self.opts.title)
 		.appendTo(titlebar);
 
-	// The "notHeader" is the extension point for adding information into the titlebar.  It's really
-	// just a place where clicking doesn't trigger the expand/collapse behavior that the rest of the
-	// titlebar has.  Anything that you'd want to shown in the title, which could be interactive,
-	// should be added under here.
-
-	var notHeader = jQuery('<span>', {'class': 'headingInfo'})
-		.on('click', function (evt) {
-			evt.stopPropagation();
-		})
-		.appendTo(titlebar);
 
 	// Create container to hold all the controls in the titlebar
 
@@ -446,7 +429,7 @@ Graph.prototype._addAggregateButtons = function (toolbar) {
 		false,
 		'Y-Axis Starts at Zero',
 		toolbar,
-		function (isChecked) {
+		function () {
 			self.drawInteractive()
 		}
 	);
@@ -467,7 +450,7 @@ Graph.prototype._addPivotButtons = function (toolbar) {
 		true,
 		'Stack',
 		toolbar,
-		function (isChecked) {
+		function () {
 			self.drawInteractive()
 		}
 	);
@@ -985,13 +968,6 @@ GraphControl.prototype.draw = function () {
 	}, { limit: 1 });
 };
 
-// GraphControlField {{{1
-
-var GraphControlField = makeSubclass('GraphControlField', Object, function () {
-	var self = this;
-
-	self.ui = {};
-});
 
 // GRAPH_TYPES {{{1
 

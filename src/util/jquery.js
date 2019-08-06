@@ -1,6 +1,10 @@
 import jQuery from 'jquery';
 
-import {deepDefaults, fontAwesome, getProp} from './util.js';
+import {
+	deepDefaults,
+	fontAwesome,
+	getProp,
+} from './misc.js';
 
 /**
  * The jQuery plugin namespace.
@@ -85,6 +89,20 @@ jQuery.fn.extend({
 
 	_isHidden: function () {
 		return this.css('display') === 'none' || this.css('visibility') !== 'visible';
+	},
+
+	_addTrailing: function (chars) {
+		var t = this.text();
+		if (t.slice(chars.length * -1) !== chars){
+			this.text(t + chars);
+		}
+	},
+
+	_stripTrailing: function (chars) {
+		var t = this.text();
+		if (t.slice(chars.length * -1) === chars) {
+			this.text(t.slice(0, chars.length * -1));
+		}
 	},
 
 	// _makeIconCheckbox('foo') -->

@@ -1,3 +1,5 @@
+// Imports {{{1
+
 import _ from 'underscore';
 import Papa from 'papaparse';
 import jQuery from 'jquery';
@@ -8,15 +10,16 @@ import {
 	deepCopy,
 	getParamsFromUrl,
 	getProp,
-	Lock,
 	log,
 	logAsync,
 	makeSubclass,
+	mixinDebugging,
 	mixinEventHandling,
 	stringValueType,
-} from './util.js';
+} from './util/misc.js';
 
-import {OrdMap} from './ordmap.js';
+import OrdMap from './util/ordmap.js';
+import Lock from './util/lock.js';
 
 // SourceError {{{1
 
@@ -249,7 +252,7 @@ HttpSource.prototype.getData = function (params, cont) {
 	}
 
 	var al = logAsync('HttpSource#getData');
-	return jQuery.ajax(self.url, {
+	self.xhr = jQuery.ajax(self.url, {
 		method: self.method,
 		dataType: self.dataType,
 		error: function (jqXHR, textStatus, errorThrown) {
@@ -263,6 +266,8 @@ HttpSource.prototype.getData = function (params, cont) {
 			return cont(true, self.cache.data);
 		}
 	});
+
+	return self.xhr;
 };
 
 // #getTypeInfo {{{2
@@ -289,6 +294,14 @@ HttpSource.prototype.clearCachedData = function () {
 	var self = this;
 
 	self.cache = null;
+};
+
+// #cancel {{{2
+
+HttpSource.prototype.cancel = function () {
+	var self = this;
+
+	self.xhr.abort();
 };
 
 // FileSource {{{1
@@ -574,10 +587,35 @@ var Source = makeSubclass('Source', Object, function (spec, params, userTypeInfo
 
 	self.conversion = spec.conversion;
 
-	self.locks.getData = new Lock('SOURCE // ' + self.name);
+	self.locks.getData = new Lock(self.getDebugTag() + ' // GET DATA');
+	self.locks.refresh = new Lock(self.getDebugTag() + ' // REFRESH');
 });
 
-// Events {{{2
+// Mixins {{{2
+
+mixinEventHandling(Source, [
+		'fetchDataBegin'
+	, 'fetchDataEnd'
+	, 'fetchDataCancel'
+	, 'dataUpdated'
+	, 'getTypeInfo'
+]);
+
+mixinDebugging(Source);
+
+// Event JSDoc {{{2
+
+/**
+ * Fired when we start fetching data from the origin.
+ *
+ * @event Source#fetchDataBegin
+ */
+
+/**
+ * Fired when we've received data from the origin.
+ *
+ * @event Source#fetchDataEnd
+ */
 
 /**
  * Fired when new data is available.
@@ -590,11 +628,6 @@ var Source = makeSubclass('Source', Object, function (spec, params, userTypeInfo
  *
  * @event Source#getTypeInfo
  */
-
-mixinEventHandling(Source, [
-		'dataUpdated'
-	, 'getTypeInfo'
-]);
 
 // .sources {{{2
 
@@ -647,21 +680,25 @@ Source.prototype.getData = function (cont) {
 	}
 
 	self.locks.getData.lock();
+	self.fire('fetchDataBegin', {async: true});
 	return self.origin.getData(self.createParams(), function (ok, data) {
 		if (!ok) {
 			self.locks.getData.unlock();
+			self.fire('fetchDataEnd', {async: true});
 			return cont(false);
 		}
 
-		if (/* FIXME: Add option to disable post-processing */ false && self.type === 'local') {
+		if (/* TODO: Add option to disable post-processing */ false && self.type === 'local') {
 			self.cache.data = data;
 			self.locks.getData.unlock();
+			self.fire('fetchDataEnd', {async: true});
 			return cont(true, data);
 		}
 		else {
 			self.postProcess(data, function (finalData) {
 				self.cache.data = finalData;
 				self.locks.getData.unlock();
+				self.fire('fetchDataEnd', {async: true});
 				return cont(true, finalData);
 			});
 		}
@@ -778,12 +815,12 @@ Source.prototype.getTypeInfo = function (cont) {
 
 				_.extend(fti, userFti);
 
-				debug.info('SOURCE // GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', userFti);
+				self.debug('GET TYPE INFO', 'Overriding origin type information { field = "' + field + '", typeInfo = %O }', userFti);
 			});
 		}
 
 		self.cache.typeInfo = typeInfo;
-		debug.info('SOURCE // GET TYPE INFO', 'Type Info = %O', deepCopy(self.cache.typeInfo.asMap()));
+		self.debug('GET TYPE INFO', 'Type Info = %O', deepCopy(self.cache.typeInfo.asMap()));
 
 		self.fire(Source.events.getTypeInfo, null, self.cache.typeInfo, self);
 		return cont(true, self.cache.typeInfo);
@@ -823,14 +860,14 @@ Source.prototype.postProcess = function (data, cont) {
 		throw new SourceError('Data Source / Post Process / Data is not an array');
 	}
 
-	debug.info('SOURCE // POST-PROCESSING', 'Beginning post-processing');
+	self.debug('POST-PROCESSING', 'Beginning post-processing');
 
 	self.getTypeInfo(function (ok, typeInfo) {
 		if (!ok) {
 			return cont(data);
 		}
 
-		debug.info('SOURCE // POST-PROCESSING', 'Received type info from source origin: %O', typeInfo.asMap());
+		self.debug('POST-PROCESSING', 'Received type info from source origin: %O', typeInfo.asMap());
 
 		typeInfo.each(function (fti) {
 			if (fti.type == null) {
@@ -907,7 +944,7 @@ Source.prototype.postProcess = function (data, cont) {
 			});
 		});
 
-		debug.info('SOURCE // POST-PROCESSING', 'Post-processing finished');
+		self.debug('POST-PROCESSING', 'Post-processing finished');
 
 		return cont(data);
 	});
@@ -952,7 +989,7 @@ Source.prototype.guessTypes = function (data, typeInfo) {
 			return;
 		}
 
-		debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'Guessing type for field "%s"', fti.field);
+		self.debug('CONVERSION // TYPE GUESSING', 'Guessing type for field "%s"', fti.field);
 
 		var guess = null;
 
@@ -964,13 +1001,13 @@ Source.prototype.guessTypes = function (data, typeInfo) {
 				guess = newGuess;
 			}
 			else if (newGuess !== guess) {
-				debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'For field "%s", previous guess "%s" disagrees with current guess "%s" (rowNum = %d, value = %O)', f, guess, newGuess, i, val);
+				self.debug('CONVERSION // TYPE GUESSING', 'For field "%s", previous guess "%s" disagrees with current guess "%s" (rowNum = %d, value = %O)', f, guess, newGuess, i, val);
 				guess = 'string';
 			}
 		}
 
 		if (guess != null && guess !== 'string') {
-			debug.info('DATA SOURCE // CONVERSION // TYPE GUESSING', 'For field "%s", successfully guessed new type "%s"', f, guess);
+			self.debug('CONVERSION // TYPE GUESSING', 'For field "%s", successfully guessed new type "%s"', f, guess);
 			fti.type = guess;
 		}
 	});
@@ -1017,7 +1054,7 @@ Source.prototype.setConversionTypeInfo = function (data, typeInfo) {
 			}
 
 			if (fti.deferDecoding) {
-				debug.info('SOURCE // CONVERSION', 'Deferring conversion until <%s> { field = "%s", type = "%s", format = "%s" }',
+				self.debug('CONVERSION', 'Deferring conversion until <%s> { field = "%s", type = "%s", format = "%s" }',
 					fti.needsDecoding ? 'SORT' : 'DISPLAY', f, fti.type, fti.format);
 			}
 		}
@@ -1034,7 +1071,7 @@ Source.prototype.convertAll = function (data, field) {
 		return;
 	}
 
-	debug.info('SOURCE // CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
+	self.debug('CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
 
 	_.each(data, function (row) {
 		convert(row[field], self.cache.typeInfo.get(field));
@@ -1063,9 +1100,43 @@ Source.prototype.clearCachedData = function () {
 
 	self.cache = {};
 
-	debug.info('SOURCE (' + self.name + ')', 'Cleared cache');
+	self.fire('dataUpdated');
+};
 
-	self.fire(Source.events.dataUpdated);
+// #refresh {{{2
+
+Source.prototype.refresh = function () {
+	var self = this;
+
+	// When locked, a data updated is already in progress.  Just wait and it will notify clients to
+	// re-pull the data from us.
+
+	if (self.locks.refresh.isLocked()) {
+		return;
+	}
+
+	self.debug(null, 'Refreshing...');
+
+	self.locks.refresh.lock();
+
+	if (typeof self.origin.clearCachedData === 'function') {
+		self.origin.clearCachedData();
+	}
+
+	var tmp = self.cache;
+	self.cache = {};
+
+	self.getData(function (ok) {
+		self.locks.refresh.unlock();
+		if (ok) {
+			self.fire('dataUpdated');
+		}
+		else {
+			// Restore cached data.  Not sure if this is really necessary because the View should have its
+			// own reference to this data.
+			self.cache = tmp;
+		}
+	});
 };
 
 // #createParams {{{2
@@ -1089,11 +1160,11 @@ Source.prototype.createParams = function () {
 	}
 
 	_.each(self.params, function (p) {
-		debug.info('SOURCE // CREATE PARAMS', 'Parameter =', p);
+		self.debug('CREATE PARAMS', 'Parameter =', p);
 		p.toParams(obj);
 	});
 
-	debug.info('SOURCE // CREATE PARAMS', 'Final Parameters =', obj);
+	self.debug('CREATE PARAMS', 'Final Parameters =', obj);
 
 	// The JSON clause parameters will be objects that need to be serialized first, so they can be
 	// sent to the server and unpacked there.
@@ -1129,12 +1200,51 @@ Source.prototype.swapRows = function (oldIndex, newIndex) {
 	//}
 };
 
+// #isCancellable {{{2
+
+/**
+ * Indicates that retrieving data from the origin is cancellable via the `cancel()` method.
+ *
+ * @returns {boolean}
+ * True if the `cancel()` method works, false otherwise.
+ */
+
+Source.prototype.isCancellable = function () {
+	var self = this;
+
+	return typeof self.origin.cancel === 'function';
+};
+
+// #cancel {{{2
+
+/**
+ * Cancel retrieval of the data from the origin.
+ */
+
+Source.prototype.cancel = function () {
+	var self = this;
+
+	if (typeof self.origin.cancel === 'function') {
+		self.origin.cancel();
+		self.locks.getData.clear();
+		self.locks.refresh.clear();
+		self.fire('fetchDataCancel');
+	}
+};
+
 // #toString {{{2
 
 Source.prototype.toString = function () {
 	var self = this;
 
 	return 'Source <' + self.name + ', ' + self.type + '>';
+};
+
+// #getDebugTag {{{2
+
+Source.prototype.getDebugTag = function () {
+	var self = this;
+	return 'SOURCE {name="' + self.name + '", type=' + self.type + '}';
 };
 
 // #setToolbar {{{2

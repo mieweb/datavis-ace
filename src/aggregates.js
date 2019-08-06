@@ -17,8 +17,8 @@ import {
 	makeSubclass,
 	toFloat,
 	toInt,
-} from './util.js';
-import {OrdMap} from './ordmap.js';
+} from './util/misc.js';
+import OrdMap from './util/ordmap.js';
 
 // Utility Functions {{{1
 /* ===============================================================================================

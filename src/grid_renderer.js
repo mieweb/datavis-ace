@@ -2,9 +2,16 @@ import _ from 'underscore';
 import Handlebars from 'handlebars';
 import jQuery from 'jquery';
 
-import {debug, deepCopy, I, Lock, makeSubclass, mixinEventHandling} from './util.js';
+import {
+	debug,
+	deepCopy,
+	I,
+	makeSubclass,
+	mixinEventHandling,
+} from './util/misc.js';
 
-import {OrdMap} from './ordmap.js';
+import OrdMap from './util/ordmap.js';
+import Lock from './util/lock.js';
 import {View} from './view.js';
 
 // GridRenderer {{{1

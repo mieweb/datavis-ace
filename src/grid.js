@@ -10,19 +10,19 @@ import {
 	fontAwesome,
 	getProp,
 	getPropDef,
-	Lock,
 	log,
-	makeLinkConfig,
 	makeRadioButtons,
 	makeSubclass,
 	makeToggleCheckbox,
 	mixinEventHandling,
+	mixinDebugging,
 	presentDownload,
 	setProp,
 	setPropDef,
 	Timing,
-} from './util.js';
-import {OrdMap} from './ordmap.js';
+} from './util/misc.js';
+import OrdMap from './util/ordmap.js';
+import Lock from './util/lock.js';
 import {AggregateControl, FilterControl, GroupControl, PivotControl} from './grid_control.js';
 import {Prefs, PrefsBackendTemporary} from './prefs.js';
 import {View} from './view.js';
@@ -378,7 +378,7 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	defn = defn || {};
 	self._normalize(defn);
 
-	debug.info('GRID', 'Definition: %O', defn);
+	self.debug(null, 'Definition: %O', defn);
 
 	if (!(view instanceof View)) {
 		throw new Error('Call Error: `view` must be an instance of MIE.WC_DataVis.View');
@@ -411,11 +411,11 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 		self.prefs = defn.prefs;
 	}
 	else if (self.view.prefs != null) {
-		debug.info('GRID (' + self.id + ') // PREFS', 'Using prefs from connected view');
+		self.debug('PREFS', 'Using prefs from connected view');
 		self.prefs = self.view.prefs;
 	}
 	else {
-		debug.info('GRID (' + self.id + ') // PREFS', 'Creating new prefs');
+		self.debug('PREFS', 'Creating new prefs');
 		self.prefs = new Prefs(self.id);
 	}
 
@@ -627,7 +627,7 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	var initialRender = true;
 
 	self.tableDoneCont = function (grid, srcIndex) {
-		debug.info('GRID', 'Finished drawing grid table!');
+		self.debug(null, 'Finished drawing grid table!');
 
 		// This just makes sure that we populate the "views" dropdown.  It's only needed the very
 		// first time that we show the grid.  Subsequent refreshes may call this code again, but
@@ -648,19 +648,58 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	self.view.on('fetchDataBegin', function () {
 		self._setSpinner('loading');
 		self._showSpinner();
+		if (self.tagOpts.title) {
+			self.ui.title._addTrailing(',');
+			self.ui.statusSpan.show().text('Loading...');
+			self.ui.rowCount.hide();
+		}
+		if (self.view.source.isCancellable()) {
+			self.ui.cancelFetchBtn.show();
+		}
 	});
 	self.view.on('fetchDataEnd', function () {
 		self._hideSpinner();
+		self.ui.cancelFetchBtn.hide();
+		self.ui.statusSpan.show().text('Loaded');
+	});
+	self.view.source.on('fetchDataCancel', function () {
+		self.ui.cancelFetchBtn.hide();
+		if (initialRender) {
+			if (self.tagOpts.title) {
+				self.ui.title._addTrailing(',');
+				self.ui.statusSpan.show().text('Not Loaded');
+				self.ui.rowCount.hide();
+			}
+			self._setSpinner('not-loaded');
+			self.hasRun = false;
+			self.hide();
+		}
+		else {
+			if (self.tagOpts.title) {
+				self.ui.title._addTrailing(',');
+				self.ui.statusSpan.hide();
+				self.ui.rowCount.show();
+			}
+			self._hideSpinner();
+		}
 	});
 
 	self.view.on('workBegin', function () {
 		self._isIdle = false;
 		self._setSpinner('working');
 		self._showSpinner();
+		if (self.tagOpts.title) {
+			self.ui.title._addTrailing(',');
+			self.ui.statusSpan.show().text('Processing...');
+			self.ui.rowCount.hide();
+		}
 	});
 	self.view.on('workEnd', function (info, ops) {
 		self._isIdle = true;
 		self._hideSpinner();
+		self.ui.title._stripTrailing(',');
+		self.ui.statusSpan.hide();
+		self.ui.rowCount.show();
 		self._updateRowCount(info, ops);
 	});
 
@@ -691,7 +730,22 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	window.MIE.WC_DataVis.grids[id] = self;
 });
 
-// Events {{{2
+// Mixins {{{2
+
+mixinEventHandling(Grid, [
+		'showControls'
+	, 'hideControls'
+	, 'renderBegin'
+	, 'renderEnd'
+	, 'colConfigUpdate'
+	, 'selectionChange'
+]);
+
+delegate(Grid, 'renderer', ['setSelection', 'getSelection', 'select', 'unselect', 'isSelected']);
+
+mixinDebugging(Grid);
+
+// Events JSDoc {{{3
 
 /**
  * Fired when controls are shown in the grid.
@@ -732,25 +786,18 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
  * Data from rows that are selected.
  */
 
-mixinEventHandling(Grid, [
-		'showControls'
-	, 'hideControls'
-	, 'renderBegin'
-	, 'renderEnd'
-	, 'colConfigUpdate'
-	, 'selectionChange'
-]);
-
-// Delegate {{{2
-
-delegate(Grid, 'renderer', ['setSelection', 'getSelection', 'select', 'unselect', 'isSelected']);
-
 // #toString {{{2
 
 Grid.prototype.toString = function () {
 	var self = this;
+	return 'Grid (' + self.id + ')';
+};
 
-	return 'Grid(id="' + self.id + '")';
+// #getDebugTag {{{2
+
+Grid.prototype.getDebugTag = function () {
+	var self = this;
+	return 'GRID {id="' + self.id + '"}';
 };
 
 // #_validateFeatures {{{2
@@ -789,7 +836,7 @@ Grid.prototype._validateFeatures = function () {
 		self.features[feat] = getPropDef(false, self.defn, 'table', 'features', feat);
 	});
 
-	debug.info('GRID', 'Features =', self.features);
+	self.debug(null, 'Features =', self.features);
 };
 
 // #_validateId {{{2
@@ -859,22 +906,30 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImme
 
 	notHeader.append(' ');
 
+	self.ui.statusSpan = jQuery('<span>').appendTo(notHeader);
 	self.ui.rowCount = jQuery('<span>').appendTo(notHeader);
 	self.ui.selectionInfo = jQuery('<span>').appendTo(notHeader);
 
 	self.ui.clearFilter = jQuery('<span>')
 		.hide()
 		.append(' (')
-		.append(
-						jQuery('<span>', {'class': 'link'})
-						.text('clear filter')
-						.on('click', function (evt) {
-							evt.stopPropagation();
-							self.ui.clearFilter.hide();
-							self.view.clearFilter({ notify: true });
-						})
-		)
+		.append(jQuery('<span>', {'class': 'link'})
+			.text('clear filter')
+			.on('click', function (evt) {
+				evt.stopPropagation();
+				self.ui.clearFilter.hide();
+				self.view.clearFilter({ notify: true });
+			}))
 		.append(')')
+		.appendTo(notHeader);
+
+	self.ui.cancelFetchBtn = jQuery('<button>', {'type': 'button'})
+		.css({'margin-left': '0.5em'})
+		.text('Cancel')
+		.on('click', function (evt) {
+			evt.stopPropagation();
+			self.view.source.cancel();
+		})
 		.appendTo(notHeader);
 
 	if (typeof self.tagOpts.helpText === 'string' && self.tagOpts.helpText !== '') {
@@ -1585,7 +1640,7 @@ Grid.prototype.redraw = function () {
 			, ops = self.view.getLastOps();
 
 		if (ops) {
-			debug.info('GRID', 'Creating grid table with view opertions: %O', ops);
+			self.debug(null, 'Creating grid table with view opertions: %O', ops);
 		}
 
 		if (self.defn.renderer != null) {
@@ -1596,7 +1651,7 @@ Grid.prototype.redraw = function () {
 			rendererCtor = GridRenderer.registry.get(getPropDef('table_pivot', self.defn, 'whenPivot', 'renderer'));
 			rendererCtorOpts = deepCopy(self.defn.table.whenPivot);
 
-			debug.info('GRID', 'Creating pivot grid table');
+			self.debug(null, 'Creating pivot grid table');
 
 			self.ui.toolbar_plain.hide();
 			self.ui.toolbar_group.hide();
@@ -1618,7 +1673,7 @@ Grid.prototype.redraw = function () {
 				rendererCtorOpts.footer = self.ui.footer;
 			}
 
-			debug.info('GRID', 'Creating group grid table');
+			self.debug(null, 'Creating group grid table');
 
 			self.ui.toolbar_plain.hide();
 			self.ui.toolbar_group.show();
@@ -1632,7 +1687,7 @@ Grid.prototype.redraw = function () {
 				rendererCtorOpts.footer = self.ui.footer;
 			}
 
-			debug.info('GRID', 'Creating plain grid table');
+			self.debug(null, 'Creating plain grid table');
 
 			self.ui.toolbar_plain.show();
 			self.ui.toolbar_group.hide();
@@ -1708,7 +1763,7 @@ Grid.prototype.redraw = function () {
 
 	self.prefs.prime(function () {
 		self.view.prime(function () {
-			debug.info('GRID', 'Redrawing...');
+			self.debug(null, 'Redrawing...');
 			makeGridTable();
 		});
 	});
@@ -1730,8 +1785,10 @@ Grid.prototype.refresh = function () {
 		return;
 	}
 
+	self.debug(null, 'Refreshing...');
+
 	self._isIdle = false;
-	self.view.clearSourceData();
+	self.view.refresh();
 };
 
 // #_updateRowCount {{{2
@@ -1748,7 +1805,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 	var doingServerFilter = getProp(self.defn, 'server', 'filter') && getProp(self.defn, 'server', 'limit') !== -1;
 	var text = [];
 
-	debug.info('GRID', 'Updating row count');
+	self.debug(null, 'Updating row count');
 
 	// When there's no titlebar, there's nothing for us to do here.
 
@@ -1782,9 +1839,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 		}
 	}
 
-	if (self.ui.title.text().slice(-1) !== ','){
-		self.ui.title.append(',');
-	}
+	self.ui.title._addTrailing(',');
 };
 
 // #hide {{{2
@@ -1799,7 +1854,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 Grid.prototype.hide = function () {
 	var self = this;
 
-	debug.info('GRID', 'Hiding...');
+	self.debug(null, 'Hiding...');
 
 	self.ui.content.hide({
 		duration: 0,
@@ -1830,7 +1885,7 @@ Grid.prototype.show = function (opts) {
 		redraw: true
 	});
 
-	debug.info('GRID', 'Showing...');
+	self.debug(null, 'Showing...');
 
 	self.ui.content.show({
 		duration: 0,
@@ -2200,11 +2255,11 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	case 'defn':
 		// Overrides everything.  Replaces both the current and initial config.
 
-		debug.info('GRID // COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
+		self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 		self.colConfig = colConfig;
 		self.colConfigSource = opts.from;
 
-		debug.info('GRID // COLCONFIG', 'Setting initial from %s: %O', opts.from || '[unknown]', colConfig);
+		self.debug('COLCONFIG', 'Setting initial from %s: %O', opts.from || '[unknown]', colConfig);
 		self.initColConfig = colConfig.clone();
 
 		updated = true;
@@ -2213,7 +2268,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		// Prefs should override typeInfo, but it shouldn't set the initial config.
 
 		if (self.colConfig == null || self.colConfigSource === 'typeInfo') {
-			debug.info('GRID // COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
+			self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 			self.colConfig = colConfig;
 			self.colConfigSource = opts.from;
 			updated = true;
@@ -2225,14 +2280,14 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		// Resetting and using the UI to change colConfig override everything, but they don't store an
 		// initial config.
 
-		debug.info('GRID // COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
+		self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 		self.colConfig = colConfig;
 		self.colConfigSource = opts.from;
 		updated = true;
 		break;
 	case 'typeInfo':
 		if (self.colConfig == null) {
-			debug.info('GRID // COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
+			self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 			self.colConfig = colConfig;
 			self.colConfigSource = 'typeinfo';
 			updated = true;
@@ -2249,7 +2304,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 			});
 
 			if (notInSource.length > 0) {
-				debug.info('GRID // COLCONFIG', 'Removing %d fields from existing column config which are missing from source: %O', notInSource.length, notInSource);
+				self.debug('COLCONFIG', 'Removing %d fields from existing column config which are missing from source: %O', notInSource.length, notInSource);
 				_.each(notInSource, function (fieldName) {
 					self.colConfig.unset(fieldName);
 				});
@@ -2260,12 +2315,12 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 			// the grid's definition are there to limit what we see, so don't try to add to them.
 
 			if (['defn', 'reset'].indexOf(self.colConfigSource) < 0 && self.colConfig.mergeWith(colConfig) > 0) {
-				debug.info('GRID // COLCONFIG', 'Merging from %s: %O', opts.from || '[unknown]', colConfig);
+				self.debug('COLCONFIG', 'Merging from %s: %O', opts.from || '[unknown]', colConfig);
 				updated = true;
 			}
 		}
 		if (self.initColConfig == null) {
-			debug.info('GRID // COLCONFIG', 'Setting initial from typeInfo: %O', colConfig);
+			self.debug('COLCONFIG', 'Setting initial from typeInfo: %O', colConfig);
 			self.initColConfig = colConfig.clone();
 		}
 		break;
@@ -2304,7 +2359,7 @@ Grid.prototype.getColConfig = function (colConfig) {
 Grid.prototype.resetColConfig = function (opts) {
 	var self = this;
 
-	debug.info('GRID // COLCONFIG', 'Resetting to: %O', self.initColConfig);
+	self.debug('COLCONFIG', 'Resetting to: %O', self.initColConfig);
 
 	opts = deepDefaults(opts, {
 		from: 'reset',
@@ -2358,7 +2413,7 @@ Grid.prototype.colConfigFromTypeInfo = function (typeInfo, opts) {
 		});
 	});
 
-	debug.info('GRID', 'Creating colConfig from typeInfo: %O -> %O', typeInfo.asMap(), typeInfoColConfig.asMap());
+	self.debug(null, 'Creating colConfig from typeInfo: %O -> %O', typeInfo.asMap(), typeInfoColConfig.asMap());
 
 	//self.setColConfig(self.colConfig == null
 	//	? typeInfoColConfig

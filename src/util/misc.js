@@ -5,8 +5,9 @@ import _ from 'underscore';
 import sprintf from 'sprintf-js';
 import jQuery from 'jquery';
 
-import {OrdMap} from './ordmap.js';
-import EXPERIMENTAL_FEATURES from './flags.js';
+import OrdMap from './ordmap.js';
+import Lock from './lock.js';
+import EXPERIMENTAL_FEATURES from '../flags.js';
 
 /**
  * @namespace util
@@ -419,6 +420,25 @@ export function trulyYours(cont, spec, thisArg, acc) {
 	})();
 }
 
+export function asyncChain(fns, args, done) {
+	var self = this;
+	if (!_.isArray(fns)) {
+		throw new Error('Call Error: `fns` must be an array');
+	}
+	if (!_.isArray(args)) {
+		throw new Error('Call Error: `args` must be an array');
+	}
+
+	fns = shallowCopy(fns);
+	var g = function () {
+		if (fns.length === 0) {
+			return done();
+		}
+		fns.shift().apply(self, args.concat(g));
+	};
+	return g();
+}
+
 /**
  * Partial application of a function.  Returns a new function that is a version of the argument
  * with some parameters already bound.  Also called Schönfinkelization.
@@ -702,6 +722,20 @@ export function eachUntilObj(o, f, r, extra) {
 	return true;
 }
 
+/**
+ * Call an asynchronous function for each element in a list.
+ *
+ * @param {object[]} args
+ * The list to iterate over.
+ *
+ * @param {function} fun
+ * An asynchronous function.  The arguments passed to it are: (1) the next element of `args`, and
+ * (2) a callback function to continue iterating.
+ *
+ * @param {function} done
+ * A function called when we're done.
+ */
+
 export function asyncEach(args, fun, done) {
 	if (!_.isArray(args)) {
 		throw new Error('Call Error: `args` must be an array');
@@ -714,13 +748,14 @@ export function asyncEach(args, fun, done) {
 	}
 
 	args = shallowCopy(args);
+	var i = 0;
 	function g() {
 		if (args.length === 0) {
 			return done();
 		}
-		fun(args.shift(), g);
+		return fun(args.shift(), i++, g);
 	}
-	g();
+	return g();
 }
 
 /**
@@ -1706,8 +1741,16 @@ export var mixinEventHandling = (function () {
 				: obj.toString();
 		};
 
-		var getTag = function () {
-			return obj.prototype.constructor.name.toUpperCase();
+		var getTag = function (self) {
+			if (typeof self.getDebugTag === 'function') {
+				return self.getDebugTag();
+			}
+			else if (typeof self.toString === 'function' && self.toString !== Object.toString) {
+				return self.toString();
+			}
+			else {
+				return obj.prototype.constructor.name.toUpperCase();
+			}
 		};
 
 		// #_initEventHandlers {{{3
@@ -1726,6 +1769,44 @@ export var mixinEventHandling = (function () {
 			if (self.eventHandlersById == null) {
 				self.eventHandlersById = [];
 			}
+		};
+
+		// #echo {{{3
+
+		/**
+		 * Echo events from a source, reproducing them ourselves.
+		 *
+		 * @param {object} src
+		 * The source, it must have had `mixinEventHandling()` called on it as well.
+		 *
+		 * @param {string[]} evt
+		 * List of events to echo.
+		 *
+		 * @param {object} opts
+		 * Additional options to pass to the `on()` method.
+		 */
+
+		obj.prototype.echo = function (src, evt, opts) {
+			var self = this;
+
+			opts = opts || {};
+
+			self._initEventHandlers();
+
+			if (!_.isArray(evt)) {
+				evt = [evt];
+			}
+			_.each(evt, function (e, i) {
+				if (typeof e !== 'string') {
+					throw new Error('Call Error: `evt[' + i + ']` must be a string');
+				}
+				if (obj.events[e] === undefined) {
+					throw new Error('Unable to register handler on ' + getName() + ' for "' + e + '" event: no such event available');
+				}
+				src.on(e, function () {
+					self.fire(e);
+				}, opts);
+			});
 		};
 
 		// #on {{{3
@@ -1761,7 +1842,7 @@ export var mixinEventHandling = (function () {
 				if (opts.who != null) {
 					msg += ' from ' + opts.who;
 				}
-				debug.info(getTag() + ' // ON', msg);
+				debug.info(getTag(self) + ' // ON', msg);
 			});
 
 			return self;
@@ -1789,20 +1870,25 @@ export var mixinEventHandling = (function () {
 
 			var newHandlers = [];
 
-			_.each(self.eventHandlers[evt], function (h) {
-				if (who == null || h.who === who) {
+			_.each(self.eventHandlers[evt], function (handler, i) {
+				if (handler == null) {
+					// This handler has been removed, e.g. due to reaching the invocation limit.
+					return;
+				}
+
+				if (who == null || handler.who === who) {
 					// Remove from the ID lookup.  This is used to allow event handlers to be removed while
 					// their event is being fired.
 
-					self.eventHandlersById[h.id] = null;
+					self.eventHandlersById[handler.id] = null;
 				}
 				else {
-					newHandlers.push(h);
+					newHandlers.push(handler);
 				}
 			});
 
 			if (!opts.silent) {
-				debug.info(getTag() + ' // OFF', 'Removed ' + (self.eventHandlers[evt].length - newHandlers.length) + ' handlers from ' + who + ' on "' + evt + '" event');
+				debug.info(getTag(self) + ' // OFF', 'Removed ' + (self.eventHandlers[evt].length - newHandlers.length) + ' handlers from ' + who + ' on "' + evt + '" event');
 			}
 
 			self.eventHandlers[evt] = newHandlers;
@@ -1839,8 +1925,13 @@ export var mixinEventHandling = (function () {
 
 			var handlers = [];
 
-			for (var i = 0; i < self.eventHandlers[evt].length; i += 1) {
+			_.each(self.eventHandlers[evt], function (handler, i) {
 				var handler = self.eventHandlers[evt][i];
+
+				if (handler == null) {
+					// This handler has been removed, e.g. due to reaching the invocation limit.
+					return;
+				}
 
 				// Check to see if this handler is for someone we shouldn't be sending to.
 				//
@@ -1852,23 +1943,27 @@ export var mixinEventHandling = (function () {
 						((_.isArray(opts.notTo) && opts.notTo.indexOf(handler.who) >= 0)
 							|| (typeof opts.notTo === 'function' && opts.notTo(handler.who))
 							|| (typeof opts.notTo === 'object' && opts.notTo === handler.who))) {
-					continue;
+					return;
 				}
 
 				handlers.push({
 					handler: handler,
 					index: i
 				});
-			}
+			});
 
 			// Print a debugging message unless invoked with the silent option (used internally to prevent
 			// spamming millions of messages, which slows down the console).
 
 			if (!opts.silent) {
-				debug.info(getTag() + ' // FIRE', 'Triggering %d handlers for "%s" event on %s: %O', handlers.length, evt, getName(), args);
+				debug.info(getTag(self) + ' // FIRE', 'Triggering %d handlers for "%s" event on %s: %O', handlers.length, evt, getName(), args);
 			}
 
-			_.each(handlers, function (h, i) {
+			// Execute all matching handlers in the order they were registered.  A break is added between
+			// each handler's invocation using setTimeout().  This allows user interface changes made a
+			// handler to be picked up by the browser.  An early handler is allowed to remove a later one.
+
+			asyncEach(handlers, function (h, i, next) {
 				if (self.eventHandlersById[h.handler.id] == null) {
 					// This handler has been removed since we started firing for this event.  This happens one
 					// an earlier event handler removes a later one.
@@ -1876,10 +1971,10 @@ export var mixinEventHandling = (function () {
 				}
 
 				if (h.handler.info != null) {
-					debug.info(getTag() + ' // FIRE', 'Executing "%s" handler (%d of %d) on %s: %s', evt, i+1, handlers.length, getName(), h.handler.info);
+					debug.info(getTag(self) + ' // FIRE', 'Executing "%s" handler (%d of %d) on %s: %s', evt, i+1, handlers.length, getName(), h.handler.info);
 				}
 				else {
-					debug.info(getTag() + ' // FIRE', 'Executing "%s" handler (%d of %d) on %s', evt, i+1, handlers.length, getName());
+					debug.info(getTag(self) + ' // FIRE', 'Executing "%s" handler (%d of %d) on %s', evt, i+1, handlers.length, getName());
 				}
 				h.handler.cb.apply(null, args);
 
@@ -1889,20 +1984,24 @@ export var mixinEventHandling = (function () {
 				if (h.handler.limit) {
 					h.handler.limit -= 1;
 					if (h.handler.limit <= 0) {
-						debug.info(getTag() + ' // FIRE', 'Removing "%s" handler #%d from %s after reaching invocation limit', evt, i+1, getName());
+						debug.info(getTag(self) + ' // FIRE', 'Removing "%s" handler #%d from %s after reaching invocation limit', evt, i+1, getName());
 						self.eventHandlers[evt][h.index] = null;
 					}
 				}
+
+				return opts.async ? window.setTimeout(next) : next();
+			}, function () {
+				if (!opts.silent) {
+					debug.info(getTag(self) + ' // FIRE', 'Done triggering handlers for "%s" event on %s', evt, getName());
+				}
+
+				// Clean up handlers we removed (because they reached the limit).
+
+				self.eventHandlers[evt] = _.without(self.eventHandlers[evt], null);
 			});
-
-			if (!opts.silent) {
-				debug.info(getTag() + ' // FIRE', 'Done triggering handlers for "%s" event on %s', evt, getName());
-			}
-
-			// Clean up handlers we removed (because they reached the limit).
-
-			self.eventHandlers[evt] = _.without(self.eventHandlers[evt], null);
 		};
+
+		// }}}3
 	};
 })();
 
@@ -1920,19 +2019,25 @@ export function mixinDebugging(obj, tagStart) {
 		else if (typeof tagStart === 'string') {
 			return tagStart;
 		}
+		else if (typeof self.getDebugTag === 'function') {
+			return self.getDebugTag();
+		}
+		else if (typeof self.toString === 'function' && self.toString !== Object.toString) {
+			return self.toString();
+		}
 		else {
-			return null;
+			return obj.prototype.constructor.name.toUpperCase();
 		}
 	};
 
 	obj.prototype.debug = function () {
 		var args = Array.prototype.slice.call(arguments);
-		debug.info.apply(null, Array.prototype.concat.call([getTag(this)], args));
-	};
-	obj.prototype.debug_tag = function () {
-		var args = Array.prototype.slice.call(arguments);
 		var tag = args.shift();
-		debug.info.apply(null, Array.prototype.concat.call([getTag(this) + ' // ' + tag], args));
+		var fullTag = getTag(this);
+		if (tag != null) {
+			fullTag += ' // ' + tag;
+		}
+		debug.info.apply(null, Array.prototype.concat.call([fullTag], args));
 	};
 }
 
@@ -1944,14 +2049,20 @@ export function mixinLogging(obj, tagPrefix) {
 	}
 
 	var getTag = function (self) {
-		if (typeof tagPrefix === 'function') {
-			return tagPrefix.call(self);
+		if (typeof tagStart === 'function') {
+			return tagStart.call(self);
 		}
-		else if (typeof tagPrefix === 'string') {
-			return tagPrefix;
+		else if (typeof tagStart === 'string') {
+			return tagStart;
+		}
+		else if (typeof self.getDebugTag === 'function') {
+			return self.getDebugTag();
+		}
+		else if (typeof self.toString === 'function' && self.toString !== Object.toString) {
+			return self.toString();
 		}
 		else {
-			return null;
+			return obj.prototype.constructor.name.toUpperCase();
 		}
 	};
 
@@ -2030,137 +2141,6 @@ export function unlock(defn, name) {
 export function isLocked(defn, name) {
 	return defn.locks && !!defn.locks[name];
 }
-
-// Lock {{{1
-// Constructor {{{2
-
-/**
- * An implementation of a counting semaphore for JavaScript.
- * @class
- */
-
-export var Lock = function (name, opts) {
-	var self = this;
-
-	self._opts = opts || {};
-
-	if (self._opts.debug == null) {
-		self._opts.debug = true;
-	}
-
-	self._name = name || '#' + (Lock._id++);
-	self._lockCount = 0;
-	self._onUnlock = [];
-
-	if (!self._opts.debug) {
-		self.debug = NOP;
-	}
-};
-
-Lock._id = 1;
-
-mixinDebugging(Lock, function () {
-	return 'LOCK - ' + this._name + ' (level ' + this._lockCount + ')';
-});
-
-// #lock {{{2
-
-/**
- * Engage the lock.  A lock can be engaged multiple times.  Each lock operation must be unlocked
- * separately to fully disengage the lock.
- *
- * @method
- */
-
-Lock.prototype.lock = function (why) {
-	var self = this;
-
-	this._lockCount += 1;
-
-	var msg = 'Locking to level: ' + self._lockCount;
-
-	if (why != null) {
-		msg += ' - ' + why;
-	}
-
-	self.debug(msg);
-};
-
-// #unlock {{{2
-
-/**
- * Disengage the lock.  A lock can be engaged multiple times.  Each lock operation must be unlocked
- * separately to fully disengage the lock.
- *
- * @method
- */
-
-Lock.prototype.unlock = function () {
-	var self = this;
-
-	self._lockCount -= 1;
-	self.debug('Unlocking to level: ' + self._lockCount);
-
-	// If we're completely unlocked, start going through the functions that were registered to be run.
-	// The only problem is that these functions can cause us to be locked again.  If that happens, we
-	// abort.  The functions to run are a queue, and when we become unlocked we'll just resume running
-	// the functions in the queue.
-
-	var onUnlockLen = self._onUnlock.length;
-	var i = 0;
-
-	while (self._onUnlock.length > 0 && !self.isLocked()) {
-		i += 1;
-		var onUnlock = self._onUnlock.shift();
-		self.debug('Running onUnlock function (%d of %d) - %s', i, onUnlockLen, onUnlock.info || '[NO INFO]');
-		onUnlock.f();
-	}
-};
-
-// #isLocked {{{2
-
-/**
- * Check to see if the lock is engaged.
- *
- * @method
- *
- * @returns {boolean} True if the lock is engaged, false if it's disengaged.
- */
-
-Lock.prototype.isLocked = function () {
-	var self = this;
-
-	return self._lockCount !== 0;
-};
-
-// #onUnlock {{{2
-
-/**
- * Register a function to call when the lock is fully disengaged (i.e. all locks have been
- * unlocked).
- *
- * @method
- *
- * @param {function} f Function to call when the lock is disengaged.
- */
-
-Lock.prototype.onUnlock = function (f, info) {
-	var self = this;
-
-	// If we're not already locked, there's no point in queueing it up, just do it.  This can simplify
-	// logic in callers (i.e. they don't have to do the check).
-
-	if (!self.isLocked()) {
-		return f();
-	}
-
-	self._onUnlock.push({
-		f: f,
-		info: info
-	});
-
-	self.debug('Saved onUnlock function (#%d) - %s', self._onUnlock.length, info || '[NO INFO]');
-};
 
 // HTML {{{1
 
@@ -3805,6 +3785,17 @@ export function uuid() {
 		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 		return v.toString(16);
 	});
+}
+
+// sleep {{{2
+
+export function sleep(ms) {
+	var start = new Date();
+	var end;
+	do {
+		end = new Date();
+	}
+	while (end - start < ms);
 }
 
 // EagerPipeline {{{1
