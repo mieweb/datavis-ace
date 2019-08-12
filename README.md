@@ -44,7 +44,11 @@ The number one convention is to avoid making unnecessary diffs.  Follow the styl
 * Run `git submodule update --init` to get the JSDoc templates that this project uses.
 * Run `make jsdoc` to build the documentation.
 
-## Testing
+## Running
+
+This project contains a builtin web server for interactively testing features during development.  Run `make serve` to start the server on port 5000.
+
+## Automated Testing
 
 DataVis uses Mocha + Selenium for browser testing.  Run `npm install` and then `make test` to run all available Selenium tests.  Since tests run in Node.js, please use any available JavaScript features you want (e.g. async/await, destructuring assignment, etc).
 
