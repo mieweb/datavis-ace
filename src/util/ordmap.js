@@ -275,7 +275,7 @@ OrdMap.prototype.toJSON = OrdMap.prototype.serialize;
  */
 
 OrdMap.prototype.size = function () {
-	return this._keys.length;
+	return this._size;
 };
 
 /**
