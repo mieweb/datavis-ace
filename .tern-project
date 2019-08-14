@@ -4,8 +4,20 @@
     "jquery"
   ],
   "loadEagerly": [
-    "src/*.js"
+    "src/*.js",
+    "src/util/*.js"
   ],
   "plugins": {
-  }
+    "doc_comment": {
+      "fullDocs": true,
+      "strong": false
+    },
+    "es_modules": {},
+    "modules": {
+      "dontLoad": "",
+      "load": "",
+      "modules": ""
+    }
+  },
+  "dontLoad": []
 }
