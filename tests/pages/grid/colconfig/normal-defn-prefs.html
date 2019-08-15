@@ -22,7 +22,7 @@ $(document).ready(function () {
 
 	var prefs = new MIE.WC_DataVis.Prefs('TEST:GRID:COLCONFIG:PREFS', null, {
 		backend: {
-			type: 'localStorage'
+			type: 'temporary'
 		}
 	});
 	prefs.addPerspective(null, 'C,B', {
@@ -36,7 +36,6 @@ $(document).ready(function () {
 			}
 		}
 	});
-	prefs.setCurrentPerspective('C,B');
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
 		url: 'data/none.csv'

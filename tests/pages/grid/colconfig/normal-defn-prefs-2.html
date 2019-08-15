@@ -25,11 +25,12 @@ $(document).ready(function () {
 			type: 'temporary'
 		}
 	});
-	prefs.addPerspective(null, 'C,B', {
+	prefs.addPerspective(null, 'A,B,C', {
 		grid: {
 			colConfig: {
-				_keys: ['C', 'B'],
+				_keys: ['A', 'B', 'C'],
 				_map: {
+					A: {field: 'A'},
 					B: {field: 'B'},
 					C: {field: 'C'}
 				}
@@ -49,7 +50,8 @@ $(document).ready(function () {
 		table: {
 			features: {
 				limit: false,
-			}
+			},
+			columns: ['B', 'A']
 		},
 		source: source,
 	}, {

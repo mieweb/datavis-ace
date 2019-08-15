@@ -7,7 +7,7 @@ const setup = require('../lib/setup.js');
 const {Builder} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
-describe('Group Functions', function () {
+describe('Column Configuration', function () {
 	setup.server();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
@@ -91,25 +91,25 @@ describe('Group Functions', function () {
 			source: 'xyz.csv',
 			expected: ''
 		}]
-//	}, {
-//		name: 'Defn and Prefs 2',
-//		url: 'normal-defn-prefs-2.html',
-//		phases: [{
-//			source: 'a.csv',
-//			expected: 'A'
-//		}, {
-//			source: 'ab.csv',
-//			expected: 'AB'
-//		}, {
-//			source: 'abc.csv',
-//			expected: 'AB'
-//		}, {
-//			source: 'abcd.csv',
-//			expected: 'AB'
-//		}, {
-//			source: 'xyz.csv',
-//			expected: ''
-//		}]
+	}, {
+		name: 'Defn and Prefs 2',
+		url: 'normal-defn-prefs-2.html',
+		phases: [{
+			source: 'a.csv',
+			expected: 'A'
+		}, {
+			source: 'ab.csv',
+			expected: 'AB'
+		}, {
+			source: 'abc.csv',
+			expected: 'AB'
+		}, {
+			source: 'abcd.csv',
+			expected: 'AB'
+		}, {
+			source: 'xyz.csv',
+			expected: ''
+		}]
 	}];
 
 	_.each(tests, function (t) {
@@ -127,6 +127,7 @@ describe('Group Functions', function () {
 				it(`test ${p.source} -> ${JSON.stringify(e)}`, async function () {
 					await grid.setSourceUrl(`data/${p.source}`);
 					await grid.refresh();
+					await grid.waitForIdle();
 					let a = await grid.getColumns();
 					assert.deepEqual(a, e);
 				});
