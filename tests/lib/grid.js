@@ -32,6 +32,14 @@ class GridUi {
 	get prefsSaveBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Save"]'));
 	}
+
+	get gearBtn() {
+		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Options"]'));
+	}
+
+	get refreshBtn() {
+		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Refresh"]'));
+	}
 }
 
 // Grid {{{1
@@ -72,8 +80,16 @@ class Grid {
 		}, opts.timeout);
 	}
 
+	async refresh() {
+		return this.ui.refreshBtn.click();
+	}
+
 	async toggleControls() {
-		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Options"]')).click();
+		return this.ui.gearBtn.click();
+	}
+
+	async setSourceUrl(url) {
+		return this.driver.executeScript(`MIE.WC_DataVis.grids['${this.id}'].view.source.origin.url = '${url}'`);
 	}
 
 	async getCell(column, row) {
@@ -173,6 +189,12 @@ class Grid {
 
 	async setGroupMode(kind) {
 		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value=${kind}]`)).click();
+	}
+
+	async getColumns() {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		const headers = await table.findElements(By.css('thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title'));
+		return Promise.all(_.map(headers, (elt) => elt.getText()));
 	}
 
 	// Sorting {{{2
@@ -334,7 +356,7 @@ class Grid {
 		}
 
 		switch (type) {
-		case 'sumoselect':
+		case 'sumoselect': {
 			const sumoselect = await controlField[0].findElement(By.css('div.wcdv_filter_control_filter > div.SumoSelect'));
 			// Open the SumoSelect dropdown.
 			await sumoselect.findElement(By.css('p.SelectBox')).click();
@@ -346,10 +368,12 @@ class Grid {
 			// Click the "OK" button.
 			await sumoselect.findElement(By.css('div.optWrapper > div.MultiControls > p.btnOk')).click();
 			break;
-		case 'input':
+		}
+		case 'input': {
 			const input = await controlField[0].findElement(By.css('div.wcdv_filter_control_filter > input'));
 			await input.sendKeys(value, Key.ENTER);
 			break;
+		}
 		default:
 			throw new Error('unsupported filter type: ' + type);
 		}
