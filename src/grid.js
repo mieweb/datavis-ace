@@ -2259,6 +2259,11 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 		self.colConfig = colConfig;
 		self.colConfigSource = opts.from;
+
+		if (self.renderer != null) {
+			self.renderer.colConfig = self.colConfig;
+		}
+
 		self.debug('COLCONFIG', 'Setting shadow from %s: %O', opts.from || '[unknown]', colConfig);
 		self.shadowColConfig = colConfig.clone();
 		updated = true;
@@ -2321,10 +2326,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		self.colConfigRestricted = true;
 		break;
 	case 'prefs':
-		if (self.colConfig == null) {
-			setCurrent();
-		}
-		else if (self.colConfigRestricted) {
+		if (self.colConfigRestricted) {
 			// The column configuration is restricted by defn, so remove anything from prefs that's
 			// missing from defn.
 
@@ -2332,10 +2334,10 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 
 			// Add anything that's in defn but not in prefs.
 
-			if (addMissing(self.colConfig, 'defn', colConfig, 'prefs') > 0) {
-				setCurrent();
-			}
+			addMissing(self.colConfig, 'defn', colConfig, 'prefs');
 		}
+
+		setCurrent();
 		break;
 	case 'reset':
 	case 'ui':
@@ -2384,6 +2386,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	if (opts.savePrefs) {
 		self.prefs.save();
 	}
+
 	self.view.setColConfig(self.colConfig); // TODO Convert to event model.
 
 	if (opts.sendEvent) {
