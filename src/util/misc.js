@@ -3672,7 +3672,21 @@ export function determineColumns(colConfig, data, typeInfo) {
 
 	validateColConfig(colConfig, data);
 
-	if (colConfig.size() > 0) {
+	// FIXME: Checking _keys.length is a stand-in for saying "this OrdMap has never had anything added
+	// to it" and should be implemented in a way that doesn't use knowledge of OrdMap's internals.
+	//
+	// The reason for not just checking size is this test:
+	//
+	//   - defn: columns = ['A', 'B']
+	//   - source: columns = ['X', 'Y', 'Z']
+	//
+	// The defn colConfig is stripped of fields not in the source, making it [].  Here, an empty
+	// colConfig means to show all source fields.  But that defies the purpose of defn colConfig,
+	// which is to limit what is visible: the correct behavior is to show nothing.  The fix is to
+	// check instead that the OrdMap has never been changed, meaning it wasn't set by defn, and
+	// therefore it's OK to show all fields.
+
+	if (colConfig._keys.length > 0) {
 		var notHidden = colConfig.filter(function (cc) {
 			return !cc.isHidden;
 		});

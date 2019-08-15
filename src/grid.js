@@ -1,3 +1,5 @@
+// Imports {{{1
+
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
 import jQuery from 'jquery';
@@ -2253,77 +2255,124 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		savePrefs: true
 	});
 
-	switch (opts.from) {
-	case 'defn':
-		// Overrides everything.  Replaces both the current and initial config.
-
+	var setCurrent = function () {
 		self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
 		self.colConfig = colConfig;
 		self.colConfigSource = opts.from;
+		self.debug('COLCONFIG', 'Setting shadow from %s: %O', opts.from || '[unknown]', colConfig);
+		self.shadowColConfig = colConfig.clone();
+		updated = true;
+	};
 
+	var setInitial = function () {
 		self.debug('COLCONFIG', 'Setting initial from %s: %O', opts.from || '[unknown]', colConfig);
 		self.initColConfig = colConfig.clone();
+	};
 
-		updated = true;
-		break;
-	case 'prefs':
-		// Prefs should override typeInfo, but it shouldn't set the initial config.
+	/**
+	 * Add elements (that are absent in `dst`) from `src` to `dst`.
+	 *
+	 * @param {OrdMap} src
+	 * @param {string} srcMsg
+	 * @param {OrdMap} dst
+	 * @param {string} dstMsg
+	 */
 
-		if (self.colConfig == null || self.colConfigSource === 'typeInfo') {
-			self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
-			self.colConfig = colConfig;
-			self.colConfigSource = opts.from;
-			updated = true;
+	var addMissing = function (src, srcMsg, dst, dstMsg) {
+		var count = dst.mergeWith(src);
+		self.debug('COLCONFIG', 'Merged %d fields from %s into %s', count, srcMsg, dstMsg);
+		return count;
+	};
+
+	/**
+	 * Remove elements from `dst` that are absent from `src`.
+	 *
+	 * @param {OrdMap} src
+	 * @param {string} srcMsg
+	 * @param {OrdMap} dst
+	 * @param {string} dstMsg
+	 */
+
+	var removeMissing = function (src, srcMsg, dst, dstMsg) {
+		var absent = [];
+
+		dst.each(function (fcc, fieldName) {
+			if (!src.isSet(fieldName)) {
+				absent.push(fieldName);
+			}
+		});
+
+		if (absent.length > 0) {
+			self.debug('COLCONFIG', 'Removing %d fields from %s which are absent from %s: %O',
+				absent.length, dstMsg, srcMsg, absent);
+			_.each(absent, function (fieldName) {
+				dst.unset(fieldName);
+			});
+			return true;
 		}
 
+		return false;
+	};
+
+	switch (opts.from) {
+	case 'defn':
+		setCurrent();
+		setInitial();
+		self.colConfigRestricted = true;
+		break;
+	case 'prefs':
+		if (self.colConfig == null) {
+			setCurrent();
+		}
+		else if (self.colConfigRestricted) {
+			// The column configuration is restricted by defn, so remove anything from prefs that's
+			// missing from defn.
+
+			removeMissing(self.colConfig, 'defn', colConfig, 'prefs');
+
+			// Add anything that's in defn but not in prefs.
+
+			if (addMissing(self.colConfig, 'defn', colConfig, 'prefs') > 0) {
+				setCurrent();
+			}
+		}
 		break;
 	case 'reset':
 	case 'ui':
-		// Resetting and using the UI to change colConfig override everything, but they don't store an
-		// initial config.
-
-		self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
-		self.colConfig = colConfig;
-		self.colConfigSource = opts.from;
-		updated = true;
+		setCurrent();
 		break;
 	case 'typeInfo':
+		// Column configuration derived from typeInfo merges with existing config (by removing config on
+		// columns that don't exist in the source, and by adding defaults for columns that exist in the
+		// source but aren't specified in the current config).  It can also set the initial, filling in
+		// when no defn is specified.
+
 		if (self.colConfig == null) {
-			self.debug('COLCONFIG', 'Setting from %s: %O', opts.from || '[unknown]', colConfig);
-			self.colConfig = colConfig;
-			self.colConfigSource = 'typeinfo';
-			updated = true;
+			setCurrent();
 		}
 		else {
+			self.colConfig = self.shadowColConfig.clone();
+			if (self.renderer != null) {
+				self.renderer.colConfig = self.colConfig;
+			}
+
 			// Delete fields from existing colConfig which aren't in the source.
 
-			var notInSource = [];
-
-			self.colConfig.each(function (fcc, fieldName) {
-				if (!colConfig.isSet(fieldName)) {
-					notInSource.push(fieldName);
-				}
-			});
-
-			if (notInSource.length > 0) {
-				self.debug('COLCONFIG', 'Removing %d fields from existing column config which are missing from source: %O', notInSource.length, notInSource);
-				_.each(notInSource, function (fieldName) {
-					self.colConfig.unset(fieldName);
-				});
+			if (removeMissing(colConfig, 'source', self.colConfig, 'existing')) {
 				updated = true;
 			}
 
 			// Add fields from source that are missing from existing colConfig.  Columns set explicitly in
 			// the grid's definition are there to limit what we see, so don't try to add to them.
 
-			if (['defn', 'reset'].indexOf(self.colConfigSource) < 0 && self.colConfig.mergeWith(colConfig) > 0) {
-				self.debug('COLCONFIG', 'Merging from %s: %O', opts.from || '[unknown]', colConfig);
-				updated = true;
+			if (!self.colConfigRestricted) {
+				if (addMissing(colConfig, 'source', self.colConfig, 'existing')) {
+					updated = true;
+				}
 			}
 		}
 		if (self.initColConfig == null) {
-			self.debug('COLCONFIG', 'Setting initial from typeInfo: %O', colConfig);
-			self.initColConfig = colConfig.clone();
+			setInitial();
 		}
 		break;
 	}
@@ -2368,7 +2417,7 @@ Grid.prototype.resetColConfig = function (opts) {
 		savePrefs: false
 	});
 
-	self.setColConfig(deepCopy(self.initColConfig), opts);
+	self.setColConfig(self.initColConfig.clone(), opts);
 };
 
 // #isIdle {{{2
