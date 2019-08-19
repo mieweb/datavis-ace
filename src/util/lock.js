@@ -1,6 +1,8 @@
+import _ from 'underscore';
 import {
 	I,
   mixinDebugging,
+	NOP,
 } from './misc.js';
 
 // Lock {{{1
