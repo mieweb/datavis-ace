@@ -8,5 +8,9 @@ module.exports = {
   "parserOptions": {
     "sourceType": "module"
   },
-  "extends": "eslint:recommended"
+  "extends": "eslint:recommended",
+  rules: {
+    // 'no-console': 'off',
+    'no-unused-vars': 'off'
+  }
 };
