@@ -7,9 +7,9 @@
   "private": true,
   "author": "Taylor Venable <tvenable@mieweb.com>",
   "files": [
-    "dist/wcdatavis.css",
-    "dist/wcdatavis.js",
-    "dist/wcdatavis.min.js"
+    "src/*.js",
+    "src/util/*.js",
+    "dist/wcdatavis.css"
   ],
   "main": "index.js",
   "browser": "datavis.js",
