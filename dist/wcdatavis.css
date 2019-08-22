@@ -33,9 +33,14 @@ button.wcdv_icon_button span.fa {
 
 button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_off {
 	color: #000;
+	padding: 0.2em;
+	border-radius: 0.2em;
 }
 button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_on {
-	color: #0095D6;
+	background-color: #0095D6;
+	color: #FFF;
+	padding: 0.2em;
+	border-radius: 0.2em;
 }
 
 button.wcdv_option {
