@@ -1336,19 +1336,19 @@ GridTable.prototype.drawHeader_addCols = function (tr, typeInfo, opts) {
  * @param {Element} tr
  * The row to attach the TH elements to.
  *
- * @param {number} groupNum
+ * @param {number} rowValIndex
  * What group number you want to print out.
  */
 
-GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
+GridTable.prototype.drawBody_rowVals = function (data, tr, rowValIndex) {
 	var self = this;
 
 	if (!(tr instanceof Element)) {
 		throw new Error('Call Error: `tr` must be an instance of Element');
 	}
 
-	if (typeof groupNum !== 'number') {
-		throw new Error('Call Error: `groupNum` must be a number');
+	if (typeof rowValIndex !== 'number') {
+		throw new Error('Call Error: `rowValIndex` must be a number');
 	}
 
 	// Create the cells that show the values of the grouped columns.
@@ -1365,21 +1365,28 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 	//   ... row[col] | col ∉ groupFields ...
 	// </tr>
 
-	_.each(data.rowVals[groupNum], function (rowValElt, rowValEltIdx) {
-		var groupField = data.groupFields[rowValEltIdx];
-		var groupSpec = data.groupSpec[rowValEltIdx];
+	var leafMetadataNode = data.groupMetadata.lookup.byRowValIndex[rowValIndex];
+	var metadataNode = leafMetadataNode;
+	var th = [];
+	var i;
+
+	for (i = data.groupFields.length - 1; i >= 0; i -= 1) {
+		var groupField = data.groupFields[i];
+		var groupSpec = data.groupSpec[i];
 		var fcc = self.colConfig.get(groupField) || {};
 		var t = self.typeInfo.get(groupField);
+		var v = metadataNode.rowValCell || metadataNode.rowValElt;
 
 		if (groupSpec.fun != null) {
 			t = {
 				type: GROUP_FUNCTION_REGISTRY.get(groupSpec.fun).resultType
 			};
+			v = metadataNode.rowValElt;
 		}
 
-		rowValElt = format(fcc, t, rowValElt);
+		v = format(fcc, t, v);
 
-		// TH (th)
+		// TH (th[i])
 		//   DIV (headingThContainer)
 		//     SPAN (headingThValue)
 		//     DIV (headingThControls)
@@ -1394,31 +1401,36 @@ GridTable.prototype.drawBody_rowVals = function (data, tr, groupNum) {
 		headingThContainer.appendChild(headingThValue);
 		headingThContainer.appendChild(headingThControls);
 
-		var th = document.createElement('th');
-		th.appendChild(headingThContainer);
+		th[i] = document.createElement('th');
+		th[i].appendChild(headingThContainer);
 
-		if (rowValElt instanceof jQuery) {
-			rowValElt = rowValElt.get(0);
+		if (v instanceof jQuery) {
+			v = v.get(0);
 		}
 
-		if (rowValElt instanceof Element) {
-			headingThValue.appendChild(rowValElt);
+		if (v instanceof Element) {
+			headingThValue.appendChild(v);
 		}
 		else if (fcc.allowHtml) {
-			headingThValue.innerHTML = rowValElt;
+			headingThValue.innerHTML = v;
 		}
 		else {
-			headingThValue.innerText = rowValElt;
+			headingThValue.innerText = v;
 		}
 
-		th.appendChild(headingThContainer);
-		tr.appendChild(th);
+		th[i].appendChild(headingThContainer);
 		self.csv.addCol(headingThValue.innerText);
 
-		if (data.isPivot && rowValEltIdx === data.groupFields.length - 1) {
-			self._addSortingToHeader(data, 'horizontal', {rowVal: data.rowVals[groupNum], aggNum: 0}, headingThControls, getPropDef([], data, 'agg', 'info', 'cell'));
+		if (data.isPivot && i === data.groupFields.length - 1) {
+			self._addSortingToHeader(data, 'horizontal', {rowVal: data.rowVals[rowValIndex], aggNum: 0}, headingThControls, getPropDef([], data, 'agg', 'info', 'cell'));
 		}
-	});
+
+		metadataNode = metadataNode.parent;
+	}
+
+	for (i = 0; i < data.groupFields.length; i += 1) {
+		tr.appendChild(th[i]);
+	}
 };
 
 // #drawBody_groupAggregates {{{2
