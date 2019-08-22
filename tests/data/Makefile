@@ -26,4 +26,4 @@ number-format-str.json:	number-format-str.in.json
 	$(JSON_GEN) < $^ > $@
 
 $(JSON_FILES):%.json:	%.json5
-	$(JSON5) < $^ > $@
+	$(JSON_GEN) -D COUNT=100 < $^ > $@
