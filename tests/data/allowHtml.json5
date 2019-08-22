@@ -3,24 +3,24 @@
   data: [
     "$< repeat(ARGS['COUNT'], VALUE) >$",
     {
-      "string1": "$< word_dict() >$",
-      "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$",
-      "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$",
-      "link1": "$< '<a href=\"https://en.wikipedia.org/wiki/' + last('fruit') + '\">' + last('fruit') + '</a>' >$",
-      "link2": "$< '<a href=\"https://en.wikipedia.org/wiki/' + last('fruit') + '\">Same Text, Different Link</a>' >$",
-      "link3": "$< last('fruit') >$",
-      "link4": "$< last('fruit') >$",
-      "state": "$< state() >$"
+      country: "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$",
+      state: "$< state() >$",
+      fruit: "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$",
+      link1: "$< '<a href=\"https://en.wikipedia.org/wiki/' + last('fruit') + '\">' + last('fruit') + '</a>' >$",
+      link2: "$< '<a href=\"https://en.wikipedia.org/wiki/' + last('fruit') + '\">Same Text, Different Link</a>' >$",
+      link3: "$< last('fruit') >$",
+      link4: "$< last('fruit') >$",
+      date: "$< random_date('date3', format='MM/dd/yyyy') >$"
     }
   ],
   typeInfo: [
-    { field: "string1", type: "string" },
-    { field: "country", type: "string" },
-    { field: "state", type: "string" },
-    { field: "fruit", type: "string" },
-    { field: "link1", type: "string" },
-    { field: "link2", type: "string" },
+    { field: 'country', type: 'string' },
+    { field: 'state', type: 'string' },
+    { field: 'fruit', type: 'string' },
+    { field: 'link1', type: 'string' },
+    { field: 'link2', type: 'string' },
     { field: 'link3', type: 'string' },
     { field: 'link4', type: 'string' },
+    { field: 'date', type: 'date' },
   ]
 }

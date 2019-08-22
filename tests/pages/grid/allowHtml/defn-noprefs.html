@@ -46,10 +46,20 @@ $(document).ready(function () {
 		return true; // conversion successful
 	};
 
+	MIE.WC_DataVis.Source.converters.date = function (cell, field, fti, info) {
+		cell.render = function (displayText) {
+			var a = document.createElement('a');
+			a.setAttribute('href', 'https://example.com/');
+			a.innerText = displayText;
+			return a;
+		};
+		return true; // conversion successful
+	};
+
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
 		url: '../../allowHtml.json',
-		conversion: {'link3': ['link3'], 'link4': ['link4']}
+		conversion: {'link3': ['link3'], 'link4': ['link4'], 'date': ['date']}
 	});
 	var view = new MIE.WC_DataVis.View(source, 'view', {
 		prefs: prefs
@@ -67,7 +77,7 @@ $(document).ready(function () {
 			}, 'link2', {
 				field: 'link3',
 				allowHtml: true
-			}, 'link4']
+			}, 'link4', 'date']
 		},
 		prefs: prefs,
 		source: source,
