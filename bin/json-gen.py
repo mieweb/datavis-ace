@@ -141,7 +141,7 @@ def repeat(times, val):
 
 CYCLE = {}
 def cycle(name, lst):
-    global LAST
+    global CYCLE, LAST
     if name in CYCLE:
         c = CYCLE[name]
         c['index'] += 1
@@ -151,6 +151,17 @@ def cycle(name, lst):
     else:
         CYCLE[name] = { 'index': 0, 'list': lst }
         ret = lst[0]
+    LAST[name] = ret
+    return ret
+
+SEQUENCE = {}
+def sequence(name, start=1):
+    global SEQUENCE, LAST
+    if name in CYCLE:
+        CYCLE[name] += 1
+    else:
+        CYCLE[name] = start
+    ret = CYCLE[name]
     LAST[name] = ret
     return ret
 
@@ -169,6 +180,7 @@ def process(node):
             'choice': random.choice,
             'state': state,
             'cycle': cycle,
+            'sequence': sequence,
             'last': last,
             'RANDOM_SEED': RANDOM_SEED }
     r = re.compile(r'\$<\s*(.*?)\s*>\$')
