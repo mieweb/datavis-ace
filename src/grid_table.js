@@ -2137,6 +2137,118 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	self.ui.tbody.children().remove();
 
+	var renderDataRow = function (row) {
+		var tr, td;
+
+		tr = document.createElement('tr');
+		tr.setAttribute('id', self.defn.table.id + '_' + row.rowNum);
+		tr.setAttribute('data-row-num', row.rowNum);
+
+		// Create the check box which selects the row.
+
+		if (self.features.rowSelect) {
+			var checkbox = jQuery('<input>', {
+				'type': 'checkbox',
+				'data-row-num': row.rowNum,
+			});
+			td = jQuery('<td>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
+			if (self.opts.drawInternalBorders) {
+				td.addClass('wcdv_pivot_colval_boundary');
+			}
+		}
+
+		// Create the data cells.
+
+		_.each(columns, function (field, colIndex) {
+			var fcc = self.colConfig.get(field) || {};
+			var cell = row.rowData[field];
+
+			var td = document.createElement('td');
+			var value = format(fcc, typeInfo.get(field), cell);
+
+			if (value instanceof Element) {
+				td.appendChild(value);
+			}
+			else if (value instanceof jQuery) {
+				td.appendChild(value.get(0));
+			}
+			else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
+				td.innerHTML = value;
+			}
+			else if (value === '') {
+				td.innerText = '\u00A0';
+			}
+			else {
+				td.innerText = value;
+			}
+
+			self.setCss(jQuery(td), field);
+			self.setAlignment(td, fcc, typeInfo.get(field));
+
+			if (self.opts.drawInternalBorders) {
+				td.classList.add('wcdv_pivot_colval_boundary');
+			}
+
+			tr.appendChild(td);
+		});
+
+		// Create button used as the "handle" for dragging/dropping rows.
+
+		if (self.features.rowReorder) {
+			jQuery('<td>').append(self.makeRowReorderBtn()).appendTo(tr);
+		}
+
+		self.ui.tr[row.rowNum] = jQuery(tr);
+		self.ui.tbody.append(tr);
+	};
+
+	var renderShowMore = function (rowNum) {
+		var tr;
+
+		tr = document.createElement('tr');
+		tr.classList.add('wcdvgrid_more');
+
+		var colSpan = columns.length
+			+ (self.features.rowSelect ? 1 : 0)
+			+ (self.features.rowReorder ? 1 : 0);
+
+		var showMore = function () {
+			tr.parentNode.removeChild(tr); // Eliminate the "more" row.
+			render(rowNum + 1, limitConfig.chunkSize, nextChunk);
+		};
+
+		var td = jQuery('<td>', {
+			colspan: colSpan
+		})
+			.on('click', showMore)
+			.append(fontAwesome('F13A'))
+			.append(jQuery('<span>Showing rows '
+											+ '1–'
+											+ (rowNum + 1)
+											+ ' of '
+											+ data.data.length
+											+ '.</span>')
+								.css({
+								'padding-left': '0.5em',
+							}))
+			.append(jQuery('<span>Click to load ' + limitConfig.chunkSize + ' more rows.</span>')
+							.css({
+								'padding-left': '0.5em',
+								'padding-right': '0.5em'
+							}))
+			.append(fontAwesome('F13A'));
+
+		self.moreVisibleHandler = onVisibilityChange(self.scrollEventElement, td, function(isVisible) {
+			if (isVisible && getProp(self.defn, 'table', 'limit', 'autoShowMore')) {
+				debug.info('GRID TABLE - PLAIN // MORE', '"Show More Rows" button scrolled into view');
+				showMore();
+			}
+		});
+
+		tr.appendChild(td.get(0));
+		self.ui.tbody.append(tr);
+	};
+
 	var render = function (startIndex, howMany, nextChunk) {
 		var atLimit = false;
 
@@ -2160,129 +2272,28 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					: ('/ ' + data.data.length - 1)));
 
 		for (var rowNum = startIndex; rowNum < data.data.length && rowNum < startIndex + howMany && !atLimit; rowNum += 1) {
-			var row = data.data[rowNum];
-			var tr;
+			renderDataRow(data.data[rowNum]);
 
 			if (!self.features.incremental
 					&& useLimit
 					&& limitConfig.method === 'more'
+					&& rowNum !== data.data.length - 1 // [0]
 					&& ((startIndex === 0 && rowNum === limitConfig.threshold - 1) // [1]
 							|| (startIndex > 0 && rowNum === startIndex + limitConfig.chunkSize - 1))) { // [2]
 
+				// Condition [0]: We haven't reached the end of the data.
 				// Condition [1]: We've reached the initial threshold for showing the more button.
 				// Condition [2]: We're showing additional rows because they clicked the more button.
 
+				renderShowMore(rowNum);
 				atLimit = true;
-
-				self.fire('limited');
-
-				tr = document.createElement('tr');
-				tr.classList.add('wcdvgrid_more');
-
-				var colSpan = columns.length
-					+ (self.features.rowSelect ? 1 : 0)
-					+ (self.features.rowReorder ? 1 : 0);
-
-				var showMore = function () {
-					tr.parentNode.removeChild(tr); // Eliminate the "more" row.
-					render(rowNum, limitConfig.chunkSize, nextChunk);
-				};
-
-				var td = jQuery('<td>', {
-					colspan: colSpan
-				})
-					.on('click', showMore)
-					.append(fontAwesome('F13A'))
-					.append(jQuery('<span>Showing rows '
-													+ '1–'
-													+ rowNum
-													+ ' of '
-													+ (data.data.length + 1)
-													+ '.</span>')
-										.css({
-										'padding-left': '0.5em',
-									}))
-					.append(jQuery('<span>Click to load ' + limitConfig.chunkSize + ' more rows.</span>')
-									.css({
-										'padding-left': '0.5em',
-										'padding-right': '0.5em'
-									}))
-					.append(fontAwesome('F13A'));
-
-				self.moreVisibleHandler = onVisibilityChange(self.scrollEventElement, td, function(isVisible) {
-					if (isVisible && getProp(self.defn, 'table', 'limit', 'autoShowMore')) {
-						debug.info('GRID TABLE - PLAIN // MORE', '"Show More Rows" button scrolled into view');
-						showMore();
-					}
-				});
-
-				tr.appendChild(td.get(0));
 			}
-			else {
-				tr = document.createElement('tr');
-				tr.setAttribute('id', self.defn.table.id + '_' + rowNum);
-				tr.setAttribute('data-row-num', row.rowNum);
-
-				// Create the check box which selects the row.
-
-				if (self.features.rowSelect) {
-					var checkbox = jQuery('<input>', {
-						'type': 'checkbox',
-						'data-row-num': row.rowNum,
-					});
-					td = jQuery('<td>').addClass('wcdv_group_col_spacer').append(checkbox).appendTo(tr);
-					if (self.opts.drawInternalBorders) {
-						td.addClass('wcdv_pivot_colval_boundary');
-					}
-				}
-
-				// Create the data cells.
-
-				_.each(columns, function (field, colIndex) {
-					var fcc = self.colConfig.get(field) || {};
-					var cell = row.rowData[field];
-
-					var td = document.createElement('td');
-					var value = format(fcc, typeInfo.get(field), cell);
-
-					if (value instanceof Element) {
-						td.appendChild(value);
-					}
-					else if (value instanceof jQuery) {
-						td.appendChild(value.get(0));
-					}
-					else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
-						td.innerHTML = value;
-					}
-					else if (value === '') {
-						td.innerText = '\u00A0';
-					}
-					else {
-						td.innerText = value;
-					}
-
-					self.setCss(jQuery(td), field);
-					self.setAlignment(td, fcc, typeInfo.get(field));
-
-					if (self.opts.drawInternalBorders) {
-						td.classList.add('wcdv_pivot_colval_boundary');
-					}
-
-					tr.appendChild(td);
-				});
-
-				// Create button used as the "handle" for dragging/dropping rows.
-
-				if (self.features.rowReorder) {
-					jQuery('<td>').append(self.makeRowReorderBtn()).appendTo(tr);
-				}
-			}
-
-			self.ui.tr[rowNum] = jQuery(tr);
-			self.ui.tbody.append(tr);
 		}
 
-		if (!atLimit) {
+		if (atLimit) {
+			self.fire('limited');
+		}
+		else {
 			self.fire('unlimited');
 		}
 
