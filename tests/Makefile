@@ -13,4 +13,4 @@ pages:
 
 clean:
 	$(MAKE) -C data clean
-	rm -f pages/wcdatavis.js pages/wcdatavis.css pages/base.css
+	rm -f pages/wcdatavis.js pages/wcdatavis.css
