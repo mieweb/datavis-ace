@@ -206,6 +206,41 @@ Filter.prototype.store = function (id) {
 				self.internalValue[i] = jQuery(elt).parent().text();
 			});
 			break;
+		case 'form':
+			var obj = {};
+			findInput('input').each(function (i, elt) {
+				var j = jQuery(elt)
+					, name = j.attr('name')
+					, type = j.attr('type');
+				if (name == null) {
+					return;
+				}
+				switch (type) {
+				case 'hidden':
+				case 'text':
+					obj[name] = j.val();
+					break;
+				case 'checkbox':
+				case 'radio':
+					if (j.prop('checked')) {
+						if (obj[j.attr('name')] == null) {
+							obj[name] = [];
+						}
+						obj[name].push(j.val());
+					}
+					break;
+				}
+			});
+			findInput('select,textarea').each(function (i, elt) {
+				var j = jQuery(elt)
+					, name = j.attr('name');
+				if (name == null) {
+					return;
+				}
+				obj[name] = j.val();
+			});
+			self.value = obj;
+			break;
 		default:
 			throw 'Invalid parameter specification: unknown input type "' + self.type + '"';
 		}
@@ -508,7 +543,14 @@ Filter.prototype.toParams = function (params) {
 		self.addJsonParam(params.report_json_having);
 		break;
 	case 'cgi':
-		params[self.paramName] = self.value;
+		if (self.type === 'form') {
+			_.each(self.value, function (v, k) {
+				params[k] = v;
+			});
+		}
+		else {
+			params[self.paramName] = self.value;
+		}
 		break;
 	default:
 		throw 'INVALID METHOD';
