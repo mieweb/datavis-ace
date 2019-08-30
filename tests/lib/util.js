@@ -1,6 +1,7 @@
 const _ = require('lodash');
-const {By} = require('selenium-webdriver');
+const {By, Key} = require('selenium-webdriver');
 const child_process = require('child_process');
+const Promise = require("bluebird");
 
 async function asyncMap(data, f) {
 	return Promise.all(_.map(data, f));
@@ -107,13 +108,49 @@ async function selectByValue(dropdown, value) {
 	return matchingOption[0].click();
 }
 
+async function radioByValue(inputs, value) {
+	let matchingRadio = await asyncFilter(inputs, async (o) => await o.getAttribute('value') === value);
+
+	if (matchingRadio.length !== 1) {
+		throw new Error('No such option: value = "' + value + '"');
+	}
+
+	return matchingRadio[0].click();
+}
+
+async function checkboxByValue(inputs, values) {
+	// Uncheck all inputs.
+
+	await Promise.each(inputs, async (input) => {
+		if (await input.getAttribute('checked')) {
+			await input.click();
+		}
+	});
+
+	if (values == null) {
+		return;
+	}
+
+	// Check the right ones.
+
+	return Promise.each(inputs, async (input) => {
+		if (values.indexOf(await input.getAttribute('value')) >= 0) {
+			await input.click();
+		}
+	});
+}
+
 function sleep(time) {
 	child_process.spawnSync('sleep', [time]);
 }
 
-exports.asyncMap = asyncMap;
-exports.asyncEach = asyncEach;
-exports.asyncFilter = asyncFilter;
-exports.selectByText = selectByText;
-exports.selectByValue = selectByValue;
-exports.sleep = sleep;
+module.exports = {
+	asyncMap,
+	asyncEach,
+	asyncFilter,
+	selectByText,
+	selectByValue,
+	radioByValue,
+	checkboxByValue,
+	sleep,
+};
