@@ -381,7 +381,38 @@ class Grid {
 
 	// Data Checking - Plain {{{2
 
-	async getCell(column, row) {
+	/**
+	 * Get a cell from a plain table, given the name of the column and the row number.
+	 *
+	 * @param {string} column
+	 * Name of the column to look for.
+	 *
+	 * @param {number} row
+	 * Which row to retrieve the value for.  The index is zero-based.  You can pass a negative number
+	 * to read backwards from the end (e.g. -1 is the last row).
+	 *
+	 * @param {object} opts
+	 * Additional options.
+	 *
+	 * @param {string} opts.result
+	 * What kind of result do you want?  Can be:
+	 *
+	 *   - `text`: Gets the text of the cell.
+	 *   - `element`: Returns the TD itself.
+	 */
+
+	async getCell(column, row, opts) {
+		opts = _.defaults({}, opts, {
+			result: 'text'
+		});
+
+		if (typeof column !== 'string')
+			throw new Error('Call Error: `column` must be a string');
+		if (typeof row !== 'number')
+			throw new Error('Call Error: `row` must be a number');
+		if (['text', 'element'].indexOf(opts.result) < 0)
+			throw new Error('Call Error: `opts.result` must be: "text" or "element"');
+
 		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
 		const headers = await table.findElements(By.css('thead > tr > th'));
 		const th = await asyncFilter(headers, async (elt) => await elt.getText() === column, {reportPosition: true});
@@ -396,7 +427,12 @@ class Grid {
 		}
 		const tds = await tr.findElements(By.css('td'));
 		const td = tds[th[0].pos];
-		return await td.getText();
+		switch (opts.result) {
+		case 'element':
+			return td;
+		case 'text':
+			return await td.getText();
+		}
 	}
 
 	async getColumns() {
@@ -419,6 +455,52 @@ class Grid {
 				return t === ' ' ? '' : t;
 			}));
 		}));
+	}
+
+	// Data Checking - Group {{{2
+
+	/**
+	 * Get a rowval cell from a group summary table, given the row and column numbers.
+	 *
+	 * @param {number} rowValIdx
+	 * What rowval index to look for, which translates to a TR in the table.
+	 *
+	 * @param {number} groupFieldIdx
+	 * The index of the element of the rowval to find, corresponding to an index in list of fields
+	 * we're grouping by.  For example, grouping by `['state', 'last_name']` and passing 1 extracts
+	 * the `last_name` element of the rowval.
+	 *
+	 * @param {object} opts
+	 * Additional options.
+	 *
+	 * @param {string} opts.result
+	 * What kind of result do you want?  Can be:
+	 *
+	 *   - `text`: Gets the text of the cell.
+	 *   - `element`: Returns the TH itself.
+	 */
+
+	async getRowVal(rowValIdx, groupFieldIdx, opts) {
+		opts = _.defaults({}, opts, {
+			result: 'text'
+		});
+
+		if (typeof rowValIdx !== 'number')
+			throw new Error('Call Error: `rowValIdx` must be a number');
+		if (typeof groupFieldIdx !== 'number')
+			throw new Error('Call Error: `groupFieldIdx` must be a number');
+		if (['text', 'element'].indexOf(opts.result) < 0)
+			throw new Error('Call Error: `opts.result` must be: "text" or "element"');
+
+		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
+		const ths = await trs[rowValIdx].findElements(By.css('th > div.wcdv_heading_container > span.wcdv_heading_title'));
+		const th = ths[groupFieldIdx];
+		switch (opts.result) {
+		case 'element':
+			return th;
+		case 'text':
+			return await th.getText();
+		}
 	}
 
 	// Data Checking - Aggregates {{{2

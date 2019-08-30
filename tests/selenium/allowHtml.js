@@ -1,0 +1,119 @@
+const {assert} = require('chai');
+const _ = require('lodash');
+const Grid = require('../lib/grid.js');
+const {asyncEach, sleep} = require('../lib/util.js');
+const setup = require('../lib/setup.js');
+
+const {Builder, By} = require('selenium-webdriver');
+const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
+
+describe('Allow HTML', function () {
+	setup.server();
+	const logging = new LoggingPrefs();
+	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
+	let driver;
+	let grid;
+
+	before(function () {
+		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+	});
+
+	after(function () {
+		if (driver != null) {
+			driver.quit();
+		}
+	});
+
+	let tests = [{
+		name: 'No Defn, No Prefs',
+		url: 'nodefn-noprefs.html',
+		phases: [{
+      field: 'link1',
+      expected: 'text'
+    }, {
+      field: 'link2',
+      expected: 'text'
+    }, {
+      field: 'link3',
+      expected: 'link'
+    }, {
+      field: 'link4',
+      expected: 'link'
+    }]
+  }, {
+    name: 'Defn Only',
+    url: 'defn-noprefs.html',
+    phases: [{
+      field: 'link1',
+      expected: 'link'
+    }, {
+      field: 'link2',
+      expected: 'text'
+    }, {
+      field: 'link3',
+      expected: 'link'
+    }, {
+      field: 'link4',
+      expected: 'link'
+    }]
+  }, {
+    name: 'Defn and Prefs',
+    url: 'defn-prefs.html',
+    phases: [{
+      field: 'link1',
+      expected: 'link'
+    }, {
+      field: 'link2',
+      expected: 'text'
+    }, {
+      field: 'link3',
+      expected: 'link'
+    }, {
+      field: 'link4',
+      expected: 'link'
+		}]
+	}];
+
+  async function check(cell, expected) {
+    let children = await cell.findElements(By.css('*'));
+    switch (expected) {
+    case 'text':
+      assert.equal(children.length, 0);
+      break;
+    case 'link':
+      assert.equal(children.length, 1);
+      assert.equal(await children[0].getTagName(), 'a');
+      break;
+    }
+  }
+
+	_.each(tests, function (t) {
+		describe(`${t.name} (${t.url})`, function () {
+			before(async function () {
+				await driver.get(`http://localhost:3000/grid/allowHtml/${t.url}`);
+				grid = new Grid(driver);
+				await grid.waitForIdle();
+			});
+			after(async function () {
+				await driver.executeScript('window.localStorage.clear()');
+			});
+      afterEach(async function () {
+        await grid.clearGroup();
+        await grid.waitForIdle();
+      });
+			_.each(t.phases, function (p) {
+				it(`column ${p.field}`, async function () {
+          let cell = await grid.getCell(p.field, 0, {result: 'element'});
+          check(cell, p.expected);
+
+          await grid.addGroup(p.field);
+          await grid.waitForIdle();
+          await grid.setGroupMode('summary');
+          await grid.waitForIdle();
+          cell = await grid.getRowVal(0, 0, {result: 'element'});
+          check(cell, p.expected);
+				});
+			});
+		});
+	});
+});
