@@ -40,6 +40,10 @@ class GridUi {
 	get refreshBtn() {
 		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Refresh"]'));
 	}
+
+	get table() {
+		return this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+	}
 }
 
 // Grid {{{1
@@ -92,93 +96,10 @@ class Grid {
 		return this.driver.executeScript(`MIE.WC_DataVis.grids['${this.id}'].view.source.origin.url = '${url}'`);
 	}
 
-	async getCell(column, row) {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		const headers = await table.findElements(By.css('thead > tr > th'));
-		const th = await asyncFilter(headers, async (elt) => await elt.getText() === column, {reportPosition: true});
-		if (th.length === 0) {
-			throw new Error(`No such column: ${column}`);
-		}
-		// Using the 'data-row-num' attribute here to prevent counting the "show more rows" TR.
-		const trs = await table.findElements(By.css('tbody > tr[data-row-num]'));
-		const tr = trs[row >= 0 ? row : trs.length + row];
-		if (tr == null) {
-			throw new Error(`No such row: ${row}`);
-		}
-		const tds = await tr.findElements(By.css('td'));
-		const td = tds[th[0].pos];
-		return await td.getText();
-	}
-
 	async getGroupCell(groupNum, colNum) {
 		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
 		const tds = await trs[groupNum].findElements(By.css('td'));
 		return tds[colNum].getText();
-	}
-
-	/**
-	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
-	 *
-	 * @param {string} rowVal The rowval we're looking for.
-	 * @param {string} [colVal] The colval we're looking for.
-	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
-	 */
-
-	async getAggResult_byVal(rowVal, colVal, aggNum = 0) {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		if (colVal != null) {
-			// TODO
-			throw new Error('not implemented');
-		}
-		else if (rowVal.length > 1) {
-			// TODO
-			throw new Error('not implemented');
-		}
-		else {
-			const trs = await table.findElements(By.css('tbody > tr'));
-			const rowValHeaders = await table.findElements(By.css('tbody > tr > th'));
-			const th = await asyncFilter(rowValHeaders, async (elt) => await elt.getText() === rowVal[0], {reportPosition: true});
-			if (th.length === 0) {
-				throw new Error(`No such rowval: ${rowVal[0]}`);
-			}
-			if (th.length > 1) {
-				throw new Error(`Too many matching rowvals: ${rowVal[0]}`);
-			}
-			const tds = await trs[th[0].pos].findElements(By.css(`tbody > tr > td[data-rowval-index]`));
-			if (tds.length === 0) {
-				throw new Error(`No cell for rowval: ${rowVal[0]}`);
-			}
-			if (tds.length < aggNum + 1) {
-				throw new Error(`No such aggnum: ${aggNum}`);
-			}
-			return tds[aggNum].getText();
-		}
-	}
-
-	/**
-	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
-	 *
-	 * @param {number} rowValIdx Index of the rowval we're looking for.
-	 * @param {number} [colValIdx] Index of the colval we're looking for.
-	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
-	 */
-
-	async getAggResult_byNum(rowValIdx, colValIdx, aggNum = 0) {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		if (colValIdx != null) {
-			// TODO
-			throw new Error('not implemented');
-		}
-		else {
-			const tds = await table.findElement(By.css(`tbody > tr > td[data-rowval-index=${rowValIdx}]`));
-			if (tds.length === 0) {
-				throw new Error(`No such rowval index: ${rowValIdx}`);
-			}
-			if (tds.length < aggNum + 1) {
-				throw new Error(`No such aggnum: ${aggNum}`);
-			}
-			return tds[aggNum].getText();
-		}
 	}
 
 	async getNumRows() {
@@ -189,12 +110,6 @@ class Grid {
 
 	async setGroupMode(kind) {
 		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value=${kind}]`)).click();
-	}
-
-	async getColumns() {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		const headers = await table.findElements(By.css('thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title'));
-		return Promise.all(_.map(headers, (elt) => elt.getText()));
 	}
 
 	// Sorting {{{2
@@ -462,6 +377,115 @@ class Grid {
 			}
 			return result;
 		});`);
+	}
+
+	// Data Checking - Plain {{{2
+
+	async getCell(column, row) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		const headers = await table.findElements(By.css('thead > tr > th'));
+		const th = await asyncFilter(headers, async (elt) => await elt.getText() === column, {reportPosition: true});
+		if (th.length === 0) {
+			throw new Error(`No such column: ${column}`);
+		}
+		// Using the 'data-row-num' attribute here to prevent counting the "show more rows" TR.
+		const trs = await table.findElements(By.css('tbody > tr[data-row-num]'));
+		const tr = trs[row >= 0 ? row : trs.length + row];
+		if (tr == null) {
+			throw new Error(`No such row: ${row}`);
+		}
+		const tds = await tr.findElements(By.css('td'));
+		const td = tds[th[0].pos];
+		return await td.getText();
+	}
+
+	async getColumns() {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		const headers = await table.findElements(By.css('thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title'));
+		return Promise.all(_.map(headers, (elt) => elt.getText()));
+	}
+
+	async getPlainData() {
+		const trs = await this.ui.table.findElements(By.css('tbody > tr'));
+		return Promise.all(_.map(trs, async (tr) => {
+			let tds = await tr.findElements(By.css('td'));
+			return Promise.all(_.map(tds, async (td) => {
+				let t = await td.getText();
+				// In DataVis, an empty cell is actually rendered as a lone "&nbsp;" so that a row of all
+				// empty cells still renders at full height, and not squished down.  However, when we do
+				// getText() on such an empty cell, instead of "\u00A0" we get a single regular space. We
+				// check for that single space and pretend it's truly empty.  But that means we technically
+				// can't distinguish between an empty cell and one that contains a single regular space.
+				return t === ' ' ? '' : t;
+			}));
+		}));
+	}
+
+	// Data Checking - Aggregates {{{2
+
+	/**
+	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
+	 *
+	 * @param {string} rowVal The rowval we're looking for.
+	 * @param {string} [colVal] The colval we're looking for.
+	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
+	 */
+
+	async getAggResult_byVal(rowVal, colVal, aggNum = 0) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		if (colVal != null) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else if (rowVal.length > 1) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else {
+			const trs = await table.findElements(By.css('tbody > tr'));
+			const rowValHeaders = await table.findElements(By.css('tbody > tr > th'));
+			const th = await asyncFilter(rowValHeaders, async (elt) => await elt.getText() === rowVal[0], {reportPosition: true});
+			if (th.length === 0) {
+				throw new Error(`No such rowval: ${rowVal[0]}`);
+			}
+			if (th.length > 1) {
+				throw new Error(`Too many matching rowvals: ${rowVal[0]}`);
+			}
+			const tds = await trs[th[0].pos].findElements(By.css(`tbody > tr > td[data-rowval-index]`));
+			if (tds.length === 0) {
+				throw new Error(`No cell for rowval: ${rowVal[0]}`);
+			}
+			if (tds.length < aggNum + 1) {
+				throw new Error(`No such aggnum: ${aggNum}`);
+			}
+			return tds[aggNum].getText();
+		}
+	}
+
+	/**
+	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
+	 *
+	 * @param {number} rowValIdx Index of the rowval we're looking for.
+	 * @param {number} [colValIdx] Index of the colval we're looking for.
+	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
+	 */
+
+	async getAggResult_byNum(rowValIdx, colValIdx, aggNum = 0) {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		if (colValIdx != null) {
+			// TODO
+			throw new Error('not implemented');
+		}
+		else {
+			const tds = await table.findElement(By.css(`tbody > tr > td[data-rowval-index=${rowValIdx}]`));
+			if (tds.length === 0) {
+				throw new Error(`No such rowval index: ${rowValIdx}`);
+			}
+			if (tds.length < aggNum + 1) {
+				throw new Error(`No such aggnum: ${aggNum}`);
+			}
+			return tds[aggNum].getText();
+		}
 	}
 
 	// }}}2
