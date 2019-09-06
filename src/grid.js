@@ -205,6 +205,18 @@ function makeJsonOrderBy(o) {
  *
  * @property {number} [table.limit.chunkSize=50]
  * When using the "more" limit method, how many additional rows to load each time.
+ *
+ * @property {object} [table.whenPlain]
+ * When the data has not been grouped, this is passed as the `opts` parameter to the GridRenderer
+ * constructor.
+ *
+ * @property {object} [table.whenGroup]
+ * When the data has been grouped, but not pivotted, this is passed as the `opts` parameter to the
+ * GridRenderer constructor.
+ *
+ * @property {object} [table.whenPivot]
+ * When the data has been pivotted, this is passed as the `opts` parameter to the GridRenderer
+ * constructor.
  */
 
 /**

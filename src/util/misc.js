@@ -2375,6 +2375,44 @@ export var loadScript = (function () {
 	};
 })();
 
+/**
+ * Set the value of a table cell.
+ *
+ * @param {HTMLTableCellElement} cell
+ * @param {Element|jQuery|string|number} value
+ * @param {object} opts
+ * @param {string} opts.field
+ * @param {OrdMap} opts.colConfig
+ * @param {OrdMap} opts.typeInfo
+ */
+
+export function setTableCell(cell, value, opts) {
+	opts = opts || {};
+
+	var fcc = (opts.field && opts.colConfig && opts.colConfig.get(opts.field)) || {};
+	var fti = (opts.field && opts.typeInfo && opts.typeInfo.get(opts.field)) || {};
+
+	if (!(cell instanceof HTMLTableCellElement)) {
+		throw new Error('Call Error: `cell` must be a HTMLTableCellElement instance');
+	}
+
+	if (value instanceof Element) {
+		cell.appendChild(value);
+	}
+	else if (value instanceof jQuery) {
+		cell.appendChild(value.get(0));
+	}
+	else if (fcc.allowHtml && fti.type === 'string') {
+		cell.innerHTML = value;
+	}
+	else if (value === '') {
+		cell.innerText = '\u00A0';
+	}
+	else {
+		cell.innerText = value;
+	}
+}
+
 // makeCheckbox {{{2
 
 export function makeCheckbox(startChecked, onChange, text, parent) {

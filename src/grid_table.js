@@ -23,6 +23,7 @@ import {
 	objFromArray,
 	onVisibilityChange,
 	setPropDef,
+	setTableCell,
 } from './util/misc.js';
 
 import {AggregateInfo} from './aggregates.js';
@@ -204,6 +205,112 @@ Csv.prototype.setOrder = function (rowId, pos) {
 };
 
 // GridTable {{{1
+// JSDoc Types {{{2
+
+/**
+ * @typedef {function} GridTable~RowRenderCb
+ * A callback that gets executed when a row is rendered in the table.
+ *
+ * @param {jQuery} tr
+ * The row we've just finished rendering.
+ *
+ * @param {object} opts
+ * Additional information for the callback.
+ *
+ * @param {boolean} opts.isGroup
+ * True if we're in group output.
+ *
+ * @param {boolean} opts.groupMode
+ * The group output mode, either "summary" or "detail."
+ *
+ * @param {string} opts.groupField
+ * In group output, detail mode, when rendering a group (i.e. non-leaf node): the name of the field
+ * that is currently being rendered.  Example: When grouping by [State, County] this property can
+ * either by "State" or "County" depending on what part of the tree is being rendered.
+ *
+ * @param {string} opts.rowValElt
+ * In group output, detail mode, when rendering a group (i.e. non-leaf node): the shared value of
+ * the field given by `opts.groupField` for all rows in the grouping currently being rendered.
+ * Following the previous example, it could be "New Mexico" or "Donut County."
+ *
+ * @param {metadataNode} opts.groupMetadata
+ * In group output, detail mode, when rendering a group (i.e. non-leaf node): additional metadata
+ * from the grouping process.  Can be used to find the number of children, for example.
+ *
+ * @param {Array.<object>} rowData
+ * In group output, detail mode, when rendering a row (i.e. leaf node): the data that has been
+ * rendered.
+ *
+ * @param {number} rowNum
+ * In group output, detail mode, when rendering a row (i.e. leaf node): the unique row identifier.
+ */
+
+/**
+ * @typedef {function} GridTable~AddCols_Value_Plain
+ *
+ * @param {Array.<object>} rowData
+ * The data of the row that has been rendered.
+ *
+ * @param {number} rowNum
+ * The unique ID of thw row that was rendered.
+ */
+
+/**
+ * @typedef {function} GridTable~AddCols_Value_Pivot
+ *
+ * @param {object} data
+ * @param {number} groupNum
+ */
+
+/**
+ * @typedef GridTable~AddCols
+ *
+ * @property {string} name
+ * The name of the column to add, which appears in the table header.
+ *
+ * @property {GridTable~AddCols_Value_Plain|GridTable~AddCols_Value_Pivot} value
+ * A function that is called to determine what gets put into the table cell.
+ */
+
+/**
+ * @typedef GridTable~CtorOpts
+ *
+ * @property {boolean} [drawInternalBorders=true]
+ * If true, draw borders between the cells in the table.
+ *
+ * @property {boolean} [zebraStriping=true]
+ * If true, use subtle alternating background colors in the table rows.
+ *
+ * @property {boolean} [generateCsv=true]
+ * If true, allow the generation of a CSV file from the table contents.
+ *
+ * @property {boolean} [stealGridFooter=true]
+ * If true, absorb the element specified by `footer` into the table footer.
+ *
+ * @property {object} [addClass]
+ * Additional classes to add when generating the table.
+ *
+ * @property {string} [addClass.table]
+ * Classes to add on the table element itself.
+ *
+ * @property {Array.<GridTable~AddCols>} [addCols]
+ * Columns to add to the table.  These are always computed as rows are rendered, and they are not
+ * backed by the View so they can't be sorted or filtered.  This option is best used as a way of
+ * adding some UI to the table row.
+ *
+ * @property {object} [events]
+ * Callbacks to bind on various events.
+ *
+ * @property {GridTable~RowRenderCb} [events.rowRender]
+ * A callback to invoke when a row is rendered.
+ *
+ * @property {jQuery} [footer]
+ * **Internal** An element to put into the table footer.
+ *
+ * @property {boolean} [fixedHeight]
+ * **Internal** If true, configure the table to scroll within the parent element.
+ */
+
 // Constructor {{{2
 
 /**
@@ -232,7 +339,8 @@ Csv.prototype.setOrder = function (rowId, pos) {
  *
  * @property {object} features
  *
- * @property {object} opts
+ * @property {GridTable~CtorOpts} opts
+ * Additional options for the renderer.
  *
  * @property {Timing} timing
  *
@@ -1305,6 +1413,10 @@ GridTable.prototype.drawHeader_aggregates = function (data, tr, displayOrderInde
 
 // #drawHeader_addCols {{{2
 
+/**
+ * Add user-defined columns to the header.
+ */
+
 GridTable.prototype.drawHeader_addCols = function (tr, typeInfo, opts) {
 	var self = this;
 	var span, th;
@@ -1313,10 +1425,21 @@ GridTable.prototype.drawHeader_addCols = function (tr, typeInfo, opts) {
 		_.each(self.opts.addCols, function (addCol) {
 			span = jQuery('<span>')
 				.text(addCol.name);
+
 			th = jQuery('<th>')
 				.append(span)
 				.appendTo(tr);
+
 			self.csv.addCol(addCol.name);
+
+			// When the added column is an aggregate function over some field, we can use that information
+			// to look up the colConfig and typeInfo of the field to determine the alignment.  For example
+			// if the aggregate is Max(Age) we can look up Age and find it's a number and therefore should
+			// be right-aligned.
+			//
+			// TODO Implement this for the aggregate type as well, as aggregates like Sum() only produce
+			// numbers which should be right-aligned.
+
 			if (getProp(opts, 'pivotConfig', 'aggField')) {
 				self.setAlignment(th, self.colConfig.get(opts.pivotConfig.aggField), typeInfo.get(opts.pivotConfig.aggField));
 			}
@@ -1907,6 +2030,8 @@ GridTablePlain.prototype.canRender = function (what) {
  * @param {View~Data} data
  *
  * @param {Source~TypeInfo} typeInfo
+ *
+ * @param {object} opts
  */
 
 GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
@@ -2089,6 +2214,10 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		headingTr.append(headingTh);
 	});
 
+	if (self.opts.addCols) {
+		self.drawHeader_addCols(headingTr, typeInfo, opts);
+	}
+
 	/*
 	 * Create a column with buttons that allows the user to reorder the rows.
 	 */
@@ -2166,21 +2295,11 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			var td = document.createElement('td');
 			var value = format(fcc, typeInfo.get(field), cell);
 
-			if (value instanceof Element) {
-				td.appendChild(value);
-			}
-			else if (value instanceof jQuery) {
-				td.appendChild(value.get(0));
-			}
-			else if (fcc.allowHtml && typeInfo.get(field).type === 'string') {
-				td.innerHTML = value;
-			}
-			else if (value === '') {
-				td.innerText = '\u00A0';
-			}
-			else {
-				td.innerText = value;
-			}
+			setTableCell(td, value, {
+				field: field,
+				colConfig: self.colConfig,
+				typeInfo: typeInfo
+			});
 
 			self.setCss(jQuery(td), field);
 			self.setAlignment(td, fcc, typeInfo.get(field));
@@ -2191,6 +2310,23 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 			tr.appendChild(td);
 		});
+
+		if (self.opts.addCols) {
+			_.each(self.opts.addCols, function (addColSpec) {
+				var cell = addColSpec.value(row.rowData, row.rowNum);
+
+				var td = document.createElement('td');
+				var value = format(null, null, cell);
+
+				setTableCell(td, value);
+
+				if (self.opts.drawInternalBorders) {
+					td.classList.add('wcdv_pivot_colval_boundary');
+				}
+
+				tr.appendChild(td);
+			});
+		}
 
 		// Create button used as the "handle" for dragging/dropping rows.
 
@@ -2210,6 +2346,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		var colSpan = columns.length
 			+ (self.features.rowSelect ? 1 : 0)
+			+ (getPropDef(0, self.opts, 'addCols', 'length'))
 			+ (self.features.rowReorder ? 1 : 0);
 
 		var showMore = function () {
