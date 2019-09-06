@@ -173,6 +173,9 @@ Filter.prototype.store = function (id) {
 		case 'text':
 			self.value = findInput('input[name="' + self.inputName + '"]').val();
 			break;
+		case 'textarea':
+			self.value = findInput('textarea[name="' + self.inputName + '"]').val();
+			break;
 		case 'date':
 			self.internalValue = {};
 			var x = _.map(['YEAR', 'MONTH', 'DAY'], function (elt) {
