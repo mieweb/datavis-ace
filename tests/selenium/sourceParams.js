@@ -175,5 +175,21 @@ describe('Source Parameters', function () {
 			assert.deepEqual(actual, expected);
 		});
 		commonTests();
+		describe('changes when you update <input type="checkbox"> as a toggle', function () {
+			it ('and check it', async function () {
+				let input = await driver.findElement(By.css('input[name="toggle-checkbox"]:not(:checked)'));
+				await input.click();
+				await grid.refresh();
+				await grid.waitForIdle();
+				assert.deepInclude(await grid.getPlainData(), ['toggle-checkbox', 'on']);
+			});
+			it ('and uncheck it', async function () {
+				let input = await driver.findElement(By.css('input[name="toggle-checkbox"]:checked'));
+				await input.click();
+				await grid.refresh();
+				await grid.waitForIdle();
+				assert.deepInclude(await grid.getPlainData(), ['toggle-checkbox', 'off']);
+			});
+		});
 	});
 });
