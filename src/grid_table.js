@@ -2313,10 +2313,12 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		if (self.opts.addCols) {
 			_.each(self.opts.addCols, function (addColSpec) {
-				var cell = addColSpec.value(row.rowData, row.rowNum);
-
+				var value = addColSpec.value(row.rowData, row.rowNum);
 				var td = document.createElement('td');
-				var value = format(null, null, cell);
+
+				if (!(value instanceof jQuery || value instanceof Element)) {
+					value = format(null, null, value);
+				}
 
 				setTableCell(td, value);
 
