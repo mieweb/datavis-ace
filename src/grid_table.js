@@ -110,6 +110,7 @@ Csv.prototype.addRow = function (rowId) {
 Csv.prototype.addCol = function (x, opts) {
 	var self = this;
 
+	opts = opts || {};
 	opts = _.defaults(opts, {
 		prepend: false
 	});
@@ -4399,6 +4400,9 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 		_.each(self.opts.displayOrder, function (what) {
 			switch (what) {
 			case 'rowVals':
+				for (var i = 0; i < data.groupFields.length - 1; i += 1) {
+					self.csv.addCol('');
+				}
 				self.csv.addCol('Total');
 
 				var span = jQuery('<span>', {'class': 'wcdv_heading_title'})
