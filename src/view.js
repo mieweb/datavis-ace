@@ -1,3 +1,5 @@
+// Imports {{{1
+
 import _ from 'underscore';
 import BigNumber from 'bignumber.js/bignumber.js';
 import numeral from 'numeral';
@@ -44,6 +46,7 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
 
 // View {{{1
 // JSDoc Types {{{2
+// View~Data {{{3
 
 /**
  * @typedef View~Data
@@ -54,6 +57,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @property {Array.<View~Data_Row>} data
  */
 
+// View~Data_Row {{{3
+
 /**
  * @typedef View~Data_Row
  *
@@ -63,6 +68,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @property {Object.<string, View~Data_Field>} rowData Contains the data for the row; keys are
  * field names, and values are objects representing the value of that field within the row.
  */
+
+// View~Data_Field {{{3
 
 /**
  * @typedef View~Data_Field
@@ -80,6 +87,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * the cell when the table is output.
  */
 
+// View~Data_Field_Render {{{3
+
 /**
  * A function called by the GridTable instance to produce a value that will be placed into a cell in
  * the table output.  An example usage would be to create a link based on the value of the cell.
@@ -89,12 +98,16 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @returns {Element|jQuery|string} What should be put into the cell in the table output.
  */
 
+// View~FilterSpec {{{3
+
 /**
  * @typedef {Object<string,string>|Object<string,View~FilterSpecValue>} View~FilterSpec
  * The specification used for filtering within a data view.  The keys are column names, and the
  * values are either strings (implying an equality relationship) or objects indicating a more
  * complex relationship.
  */
+
+// View~FilterSpecValue {{{3
 
 /**
  * @typedef {Object<string,any>} View~FilterSpecValue
@@ -111,6 +124,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @property {Array.<string|number>} [$nin] Allow things that are not elements of the set value.
  */
 
+// View~GroupSpec {{{3
+
 /**
  * @typedef {object} View~GroupSpec
  * Specifies how to group the data.
@@ -123,6 +138,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * Additional rowvals to add, even if they don't exist in the data naturally.
  */
 
+// View~GroupSpecElt {{{3
+
 /**
  * @typedef {object} View~GroupSpecElt
  *
@@ -133,6 +150,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * Name of a {@link GroupFunction} from the {@link GROUP_FUNCTION_REGISTRY} to change how we group
  * by this field.
  */
+
+// View~PivotSpec {{{3
 
 /**
  * @typedef {object} View~PivotSpec
@@ -152,6 +171,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @property {Array.<Array.<string>>} addColVals
  * Additional colvals to add, even if they don't exist in the data naturally.
  */
+
+// View~AggregateSpec {{{3
 
 /**
  * @typedef {object} View~AggregateSpec
@@ -173,6 +194,8 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * Aggregate functions applied over all rows.  Calculated for both group summary output and pivot
  * output.
  */
+
+// View~AggregateTypeSpec {{{3
 
 /**
  * @typedef {object} View~AggregateTypeSpec
@@ -199,6 +222,94 @@ import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
  * @property {boolean} [shouldGraph=false]
  * If true, then this aggregate should be used for graphing.
  */
+
+// View~SortSpec {{{3
+
+/**
+ * @typedef {object} View~SortSpec
+ *
+ * @property {View~SortSpecVert} vertical
+ * @property {View~SortSpecHoriz} horizontal
+ */
+
+/**
+ * @typedef {View~SortSpecVertPlain|View~SortSpecVertGroup|View~SortSpecVertPivot} View~SortSpecVert
+ *
+ * @property {string} dir
+ * Which direction to sort, either "ASC" or "DESC".
+ */
+
+/**
+ * @typedef {object} View~SortSpecVertPlain
+ *
+ * @property {string} field
+ * @property {Array.<string>} [values]
+ */
+
+/**
+ * @typedef {object} View~SortSpecVertGroup
+ *
+ * @property {string} [field]
+ * @property {number} [groupFieldIndex]
+ * @property {Array.<string>} [values]
+ * @property {string} [aggType]
+ * @property {number} [aggNum]
+ */
+
+/**
+ * @typedef {object} View~SortSpecVertPivot
+ *
+ * @property {string} [field]
+ * @property {string} [groupFieldIndex]
+ * @property {Array.<string>} [values]
+ * This is sort method #1.
+ *
+ * @property {Array.<string>} [colVal]
+ * @property {number} [colValIndex]
+ * Reorders rowvals (i.e. sorting vertically) by the result of a cell aggregate function applied to
+ * data with the specified colval.  Use `aggNum` to indicate which.  This is sort method #4.
+ *
+ * @property {string} [aggType]
+ * Setting this to "group" indicates reordering rowvals (i.e. sorting vertically) by the result of a
+ * group aggregate function.  Use `aggNum` to indicate which one.  This is sort method #6.
+ *
+ * @property {number} [aggNum]
+ * The number of the aggregate to use for sorting.  Used when:
+ *   - Using `colVal` or `colValIndex`.
+ *   - Using `{aggType: 'group'}`.
+ */
+
+/**
+ * @typedef {View~SortSpecHorizPivot} View~SortSpecHoriz
+ *
+ * @property {string} dir
+ * Which direction to sort, either "ASC" or "DESC".
+ */
+
+/**
+ * @typedef {object} View~SortSpecHorizPivot
+ *
+ * @property {string} [field]
+ * @property {string} [pivotFieldIndex]
+ * @property {Array.<string>} [values]
+ * This is sort method #3.
+ *
+ * @property {Array.<string>} [rowVal]
+ * @property {number} [rowValIndex]
+ * Reorders colvals (i.e. sorting horizontally) by the result of a cell aggregate function applied
+ * to data with the specified rowval.  Use `aggNum` to indicate which.  This is sort method #2.
+ *
+ * @property {string} [aggType]
+ * Setting this to "pivot" indicates reordering colvals (i.e. sorting horizontally) by the result of
+ * a pivot aggregate function.  Use `aggNum` to indicate which one.  This is sort method #5.
+ *
+ * @property {number} [aggNum]
+ * The number of the aggregate to use for sorting.  Used when:
+ *   - Using `rowVal` or `rowValIndex`.
+ *   - Using `{aggType: 'pivot'}`.
+ */
+
+// View~OperationsPerformed {{{3
 
 /**
  * @typedef {object} View~OperationsPerformed
@@ -609,9 +720,8 @@ View.prototype.getTotalRowCount = function () {
 /**
  * Set the sorting spec for the view.
  *
- * @param {string} col Name of the field to sort by.
- *
- * @param {string} dir Direction to sort by, either "ASC" or "DESC."
+ * @param {View~SortSpec} spec
+ * @param {object} [opts]
  */
 
 View.prototype.setSort = function (spec, opts) {
