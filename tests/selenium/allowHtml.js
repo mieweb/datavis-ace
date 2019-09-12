@@ -110,7 +110,7 @@ describe('Allow HTML', function () {
           await grid.waitForIdle();
           await grid.setGroupMode('summary');
           await grid.waitForIdle();
-          cell = await grid.getRowVal(0, 0, {result: 'element'});
+          cell = await grid.getRowValElt(0, 0, {result: 'element'});
           check(cell, p.expected);
 				});
 			});

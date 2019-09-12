@@ -510,7 +510,7 @@ class Grid {
 	 *   - `element`: Returns the TH itself.
 	 */
 
-	async getRowVal(rowValIdx, groupFieldIdx, opts) {
+	async getRowValElt(rowValIdx, groupFieldIdx, opts) {
 		opts = _.defaults({}, opts, {
 			result: 'text'
 		});
