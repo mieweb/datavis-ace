@@ -490,6 +490,54 @@ class Grid {
 	// Data Checking - Group {{{2
 
 	/**
+	 * Get rowval cells from a group summary table, given the row number.
+	 *
+	 * @param {number} rowValIdx
+	 * What rowval index to look for, which translates to a TR in the table.
+	 *
+	 * @param {object} opts
+	 * Additional options.
+	 *
+	 * @param {string} opts.result
+	 * What kind of result do you want?  Can be:
+	 *
+	 *   - `text`: Gets the text of the cell.
+	 *   - `element`: Returns the TH itself.
+	 */
+
+	async getRowVal(rowValIdx, opts) {
+		opts = _.defaults({}, opts, {
+			result: 'text'
+		});
+
+		if (typeof rowValIdx !== 'number')
+			throw new Error('Call Error: `rowValIdx` must be a number');
+		if (['text', 'element'].indexOf(opts.result) < 0)
+			throw new Error('Call Error: `opts.result` must be: "text" or "element"');
+
+		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
+
+		if (rowValIdx >= trs.length || (rowValIdx < 0 && rowValIdx < trs.length * -1)) {
+			throw new Error(`Test Error: Looking for rowValIdx = ${rowValIdx}, but only ${trs.length} rowVals were found`);
+		}
+
+		if (rowValIdx < 0) {
+			rowValIdx = trs.length + rowValIdx;
+		}
+
+		const ths = await trs[rowValIdx].findElements(By.css('th > div.wcdv_heading_container > span.wcdv_heading_title'));
+
+		return Promise.mapSeries(ths, async (th) => {
+			switch (opts.result) {
+			case 'element':
+				return th;
+			case 'text':
+				return await th.getText();
+			}
+		});
+	}
+
+	/**
 	 * Get a rowval cell from a group summary table, given the row and column numbers.
 	 *
 	 * @param {number} rowValIdx
