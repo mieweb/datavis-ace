@@ -835,6 +835,8 @@ View.prototype.sort = function (cont) {
 
 				// Reorder data and rowvals.
 
+				var rowValIdxMap = {};
+
 				_.each(sorted, function (s, newIndex) {
 					// For plain output, fire the "sort" event so that the rows (if the grid table is showing
 					// all of them) can just be shuffled around, and the table doesn't have to be recreated.
@@ -849,7 +851,34 @@ View.prototype.sort = function (cont) {
 					if (origRowVals != null) {
 						self.data.rowVals[newIndex] = origRowVals[s.oldIndex];
 					}
+
+					rowValIdxMap[s.oldIndex] = newIndex;
 				});
+
+				if (self.data.isGroup) {
+					// Update the groupMetadata tree's use of rowValIndex to correspond to the new ordering of
+					// rowvals.  This means both the `rowValIndex` property of each node in the tree, and the
+					// lookup object.  If this isn't done, then some parts of the UI (like the rowvals in group
+					// and pivot output) will not change to reflect the new ordering.
+
+					var postorder = function (node, depth) {
+						if (node.children == null) {
+							node.rowValIndex = rowValIdxMap[node.rowValIndex];
+							self.data.groupMetadata.lookup.byRowValIndex[node.rowValIndex] = node;
+						}
+						else {
+							_.each(node.children, function (child) {
+								postorder(child, depth + 1);
+							});
+							if (depth > 0) {
+								// FIXME Assumes that node.children.length > 0.
+								node.rowValIndex = node.children[_.keys(node.children)[0]].rowValIndex;
+							}
+						}
+					};
+
+					postorder(self.data.groupMetadata, 0);
+				}
 
 				// Reorder cell aggregates.
 
@@ -1310,9 +1339,35 @@ View.prototype.sort = function (cont) {
 				return next(false);
 			}
 
+			// NOTE We're intentionally making the sort stable only when sorting ascending.
+			//
+			// When sorting rowvals/colvals:
+			//
+			// Since we're always starting from the same set of data (which is sorted asc by each element
+			// of the rowval/colval in turn), no matter which direction we sort, this has the effect of
+			// making the following work:
+			//
+			//   X,Y             X,Y            X,Y
+			//  -----           -----          -----
+			//   A,A             C,C            A,A
+			//   A,B             C,B            A,B
+			//   A,C             C,A            A,C
+			//   B,A  ========>  B,C  =======>  B,A
+			//   B,B   X, DESC   B,B   X, ASC   B,B
+			//   B,C  ========>  B,A  =======>  B,C
+			//   C,A             A,C            C,A
+			//   C,B             A,B            C,B
+			//   C,C             A,A            C,C
+			//
+			// This magickally does the expected thing, in every scenario.  Fields other than the one
+			// sorted by (in the example above, Y) end up sorted in the same direction, left to right.
+			//
+			// FIXME This will need to be adjusted when we support multiple sorts.  Both directions should
+			// be stable when we do that, or else it won't work as expected.
+
 			comparison = function (a, b) {
 				if (spec.dir.toUpperCase() === 'ASC') {
-					return cmp(a.sortSource, b.sortSource) < 0;
+					return cmp(a.sortSource, b.sortSource) <= 0;
 				}
 				else if (spec.dir.toUpperCase() === 'DESC') {
 					return cmp(a.sortSource, b.sortSource) > 0;
@@ -2241,6 +2296,7 @@ View.prototype.group = function () {
 					node.rows = node.rows.concat(child.rows);
 				});
 				if (depth > 0) {
+					// FIXME Assumes that node.children.length > 0.
 					node.rowValIndex = node.children[_.keys(node.children)[0]].rowValIndex;
 					node.rowValElt = rowVals[node.rowValIndex][depth - 1];
 				}
@@ -2301,6 +2357,8 @@ View.prototype.group = function () {
 	self.data.rowVals = rowVals;
 	self.data.data = newData.data;
 	self.data.groupMetadata = newData.metadata;
+
+	self.debug('GROUP', 'Final Data: %O', self.data);
 
 	return true;
 };
@@ -2605,6 +2663,7 @@ View.prototype.pivot = function () {
 		, finalPivotSpec = [] // Array of field names to pivot by.
 		, colValsTree // Tree of all possible column value combinations.
 		, colVals     // Array of all possible column value combinations.
+		, newData
 	;
 
 	// FIXME Allow pivot without group.
@@ -2779,13 +2838,13 @@ View.prototype.pivot = function () {
 	}
 
 	colVals = buildColVals(self.pivotSpec.addColVals);
-	self.data.data = buildData(self.data.data, colVals);
+	newData = buildData(self.data.data, colVals);
 	colVals = convertColVals(colVals);
 
 	self.debug('PIVOT', 'Pivot Spec: %O', finalPivotSpec);
 	self.debug('PIVOT', 'Orig Keys: %O', origKeys);
 	self.debug('PIVOT', 'Col Vals: %O', colVals);
-	self.debug('PIVOT', 'New Data: %O', self.data);
+	self.debug('PIVOT', 'New Data: %O', newData);
 
 	self.data.isPlain = false;
 	self.data.isGroup = false;
@@ -2793,6 +2852,9 @@ View.prototype.pivot = function () {
 	self.data.pivotFields = _.pluck(finalPivotSpec, 'field');
 	self.data.pivotSpec = finalPivotSpec;
 	self.data.colVals = colVals;
+	self.data.data = newData;
+
+	self.debug('GROUP', 'Final Data: %O', self.data);
 
 	return true;
 };
