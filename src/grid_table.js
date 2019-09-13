@@ -4688,7 +4688,7 @@ var GridTablePivot = makeSubclass('GridTablePivot', GridTable, function (grid, d
 
 	debug.info('GRID TABLE - PIVOT', 'Constructing grid table; features = %O', features);
 
-	setPropDef(['rowVals', 'cells', 'groupAggregates'], self.opts, 'displayOrder');
+	setPropDef(['rowVals', 'cells', 'groupAggregates', 'addCols'], self.opts, 'displayOrder');
 });
 
 // #canRender {{{2
@@ -4960,18 +4960,18 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		}
 	};
 
-	//                                                                     ↓↓↓↓↓↓↓↓↓↓↓
-	// +---------------------------+--------------------------------------+-----------+
-	// |                           | COLVAL 1.1              | COLVAL 1.2 |           |
-	// +---------------------------+------------+------------+------------+-----------+
-	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |           |
-	// +-------------+-------------+------------+------------+------------+-----------+
-	// | GROUP FIELD | GROUP FIELD |                                      | GROUP AGG |
-	// +-------------+-------------+--------------------------------------+-----------+
+	//                                                                     ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+	// +---------------------------+--------------------------------------+----------------------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |                      |
+	// +---------------------------+------------+------------+------------+----------------------+
+	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |                      |
+	// +-------------+-------------+------------+------------+------------+-----------+----------+
+	// | GROUP FIELD | GROUP FIELD |                                      | GROUP AGG | ADD COLS |
+	// +-------------+-------------+--------------------------------------+-----------+----------+
 
 	var displayGroupAggregates_padding = function (tr, displayOrderIndex, displayOrderMax) {
 		var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
-			+ getPropDef(0, opts, 'addCols', 'length');
+			+ getPropDef(0, self.opts, 'addCols', 'length');
 		if (numExtraCols > 0) {
 			var th = jQuery('<th>', { colspan: numExtraCols });
 			if (displayOrderIndex > 0) {
