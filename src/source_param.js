@@ -165,7 +165,9 @@ Filter.prototype.store = function (id) {
 	var self = this;
 
 	if (self.type === undefined) {
-		self.value = self.defaultValue;
+		self.value = typeof self.defaultValue === 'function'
+			? self.defaultValue()
+			: self.defaultValue;
 	}
 	else {
 		switch (self.type) {
