@@ -2396,20 +2396,81 @@ export function setTableCell(cell, value, opts) {
 		throw new Error('Call Error: `cell` must be a HTMLTableCellElement instance');
 	}
 
+	var container = cell;
+
+	if (fcc.maxHeight != null) {
+		var wrapper = document.createElement('div');
+		wrapper.classList.add('wcdv_maxheight_wrapper');
+		wrapper.style.maxHeight = fcc.maxHeight;
+
+		if (fcc.width) {
+			wrapper.classList.add('wcdv_maxheight_wrapper_withwidth');
+			wrapper.style.width = fcc.width;
+		}
+
+		var showValueBtn = document.createElement('button');
+		showValueBtn.setAttribute('title', 'Full value has been truncated; click to show it.');
+		showValueBtn.classList.add('wcdv_icon_button');
+		showValueBtn.classList.add('wcdv_icon_button_incell');
+		showValueBtn.classList.add('wcdv_icon_button_nolabel');
+		showValueBtn.classList.add('wcdv_show_full_value');
+
+		var showValueSpan = document.createElement('span');
+		showValueSpan.classList.add('fa');
+		showValueSpan.classList.add('fa-arrows-alt');
+
+		container = document.createElement('div');
+
+		// cell (td)
+		//   wrapper (div)
+		//     showValueBtn (button)
+		//       showValueSpan (span.fa)
+		//     container (div)
+
+		cell.appendChild(wrapper);
+		wrapper.appendChild(showValueBtn);
+		showValueBtn.appendChild(showValueSpan);
+		wrapper.appendChild(container);
+	}
+
+	setElement(container, value, opts);
+}
+
+/**
+ * Set the value of an element.
+ *
+ * @param {Element} container
+ * @param {Element|jQuery|string|number} value
+ * @param {object} opts
+ * @param {string} opts.field
+ * @param {OrdMap} opts.colConfig
+ * @param {OrdMap} opts.typeInfo
+ */
+
+export function setElement(container, value, opts) {
+	opts = opts || {};
+
+	var fcc = (opts.field && opts.colConfig && opts.colConfig.get(opts.field)) || {};
+	var fti = (opts.field && opts.typeInfo && opts.typeInfo.get(opts.field)) || {};
+
+	if (!(container instanceof Element)) {
+		throw new Error('Call Error: `container` must be an Element instance');
+	}
+
 	if (value instanceof Element) {
-		cell.appendChild(value);
+		container.appendChild(value);
 	}
 	else if (value instanceof jQuery) {
-		cell.appendChild(value.get(0));
+		container.appendChild(value.get(0));
 	}
 	else if (fcc.allowHtml && fti.type === 'string') {
-		cell.innerHTML = value;
+		container.innerHTML = value;
 	}
 	else if (value === '') {
-		cell.innerText = '\u00A0';
+		container.innerText = '\u00A0';
 	}
 	else {
-		cell.innerText = value;
+		container.innerText = value;
 	}
 }
 

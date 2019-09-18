@@ -262,6 +262,11 @@ function makeJsonOrderBy(o) {
  * If true and the type of the field is a string, the value is interpreted as HTML and the resulting
  * nodes are inserted into the table result.  When exporting to CSV, the value emitted will be the
  * text nodes only.
+ *
+ * @property {string} [maxHeight]
+ * If present, sets the maximum height allowed for the cell, and puts a "fullscreen" icon button in
+ * the top-right which will pop open a window showing the full value.  Useful for extremely long
+ * pieces of data that would otherwise blow up the table.  Only works in plain output.
  */
 
 /**

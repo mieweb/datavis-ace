@@ -24,6 +24,7 @@ import {
 	onVisibilityChange,
 	setPropDef,
 	setTableCell,
+	setElement,
 } from './util/misc.js';
 
 import {AggregateInfo} from './aggregates.js';
@@ -2292,6 +2293,42 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	self.ui.tbody.children().remove();
 
+	// Create a window that will show the full value of a cell whose display has been truncated by
+	// setting the `maxHeight` property in the column configuration.
+
+	var fullValueWinDiv = document.createElement('div');
+
+	var fullValueWinEffect = {
+		effect: 'fade',
+		duration: 100
+	};
+
+	var fullValueWin = jQuery('<div>', { title: 'Full Value' }).dialog({
+		autoOpen: false,
+		modal: true,
+		width: 800,
+		show: fullValueWinEffect,
+		hide: fullValueWinEffect,
+	});
+
+	fullValueWin.append(fullValueWinDiv);
+
+	// When the "show full value" button is clicked, use the attached data attributes to determine the
+	// value that will be shown in the window.
+
+	self.ui.tbody.on('click', 'button.wcdv_show_full_value', function (evt) {
+		evt.stopPropagation();
+		var btn = jQuery(this);
+		var td = btn.parents('td');
+		var tr = td.parents('tr');
+		var field = td.attr('data-wcdv-field');
+		var rowNum = +tr.attr('data-row-num');
+		var val = getProp(data, 'data', rowNum, 'rowData', field, 'cachedRender');
+		setElement(fullValueWinDiv, val);
+		fullValueWin.dialog('option', 'title', 'Full Value (' + field + ')');
+		fullValueWin.dialog('open');
+	});
+
 	var renderDataRow = function (row) {
 		var tr, td;
 
@@ -2326,6 +2363,10 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 				colConfig: self.colConfig,
 				typeInfo: typeInfo
 			});
+
+			if (fcc.maxHeight != null) {
+				td.setAttribute('data-wcdv-field', field);
+			}
 
 			self.setCss(jQuery(td), field);
 			self.setAlignment(td, fcc, typeInfo.get(field));
