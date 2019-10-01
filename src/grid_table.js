@@ -1492,6 +1492,20 @@ GridTable.prototype.draw = function (root, opts, cont) {
 			}
 		}
 
+		// This isn't fast or reliable but it is one way to get rid of excess "show full value" buttons
+		// if the cell doesn't actually get cut off.  It's fine for small numbers of cells, but once you
+		// get over like 1000 cells it's going to take a while.  Plus, it technically needs to be rerun
+		// whenever the table size changes.  I just want to leave it here in case I need it later.
+
+		// jQuery(self.ui.tbody).find('div.wcdv_maxheight_wrapper').each(function (i, elt) {
+		// 	var s = window.getComputedStyle(elt);
+		// 	var height = s.height.slice(0, -2);
+		// 	var maxHeight = s.maxHeight.slice(0, -2);
+		// 	if (+height < +maxHeight) {
+		// 		jQuery(elt).children('button.wcdv_show_full_value').hide();
+		// 	}
+		// });
+
 		self.addWorkHandler();
 
 		self.fire('renderEnd');
