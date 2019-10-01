@@ -736,6 +736,7 @@ tr.wcdvgrid_more td {
 .wcdv_grid_table table td,
 .wcdv_grid_table table th {
 	padding: 4px;
+	vertical-align: top;
 }
 
 .wcdv_grid_table table .wcdv_divider {
