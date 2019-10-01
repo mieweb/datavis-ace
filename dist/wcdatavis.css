@@ -22,16 +22,20 @@ button.wcdv_button_left {
 }
 
 /*
- * In-cell buttons like the one used to show the full value of a cell when the maxHeight is set.
+ * In-cell buttons like the one used to show the full value of a cell when the maxHeight is set in
+ * column config.
  */
 
 td button.wcdv_icon_button_incell {
+	/*
 	position: absolute;
 	top: 0px;
 	right: 0px;
+	*/
+	float: right;
 	border: none;
-	padding: 4px;
-	border-radius: 4px;
+	padding: 2px;
+	border-radius: 2px;
 	background-color: #E0E0E080;
 	color: #80808080;
 }
@@ -42,6 +46,10 @@ td:hover button.wcdv_icon_button_incell {
 
 td button.wcdv_icon_button_incell:hover {
 	color: #404040;
+}
+
+td button.wcdv_icon_button_incell span.fa {
+	font-size: 12px;
 }
 
 button.wcdv_icon_button span.fa {
