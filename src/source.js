@@ -191,7 +191,7 @@ HttpSource.prototype.parseData = function (data) {
 		});
 	}
 	else if (typeof data === 'string') {
-		var decoded = Papa.parse(data)
+		var decoded = Papa.parse(data, { skipEmptyLines: true })
 			, fields = decoded.data[0];
 
 		_.each(decoded.data.slice(1), function (row) {
