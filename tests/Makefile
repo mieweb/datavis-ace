@@ -10,7 +10,7 @@ data:
 
 pages:
 	cp $(PAGES_DEPENDS) pages
-	cp data/*.json pages
+	cp data/*.csv data/*.json data/*.xml pages
 
 jsdoc:
 	$(JSDOC) -p -c jsdoc_conf.json lib
