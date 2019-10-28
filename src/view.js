@@ -3645,5 +3645,6 @@ GROUP_FUNCTION_REGISTRY.set('year_and_week_iso', new GroupFunction({
 
 export {
 	View,
+	GroupFunction,
 	GROUP_FUNCTION_REGISTRY
 };
