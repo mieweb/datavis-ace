@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="../jquery-latest.js"></script>
+		<script src="../jquery-ui.js"></script>
+		<script src="../blockUI.js"></script>
+		<script src="../contextMenu.js"></script>
+		<script src="../sumoselect.js"></script>
+		<script src="../flatpickr.js"></script>
+		<script src="../wcdatavis.js"></script>
+		<script src="../numeral.min.js"></script>
+		<script src="../bignumber.min.js"></script>
+		<link rel="stylesheet" href="../font-awesome.css"/>
+		<link rel="stylesheet" href="../jquery-ui.css"/>
+		<link rel="stylesheet" href="../contextMenu.css"/>
+		<link rel="stylesheet" href="../sumoselect.css"/>
+		<link rel="stylesheet" href="../flatpickr.css"/>
+		<link rel="stylesheet" href="../base.css"/>
+		<link rel="stylesheet" href="../wcdatavis.css"/>
+		<script>
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	MIE.WC_DataVis.GROUP_FUNCTION_REGISTRY.set('round_hundreds', new MIE.WC_DataVis.GroupFunction({
+    displayName: 'Round to Hundreds',
+    allowedTypes: ['currency'],
+		resultType: 'currency',
+    valueFun: function (x) {
+			var b = typeof x === 'string' ? BigNumber(x)
+				: numeral.isNumeral(x) ? BigNumber(x.value())
+				: BigNumber.isBigNumber(x) ? x
+				: BigNumber(0);
+			return b.idiv(100).times(100).plus(b.mod(100) >= 50 ? 100 : 0).toNumber();
+		}
+  }));
+
+	var source = new MIE.WC_DataVis.Source({
+		type: 'http',
+		url: '../random100.json'
+	});
+	var view = new MIE.WC_DataVis.View(source, 'TEST:GRID:DEFAULT');
+	new MIE.WC_DataVis.Grid('grid', view, {
+		id: 'grid',
+		table: {
+			features: {
+				limit: false,
+				rowSelect: true,
+			}
+		},
+		source: source,
+	}, {
+		title: 'Test - Grid - Default',
+		showControls: true
+	});
+});
+		</script>
+	</head>
+	<body>
+		<div id="grid"></div>
+	</body>
+</html>
