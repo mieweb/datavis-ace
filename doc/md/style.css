@@ -1,0 +1,88 @@
+.md-typeset dt {
+  display: inline-block;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  background-color: #ececec;
+  padding-left: 0.3em;
+  padding-right: 0.3em;
+}
+
+.md-typeset h1, .md-typeset h2 {
+  font-weight: 700;
+}
+
+[data-md-color-primary=red] .md-typeset dt {
+  border-bottom-color: #ef5350;
+}
+
+[data-md-color-primary=pink] .md-typeset dt {
+  border-bottom-color: #e91e63;
+}
+
+[data-md-color-primary=purple] .md-typeset dt {
+  border-bottom-color: #ab47bc;
+}
+
+[data-md-color-primary=deep-purple] .md-typeset dt {
+  border-bottom-color: #7e57c2;
+}
+
+[data-md-color-primary=indigo] .md-typeset dt {
+  border-bottom-color: #3f51b5;
+}
+
+[data-md-color-primary=blue] .md-typeset dt {
+  border-bottom-color: #2196f3;
+}
+
+[data-md-color-primary=light-blue] .md-typeset dt {
+  border-bottom-color: #03a9f4;
+}
+
+[data-md-color-primary=cyan] .md-typeset dt {
+  border-bottom-color: #00bcd4;
+}
+
+[data-md-color-primary=teal] .md-typeset dt {
+  border-bottom-color: #009688;
+}
+
+[data-md-color-primary=green] .md-typeset dt {
+  border-bottom-color: #4caf50;
+}
+
+[data-md-color-primary=light-green] .md-typeset dt {
+  border-bottom-color: #7cb342;
+}
+
+[data-md-color-primary=lime] .md-typeset dt {
+  border-bottom-color: #c0ca33;
+}
+
+[data-md-color-primary=yellow] .md-typeset dt {
+  border-bottom-color: #f9a825;
+}
+
+[data-md-color-primary=amber] .md-typeset dt {
+  border-bottom-color: #ffa000;
+}
+
+[data-md-color-primary=orange] .md-typeset dt {
+  border-bottom-color: #fb8c00;
+}
+
+[data-md-color-primary=deep-orange] .md-typeset dt {
+  border-bottom-color: #ff7043;
+}
+
+[data-md-color-primary=brown] .md-typeset dt {
+  border-bottom-color: #795548;
+}
+
+[data-md-color-primary=grey] .md-typeset dt {
+  border-bottom-color: #757575;
+}
+
+[data-md-color-primary=blue-grey] .md-typeset dt {
+  border-bottom-color: #546e7a;
+}

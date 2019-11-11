@@ -1,8 +1,49 @@
 site_name: DataVis
 repo_url: https://repo.mieweb.com/projects/DV/repos/wcdatavis/
 site_author: Taylor Venable <tvenable@mieweb.com>
-theme: readthedocs
+theme:
+  name: material
+  feature:
+    tabs: false
+  palette:
+    primary: 'blue grey'
+    accent: 'deep orange'
+  font:
+    text: 'Overpass'
+    code: 'Overpass Mono'
 docs_dir: doc/md
 site_dir: doc/html
+extra_css:
+  - style.css
+nav:
+  - Introduction: index.md
+  - Getting Started: getting_started.md
+  - Sources:
+      - Source Basics: source/index.md
+      - Builtin Sources: source/builtin.md
+      - Writing Your Own: source/custom.md
+  - View:
+      - Primary Operations: view/view.md
+      - Group Functions: view/group_funs.md
+  - Grid: grid.md
+  - Graph: graph.md
+  - Preferences: prefs.md
+  - Performance: performance.md
+  - Errors & Debugging: debugging.md
+  - Development:
+      - Overview: development/index.md
+      - Generating Data: development/json_gen.md
+      - Writing Tests: development/selenium.md
+  - Glossary: glossary.md
+  - About DataVis: about.md
+# SEE ALSO: https://squidfunk.github.io/mkdocs-material/extensions/pymdown/
 markdown_extensions:
-  - extra
+  - markdown.extensions.extra
+  - markdown.extensions.admonition
+  - markdown.extensions.codehilite: # needed only for material theme
+      guess_lang: false
+  - markdown.extensions.smarty
+  - markdown.extensions.toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences

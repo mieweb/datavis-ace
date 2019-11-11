@@ -3,7 +3,7 @@ SOURCE=$(wildcard src/*.js) $(wildcard src/util/*.js)
 DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.min.js wcdatavis.css)
 EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
 
-.PHONY:	doc jsdoc pandoc clean tags examples serve test tests
+.PHONY:	doc jsdoc mkdocs clean tags examples serve test tests
 
 all:	$(DIST_FILES)
 
@@ -13,13 +13,14 @@ dist/wcdatavis.js:	rollup.config.js datavis.js $(SOURCE)
 dist/wcdatavis.min.js:	dist/wcdatavis.js
 	npm run uglify
 
-doc:	jsdoc pandoc
+doc:	jsdoc mkdocs
+	$(MAKE) -C tests jsdoc
 
 jsdoc:
 	$(JSDOC) -p -c jsdoc_conf.json src
 
-pandoc:
-	$(MAKE) -C doc
+mkdocs:
+	mkdocs build
 
 tests:	$(DIST_FILES)
 	$(MAKE) -C tests

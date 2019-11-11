@@ -2,46 +2,62 @@
 
 ## Building
 
-To make it easier to keep track of all the code in this very large
-project, different classes are kept in different files within the `src/`
-directory. These are compiled together according to the `wcdatavis.src`
-file, using a tool called `jspp` (which is a Bash shell script found in
-the `bin/` directory). Basically, `wcdatavis.src` is a JavaScript file
-with a special "function" that includes a file in that place when
-processed by `jspp`, just like the C preprocessor does. This is all just
-for developer convenience.
+This project can be built using NPM and Make.
 
-Simply running `make` in the toplevel directory will cause all the files
-you need to be built and copied to the `dist/` directory.
+```
+$ npm install
+$ make
+```
+
+You can also do it all with NPM.
+
+```
+$ npm install
+$ npm run rollup
+$ npm run uglify
+```
+
+Using Make is recommended in case the build process changes in the future.  Make is also used to generate documentation, build & run tests, and other stuff.
 
 ## Installation
 
-Copy the JS and CSS files from the `dist/` directory and include them in
-your page.
+Copy the JS and CSS files from the `dist` directory and include them in your page.
 
 ## Runtime Dependencies
 
 ### Required Dependencies
 
-The following libraries are required to use WC DataVis:
+The following libraries are required to use DataVis:
 
-  - Underscore
-  - jQuery (version 1.12 if using TableTool)
-  - jQuery UI
-  - Numeral.js — For parsing number and currency data.
-  - Moment.js — For parsing date/time data.
-  - Chosen — For filtering string data.
-  - FlatPickr — For filtering date/time data.
+| Name         | Dependency Type |
+| ------------ | --------------- |
+| jQuery       | JS              |
+| jQuery UI    | JS, CSS         |
+| BlockUI      | JS              |
+| contextMenu  | JS, CSS         |
+| SumoSelect   | JS, CSS         |
+| FlatPickr    | JS, CSS         |
+| Font Awesome | CSS             |
 
-(The examples pull all of these libraries in from Cloudflare's CDN.)
+Here's some HTML you can adapt to get the external dependencies.
 
-You also need the following MIE libraries:
+``` html
+<script src="jquery-latest.js"></script>
+<script src="jquery-ui.js"></script>
+<script src="blockUI.js"></script>
+<script src="contextMenu.js"></script>
+<script src="sumoselect.js"></script>
+<script src="flatpickr.js"></script>
+<script src="wcdatavis.js"></script>
 
-  - TableTool
-
-### Optional Dependencies
-
-  - NProgress
+<link rel="stylesheet" href="font-awesome.css"/>
+<link rel="stylesheet" href="jquery-ui.css"/>
+<link rel="stylesheet" href="contextMenu.css"/>
+<link rel="stylesheet" href="sumoselect.css"/>
+<link rel="stylesheet" href="flatpickr.css"/>
+<link rel="stylesheet" href="base.css"/>
+<link rel="stylesheet" href="wcdatavis.css"/>
+```
 
 ## Basic Usage
 
