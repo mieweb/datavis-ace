@@ -584,7 +584,10 @@ var NumberTextboxGridFilter = makeSubclass('NumberTextboxGridFilter', GridFilter
 
 	GridFilter.apply(self, arguments);
 
-	self.input = jQuery('<input type="text">');
+	self.input = jQuery('<input>', {
+		'type': 'text'
+	});
+	self.input.attr('size', '10');
 	self.input.on('change', function (evt) {
 		self.gridFilterSet.update(false);
 	});

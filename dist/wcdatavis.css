@@ -306,30 +306,21 @@ hr.wcdv_hr_gradient {
 	background-color: #FFF;
 	border-bottom: 1px solid #c7c7c7;
 	font-size: 0.85em;
-	padding: 0 8px;
-	display: flex;
-    flex-shrink: 0;
 
 	/*
 	 * Flexible display of group/filter/pivot controls.
 	 */
-	/*
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	*/
-}
 
-/*
-.wcdv_group_control,
-.wcdv_pivot_control {
-	font-size: 0.85em;
+	display: flex;
+    flex-shrink: 0;
+	flex-wrap: wrap;
+	justify-content: space-between;
 }
-*/
 
 .wcdv_control_title_bar {
 	display: flex;
 	border-bottom: 1px solid #737373;
+	align-items: baseline;
 }
 
 .wcdv_control_title {
@@ -347,10 +338,28 @@ hr.wcdv_hr_gradient {
     font-size: 16px !important;
 }
 
-.wcdv_group_control > div > ul,
-.wcdv_filter_control > div > ul,
-.wcdv_pivot_control > div > ul,
-.wcdv_aggregate_control > div > ul {
+.wcdv_control_pane {
+	flex-grow: 1;
+	background-color: #FFF;
+	padding: 8px;
+	display: inline-block;
+	vertical-align: top;
+	border: solid 1px #c7c7c7;
+	border-radius: 8px;
+	margin: 8px;
+}
+
+/*
+.wcdv_control_pane {
+	border-left: 1px solid #c7c7c7;
+}
+
+.wcdv_control_pane:first-child {
+	border-left: none;
+}
+*/
+
+.wcdv_control_pane > div > ul {
 	list-style-type: none;
 	padding: 0px;
 	margin-top: 1ex;
@@ -358,26 +367,9 @@ hr.wcdv_hr_gradient {
 	width: 100%;
 }
 
-.wcdv_group_control,
-.wcdv_filter_control,
-.wcdv_pivot_control,
-.wcdv_aggregate_control {
-	border-right: 1px solid #c7c7c7;
-	background-color: #FFF;
-	padding: 10px 8px;
-	display: inline-block;
-	vertical-align: top;
-	min-width: 122px;
-}
-
-.wcdv_filter_control{
-	padding-left: 0;
-}
-
 /* HORIZONTAL CONTROLS */
 
-.wcdv_group_control ul li,
-.wcdv_pivot_control ul li {
+.wcdv_control_pane ul.wcdv_control_horizontal li {
 	display: inline-block;
 }
 
@@ -388,13 +380,11 @@ hr.wcdv_hr_gradient {
  * field elements.
  */
 
-.wcdv_group_control ul > li:first-child > span.fa,
-.wcdv_pivot_control ul > li:first-child > span.fa {
+.wcdv_control_pane ul.wcdv_control_horizontal > li:first-child > span.fa {
 	display: none;
 }
 
-.wcdv_group_control ul li > span.fa,
-.wcdv_pivot_control ul li > span.fa {
+.wcdv_control_pane ul.wcdv_control_horizontal li > span.fa {
 	margin-right: 4px;
 }
 
@@ -402,8 +392,7 @@ hr.wcdv_hr_gradient {
  * These are the fields themselves.
  */
 
-.wcdv_group_control ul li .wcdv_field,
-.wcdv_pivot_control ul li .wcdv_field {
+.wcdv_control_pane ul.wcdv_control_horizontal li .wcdv_field {
 	display: inline-block;
 	border-radius: 4px;
 	padding: 4px;
@@ -415,25 +404,39 @@ hr.wcdv_hr_gradient {
 	background-color: #FFF;
 }
 
-.wcdv_group_control ul li.ui-sortable-helper .wcdv_field button,
-.wcdv_pivot_control ul li.ui-sortable-helper .wcdv_field button{
+.wcdv_control_pane ul.wcdv_control_horizontal li.ui-sortable-helper .wcdv_field button {
 	display: none;
 }
 
 /* VERTICAL CONTROLS */
 
-.wcdv_filter_control ul li:first-child .wcdv_field,
-.wcdv_aggregate_control ul li:first-child .wcdv_field {
+.wcdv_control_pane .wcdv_control_vertical li:first-child .wcdv_field {
 	border-top: none;
 }
 
-.wcdv_filter_control ul li .wcdv_field,
-.wcdv_aggregate_control ul li .wcdv_field {
-	border-top: solid 1px #444;
+.wcdv_control_pane .wcdv_control_vertical li .wcdv_field {
+	display: flex;
+	align-items: center;
+	border-top: dashed 1px #c7c7c7;
 	padding: 4px;
 }
 
-.wcdv_field button + span, .ui-sortable li span.fa{
+/*
+ * These are the fields themselves.
+ */
+
+.wcdv_control_pane .wcdv_control_vertical .wcdv_field .wcdv_field_name {
+	flex-grow: 1;
+	flex-shrink: 0;
+	/*
+	max-width: 10em;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	*/
+}
+
+.wcdv_field button + span, .ui-sortable li span.fa {
 	vertical-align: middle;
 }
 
@@ -470,6 +473,10 @@ hr.wcdv_hr_gradient {
 	flex: none;
 }
 
+.wcdv_filter_control ul li .wcdv_field .wcdv_field_name {
+	flex-grow: 0 !important;
+}
+
 .wcdv_filter_control ul li .wcdv_field > .wcdv_filter_control_filter_container {
 	margin-left: 1ex;
 	flex: 1 1 auto;
@@ -501,6 +508,22 @@ div.SumoSelect > div.optWrapper {
 
 .wcdv_filter_control_filter_container {
 	display: inline-block;
+}
+
+/* AGGREGATE CONTROL */
+
+.wcdv_aggregate_control .wcdv_field {
+	align-items: baseline !important;
+}
+
+ul.wcdv_aggregate_control_fieldlist {
+	padding-left: 0.5em;
+	list-style-type: none;
+	text-align: right;
+}
+
+ul.wcdv_aggregate_control_fieldlist > li > label {
+	padding-right: 0.5em;
 }
 
 /******************************************************************************/

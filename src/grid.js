@@ -538,10 +538,10 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	self._addPivotButtons(self.ui.toolbar_pivot);
 
 	self.ui.controls = jQuery('<div>', { 'class': 'wcdv_grid_control' });
-	self.ui.filterControl = jQuery('<div>', { 'class': 'wcdv_filter_control' });
-	self.ui.groupControl = jQuery('<div>', { 'class': 'wcdv_group_control' });
-	self.ui.pivotControl = jQuery('<div>', { 'class': 'wcdv_pivot_control' });
-	self.ui.aggregateControl = jQuery('<div>', { 'class': 'wcdv_aggregate_control' });
+	self.ui.filterControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_filter_control' });
+	self.ui.groupControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_group_control' });
+	self.ui.pivotControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_pivot_control' });
+	self.ui.aggregateControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_aggregate_control' });
 	self.ui.grid = jQuery('<div>', { 'id': defn.table.id, 'class': 'wcdv_grid_table' });
 
 	if (self.rootHasFixedHeight) {

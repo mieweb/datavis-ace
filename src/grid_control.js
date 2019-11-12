@@ -120,6 +120,7 @@ var GridControlField = (function () {
 
 GridControlField.prototype.draw = function () {
 	var self = this;
+	var label = self.displayText || (self.colConfig && self.colConfig.displayText) || self.field.field;
 
 	self.ui.removeButton = jQuery('<button>', {'type': 'button'})
 		.append(fontAwesome('F146'))
@@ -130,8 +131,11 @@ GridControlField.prototype.draw = function () {
 		})
 	;
 
-	self.ui.fieldLabel = jQuery('<span>')
-		.text(self.displayText || (self.colConfig && self.colConfig.displayText) || self.field.field);
+	self.ui.fieldLabel = jQuery('<span>', {
+		'class': 'wcdv_field_name',
+		'title': label
+	})
+		.text(label);
 
 	self.ui.root = jQuery('<div>', { 'class': 'wcdv_field' })
 		.append(self.ui.removeButton)
@@ -261,6 +265,7 @@ FunGridControlField.prototype.draw = function () {
 		if (self.field.fun != null) {
 			var gf = GROUP_FUNCTION_REGISTRY.get(self.field.fun);
 			self.ui.fieldLabel.text(self.field.field + ' (' + gf.displayName + ')');
+			self.ui.fieldLabel.attr('title', self.field.field + ' (' + gf.displayName + ')');
 		}
 		self.ui.fieldLabel.after(self.ui.groupFunWinBtn);
 	}
@@ -386,53 +391,15 @@ AggregateControlField.prototype.draw = function () {
 
 	var aggDefn = AGGREGATE_REGISTRY.get(self.field.field);
 
-	self.ui.isHiddenCheckbox = jQuery('<input>', {
-		'type': 'checkbox'
-	})
-		.prop('checked', getProp(self.opts, 'isHidden'))
-		.on('change', function () {
-			self.control.updateView();
-		})
-		.appendTo(self.ui.root)
-		._makeIconCheckbox('fa-eye-slash wcdv_text-primary', 'fa-eye wcdv_text-primary')
-	;
-
-	if (self.control.view.hasClientKind('graph')) {
-		self.ui.graphBtn = jQuery('<button>', {
-			'type': 'button'
-		})
-			.addClass('wcdv_icon_button wcdv_text-primary')
-			.on('click', function () {
-				// TODO Think of a better way to do this.  I feel like the coupling here is too high.
-
-				self.control.clearGraphFlag();
-				self.shouldGraph = true;
-				self.control.updateView();
-			})
-			.append(fontAwesome('fa-bar-chart'))
-			.appendTo(self.ui.root)
-		;
-	}
-
-	if (aggDefn.prototype.options != null) {
-		jQuery('<button>', {
-			'type': 'button',
-			title: 'Edit Options'
-		})
-			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
-			.on('click', function () {
-				self.ui.optionsDialog.dialog('open');
-			})
-			.append(fontAwesome('F044'))
-			.appendTo(self.ui.root)
-		;
-		self._makeOptionsDialog(aggDefn);
-	}
-
-	var fieldList = jQuery('<ul>').appendTo(self.ui.root);
+	var fieldList = jQuery('<ul>', {
+		'class': 'wcdv_aggregate_control_fieldlist'
+	}).appendTo(self.ui.root);
 
 	for (var i = 0; i < aggDefn.prototype.fieldCount; i += 1) {
 		var li = jQuery('<li>').addClass('wcdv_aggregate_field').appendTo(fieldList);
+		if (getProp(aggDefn.prototype, 'fieldInfo', i, 'name')) {
+			var label = jQuery('<label>').text(aggDefn.prototype.fieldInfo[i].name + ':').appendTo(li);
+		}
 		var select = jQuery('<select>')
 			.on('change', function (evt) {
 				select.children('option[data-wcdv-bad-field]').filter(function (eltIndex, elt) {
@@ -476,6 +443,49 @@ AggregateControlField.prototype.draw = function () {
 			dropdown.val(self.opts.fields[i]);
 		}
 	});
+
+	if (aggDefn.prototype.options != null) {
+		jQuery('<button>', {
+			'type': 'button',
+			title: 'Edit Options'
+		})
+			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
+			.on('click', function () {
+				self.ui.optionsDialog.dialog('open');
+			})
+			.append(fontAwesome('F044'))
+			.appendTo(self.ui.root)
+		;
+		self._makeOptionsDialog(aggDefn);
+	}
+
+	if (self.control.view.hasClientKind('graph')) {
+		self.ui.graphBtn = jQuery('<button>', {
+			'type': 'button'
+		})
+			.addClass('wcdv_icon_button wcdv_text-primary')
+			.on('click', function () {
+				// TODO Think of a better way to do this.  I feel like the coupling here is too high.
+
+				self.control.clearGraphFlag();
+				self.shouldGraph = true;
+				self.control.updateView();
+			})
+			.append(fontAwesome('fa-bar-chart'))
+			.appendTo(self.ui.root)
+		;
+	}
+
+	self.ui.isHiddenCheckbox = jQuery('<input>', {
+		'type': 'checkbox'
+	})
+		.prop('checked', getProp(self.opts, 'isHidden'))
+		.on('change', function () {
+			self.control.updateView();
+		})
+		.appendTo(self.ui.root)
+		._makeIconCheckbox('fa-eye-slash wcdv_text-primary', 'fa-eye wcdv_text-primary')
+	;
 
 	return self.ui.root;
 };
@@ -625,6 +635,24 @@ AggregateControlField.prototype.getInfo = function () {
  *
  * @property {jQuery} ui.dropdown
  * The SELECT element containing the available fields.
+ *
+ * @property {boolean} [prototype.isHorizontal=false]
+ * If true, display the list horizontally rather than vertically.
+ *
+ * @property {boolean} [prototype.isReorderable=true]
+ * If true, display an arrow for reordering the items in the list (when `isHorizontal=false`).
+ *
+ * @property {boolean} [prototype.showColumns=true]
+ * If true, display a dropdown with field names to choose from.
+ *
+ * @property {boolean} [prototype.disableUsedItems=false]
+ * If true, items that are added will be disabled in the columns dropdown.
+ *
+ * @property {boolean} [prototype.useColConfig=true]
+ * If true, pass colConfig for the item to the appropriate `Field` subclass.
+ *
+ * @property {boolean} [prototype.updateCanHide=true]
+ * If true, automatically update colConfig to show (and prohibit hiding of) the column being added.
  */
 
 var GridControl = makeSubclass('GridControl', Object, function (grid, colConfig, view, features, timing) {
@@ -651,8 +679,9 @@ var GridControl = makeSubclass('GridControl', Object, function (grid, colConfig,
 	});
 }, {
 	isHorizontal: false,
-	disableUsedItems: false,
+	isReorderable: true,
 	showColumns: true,
+	disableUsedItems: false,
 	useColConfig: true,
 	updateCanHide: true
 });
@@ -1098,7 +1127,6 @@ var GroupControl = makeSubclass('GroupControl', GridControl, function () {
 		});
 	});
 }, {
-	isHorizontal: true,
 	controlFieldCtor: GroupControlField,
 	controlType: 'Group'
 });
@@ -1148,7 +1176,8 @@ GroupControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {
-		id: gensym()
+		id: gensym(),
+		'class': self.isHorizontal ? 'wcdv_control_horizontal' : 'wcdv_control_vertical'
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
@@ -1271,7 +1300,6 @@ var PivotControl = makeSubclass('PivotControl', GridControl, function () {
 		});
 	});
 }, {
-	isHorizontal: true,
 	controlFieldCtor: PivotControlField,
 	controlType: 'Pivot'
 });
@@ -1322,7 +1350,8 @@ PivotControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {
-		id: gensym()
+		id: gensym(),
+		'class': self.isHorizontal ? 'wcdv_control_horizontal' : 'wcdv_control_vertical'
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
@@ -1474,7 +1503,10 @@ AggregateControl.prototype.draw = function (parent) {
 		.text('Aggregate')
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
-	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
+	self.ui.fields = jQuery('<ul>', {
+		id: gensym(),
+		'class': self.isHorizontal ? 'wcdv_control_horizontal' : 'wcdv_control_vertical'
+	}).appendTo(self.ui.root);
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
 	self.ui.dropdown.on('change', function () {
@@ -1725,6 +1757,7 @@ var FilterControl = makeSubclass('FilterControl', GridControl, function () {
 		dontSendEventTo: self
 	});
 }, {
+	isReorderable: false,
 	controlFieldCtor: FilterControlField,
 	controlType: 'Filter'
 });
@@ -1741,10 +1774,12 @@ var FilterControl = makeSubclass('FilterControl', GridControl, function () {
 FilterControl.prototype.draw = function (parent) {
 	var self = this;
 
+	/*
 	parent.resizable({
 		handles: 'e',
 		minWidth: 100
 	});
+	*/
 
 	parent.droppable({
 		classes: {
@@ -1768,7 +1803,10 @@ FilterControl.prototype.draw = function (parent) {
 		.text('Filters')
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
-	self.ui.fields = jQuery('<ul>').appendTo(self.ui.root);
+	self.ui.fields = jQuery('<ul>', {
+		id: gensym(),
+		'class': self.isHorizontal ? 'wcdv_control_horizontal' : 'wcdv_control_vertical'
+	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
 	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);

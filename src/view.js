@@ -3568,11 +3568,28 @@ View.prototype.prime = function (cont) {
  * Represents a function that can be applied to the value of a field when grouping or pivotting.
  *
  * @param {object} spec
+ * A specification for the group function.
+ *
  * @param {string} spec.displayName
+ * What should be shown in the user interface for this function's name.
+ *
  * @param {Array.<string>} [spec.allowedTypes]
+ * If present, this function will only be presented as an option for fields in the specified set of
+ * data types (e.g. using `['datetime']` will restrict it to datetime fields only).  By default, the
+ * group function will be shown for fields of all types on which DataVis supports group functions.
+ *
  * @param {function} [spec.valueFun]
+ * If present, this function will be used to transform the original data value into one used for
+ * grouping.  If not provided, the default is the identity function.
+ *
  * @param {string} [spec.resultType="string"]
+ * The DataVis field type of the result of calling `valueFun`.
+ *
  * @param {string} [spec.sortType=spec.resultType]
+ * If present, overrides the algorithm for sorting group values, e.g. "month" to sort month names by
+ * chronological (rather than alphabetical) order.
+ *
+ * @class
  */
 
 var GroupFunction = makeSubclass('GroupFunction', Object, function (spec) {
@@ -3612,6 +3629,16 @@ var GroupFunction = makeSubclass('GroupFunction', Object, function (spec) {
 });
 
 // #applyValueFun {{{2
+
+/**
+ * Apply the function to get the value used for grouping.
+ *
+ * @param {any} x
+ * The original value from the data.
+ *
+ * @returns {any}
+ * The value that should be used for grouping purposes.
+ */
 
 GroupFunction.prototype.applyValueFun = function (x) {
 	return this.valueFun ? this.valueFun(x) : x;

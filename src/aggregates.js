@@ -231,6 +231,7 @@ var Aggregate = makeSubclass('Aggregate', Object, function (opts) {
 }, {
 	enabled: true,
 	fieldCount: 0,
+	fieldInfo: [],
 	inheritFormatting: false,
 	numItems: 0
 });
@@ -1098,6 +1099,11 @@ NthAggregate.prototype.calculate = function (data) {
 var SumOverSumAggregate = makeSubclass('SumOverSumAggregate', Aggregate, null, {
 	name: 'Sum/Sum',
 	fieldCount: 2,
+	fieldInfo: [{
+		name: 'Num'
+	}, {
+		name: 'Denom'
+	}],
 	type: 'string',
 	inheritFormatting: false,
 	bottomValue: 0,
@@ -1159,6 +1165,11 @@ SumOverSumAggregate.prototype.getFullName = function () {
 var CountOverCountAggregate = makeSubclass('CountOverCountAggregate', Aggregate, null, {
 	name: 'Count/Count',
 	fieldCount: 2,
+	fieldInfo: [{
+		name: 'Num'
+	}, {
+		name: 'Denom'
+	}],
 	type: 'number',
 	inheritFormatting: false,
 	bottomValue: 0
