@@ -1275,6 +1275,14 @@ GridTable.prototype.draw = function (root, opts, cont) {
 			return cont();
 		}
 
+		// Configuration for floating header feature.
+
+		if (!self.features.floatingHeader || self.defn.table.floatingHeader.method !== 'tabletool') {
+			root.css({ 'overflow-x': 'auto' });
+		}
+
+		// Configuration for limit feature.
+
 		if (self.features.limit && self.defn.table.limit.method === 'more') {
 			self.scrollEventElement = self.opts.fixedHeight ? self.root : window;
 			jQuery(self.scrollEventElement).on(self.scrollEvents, function () {

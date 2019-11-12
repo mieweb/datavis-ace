@@ -621,9 +621,6 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	if (self.rootHasFixedHeight) {
 		self.ui.grid.css({ 'overflow': 'auto' });
 	}
-	else if (!self.features.floatingHeader || self.defn.table.floatingHeader.method !== 'tabletool') {
-		self.ui.grid.css({ 'overflow-x': 'auto' });
-	}
 
 	if (document.getElementById(id + '_footer')) {
 		// There was a footer which was printed out by dashboard.c which we are now going to move
