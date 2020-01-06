@@ -36,7 +36,7 @@ $(EXAMPLE_FILES):examples/%:	dist/%
 
 clean:
 	$(MAKE) -C tests clean
-	$(MAKE) -C doc clean
+	rm -rf doc/html
 	rm -f dist/wcdatavis.js dist/wcdatavis.min.js
 	rm -f $(EXAMPLE_FILES)
 	rm -f examples/test/*.json
