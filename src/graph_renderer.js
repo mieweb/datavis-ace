@@ -6,6 +6,7 @@ import jQuery from 'jquery';
 import {
 	dataURItoBlob,
 	debug,
+	deepCopy,
 	deepDefaults,
 	getProp,
 	loadScript,
@@ -14,6 +15,7 @@ import {
 	setProp,
 } from './util/misc.js';
 import {AggregateInfo} from './aggregates';
+import {GROUP_FUNCTION_REGISTRY} from './view.js';
 
 // GraphRenderer {{{1
 
@@ -536,6 +538,41 @@ GraphRendererGoogle.prototype._draw = function (devConfig, userConfig) {
 						blob = dataURItoBlob(chart.getImageURI());
 					}
 					self.graph._setExportBlob(blob);
+				});
+
+				google.visualization.events.addListener(chart, 'select', function () {
+					var sel = chart.getSelection();
+					_.each(sel, function (o) {
+						debug.info('GRAPH // DRILL DOWN', 'User selected element in graph: row = %s, column = %s, value = %s, formattedValue = %s', o.row, o.column, dt.getValue(o.row, o.column), dt.getFormattedValue(o.row, o.column));
+
+						var filter = deepCopy(self.view.getFilter());
+
+						_.each(data.rowVals[o.row], function (x, i) {
+							var gs = data.groupSpec[i];
+							filter[data.groupFields[i]] = gs.fun != null
+								? GROUP_FUNCTION_REGISTRY.get(gs.fun).valueToFilter(x)
+								: { '$eq': x };
+						});
+
+						if (data.isPivot) {
+							// Offset column by one because the category is stored in the first column of the Google
+							// DataTable, but that obviously doesn't exist in the View.
+
+							_.each(data.colVals[o.column - 1], function (x, i) {
+								var ps = data.pivotSpec[i];
+								filter[data.pivotFields[i]] = ps.fun != null
+									? GROUP_FUNCTION_REGISTRY.get(ps.fun).valueToFilter(x)
+									: { '$eq': x };
+							});
+						}
+
+						debug.info('GRAPH // DRILL DOWN',
+							'Creating new perspective: filter = %O', filter);
+
+						window.setTimeout(function () {
+							self.view.prefs.addPerspective(null, 'Drill Down', { view: { filter: filter } }, { isTemporary: true }, null, { onDuplicate: 'replace' });
+						});
+					});
 				});
 
 				debug.info('GRAPH // GOOGLE // DRAW', 'Starting draw: [config = %O ; options = %O]', config, options);
