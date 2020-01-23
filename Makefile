@@ -22,6 +22,9 @@ jsdoc:
 mkdocs:
 	mkdocs build
 
+serve:
+	npm run http-server
+
 tests:	$(DIST_FILES)
 	$(MAKE) -C tests
 
