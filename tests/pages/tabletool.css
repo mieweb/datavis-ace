@@ -126,10 +126,78 @@ THIS ID CONVERSION IS PERFORMED TO COMPLY WITH VALIDATION STANDARDS AND SUPPORT 
 .tabletool.ttsidescroll .scrollheadwrap {
 	float: left;
 	overflow: hidden;
+	position: relative;
 }
 
 .tabletool.ttsidescroll .scrollbodywrap {
 	overflow: auto;
+}
+
+.ttsidescroll .hide-sticky .outer.thead,
+.ttsidescroll .hide-sticky .outer.tfoot {
+	display: none;
+}
+
+.ttsidescroll .hide-sticky .outer.tbody thead {
+	visibility: visible !important;
+}
+
+.ttsidescroll .side-header-clone,
+.ttsidescroll .side-footer-clone {
+	display: none;
+}
+
+.ttsidescroll .side-footer-clone,
+.ttsidescroll .side-header-clone {
+	width: auto;
+}
+
+.ttsidescroll.thead-stuck .side-header-clone {
+	position: fixed;
+	display: block;
+	top: 0px;
+}
+
+.ttsidescroll.thead-stuck.hide-init .side-header-clone {
+	visibility: hidden;
+}
+
+.ttsidescroll .theads-colspans tr > * {
+	display: inline-grid;
+}
+
+.ttsidescroll.thead-touched-tfoot .side-header-clone {
+	display: block;
+	position: absolute;
+	top: auto;
+	bottom: 0px;
+	width: 10000%;
+}
+
+.ttsidescroll.tfoot-touched-thead .side-footer-clone {
+	display: block;
+	position: absolute;
+	top: 0px;
+	bottom: auto;
+	width: 10000%;
+}
+
+.ttsidescroll.tfoot-stuck .side-footer-clone {
+	position: fixed;
+	display: table;
+	bottom: 0px;
+}
+
+.ttsidescroll .side-header-clone tr > *,
+.ttsidescroll .side-footer-clone tr > * {
+	box-sizing: border-box;
+}
+
+.ttsidescroll .divide-header,
+.ttsidescroll .divide-header ~ *,
+.ttsidescroll .divide-footer,
+.ttsidescroll .divide-footer ~ * {
+	display: none !important;
 }
 
 /*Target Box-Sizing IE7*/

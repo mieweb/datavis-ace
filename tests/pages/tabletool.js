@@ -7,47 +7,15 @@
 //Pass in a number greater than 0 to signify the cells acting as a side column with data-tttype="sidescroll" tables.
 //jQuery Event handlers are maintained in cloned headers and footer. Events should be attached before the TableTool script runs in order to capture attached events.
 
-'use strict';
-
-var scrollbarWidth = {};
-
-function getScrollbarWidth(targetClass) {
-	targetClass = targetClass || 'getScrollbarWidth';
-
-	if (!scrollbarWidth[targetClass]) {
-		var outer = document.createElement('div'),
-		inner = document.createElement('p'),
-		w1 = null,
-		w2 = null;
-
-		outer.appendChild(inner);
-		document.body.appendChild(outer);
-
-		outer.className = targetClass;
-		outer.style.position = 'fixed';
-		outer.style.width = '100px';
-
-		w1 = inner.offsetWidth;
-		outer.style.overflow = 'scroll';
-		w2 = inner.offsetWidth;
-
-		if (w1 === w2 && outer.clientWidth) {
-			w2 = outer.clientWidth;
-		}
-
-		document.body.removeChild(outer);
-		scrollbarWidth[targetClass] = w1 - w2;
-	}
-
-	return scrollbarWidth[targetClass];
-}
-
 //API access
 var TableTool = {};
 
-(function(j) {
+(function(jq) {
+	// http://linterrors.com/js/use-the-function-form-of-use-strict#why-do-i-get-this-error-
+	// https://yuiblog.com/blog/2010/12/14/strict-mode-is-coming-to-town/
+	'use strict';
 
-	//Declare global objects
+	// Declare shared and constant vars
 	var win = null,
 		body = null,
 		topEleWrap = null,
@@ -59,16 +27,96 @@ var TableTool = {};
 		CONST_TFOOT = 1,
 		allStickies = [],
 		allFixed = [],
-		allSidescrolls = [];
+		allSidescrolls = [],
+		scrollbarWidth = {},
+		PIXEL_STEP  = 10,
+		LINE_HEIGHT = 40,
+		PAGE_HEIGHT = 800;
+		
+	window.getScrollbarWidth = function (targetClass) {
+		targetClass = targetClass || 'getScrollbarWidth';
+	
+		if (!scrollbarWidth[targetClass]) {
+			var outer = document.createElement('div'),
+			inner = document.createElement('p'),
+			w1 = null,
+			w2 = null;
+	
+			outer.appendChild(inner);
+			document.body.appendChild(outer);
+	
+			outer.className = targetClass;
+			outer.style.position = 'fixed';
+			outer.style.width = '100px';
+	
+			w1 = inner.offsetWidth;
+			outer.style.overflow = 'scroll';
+			w2 = inner.offsetWidth;
+	
+			if (w1 === w2 && outer.clientWidth) {
+				w2 = outer.clientWidth;
+			}
+	
+			document.body.removeChild(outer);
+			scrollbarWidth[targetClass] = w1 - w2;
+		}
+	
+		return scrollbarWidth[targetClass];
+	};
+	
+	// Portions Copyright (c) 2015, Facebook, Inc. All rights reserved.
+	function normalizeWheel(event) {
+		var sX = 0, sY = 0,       // spinX, spinY
+			pX = 0, pY = 0;       // pixelX, pixelY
+	
+		// Legacy
+		if ('detail'      in event) { sY = event.detail; }
+		if ('wheelDelta'  in event) { sY = -event.wheelDelta / 120; }
+		if ('wheelDeltaY' in event) { sY = -event.wheelDeltaY / 120; }
+		if ('wheelDeltaX' in event) { sX = -event.wheelDeltaX / 120; }
+	
+		// side scrolling on FF with DOMMouseScroll
+		if ( 'axis' in event && event.axis === event.HORIZONTAL_AXIS ) {
+			sX = sY;
+			sY = 0;
+		}
+	
+		pX = sX * PIXEL_STEP;
+		pY = sY * PIXEL_STEP;
+	
+		if ('deltaY' in event) { pY = event.deltaY; }
+		if ('deltaX' in event) { pX = event.deltaX; }
+	
+		if ((pX || pY) && event.deltaMode) {
+			if (event.deltaMode == 1) {          // delta in LINE units
+					pX *= LINE_HEIGHT;
+					pY *= LINE_HEIGHT;
+			} else {                             // delta in PAGE units
+					pX *= PAGE_HEIGHT;
+					pY *= PAGE_HEIGHT;
+			}
+		}
+	
+		// Fall-back if spin cannot be determined
+		if (pX && !sX) { sX = (pX < 1) ? -1 : 1; }
+		if (pY && !sY) { sY = (pY < 1) ? -1 : 1; }
+	
+		return {
+			spinX  : sX,
+			spinY  : sY,
+			pixelX : pX,
+			pixelY : pY
+		};
+	}
 
 	function init() {
 		//Check for adding or removing of tables
-		var tables = j('table[data-tttype]');
-		win = j(window);
-		body = j(document.body);
+		var tables = jq('table[data-tttype]');
+		win = jq(window);
+		body = jq(document.body);
 
 		tables.each(function(idx, ele) {
-			var el = j(ele),
+			var el = jq(ele),
 				proceed = true;
 
 			if (
@@ -91,7 +139,7 @@ var TableTool = {};
 						stickyWrap(ele);
 						break;
 					case 'sidescroll':
-						sidescrollWrap(ele, el.data('ttsidecells'));
+						sidescrollWrap(stickyWrap(ele), el.data('ttsidecells'));
 						break;
 				}
 			}
@@ -100,12 +148,12 @@ var TableTool = {};
 
 	function setupDetection() {
 		//if TableTool table is removed, stop running code on it and remove from array. This checks both the body height and compares the number of tabletool tables with a baseline
-		var heightBaseline = body.height(),
-			ttTablesInBaseline = j('.tabletool').length;
+		var heightBaseline = body[0].scrollHeight, // get scroll height which is the total page height regardless of win size
+			ttTablesInBaseline = jq('.tabletool').length;
 
-		var loop = setInterval(function() {
-			var bodyHeight = body.height(),
-				ttTablesInDOM = j('.tabletool').length;
+		setInterval(function() {
+			var bodyHeight = body[0].scrollHeight, // get scroll height which is the total page height regardless of win size
+				ttTablesInDOM = jq('.tabletool').length;
 
 			//compare body height to check if table has been removed / user could set height to 100% or a fixed value like 1000px
 			if (bodyHeight > heightBaseline) {
@@ -123,45 +171,47 @@ var TableTool = {};
 				ttTablesInBaseline = ttTablesInDOM;
 			}
 
-			if (j('table[data-tttype]').length) {
+			if (jq('table[data-tttype]').length) {
 				TableTool.init();
 			}
+
+			heightBaseline = bodyHeight;
 		}, 1000);
 	}
 
 	function checkTableToolExists() {
-		for (var i=0; i<allStickies.length; i++) {
-			var stickyObj = allStickies[i],
-				outermostEle = j(stickyObj.parent[0]);
+		for (var ast=0; ast<allStickies.length; ast++) {
+			var stickyObj = allStickies[ast],
+				outerStickyEle = stickyObj.parent;
 
 			//Attach ID and search DOM for it
-			outermostEle.attr('id', 'test_ttsticky_exist');
+			outerStickyEle.attr('id', 'test_ttsticky_exist');
 			if (document.getElementById('test_ttsticky_exist')) {
-				outermostEle.removeAttr('id', 'test_ttsticky_exist');
+				outerStickyEle.removeAttr('id', 'test_ttsticky_exist');
 			} else {
 				win.off({
 					'resize' : stickyObj.windowResize,
 					'scroll' : stickyObj.setStickies
 				});
-				j(stickyObj).empty();
+				jq(stickyObj).empty();
 				stickyObj = null;
-				allStickies.splice(i, 1);
+				allStickies.splice(ast, 1);
 			}
 		}
 
-		for (var i=0; i<allFixed.length; i++) {
-			var fixedObj = allFixed[i],
-				outermostEle = j(fixedObj.parent[0]);
+		for (var afx=0; afx<allFixed.length; afx++) {
+			var fixedObj = allFixed[afx],
+				outerFixedEle = fixedObj.parent;
 
 			//Attach ID and search DOM for it
-			outermostEle.attr('id', 'test_ttfixed_exist');
+			outerFixedEle.attr('id', 'test_ttfixed_exist');
 			if (document.getElementById('test_ttfixed_exist')) {
-				outermostEle.removeAttr('id', 'test_ttfixed_exist');
+				outerFixedEle.removeAttr('id', 'test_ttfixed_exist');
 			} else {
 				win.off('resize', fixedObj.windowResize);
-				j(fixedObj).empty();
+				jq(fixedObj).empty();
 				fixedObj = null;
-				allFixed.splice(i, 1);
+				allFixed.splice(afx, 1);
 			}
 		}
 	}
@@ -181,7 +231,7 @@ var TableTool = {};
 			}
 		}
 
-		if (j.isArray(clonedEle)) { // if plain array [1,2,3] not "array like" jQuery object. If invoked like this uniqueIDs([jqEle1, jqEle2]);
+		if (jq.isArray(clonedEle)) { // if plain array [1,2,3] not "array like" jQuery object. If invoked like this uniqueIDs([jqEle1, jqEle2]);
 			plainAry(clonedEle);
 		} else {
 			if (arguments.length > 1) { // if invoked like this uniqueIDs(jqEle1, jqEle2);
@@ -195,11 +245,11 @@ var TableTool = {};
 	}
 
 	function scrollTracker(pos, trkEle, clsEle) {
-		var scrEle = j(trkEle);
+		var scrEle = jq(trkEle);
 
 		function trackPos(manPos) {
 			var maxScroll = (scrEle[0].scrollWidth - scrEle.outerWidth()),
-				jqCls = (clsEle ? j(clsEle) : scrEle).removeClass('atLeft atRight'),
+				jqCls = (clsEle ? jq(clsEle) : scrEle).removeClass('atLeft atRight'),
 				scrollPos = (typeof manPos === 'undefined' ? scrEle.scrollLeft() : manPos);
 
 			if (maxScroll) {
@@ -225,18 +275,23 @@ var TableTool = {};
 		}
 	}
 
+	function add(ary) {
+		var newList = jq(ary[0]);
+
+		for (var i = 1; i < ary.length; i++) {
+			newList = newList.add(ary[i]);
+		}
+
+		return newList;
+	}
+
 	function fixedWrap(table, height) {
 		var fixed = {},
-			colWidth = [],
-			mouseWheel = {},
 			timer = null,
-			startData = [],
-			dragData = [],
-			footerExists,
 			wheelEvent = false;
 
-		fixed.parent = j('<div class="tabletool ttfixed"></div>');
-		fixed.table = j(table);
+		fixed.parent = jq('<div class="tabletool ttfixed"></div>');
+		fixed.table = jq(table);
 		//remove data attribute from original table
 		fixed.table.removeAttr('data-tttype');
 		fixed.table.wrap(fixed.parent);
@@ -403,10 +458,8 @@ var TableTool = {};
 	}
 
 	function stickyWrap(table) {
-		var colWidth = [],
-			sticky = {},
-			timer = null,
-			scrollPosY;
+		var sticky = {},
+			timer = null;
 
 		sticky.windowResize = function () {
 
@@ -422,9 +475,6 @@ var TableTool = {};
 			clearTimeout(timer);
 			timer = setTimeout(function() {
 				var maxWidth = sticky.tbody.width(),
-					orgHeadHeight = sticky.orgHead.height(),
-					maxHeight = sticky.tbody.height(),
-					rowHeight = sticky.firstRow.height(),
 					orgWidth = sticky.table.width(),
 					resizeWidth = sticky.tbody.width();
 
@@ -464,20 +514,20 @@ var TableTool = {};
 				}
 
 				scrollTracker(true, sticky.tfootInner, sticky.tbody); // do not attach scroll evt listener
+
+				for (var i = 0; i < sticky.events.stickies_set.length; i++) {
+					sticky.events.stickies_set[i](sticky, 'stickies-set');
+				}
 			}, 100);
 		};
 
 		sticky.setStickies = function() {
-			scrollPosY = document.body.scrollTop;
 
 			//scrollbar Y location
 			var yBar = window.scrollY || document.documentElement.scrollTop,
 			//window height
 			windowHeight = win.height(),
 
-			//set this to other fixed elements on page (ie: wc header)
-			thisTable = sticky.parent,
-			tableHeight = sticky.parent.height(),
 			footHeight = sticky.tfoot.outerHeight(),
 			headHeight = sticky.thead.outerHeight(),
 			tblOffset = sticky.parent.offset().top,
@@ -490,77 +540,130 @@ var TableTool = {};
 			topElement = topElement ? topElement : 0;
 			btmElement = btmElement ? btmElement : 0;
 
+			sticky.parent.removeClass('tfoot-touched-thead thead-touched-tfoot');
+
 			//Header and footer scroll with the body but default margin left is 0
 			if (tblBottom - headHeight - footHeight - yBar <= topElement) {
 				sticky.thead.removeClass('isStuck');
-				hstyle.position = "absolute";
-				hstyle.top = "auto";
-				hstyle.bottom = footHeight + "px";
-				hstyle.marginLeft = "0px";
+				sticky.parent.removeClass('thead-stuck');
+				hstyle.position = 'absolute';
+				hstyle.top = 'auto';
+				hstyle.bottom = footHeight + 'px';
+				hstyle.marginLeft = '0px';
+				sticky.parent.addClass('thead-touched-tfoot');
 			} else if (tblOffset - yBar <= topElement) {
 				if (windowHeight > headHeight + footHeight + 40) {
 					sticky.thead.addClass('isStuck');
-					hstyle.position = "fixed";
-					hstyle.top = topElement + "px";
-					hstyle.bottom = "auto";
-					hstyle.marginLeft = -bodyScroll + "px";
+					sticky.parent.addClass('thead-stuck');
+					hstyle.position = 'fixed';
+					hstyle.top = topElement + 'px';
+					hstyle.bottom = 'auto';
+					hstyle.marginLeft = -bodyScroll + 'px';
 				}
 			} else {
 				sticky.thead.removeClass('isStuck');
-				hstyle.position = "absolute";
+				sticky.parent.removeClass('thead-stuck');
+				hstyle.position = 'absolute';
 				hstyle.top = 0;
-				hstyle.bottom = "auto";
-				hstyle.marginLeft = "0px";
+				hstyle.bottom = 'auto';
+				hstyle.marginLeft = '0px';
 			}
 
 			//set footer sticky threshold
 			if (tblOffset + headHeight + footHeight - yBar >= windowHeight - btmElement) {
 				sticky.tfoot.removeClass('isStuck');
-				fstyle.position = "absolute";
-				fstyle.bottom = "auto";
-				fstyle.top = headHeight + "px";
-				fstyle.marginLeft = "0px";
+				sticky.parent.removeClass('tfoot-stuck');
+				fstyle.position = 'absolute';
+				fstyle.bottom = 'auto';
+				fstyle.top = headHeight + 'px';
+				fstyle.marginLeft = '0px';
+				sticky.parent.addClass('tfoot-touched-thead');
 			} else if (tblBottom - yBar <= windowHeight - btmElement) {
 				sticky.tfoot.removeClass('isStuck');
-				fstyle.position = "absolute";
-				fstyle.top = "auto";
+				sticky.parent.removeClass('tfoot-stuck');
+				fstyle.position = 'absolute';
+				fstyle.top = 'auto';
 				fstyle.bottom = 0;
-				fstyle.marginLeft = "0px";
+				fstyle.marginLeft = '0px';
 			} else {
 				if (windowHeight > headHeight + footHeight + 40) {
 					sticky.tfoot.addClass('isStuck');
-					fstyle.position = "fixed";
-					fstyle.top = "auto";
-					fstyle.bottom = btmElement + "px";
-					fstyle.marginLeft = "-" + bodyScroll + "px";
+					sticky.parent.addClass('tfoot-stuck');
+					fstyle.position = 'fixed';
+					fstyle.top = 'auto';
+					fstyle.bottom = btmElement + 'px';
+					fstyle.marginLeft = '-' + bodyScroll + 'px';
+				}
+			}
+
+			if (sticky.parent.hasClass('tfoot-touched-thead') && sticky.events.tfoot_touched_thead.length) {
+				for (var i = 0; i < sticky.events.tfoot_touched_thead.length; i++) {
+					sticky.events.tfoot_touched_thead[i](sticky, 'tfoot-touched-thead');
+				}
+			} else if (sticky.events.tfoot_untouched_thead.length) {
+				for (var i = 0; i < sticky.events.tfoot_untouched_thead.length; i++) {
+					sticky.events.tfoot_untouched_thead[i](sticky, 'tfoot-untouched-thead');
+				}
+			}
+
+			if (sticky.parent.hasClass('thead-touched-tfoot') && sticky.events.thead_touched_tfoot.length) {
+				for (var i = 0; i < sticky.events.thead_touched_tfoot.length; i++) {
+					sticky.events.thead_touched_tfoot[i](sticky, 'thead-touched-tfoot');
+				}
+			} else if (sticky.events.thead_untouched_tfoot.length) {
+				for (var i = 0; i < sticky.events.thead_untouched_tfoot.length; i++) {
+					sticky.events.thead_untouched_tfoot[i](sticky, 'thead-untouched-tfoot');
 				}
 			}
 		};
 
-		sticky.touch = function(e) {
-			sticky.tbody.scroll({f: sticky.tfootInner}, function(e) {
-				e.data.f[0].scrollLeft = this.scrollLeft;
-			});
+		sticky.touchHandler = function(event) {
+			var touches = event.changedTouches[0];
+
+			if (event.type === 'touchmove') {
+				var touchX = touches.pageX,
+					storedX = sticky.touchData.pageX,
+					multiplicand = 0;
+
+				if (touchX > storedX) {
+					multiplicand = -1;
+				} else if (touchX < storedX) {
+					multiplicand = 1;
+				}
+
+				sticky.tfootInner[0].scrollLeft += (multiplicand * PIXEL_STEP);
+			}
+
+			sticky.touchData = touches;
 		};
 
 		sticky.wheelScroll = function(e) {
-			var horWheelData = (e.deltaX || (-(e.wheelDeltaX / 3)));
+			var normalWheel = normalizeWheel(e),
+				swipe = normalWheel.pixelX;
 
-				if (horWheelData > 0) {
-					horWheelData = Math.min(10, horWheelData);
-				}
-				else if (horWheelData < 0) {
-					horWheelData = Math.max(-10, horWheelData);
-				}
-				else {
-					horWheelData = 0;
-				}
+			// Prevent swipe event from triggering page navigation on Mac browsers
+			if (
+				(
+					(
+						!sticky.tbody.hasClass('atLeft') &&
+						swipe < 0
+					) ||
+					(
+						!sticky.tbody.hasClass('atRight') &&
+						swipe > 0
+					)
+				) &&
+				// Likely a horizonal scroll
+				Math.abs(swipe) >= Math.abs(normalWheel.pixelY)
+			) {
+				e.preventDefault();
+			}
 
-			sticky.tfootInner[0].scrollLeft += horWheelData;
+			sticky.tfootInner[0].scrollLeft += swipe;
 		};
 
-		sticky.parent = j('<div class="tabletool ttsticky"></div>');
-		sticky.table = j(table);
+		sticky.parent = jq('<div class="tabletool ttsticky"></div>');
+		sticky.table = jq(table);
 
 		//remove data attribute from original table
 		sticky.table.removeAttr('data-tttype');
@@ -590,6 +693,7 @@ var TableTool = {};
 		sticky.theadInner = sticky.thead.find('.inner');
 		sticky.sortHead = sticky.orgHead.length ? sortCols(sticky, CONST_THEAD) : false;
 		sticky.sortFoot = sticky.orgFoot.length ? sortCols(sticky, CONST_TFOOT) : false;
+		sticky.events = {'tfoot_touched_thead': [], 'tfoot_untouched_thead': [], 'thead_touched_tfoot': [],  'thead_untouched_tfoot': [], 'stickies_set': []};
 
 		//Fieldset elements are useful for organizing and grouping related items within a form.
 		//Using fieldsets to contain tables is inappropriate because it complicates styling via css; DIVs should be used instead.
@@ -602,13 +706,11 @@ var TableTool = {};
 
 		//on touch set the body scroll to the footer scroll
 		if (document.body.addEventListener) {
-			//Use vinillaJS event listeners for wheel x data
-			var wheelBody = sticky.tbody[0],
-				wheelEvents = ['wheel', 'mousewheel'];
+			var breakTbody = sticky.tbody[0];
 
-			for (var i=0;i<wheelEvents.length;i++) {
-				wheelBody.addEventListener(wheelEvents[i], sticky.wheelScroll, false);
-			}
+			breakTbody.addEventListener('wheel', sticky.wheelScroll, false);
+			breakTbody.addEventListener('touchstart', sticky.touchHandler, false);
+			breakTbody.addEventListener('touchmove', sticky.touchHandler, false);
 		}
 
 		win.scroll(sticky.setStickies).resize(sticky.windowResize);
@@ -616,26 +718,82 @@ var TableTool = {};
 		sticky.setStickies();
 		scrollTracker(null, sticky.tfootInner, sticky.tbody); // attach scroll evt listener
 		allStickies.push(sticky);
+
+		return sticky;
 	}
 
-	function sidescrollWrap(table, len) {
+	function sizeTo(target, reference, scrollBar) {
+		return jq(target).each(function(idx, th) {
+			var thisCell = jq(th);
+
+			if (thisCell.css('display') !== 'none') {
+				var  refCell = jq(reference[idx]),
+					newWidth = widthCalc(refCell);
+
+
+				thisCell.css({'width': newWidth, 'height': heightCalc(refCell) + (scrollBar ? getScrollbarWidth() : 0)});
+			}
+		});
+	}
+
+	function sidescrollWrap(stickyTbl, len) {
 		var sidescroll = {},
 			parseLen = parseInt(len),
 			colInt = (!isNaN(len) && parseLen > 0) ? parseLen : 1,
 			colDivideEle = null,
-			scrollDly = null,
 			resizeDly = null;
 
-		sidescroll.bodyTbl = j(table).removeAttr('data-tttype').wrap('<div class="tabletool ttsidescroll"><div class="scrollbodywrap sideouter"></div></div>');
-		sidescroll.bodyWrap = sidescroll.bodyTbl.parents('.scrollbodywrap');
+		sidescroll.parent = stickyTbl.parent.addClass('ttsidescroll').append('<div class="scrollbodywrap sideouter"></div>');
+		sidescroll.bodyTbl = stickyTbl.table.removeAttr('data-tttype');
+		sidescroll.bodyWrap = sidescroll.parent.children('.scrollbodywrap').append(stickyTbl.tbody, stickyTbl.thead, stickyTbl.tfoot);
 		sidescroll.sidePar = sidescroll.bodyTbl.parents('.ttsidescroll');
 		sidescroll.headerTbl = sidescroll.bodyTbl.clone(true).wrap('<div class="scrollheadwrap sideouter"></div>');
+		sidescroll.sticky = stickyTbl;
 
 		// give cloned header unique IDs. Wait until after wrap complete
 		uniqueIDs(sidescroll.headerTbl);
 		sidescroll.headerWrap = sidescroll.headerTbl.parent().prependTo(sidescroll.sidePar);
-		colDivideEle = sidescroll.bodyTbl.find('tbody > tr:first-child > *:nth-child(' + (colInt + 1) + ')'); // could be either TD or TH immediate children
+		sidescroll.headerClone = sidescroll.headerTbl.clone(true).addClass('side-header-clone');
+		sidescroll.footerClone = sidescroll.headerTbl.clone(true).addClass('side-footer-clone');
 
+		sidescroll.headerWrap.append(sidescroll.headerClone);
+		sidescroll.headerClone.find('tbody, tfoot').remove();
+
+		sidescroll.headerWrap.append(sidescroll.footerClone);
+		sidescroll.footerClone.find('tbody, thead').remove();
+
+		// set up permanent header refs
+		sidescroll.permSide = {};
+		sidescroll.permSide.thead = sidescroll.headerTbl.find('thead tr > *');
+		sidescroll.permSide.tfoot = sidescroll.headerTbl.find('tfoot tr > *');
+
+		// set up clone header refs
+		sidescroll.cloneSide = {};
+		sidescroll.cloneSide.theadRows = sidescroll.headerClone.find('thead tr');
+		sidescroll.cloneSide.thead = sidescroll.cloneSide.theadRows.find('> *');
+		sidescroll.cloneSide.tfoot = sidescroll.footerClone.find('tfoot tr > *');
+
+		// set up sticky reference cells
+		sidescroll.stickyTheadRefs = stickyTbl.thead.find('thead tr > *');
+		sidescroll.stickyTfootRefs = stickyTbl.tfoot.find('tfoot tr > *');
+
+		// copy sticky events to sidescroll object
+		sidescroll.evtCBs = stickyTbl.events;
+
+		colDivideEle = sidescroll.bodyTbl.find('tbody > tr:first-child > *:nth-child(' + (colInt + 1) + ')'); // could be either TD or TH immediate children
+		sidescroll.headerClone.find('thead tr > *:nth-child(' + (colInt + 1) + ')').addClass('divide-header');
+		sidescroll.footerClone.find('tfoot tr > *:nth-child(' + (colInt + 1) + ')').addClass('divide-footer');
+
+		if (
+			sidescroll.cloneSide.theadRows.length > 1 &&
+			sidescroll.cloneSide.thead.filter(function(idx, cs) {
+				if (jq(cs).attr('colspan') > 1) {
+					return true;
+				}
+			}).length
+		) {
+			sidescroll.headerClone.addClass('theads-colspans');
+		}
 
 		sidescroll.clearStyles = function() {
 			sidescroll.bodyTbl.css('margin-left', '');
@@ -647,16 +805,26 @@ var TableTool = {};
 				parWidth = widthCalc(sidescroll.sidePar);
 
 			function resetSideTbl() {
-				sidescroll.bodyTbl.css('margin-left', '');
+				add([sidescroll.bodyTbl, sidescroll.sticky.theadTable, sidescroll.sticky.tfootTable]).css('margin-left', '');
 				sidescroll.headerWrap.css('display', 'none');
 			}
 
 			if (divideLine < (parWidth / 2)) { // header column wrapper is < 50% of parent ttsidescroll wrapper
-				sidescroll.bodyTbl.css('margin-left', -divideLine);
 				sidescroll.headerWrap.css({'max-width': divideLine, 'display': ''});
+
+				sizeTo(sidescroll.cloneSide.thead, sidescroll.permSide.thead);
+
+				add([sidescroll.headerClone, sidescroll.footerClone]).css('max-width', widthCalc(sidescroll.parent));
 
 				if (parWidth > widthCalc(sidescroll.bodyTbl)) {  // ttsidescroll wrapper is narrower then body table
 					resetSideTbl(); // reset sidescroll to default table behavior
+				} else {
+					add([sidescroll.bodyTbl, sidescroll.sticky.theadTable, sidescroll.sticky.tfootTable]).css('margin-left', -divideLine);
+
+					sizeTo(sidescroll.cloneSide.thead, sidescroll.stickyTheadRefs);
+
+					// account for scrollbar when setting sidescroll clone footer height
+					sizeTo(sidescroll.cloneSide.tfoot, sidescroll.stickyTfootRefs, true);
 				}
 			} else { // header column wrapper is >= 50% of parent ttsidescroll wrapper
 				resetSideTbl();
@@ -664,24 +832,35 @@ var TableTool = {};
 		};
 
 		sidescroll.resize = function() {
+			var tfoot = sidescroll.sticky.tfootInner;
+
+			if (!tfoot.data('pos-before-resize')) {
+				// stash scroll position
+				tfoot.data('pos-before-resize', tfoot.scrollLeft());
+				tfoot.scrollLeft(0);
+			}
+
 			clearTimeout(resizeDly);
 			resizeDly = setTimeout(function() {
 				scrollTracker(true, sidescroll.bodyWrap); // don't attach scroll evt listenerw positions
+				// return scroll position after resize event finishes
+				tfoot.scrollLeft(tfoot.data('pos-before-resize'));
+				tfoot.data('pos-before-resize', '');
 			}, 100);
 
 			sidescroll.sizeSidescroll(); // need to re-evaluate on each resize event
-		}
+		};
 
 		function rmvRowCls(cls) {
-			j.each(allSidescrolls, function(idx, ele) {
-				j(ele.sidePar).find('tr').removeClass(cls);
+			jq.each(allSidescrolls, function(idx, ele) {
+				jq(ele.sidePar).find('tr').removeClass(cls);
 			});
 		}
 
 		function linkRowEvt(currRow, lnkCls) {
-			var currTar = j(currRow.currentTarget);
+			var currTar = jq(currRow.currentTarget);
 
-			j(currRow.delegateTarget)
+			jq(currRow.delegateTarget)
 				.find(
 					currTar.parent()[0].tagName + ' tr:nth-child(' + (currTar.index() + 1) + ')'
 				)
@@ -715,23 +894,80 @@ var TableTool = {};
 			}
 		});
 
+		// tie in to sticky events "thead touched"
+		sidescroll.evtCBs.tfoot_touched_thead.push(function() {
+			sidescroll.footerClone.css('top', heightCalc(sidescroll.sticky.theadTable));
+		});
+
+		sidescroll.evtCBs.tfoot_untouched_thead.push(function() {
+			sidescroll.footerClone.css('top', '');
+		});
+
+		sidescroll.evtCBs.thead_touched_tfoot.push(function() {
+			sidescroll.headerClone.css('bottom', heightCalc(sidescroll.sticky.tfootTable));
+		});
+
+		sidescroll.evtCBs.thead_untouched_tfoot.push(function() {
+			sidescroll.headerClone.css('bottom', '');
+		});
+
+		sidescroll.evtCBs.stickies_set.push(function() {
+			sidescroll.sizeSidescroll();
+		});
+
+		/*
+			Chrome needs "display: inline-grid" if we have multiple thead rows AND one or more colspans in those rows
+			Chrome renders inline-grid differently, therefore we can target it's behavior without using user-agent
+		*/
+
+		if (sidescroll.headerClone.hasClass('theads-colspans')) {
+			var theads = sidescroll.cloneSide.thead,
+				theadStuck = sidescroll.sticky.parent.hasClass('thead-stuck');
+
+			if (!theadStuck) {
+				sidescroll.sticky.parent.addClass('thead-stuck hide-init');
+			}
+
+			if (parseInt(widthCalc(theads[0])) !== parseInt(jq(theads[1]).position().left)) {
+				sidescroll.headerClone.removeClass('theads-colspans');
+			}
+
+			if (!theadStuck) {
+				sidescroll.sticky.parent.removeClass('thead-stuck hide-init');
+			}
+		}
+
+		if (topElement > 0) {
+			sidescroll.headerClone.css('top', topElement);
+		}
+
+		if (btmElement > 0) {
+			sidescroll.headerClone.css('bottom', btmElement);
+		}
+
 		win.resize(sidescroll.resize);
 		sidescroll.resize();
-		sidescroll.sizeSidescroll(); // position elements on load
-		setTimeout(sidescroll.sizeSidescroll, 100); // once elements are positioned, remeasure in their new positions
+
 		scrollTracker(null, sidescroll.bodyWrap); // attach scroll evt listenerw positions
 		allSidescrolls.push(sidescroll);
+
+		setTimeout(function() {
+			sidescroll.sticky.windowResize();
+			sidescroll.sizeSidescroll();
+		}, 250);
+
+		return sidescroll;
 	}
 
 	function setColWidth(sortedColAry, newColgroup) {
 		var sortedLen = sortedColAry.length;
 
 		// Assign widths to our colgroup cols
-		j(sortedColAry).each(function(idx, colRep) {
-			var colgroupEle = (newColgroup[idx] && newColgroup[idx].tagName.toLowerCase() === 'col') ? j(newColgroup[idx]) : j('<col>').appendTo(newColgroup);
+		jq(sortedColAry).each(function(idx, colRep) {
+			var colgroupEle = (newColgroup[idx] && newColgroup[idx].tagName.toLowerCase() === 'col') ? jq(newColgroup[idx]) : jq('<col>').appendTo(newColgroup);
 
 			if (colRep) {
-				var sortedColEle = j(colRep.colEle || colRep),
+				var sortedColEle = jq(colRep.colEle || colRep),
 					curColleftPos = sortedColEle.position().left,
 					nxtColLftPos = null,
 					nxtRep = null,
@@ -742,7 +978,7 @@ var TableTool = {};
 				while (nxt < sortedLen - idx && nxtColLftPos === null) {
 					nxtRep = sortedColAry[idx + nxt];
 
-					nxtColLftPos = nxtRep ? j(nxtRep.colEle || nxtRep).position().left : null;
+					nxtColLftPos = nxtRep ? jq(nxtRep.colEle || nxtRep).position().left : null;
 					nxt++;
 				}
 
@@ -760,19 +996,19 @@ var TableTool = {};
 	function sortCols(ttObj, contextEle) {
 		var allRows = ttObj.tbody.find('table tr'),
 			contextBar = contextEle === CONST_THEAD ? ttObj.thead : ttObj.tfoot,
-			theadMatrix = allRows.map(function() {return j(this).children()}),
+			theadMatrix = allRows.map(function() {return jq(this).children();}),
 			colReps = [],
 			colLength = null,
 			colspanMatrix = [],
 			preExistingCols = contextBar.find('colgroup'),
-			colgroupClone = preExistingCols.length ? preExistingCols : j('<colgroup></colgroup>').prependTo(contextBar.find('table')),
+			colgroupClone = preExistingCols.length ? preExistingCols : jq('<colgroup></colgroup>').prependTo(contextBar.find('table')),
 			colgroupChildren = colgroupClone.children();
 
 		function countColspans(e) {
 			var t = 0;
 
-			j(e).each(function(e, n){
-				t += parseInt(j(n).attr('colspan')) || 1;
+			jq(e).each(function(e, n){
+				t += parseInt(jq(n).attr('colspan')) || 1;
 			});
 
 			return t;
@@ -783,7 +1019,6 @@ var TableTool = {};
 		for (var i=0; i<theadMatrix.length; i++) {
 			var rowspanAry = [],
 				curRow = theadMatrix[i],
-				countAry = [],
 				colspanCount = 1;
 
 			//Loop through every possible column
@@ -828,7 +1063,7 @@ var TableTool = {};
 				}
 
 				if (curRow[colIdx]) {
-					var th = j(curRow[colIdx]),
+					var th = jq(curRow[colIdx]),
 						colspanValVar = parseInt(th.attr('colspan')) || 1,
 						rowspanValVar = parseInt(th.attr('rowspan')) || 1,
 						rowspanObj = {
@@ -838,7 +1073,7 @@ var TableTool = {};
 							'colEle' : th
 						};
 
-					rowspanAry.push(rowspanObj)
+					rowspanAry.push(rowspanObj);
 					colspanCount += colspanValVar;
 				}
 
@@ -861,7 +1096,7 @@ var TableTool = {};
 				}
 
 				if (!colgroupChildren[colIdx]) {
-					colgroupChildren[colIdx] = j('<col>').appendTo(colgroupClone);
+					colgroupChildren[colIdx] = jq('<col>').appendTo(colgroupClone);
 				}
 			}
 
@@ -869,9 +1104,9 @@ var TableTool = {};
 		}
 
 		if (contextEle === CONST_THEAD) {
-			ttObj.theadColgroup = j(colgroupClone).children();
+			ttObj.theadColgroup = jq(colgroupClone).children();
 		} else {
-			ttObj.tfootColgroup = j(colgroupClone).children();
+			ttObj.tfootColgroup = jq(colgroupClone).children();
 		}
 
 		colspanMatrix.length = 0;
@@ -879,12 +1114,12 @@ var TableTool = {};
 	}
 
 	function setStickyLimits(topEle, btmEle) {
-		topEleWrap = j(topEle);
-		btmEleWrap = j(btmEle);
+		topEleWrap = jq(topEle);
+		btmEleWrap = jq(btmEle);
 
 		//If called before TableTool is initialized
 		if (!win) {
-			win = j(window);
+			win = jq(window);
 		}
 
 		if (topEleWrap.length) {
@@ -898,13 +1133,13 @@ var TableTool = {};
 			btmElement = 0;
 		}
 
-		j(allStickies).each(function (idx, ele) {
+		jq(allStickies).each(function (idx, ele) {
 		   ele.setStickies();
 		});
 	}
 
 	function widthCalc(breakJq) {
-		var ele = j(breakJq)[0],
+		var ele = jq(breakJq)[0],
 			width = null;
 
 		//Use boundingClient for width if possible
@@ -913,10 +1148,26 @@ var TableTool = {};
 		} else if (ele.offsetWidth) {
 			width = ele.offsetWidth;
 		} else {
-			width = j(ele).width();
+			width = jq(ele).width();
 		}
 
 		return width;
+	}
+
+	function heightCalc(breakJq) {
+		var ele = jq(breakJq)[0],
+			height = null;
+
+		//Use boundingClient for height if possible
+		if (ele.getBoundingClientRect && ele.getBoundingClientRect().height) {
+			height = ele.getBoundingClientRect().height;
+		} else if (ele.offsetHeight) {
+			height = ele.offsetHeight;
+		} else {
+			height = jq(ele).height();
+		}
+
+		return height;
 	}
 
 	Array.prototype.indexOfObject = function(property, value) {
@@ -928,8 +1179,8 @@ var TableTool = {};
 	};
 
 	// Document Ready/Load
-	j(document).ready(init);
-	j(window).load(setupDetection);
+	jq(document).ready(init);
+	jq(window).load(setupDetection);
 
 	//define API
 	TableTool.init = init;
@@ -938,20 +1189,20 @@ var TableTool = {};
 	TableTool.update = function () {
 		TableTool.init();
 		//loop through all sticky tables and call windowResize method.
-		for (var i=0; i<allStickies.length; i++) {
-			allStickies[i].windowResize();
+		for (var ast=0; ast<allStickies.length; ast++) {
+			allStickies[ast].windowResize();
 		}
 
 		//loop through all fixed tables and call setHeadHeight method.
-		for (var i=0; i<allFixed.length; i++) {
-			allFixed[i].setHeadHeight();
+		for (var afx=0; afx<allFixed.length; afx++) {
+			allFixed[afx].setHeadHeight();
 		}
 	};
 
 	TableTool.disable = function () {
 		//loop through all sticky tables, apply "disabled" class to outermost layer.
-		for (var i=0; i<allStickies.length; i++) {
-			var stickyTable = allStickies[i];
+		for (var ast=0; ast<allStickies.length; ast++) {
+			var stickyTable = allStickies[ast];
 
 			stickyTable.table
 				.clone()
@@ -962,8 +1213,8 @@ var TableTool = {};
 		}
 
 		//loop through all fixed tables, apply "disabled" class to outermost layer.
-		for (var i=0; i<allFixed.length; i++) {
-			var fixedTable = allFixed[i];
+		for (var afx=0; afx<allFixed.length; afx++) {
+			var fixedTable = allFixed[afx];
 
 			fixedTable.table
 				.clone()
@@ -973,8 +1224,8 @@ var TableTool = {};
 			fixedTable.parent.remove();
 		}
 
-		for (var i=0; i<allSidescrolls.length; i++) {
-			var sidescroll = allSidescrolls[i];
+		for (var asd=0; asd<allSidescrolls.length; asd++) {
+			var sidescroll = allSidescrolls[asd];
 
 			sidescroll.clearStyles();
 			sidescroll.bodyTbl
@@ -982,15 +1233,15 @@ var TableTool = {};
 				.attr('data-ttdisabled', 'sidescrolldisabled')
 				.insertBefore(sidescroll.sidePar);
 
-			sidescroll.sidePar.remove()
+			sidescroll.sidePar.remove();
 		}
 
 		checkTableToolExists();
 	};
 
 	TableTool.enable = function () {
-		j('table[data-ttdisabled]').each(function(idx, ttd) {
-			var tt = j(ttd);
+		jq('table[data-ttdisabled]').each(function(idx, ttd) {
+			var tt = jq(ttd);
 
 			tt
 				.attr('data-tttype', tt.data('ttdisabled').replace('disabled', ''))
@@ -1001,7 +1252,7 @@ var TableTool = {};
 	};
 
 	TableTool.convert = function (ele, type, height) {
-		j(ele).attr({
+		jq(ele).attr({
 			'data-ttType' : type,
 			'data-ttHeight' : height
 		});
@@ -1012,17 +1263,17 @@ var TableTool = {};
 	TableTool.changeHeight = function (ttID, height) {
 		//If an id is passed as first parameter, store it or it's ancestor's data-ttid;
 		var newHeight = parseInt(height),
-			tableID = j(ttID).data('ttid') || j(ttID).parents('.tabletool[data-ttID]').data('ttid');
+			tableID = jq(ttID).data('ttid') || jq(ttID).parents('.tabletool[data-ttID]').data('ttid');
 
 		for (var i=0;i<allFixed.length;i++) {
 			var storedFixed = allFixed[i],
-				storedID = j(storedFixed.parent).data('ttid');
+				storedID = jq(storedFixed.parent).data('ttid');
 
 			//If the data-ttid value string is passed in the first parameter, compare it with the ttid value of the current table in the loop
 			if (storedID == tableID || storedID == ttID) {
-				var fixedTbody = j(allFixed[i].tbody);
+				var fixedTbody = jq(allFixed[i].tbody);
 
-				if (!j(storedFixed.tfoot).hasClass('ttHScroll')) {
+				if (!jq(storedFixed.tfoot).hasClass('ttHScroll')) {
 					fixedTbody.css('max-height', newHeight);
 				} else {
 					fixedTbody.css('max-height', newHeight - getScrollbarWidth('ttfixed'));
@@ -1034,3 +1285,4 @@ var TableTool = {};
 	};
 
 })(jQuery);
+
