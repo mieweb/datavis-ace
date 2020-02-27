@@ -5,7 +5,9 @@ import jQuery from 'jquery';
 import {
 	debug,
 	deepCopy,
+	format,
 	makeSubclass,
+	outerHtml,
 } from '../../util/misc.js';
 
 import {GridRenderer} from '../../grid_renderer.js';
@@ -101,8 +103,13 @@ GridRendererHandlebars.prototype._draw_plain = function (root, data, typeInfo, o
 		if (self.item != null) {
 			_.each(data.data, function (row) {
 				var context = {};
-				_.each(row.rowData, function (v, k) {
-					context[k] = v.value;
+				_.each(row.rowData, function (cell, field) {
+					var fcc = self.colConfig.get(field) || {};
+					var value = format(fcc, typeInfo.get(field), cell);
+					if (value instanceof Element || value instanceof jQuery) {
+						value = outerHtml(value);
+					}
+					context[field] = value;
 				});
 				html += self.item(context);
 			});
