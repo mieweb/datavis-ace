@@ -18,9 +18,9 @@ describe('Source Parameters', function () {
 		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
 	});
 
-	after(function () {
+	after(async function () {
 		if (driver != null) {
-			driver.quit();
+			await driver.quit();
 		}
 	});
 

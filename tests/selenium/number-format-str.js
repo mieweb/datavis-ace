@@ -12,7 +12,7 @@ describe('Number Formatting', function() {
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
-	
+
 	before(function () {
 		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
 	});
@@ -35,9 +35,9 @@ describe('Number Formatting', function() {
 		await driver.executeScript('window.localStorage.clear()');
 	});
 
-	after(function () {
+	after(async function () {
 		if (driver != null) {
-			driver.quit();
+			await driver.quit();
 		}
 	});
 

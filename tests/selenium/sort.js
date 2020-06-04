@@ -21,7 +21,7 @@ describe('Sort', function() {
 
 	after(async function () {
 		if (driver != null) {
-			driver.quit();
+			await driver.quit();
 		}
 	});
 

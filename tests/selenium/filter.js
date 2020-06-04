@@ -38,9 +38,9 @@ describe('Filter', function() {
 		await driver.executeScript('window.localStorage.clear()');
 	});
 
-	after(function () {
+	after(async function () {
 		if (driver != null) {
-			driver.quit();
+			await driver.quit();
 		}
 	});
 

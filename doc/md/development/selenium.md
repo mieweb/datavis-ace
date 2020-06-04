@@ -47,7 +47,7 @@ describe('My Test Suite', function() {
 
   after(async function () {
     if (driver != null) {
-      driver.quit();
+      await driver.quit();
     }
   });
 
