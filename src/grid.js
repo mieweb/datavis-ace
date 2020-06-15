@@ -33,7 +33,7 @@ import './grid_table.js';
 import './renderers/grid/handlebars.js';
 import {ColConfigWin} from './col_config_win.js';
 import {HandlebarsEditor} from './ui/handlebars.js';
-import {PlainToolbar, GroupToolbar, PivotToolbar, PrefsToolbar} from './ui/toolbars/grid.js';
+import {PlainToolbar, GroupToolbar, PivotToolbar, PrefsToolbar, RendererToolbar} from './ui/toolbars/grid.js';
 import {FileSource} from './source.js';
 import {trans} from './trans.js';
 
@@ -539,6 +539,9 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 	self.ui.toolbar_pivot = new PivotToolbar(self);
 	self.ui.toolbar_pivot.attach(self.ui.toolbar);
 	self.ui.toolbar_pivot.hide();
+
+	self.ui.toolbar_renderer = new RendererToolbar(self)
+	self.ui.toolbar_renderer.attach(self.ui.toolbar);
 
 	self.ui.controls = jQuery('<div>', { 'class': 'wcdv_grid_control' });
 	self.ui.filterControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_filter_control' });

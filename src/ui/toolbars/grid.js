@@ -11,6 +11,7 @@ import {
 
 import {ToolbarSection} from '../toolbar.js';
 import {PrefsBackendTemporary} from '../../prefs.js';
+import {GridTableOptsWin} from '../windows/grid_table_opts.js';
 
 // PlainToolbar {{{1
 
@@ -657,6 +658,48 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 	});
 });
 
+// RendererToolbar {{{1
+
+var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (grid) {
+	var self = this;
+
+	self.super.ctor.apply(self, []);
+	self.ui.root.addClass('wcdv_toolbar_section');
+
+	self.grid = grid;
+
+	var div = jQuery('<div>')
+		.addClass('wcdv_toolbar_view')
+		.css({'display': 'inline-block'})
+		.appendTo(self.ui.root)
+	;
+
+	var configBtn = jQuery('<button>', {'type': 'button', 'title': 'Display Options'})
+		.append(fontAwesome('fa-table'))
+		.append('Display Options')
+		.on('click', function () {
+			var gridTableOptsWin = new GridTableOptsWin(grid.renderer);
+			gridTableOptsWin.show(function (newOpts) {
+				if (grid.renderer.canRender('plain')) {
+					grid.defn.table.whenPlain = newOpts;
+				}
+				else if (grid.renderer.canRender('group')) {
+					grid.defn.table.whenGroup = newOpts;
+				}
+				else if (grid.renderer.canRender('pivot')) {
+					grid.defn.table.whenPivot = newOpts;
+				}
+				grid.redraw();
+			});
+		})
+		.appendTo(div)
+	;
+
+	grid.on('renderEnd', function () {
+		configBtn.prop('disabled', grid.renderer.canRender('plain'));
+	});
+});
+
 // Exports {{{1
 
 export {
@@ -664,4 +707,5 @@ export {
 	GroupToolbar,
 	PivotToolbar,
 	PrefsToolbar,
+	RendererToolbar,
 };

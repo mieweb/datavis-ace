@@ -33,6 +33,8 @@ import {GridFilterSet} from './grid_filter.js';
 import {GridRenderer} from './grid_renderer.js';
 import {View, GROUP_FUNCTION_REGISTRY} from './view.js';
 
+import handlebarsUtil from './util/handlebars.js';
+
 // Csv {{{1
 
 /**
@@ -1139,6 +1141,17 @@ GridTable.prototype._getAggInfo = function (data) {
 		);
 	});
 	return ai;
+};
+
+// #_getDisplayFormat {{{2
+
+GridTable.prototype._getDisplayFormat = function () {
+	var self = this;
+	var df = objFromArray(['cell', 'group', 'pivot', 'all'], [[]]);
+	df = _.mapObject(df, function (val, key) {
+		return getPropDef([], self.opts, 'displayFormat', key)
+	});
+	return df;
 };
 
 // #_setupFullValueWin {{{2
@@ -4841,7 +4854,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 						self.csv.addCol(td.innerText);
 					}
 
-					if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+					if (self.opts.drawInternalBorders || ai.all.length > 1) {
 						td.addClass(aiAllIndex === 0 ? 'wcdv_pivot_aggregate_boundary' : 'wcdv_pivot_colval_boundary');
 					}
 
@@ -4983,7 +4996,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +-------------+-------------+--------------------------------------+-----------+
 	//  ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 
-	var displayRowVals = function (tr, pivotFieldNum, displayOrderIndex) {
+	var displayRowVals = function (tr) {
 		_.each(data.groupFields, function (field, fieldIdx) {
 			var fcc = self.colConfig.get(field) || {};
 			span = jQuery('<span>').addClass('wcdv_heading_title').text(fcc.displayText || field);
@@ -5042,6 +5055,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	var displayCells = function (tr, pivotFieldIdx, displayOrderIndex) {
 		var colVal, colValIndex;
 		var ai = self._getAggInfo(data);
+		var df = self._getDisplayFormat();
 		// Indicates that we're on the last pivot field, i.e. the last row of the table header.
 		var isLastPivotField = pivotFieldIdx === data.pivotFields.length - 1;
 		var pivotField = data.pivotFields[pivotFieldIdx];
@@ -5111,7 +5125,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 					var colSpan = lastColValCount;
 
-					if (ai.cell.length >= 2) {
+					if ((df.cell.length || ai.cell.length) >= 2) {
 						colSpan *= ai.cell.length;
 					}
 
@@ -5153,15 +5167,15 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					self._addSortingToHeader(data, 'vertical', {colVal: data.colVals[colValIndex], aggNum: 0}, headingThControls.get(0), getPropDef([], data, 'agg', 'info', 'cell'));
 				}
 
-				if (ai.cell.length === 1) {
+				if ((df.cell.length || ai.cell.length) === 1) {
 					aggInfo = data.agg.info.cell[0];
 					self.setAlignment(th, aggInfo.colConfig[0], aggInfo.typeInfo[0], aggInfo.instance.getType());
 				}
-				else if (ai.cell.length > 1) {
+				else if ((df.cell.length || ai.cell.length) > 1) {
 					self.setAlignment(th, null, null, null, 'center');
 				}
 
-				if (self.opts.drawInternalBorders || ai.cell.length > 1) {
+				if (self.opts.drawInternalBorders || (df.cell.length || ai.cell.length) > 1) {
 					th.addClass('wcdv_pivot_colval_boundary');
 				}
 			}
@@ -5174,8 +5188,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		var colSpan = lastColValCount;
 
-		if (ai.cell.length >= 2) {
-			colSpan *= ai.cell.length;
+		if ((df.cell.length || ai.cell.length) >= 2) {
+			colSpan *= (df.cell.length || ai.cell.length);
 		}
 
 		if (th != null) {
@@ -5193,24 +5207,27 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +---------------------------+------------+------------+------------+-----------+
 	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |           |
 	// +-------------+-------------+------------+------------+------------+-----------+
-	// | GROUP FIELD | GROUP FIELD |                                      | GROUP AGG |
+	// | GROUP FIELD | GROUP FIELD |  //  //  //  //  //  //  //  //  //  | GROUP AGG |
 	// +-------------+-------------+--------------------------------------+-----------+
 	//                              ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 
 	var displayCells_padding = function (tr) {
 		var ai = self._getAggInfo(data);
+		var df = self._getDisplayFormat();
+
+		var numCols = df.cell.length || ai.cell.length;
+
 		var hr = jQuery('<hr>', {
 			class: 'wcdv_hr_gradient'
 		});
 		var div = jQuery('<div>&nbsp;</div>');
 		var th = jQuery('<th>', {
 			class: 'wcdv_pivot_colval_boundary wcdv_cell_empty',
-			colspan: data.colVals.length * Math.max(ai.cell.length, 1)
+			colspan: data.colVals.length * Math.max(numCols, 1)
 		});
-		//hr.appendTo(th);
 		div.appendTo(th);
 		th.appendTo(tr);
-		for (var i = 0; i < data.colVals.length * Math.max(ai.cell.length, 1); i += 1) {
+		for (var i = 0; i < data.colVals.length * Math.max(numCols, 1); i += 1) {
 			self.csv.addCol('');
 		}
 	};
@@ -5221,14 +5238,16 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +---------------------------+------------+------------+------------+----------------------+
 	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |                      |
 	// +-------------+-------------+------------+------------+------------+-----------+----------+
-	// | GROUP FIELD | GROUP FIELD |                                      | GROUP AGG | ADD COLS |
+	// | GROUP FIELD | GROUP FIELD |  //  //  //  //  //  //  //  //  //  | GROUP AGG | ADD COLS |
 	// +-------------+-------------+--------------------------------------+-----------+----------+
 
 	var displayGroupAggregates_padding = function (tr, displayOrderIndex, displayOrderMax) {
-		var numExtraCols = getPropDef(0, data, 'agg', 'info', 'group', 'length')
-			+ getPropDef(0, self.opts, 'addCols', 'length');
-		if (numExtraCols > 0) {
-			var th = jQuery('<th>', { colspan: numExtraCols });
+		var ai = self._getAggInfo(data);
+
+		var numCols = ai.group.length + getPropDef(0, self.opts, 'addCols', 'length');
+
+		if (numCols > 0) {
+			var th = jQuery('<th>', { colspan: numCols });
 			if (displayOrderIndex > 0) {
 				th.addClass('wcdv_bld'); // border-left: double
 			}
@@ -5244,7 +5263,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 	// +---------------------------+------------+------------+------------+-----------+
 	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |           |
 	// +-------------+-------------+------------+------------+------------+-----------+
-	// | GROUP FIELD | GROUP FIELD |                                      | GROUP AGG |
+	// | GROUP FIELD | GROUP FIELD |  //  //  //  //  //  //  //  //  //  | GROUP AGG |
 	// +-------------+-------------+--------------------------------------+-----------+
 	//                                                                     ↑↑↑↑↑↑↑↑↑↑↑
 
@@ -5253,21 +5272,13 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			self.drawHeader_addCols(tr, typeInfo, opts);
 	};
 
-	// This produces separate rows in the header for each pivot field.  That's what allows you to
-	// see the combinations of column values, like this:
-	//
-	// Example
-	// -------
-	//
-	//   pivotFields = ["Last Name", "First Name"]
-	//   colVals = [["Kennedy", "John"], ["Kennedy", "Robert"], ["Kennedy", "Ted"],
-	//              ["Roosevelt", "Franklin"], ["Roosevelt", "Teddy"]]
-	//
-	// +---------------------+------------------+
-	// | Kennedy             | Roosevelt        |
-	// +------+--------+-----+----------+-------+
-	// | John | Robert | Ted | Franklin | Teddy |
-	// +------+--------+-----+----------+-------+
+	// +---------------------------+--------------------------------------+-----------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |           | ←---
+	// +---------------------------+------------+------------+------------+-----------+ ←---
+	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |           | ←---
+	// +-------------+-------------+------------+------------+------------+-----------+
+	// | GROUP FIELD | GROUP FIELD |  //  //  //  //  //  //  //  //  //  | GROUP AGG |
+	// +-------------+-------------+--------------------------------------+-----------+
 
 	for (var pivotFieldIdx = 0; pivotFieldIdx < data.pivotFields.length; pivotFieldIdx += 1) {
 		self.csv.addRow();
@@ -5289,6 +5300,14 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 		});
 		tr.appendTo(self.ui.thead);
 	}
+
+	// +---------------------------+--------------------------------------+-----------+
+	// |                           | COLVAL 1.1              | COLVAL 1.2 |           |
+	// +---------------------------+------------+------------+------------+-----------+
+	// |                           | COLVAL 2.1 | COLVAL 2.2 | COLVAL 2.1 |           |
+	// +-------------+-------------+------------+------------+------------+-----------+
+	// | GROUP FIELD | GROUP FIELD |  //  //  //  //  //  //  //  //  //  | GROUP AGG | ←---
+	// +-------------+-------------+--------------------------------------+-----------+
 
 	self.csv.addRow();
 	tr = jQuery('<tr>');
@@ -5322,6 +5341,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	opts.pivotConfig = opts.pivotConfig || {};
 
 	var ai = self._getAggInfo(data);
+	var df = self._getDisplayFormat();
 
 	if (data.groupFields.length === 0) {
 		if (typeof cont === 'function') {
@@ -5333,6 +5353,36 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	}
 
 	self._setupFullValueWin(data);
+
+	// Setup the handlebars environment to reference our data.
+
+	var handlebarsEnv = handlebarsUtil.makeEnv();
+	handlebarsUtil.addHelpers(handlebarsEnv, self.data);
+
+	// Compile all templates; if there's an error then the template can still be used, it just
+	// produces the error message instead of doing something useful.
+
+	var templates = {};
+
+	_.each(df, function (tmplStrs, type) {
+		templates[type] = _.map(tmplStrs, function (str) {
+			var t;
+			try {
+				t = handlebarsEnv.compile(str);
+			}
+			catch (e) {
+				t = function () {
+					return e.message;
+				};
+			}
+			return t;
+		});
+	});
+
+	// ===========================================================================
+	//  DATA AND GROUP AGGREGATES
+	// ===========================================================================
+
 
 	_.each(data.data, function (rowGroup, groupNum) {
 		self.csv.addRow();
@@ -5364,11 +5414,31 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 					// Column #4: agg(rowGroup[3]) - rows in the group w/ State = "OH"
 
 					_.each(rowGroup, function (colGroup, pivotNum) {
-						if (ai.cell.length === 0) {
-							// There's no cell aggregate functions, so there isn't anything to put in the cell.
-							tr.appendChild(document.createElement('td'));
+						if (df.cell.length > 0) {
+							_.each(df.cell, function (dispFmt, dfCellIndex) {
+								var td = document.createElement('td');
+								td.classList.add('wcdv_pivot_cell');
+								td.setAttribute('data-rowval-index', groupNum);
+								td.setAttribute('data-colval-index', pivotNum);
+
+								td.innerHTML = templates.cell[dfCellIndex]({
+									rowValIdx: groupNum,
+									colValIdx: pivotNum
+								});
+
+								if (_.every(data.groupSpec, function (gs) { return gs.fun == null; })
+										&& _.every(data.pivotSpec, function (ps) { return ps.fun == null; })) {
+									self._addDrillDownClass(td);
+								}
+
+								if (self.opts.drawInternalBorders) {
+									td.classList.add('wcdv_pivot_colval_boundary');
+								}
+
+								tr.appendChild(td);
+							});
 						}
-						else {
+						else if (ai.cell.length > 0) {
 							// Every cell aggregate function is going to make a separate cell.
 							_.each(ai.cell, function (aggInfo, aiCellIndex) {
 								var aggNum = aggInfo.aggNum;
@@ -5432,6 +5502,10 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 								tr.appendChild(td);
 							});
+						}
+						else {
+							// There's no cell aggregate functions, so there isn't anything to put in the cell.
+							tr.appendChild(document.createElement('td'));
 						}
 					});
 					break;
@@ -5598,8 +5672,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							self._addDrillDownClass(td.get(0));
 						}
 
-						if (ai.cell.length > 1) {
-							td.attr('colspan', ai.cell.length);
+						if ((df.cell.length || ai.cell.length) > 1) {
+							td.attr('colspan', (df.cell.length || ai.cell.length));
 						}
 
 						if (self.opts.drawInternalBorders || ai.cell.length > 1) {
@@ -5726,6 +5800,7 @@ GridRenderer.registry.set('table_pivot', GridTablePivot);
 // Exports {{{1
 
 export {
+	GridTable,
 	GridTablePlain,
 	GridTableGroupSummary,
 	GridTableGroupDetail,
