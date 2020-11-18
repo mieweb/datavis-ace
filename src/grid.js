@@ -732,7 +732,6 @@ var Grid = makeSubclass('Grid', Object, function (id, view, defn, tagOpts, cb) {
 			self.show({ redraw: false });
 		}
 		self.redraw();
-		self.setSelection();
 	});
 
 	self.view.on('getTypeInfo', function (typeInfo) {
@@ -1239,6 +1238,7 @@ Grid.prototype.redraw = function () {
 		}
 
 		self.renderer.draw(self.ui.grid, null, function () {
+			self.setSelection();
 			self.ui.exportBtn.attr('disabled', false);
 			self.tableDoneCont();
 		});
