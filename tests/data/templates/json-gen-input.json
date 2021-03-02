@@ -43,9 +43,12 @@
       , "datetime7": "$< random_datetime('datetime7', min='2010-01-01 08:00:00', max='2010-01-01 08:59:59', format='yyyy-MM-dd HH:mm:\\'0\\'0') >$"
       , "datetime8": "$< random_datetime('datetime8', min='2010-01-01 08:00:00', max='2010-01-01 08:59:59', format='MMM d, yyyy HH:mm:\\'0\\'0') >$"
       , "datetime9": "$< random_datetime('datetime9', min='2010-01-01 08:00:00', max='2010-01-01 08:59:59', format='MM/dd/yyyy HH:mm:\\'0\\'0') >$"
-      , "datetime10": "$< random_datetime('datetime10', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='yyyy-MM-dd HH:mm:ss') >$"
-      , "datetime11": "$< random_datetime('datetime11', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='MMM d, yyyy HH:mm:ss') >$"
-      , "datetime12": "$< random_datetime('datetime12', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='MM/dd/yyyy HH:mm:ss') >$"
+      , "datetime10": "$< random_datetime('datetime10', min='2010-01-01 00:00:00', max='2010-01-01 23:59:59', format='yyyy-MM-dd HH:mm:ss') >$"
+      , "datetime11": "$< random_datetime('datetime11', min='2010-01-01 00:00:00', max='2010-01-01 23:59:59', format='MMM d, yyyy HH:mm:ss') >$"
+      , "datetime12": "$< random_datetime('datetime12', min='2010-01-01 00:00:00', max='2010-01-01 23:59:59', format='MM/dd/yyyy HH:mm:ss') >$"
+      , "datetime13": "$< random_datetime('datetime13', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='yyyy-MM-dd HH:mm:ss') >$"
+      , "datetime14": "$< random_datetime('datetime14', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='MMM d, yyyy HH:mm:ss') >$"
+      , "datetime15": "$< random_datetime('datetime15', min='2010-01-01 00:00:00', max='2010-01-31 23:59:59', format='MM/dd/yyyy HH:mm:ss') >$"
       , "fixedPrecision1": 0.7
       , "fixedPrecision2": "0.7"
       , "fixedPrecision3": "$0.70"
@@ -97,6 +100,9 @@
     , { "field": "datetime10", "type": "datetime" }
     , { "field": "datetime11", "type": "datetime", "format": "MMMM D, YYYY HH:mm:ss" }
     , { "field": "datetime12", "type": "datetime", "format": "MM/DD/YYYY HH:mm:ss" }
+    , { "field": "datetime13", "type": "datetime" }
+    , { "field": "datetime14", "type": "datetime", "format": "MMMM D, YYYY HH:mm:ss" }
+    , { "field": "datetime15", "type": "datetime", "format": "MM/DD/YYYY HH:mm:ss" }
     , { "field": "fixedPrecision1", "type": "number" }
     , { "field": "fixedPrecision2", "type": "number" }
     , { "field": "fixedPrecision3", "type": "currency" }

@@ -79,14 +79,6 @@ button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_on {
 	border-radius: 0.2em;
 }
 
-button.wcdv_option {
-	width: 100%;
-	padding-top: 1ex;
-	padding-bottom: 1ex;
-	margin-top: 0.5ex;
-	margin-bottom: 0.5ex;
-}
-
 .wcdv_grid button > span.fa,
 .wcdv_graph button > span.fa,
 .wcdv_spinner > span.fa {
@@ -1026,6 +1018,35 @@ html:not(.ie11) .wcdv_grid_table table th.wcdv_cell_empty div {
 .wcdv_width_1em {
 	text-align: center;
 	width: 1em;
+}
+
+/*
+ * GROUP FUNCTION WINDOW
+ */
+
+h1.wcdv_groupfun_header {
+	font-weight: normal;
+	font-size: inherit;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	padding-bottom: 0.5ex;
+	margin: 0px;
+	white-space: nowrap;
+}
+
+div.wcdv_groupfun_buttons {
+	border-top: solid 1px black;
+	padding: 0.5ex;
+}
+
+button.wcdv_option {
+	width: 100%;
+	padding-top: 1ex;
+	padding-bottom: 1ex;
+	margin-top: 0.5ex;
+	margin-bottom: 0.5ex;
+	white-space: nowrap;
+	text-align: left;
 }
 
 /******************************************************************************/

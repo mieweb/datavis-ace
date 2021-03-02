@@ -3632,6 +3632,7 @@ var GroupFunction = makeSubclass('GroupFunction', Object, function (spec) {
 	}
 
 	spec = deepDefaults(spec, {
+		category: 'other',
 		resultType: 'string',
 		canFilter: true,
 		valueToFilter: function (s) {
@@ -3643,7 +3644,7 @@ var GroupFunction = makeSubclass('GroupFunction', Object, function (spec) {
 		spec.sortType = spec.resultType;
 	}
 
-	copyProps(spec, self, ['displayName', 'allowedTypes', 'valueFun', 'resultType', 'sortType', 'canFilter', 'valueToFilter']);
+	copyProps(spec, self, ['category', 'displayName', 'allowedTypes', 'valueFun', 'resultType', 'sortType', 'canFilter', 'valueToFilter']);
 });
 
 // #applyValueFun {{{2
@@ -3666,7 +3667,10 @@ GroupFunction.prototype.applyValueFun = function (x) {
 
 var GROUP_FUNCTION_REGISTRY = new OrdMap();
 
+// Year {{{2
+
 GROUP_FUNCTION_REGISTRY.set('year', new GroupFunction({
+	category: 'date',
 	displayName: 'Year',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3686,7 +3690,10 @@ GROUP_FUNCTION_REGISTRY.set('year', new GroupFunction({
 	}
 }));
 
+// Quarter {{{2
+
 GROUP_FUNCTION_REGISTRY.set('quarter', new GroupFunction({
+	category: 'repeating',
 	displayName: 'Quarter',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3703,7 +3710,10 @@ GROUP_FUNCTION_REGISTRY.set('quarter', new GroupFunction({
 	canFilter: false
 }));
 
+// Month {{{2
+
 GROUP_FUNCTION_REGISTRY.set('month', new GroupFunction({
+	category: 'repeating',
 	displayName: 'Month',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3721,7 +3731,10 @@ GROUP_FUNCTION_REGISTRY.set('month', new GroupFunction({
 	canFilter: false
 }));
 
+// ISO Week {{{2
+
 GROUP_FUNCTION_REGISTRY.set('week_iso', new GroupFunction({
+	category: 'repeating',
 	displayName: 'Week (ISO)',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3738,28 +3751,10 @@ GROUP_FUNCTION_REGISTRY.set('week_iso', new GroupFunction({
 	canFilter: false
 }));
 
-GROUP_FUNCTION_REGISTRY.set('day', new GroupFunction({
-	displayName: 'Day Only (No Time)',
-	allowedTypes: ['datetime'],
-	valueFun: function (d) {
-		if (typeof d === 'string') {
-			d = moment(d);
-		}
-		if (!moment.isMoment(d) || !d.isValid()) {
-			return 'Invalid Date';
-		}
-		return d.format('YYYY-MM-DD');
-	},
-	resultType: 'date',
-	valueToFilter: function (s) {
-		return {
-			'$gte': moment(s).format('YYYY-MM-DD HH:mm:ss'),
-			'$lte': moment(s).add(1, 'days').subtract(1, 'seconds').format('YYYY-MM-DD HH:mm:ss')
-		};
-	}
-}));
+// Day of Week {{{2
 
 GROUP_FUNCTION_REGISTRY.set('day_of_week', new GroupFunction({
+	category: 'repeating',
 	displayName: 'Day of Week',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3777,7 +3772,10 @@ GROUP_FUNCTION_REGISTRY.set('day_of_week', new GroupFunction({
 	canFilter: false
 }));
 
+// Year, Quarter {{{2
+
 GROUP_FUNCTION_REGISTRY.set('year_and_quarter', new GroupFunction({
+	category: 'date',
 	displayName: 'Year & Quarter',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3797,7 +3795,10 @@ GROUP_FUNCTION_REGISTRY.set('year_and_quarter', new GroupFunction({
 	}
 }));
 
+// Year, Month {{{2
+
 GROUP_FUNCTION_REGISTRY.set('year_and_month', new GroupFunction({
+	category: 'date',
 	displayName: 'Year & Month',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3818,7 +3819,10 @@ GROUP_FUNCTION_REGISTRY.set('year_and_month', new GroupFunction({
 	}
 }));
 
+// Year, ISO Week {{{2
+
 GROUP_FUNCTION_REGISTRY.set('year_and_week_iso', new GroupFunction({
+	category: 'date',
 	displayName: 'Year & Week (ISO)',
 	allowedTypes: ['date', 'datetime'],
 	valueFun: function (d) {
@@ -3834,6 +3838,84 @@ GROUP_FUNCTION_REGISTRY.set('year_and_week_iso', new GroupFunction({
 		return {
 			'$gte': moment(s, 'YYYY [W]WW').format('YYYY-MM-DD HH:mm:ss'),
 			'$lte': moment(s, 'YYYY [W]WW').add(1, 'weeks').subtract(1, 'seconds').format('YYYY-MM-DD HH:mm:ss')
+		};
+	}
+}));
+
+// Year, Month, Day {{{2
+
+GROUP_FUNCTION_REGISTRY.set('day', new GroupFunction({
+	category: 'date',
+	displayName: 'Full Date (No Time)',
+	allowedTypes: ['datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY-MM-DD');
+	},
+	resultType: 'date',
+	valueToFilter: function (s) {
+		return {
+			'$gte': moment(s).format('YYYY-MM-DD HH:mm:ss'),
+			'$lte': moment(s).add(1, 'days').subtract(1, 'seconds').format('YYYY-MM-DD HH:mm:ss')
+		};
+	}
+}));
+
+// Year, Month, Day, Hour {{{2
+
+GROUP_FUNCTION_REGISTRY.set('day_and_time_1hr', new GroupFunction({
+	category: 'datetime',
+	displayName: 'Date & Time: 1 hr slices',
+	allowedTypes: ['datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		return d.format('YYYY-MM-DD HH:00:00');
+	},
+	resultType: 'datetime',
+	valueToFilter: function (s) {
+		return {
+			'$gte': moment(s).format('YYYY-MM-DD HH:mm:ss'),
+			'$lte': moment(s).add(1, 'hours').subtract(1, 'seconds').format('YYYY-MM-DD HH:mm:ss')
+		};
+	}
+}));
+
+// Year, Month, Day, Hour, Quarter Hour {{{2
+
+GROUP_FUNCTION_REGISTRY.set('day_and_time_15min', new GroupFunction({
+	category: 'datetime',
+	displayName: 'Date & Time: 15 min slices',
+	allowedTypes: ['datetime'],
+	valueFun: function (d) {
+		if (typeof d === 'string') {
+			d = moment(d);
+		}
+		if (!moment.isMoment(d) || !d.isValid()) {
+			return 'Invalid Date';
+		}
+		var min = d.minutes();
+		var minStr = (min >= 0 && min <= 14) ? '00'
+			: (min >= 15 && min <= 29) ? '15'
+			: (min >= 30 && min <= 44) ? '30'
+			: (min >= 45 && min <= 59) ? '45'
+			: '00';
+		return d.format('YYYY-MM-DD HH:' + minStr + ':00');
+	},
+	resultType: 'datetime',
+	valueToFilter: function (s) {
+		return {
+			'$gte': moment(s).format('YYYY-MM-DD HH:mm:ss'),
+			'$lte': moment(s).add(15, 'minutes').subtract(1, 'seconds').format('YYYY-MM-DD HH:mm:ss')
 		};
 	}
 }));
