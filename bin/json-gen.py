@@ -86,6 +86,19 @@ def random_date(name='random_date', min='1900-01-01', max='2100-01-01', **opts):
     LAST[name] = ret
     return ret
 
+def random_time(name='random_time', min='00:00:00', max='23:59:59', **opts):
+    global LAST
+    r = init_random(name)
+    min = time.mktime(time.strptime('2000-01-01 ' + min, '%Y-%m-%d %H:%M:%S'))
+    max = time.mktime(time.strptime('2000-01-01 ' + max, '%Y-%m-%d %H:%M:%S'))
+    val = datetime.fromtimestamp(r.randint(min, max))
+    if 'format' in opts:
+        ret = format_datetime(val, opts['format'])
+    else:
+        ret = format_datetime(val, 'HH:mm:ss')
+    LAST[name] = ret
+    return ret
+
 def random_datetime(name='random_datetime', min='1900-01-01 00:00:00', max='2099-12-31 23:59:59', **opts):
     global LAST
     r = init_random(name)
@@ -180,6 +193,7 @@ def process(node):
     env = { 'random_int': random_int,
             'random_float': random_float,
             'random_date': random_date,
+            'random_time': random_time,
             'random_datetime': random_datetime,
             'random_element': random_element,
             'repeat': repeat,
