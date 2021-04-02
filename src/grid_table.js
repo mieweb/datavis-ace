@@ -5469,6 +5469,10 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 									td.appendChild(aggResult);
 									self.csv.addCol(aggResult.innerText);
 								}
+								else if (self.opts.hideBottomValueAggResults && aggResult === aggInfo.instance.bottomValue) {
+									td.innerHTML = '&nbsp;';
+									self.csv.addCol('');
+								}
 								else {
 									if (aggInfo.instance.inheritFormatting) {
 										text = format(aggInfo.colConfig[0], aggInfo.typeInfo[0], aggResult, {

@@ -297,6 +297,17 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		}
 	);
 
+	self.ui.hideBottomValueAggResults = makeToggleCheckbox(
+		grid.defn,
+		['table', 'whenPivot', 'hideBottomValueAggResults'],
+		false,
+		'Hide Zero Values',
+		self.ui.root,
+		function (isChecked) {
+			grid.redraw();
+		}
+	);
+
 	self.ui.handlebarsEditor = jQuery('<button>', {
 		'type': 'button'
 	})
