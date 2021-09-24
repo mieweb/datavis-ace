@@ -6,6 +6,7 @@ import {
 	debug,
 	deepCopy,
 	I,
+	log,
 	makeSubclass,
 	mixinEventHandling,
 } from './util/misc.js';
@@ -125,6 +126,11 @@ GridRenderer.prototype.draw = function (root, opts, cont) {
 
 		return self.view.getTypeInfo(function (ok, typeInfo) {
 			if (!ok) {
+				return cont(false);
+			}
+
+			if (data == null || typeInfo == null) {
+				log.error('Provided data or typeInfo is null');
 				return cont(false);
 			}
 
