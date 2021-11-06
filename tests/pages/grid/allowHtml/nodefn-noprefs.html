@@ -66,11 +66,12 @@ $(document).ready(function () {
 			format: 'MM/DD/YYYY'
 		}
 	});
-	var view = new MIE.WC_DataVis.View(source, 'view', {
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
 		prefs: prefs
 	});
-	new MIE.WC_DataVis.Grid('grid', view, {
+	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
 		table: {
 			features: {
 				limit: false,

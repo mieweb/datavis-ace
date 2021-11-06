@@ -40,11 +40,12 @@ $(document).ready(function () {
 		type: 'http',
 		url: 'data/none.csv'
 	});
-	var view = new MIE.WC_DataVis.View(source, 'View', {
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
 		prefs: prefs
 	});
-	new MIE.WC_DataVis.Grid('grid', view, {
+	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
 		prefs: prefs,
 		table: {
 			features: {

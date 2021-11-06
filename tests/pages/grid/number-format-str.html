@@ -25,9 +25,10 @@ $(document).ready(function () {
 		type: 'http',
 		url: '../number-format-str.json'
 	});
-	var view = new MIE.WC_DataVis.View(source, 'TEST:GRID:NUMBER-FORMAT-STR', {prefs: prefs});
-	new MIE.WC_DataVis.Grid('grid', view, {
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {prefs: prefs});
+	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
 		table: {
 			features: {
 				limit: false,

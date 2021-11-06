@@ -7,6 +7,10 @@
       , "string1": "$< word_dict() >$"
       , "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
       , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "Pentel Energel Color": "$< random_element('seed1', ['Black', 'Blue', 'Brown', 'Green', 'Lime Green', 'Navy Blue', 'Orange', 'Pink', 'Red', 'Sky Blue', 'Turquoise', 'Violet']) >$"
+      , "Pilot Juice Color": "$< random_element('seed1', ['Apple Green', 'Apricot Orange', 'Aqua Blue', 'Baby Pink', 'Black', 'Blue', 'Blue Black', 'Brown', 'Coffee Brown', 'Coral Pink', 'Dark Red', 'Grape', 'Gray', 'Green', 'Leaf Green', 'Light Blue', 'Orange', 'Pink', 'Red', 'Rose Pink', 'Sky Blue', 'Turquoise Green', 'Violet', 'Yellow']) >$"
+      , "Uni Signo RT1 Color": "$< random_element('seed1', ['Black', 'Baby Pink', 'Blue', 'Blue Black', 'Green', 'Light Blue', 'Lime Green', 'Orange', 'Red', 'Violet']) >$"
+      , "Zebra Sarasa Color": "$< random_element('seed1', ['Black', 'Blue', 'Blue Black', 'Blue Green', 'Brown', 'Cobalt Blue', 'Gray', 'Green', 'Light Blue', 'Light Green', 'Light Pink', 'Magenta Pink', 'Orange', 'Pale Blue', 'Pink', 'Purple', 'Red', 'Red Orange', 'Viridian Green', 'Yellow']) >$"
       , "link": "$< '<a href=\"https://en.wikipedia.org/wiki/' + last('fruit') + '\">' + last('fruit') + '</a>' >$"
       , "state": "$< state() >$"
       , "int1": "$< random_int('int1', 0, 9999, output_type='number') >$"
@@ -87,6 +91,10 @@
     , { "field": "country", "type": "string" }
     , { "field": "state", "type": "string" }
     , { "field": "fruit", "type": "string" }
+    , { "field": "Pentel Energel Color", "type": "string" }
+    , { "field": "Pilot Juice Color", "type": "string" }
+    , { "field": "Uni Signo RT1 Color", "type": "string" }
+    , { "field": "Zebra Sarasa Color", "type": "string" }
     , { "field": "link", "type": "string" }
     , { "field": "int1", "type": "number", "internalType": "primitive" }
     , { "field": "int2", "type": "number", "internalType": "primitive" }

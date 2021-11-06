@@ -8,6 +8,7 @@
 		<script src="../contextMenu.js"></script>
 		<script src="../sumoselect.js"></script>
 		<script src="../flatpickr.js"></script>
+		<script src="../jquery.floatThead.min.js"></script>
 		<script src="../wcdatavis.js"></script>
 		<link rel="stylesheet" href="../font-awesome.css"/>
 		<link rel="stylesheet" href="../jquery-ui.css"/>
@@ -20,22 +21,34 @@
 $(document).ready(function () {
 	MIE.DEBUGGING = true;
 
+	var prefs = new MIE.WC_DataVis.Prefs('TEST:GRID:NO-AUTO-SAVE', null, {
+		backend: {
+			type: 'localStorage'
+		},
+		autoSave: false
+	});
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
 		url: '../random100.json'
 	});
-	var computedView = new MIE.WC_DataVis.ComputedView(source);
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
+		prefs: prefs
+	});
 	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		source: source,
 		computedView: computedView,
+		prefs: prefs,
 		table: {
 			features: {
-				limit: false,
-				rowSelect: true,
+				limit: false
+			},
+			floatingHeader: {
+				method: 'floatThead'
 			}
-		}
+		},
 	}, {
-		title: 'Test - Grid - Default',
+		title: 'Test - Grid - No Auto Save',
 		showControls: true
 	});
 });

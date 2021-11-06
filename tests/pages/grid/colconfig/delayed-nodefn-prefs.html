@@ -20,18 +20,43 @@
 $(document).ready(function () {
 	MIE.DEBUGGING = true;
 
+	var prefs = new MIE.WC_DataVis.Prefs('TEST:GRID:COLCONFIG:PREFS', null, {
+		backend: {
+			type: 'temporary'
+		}
+	});
+	prefs.addPerspective(null, 'C,B', {
+		grid: {
+			colConfig: {
+				_keys: ['C', 'B'],
+				_map: {
+					B: {field: 'B'},
+					C: {field: 'C'}
+				}
+			}
+		}
+	});
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
-		url: '../../random1000.json'
+		url: 'data/none.csv'
 	});
-	var view = new MIE.WC_DataVis.ComputedView(source);
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
+		prefs: prefs
+	});
 	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
+		prefs: prefs,
+		table: {
+			features: {
+				limit: false,
+			}
+		},
 		source: source,
-		computedView: view
 	}, {
-		title: 'Test / Grid / Basic / Random 1000',
-		showControls: true
+		title: 'Test - Grid - ColConfig - Delayed, Prefs',
+		showControls: true,
+		runImmediately: false
 	});
 });
 		</script>

@@ -26,7 +26,7 @@ $(document).ready(function () {
 	}, [
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'hidden',
+			inputType: 'hidden',
 			inputName: 'hidden',
 			cgi: {
 				name: 'hidden'
@@ -34,7 +34,7 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'text',
+			inputType: 'text',
 			inputName: 'text',
 			cgi: {
 				name: 'text'
@@ -42,7 +42,7 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'checkbox',
+			inputType: 'checkbox',
 			inputName: 'checkbox',
 			cgi: {
 				name: 'checkbox'
@@ -50,7 +50,7 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'toggle-checkbox',
+			inputType: 'toggle-checkbox',
 			inputName: 'toggle-checkbox',
 			cgi: {
 				name: 'toggle-checkbox'
@@ -58,7 +58,7 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'radio',
+			inputType: 'radio',
 			inputName: 'radio',
 			cgi: {
 				name: 'radio'
@@ -66,7 +66,7 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'select',
+			inputType: 'select',
 			inputName: 'select',
 			cgi: {
 				name: 'select'
@@ -74,16 +74,19 @@ $(document).ready(function () {
 		}),
 		new MIE.WC_DataVis.ParamInput('report', {
 			reportMethod: 'cgi',
-	    inputType: 'textarea',
+			inputType: 'textarea',
 			inputName: 'textarea',
 			cgi: {
 				name: 'textarea'
 			}
 		}),
 	]);
-	var view = new MIE.WC_DataVis.View(source, 'TEST:GRID:FORM');
-	new MIE.WC_DataVis.Grid('grid', view, {
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
+		name: 'TEST:GRID:FORM'
+	});
+	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
 		table: {
 			features: {
 				limit: false
