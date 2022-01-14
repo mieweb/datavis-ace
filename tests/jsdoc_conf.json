@@ -4,7 +4,8 @@
     ],
     "opts": {
         "template": "../jaguarjs-jsdoc",
-        "destination": "jsdoc"
+        "destination": "jsdoc",
+        "readme": "README.md"
     },
     "templates": {
         "systemName": "DataVis Test Lib",
