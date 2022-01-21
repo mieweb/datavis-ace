@@ -4,7 +4,8 @@ DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.min.js wcdatavis.css)
 EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
 DOC_PUB_PATH=zeus.med-web.com:~/public_html/datavis
 
-.PHONY:	doc jsdoc mkdocs clean tags examples serve test tests
+.PHONY:	all doc doc-publish doc-clean doc-serve jsdoc mkdocs serve tests test examples clean tags
+.DEFAULT:	all
 
 all:	$(DIST_FILES)
 
@@ -16,6 +17,7 @@ dist/wcdatavis.min.js:	dist/wcdatavis.js
 
 doc:	jsdoc mkdocs
 	$(MAKE) -C tests $@
+	@printf '\033[32;1mRun `make doc-publish` to publish documentation to $(DOC_PUB_PATH)\033[0m\n'
 
 doc-publish:	doc
 	rsync -a --delete doc/html/ $(DOC_PUB_PATH)/manual/
@@ -26,6 +28,9 @@ doc-clean:
 	rm -rf doc/html
 	rm -rf jsdoc
 	$(MAKE) -C tests $@
+
+doc-serve:
+	mkdocs serve
 
 jsdoc:
 	$(JSDOC) -p -c jsdoc_conf.json src

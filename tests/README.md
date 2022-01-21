@@ -4,7 +4,16 @@ These libraries are used for writing tests using Selenium via the JS API.
 
 Probably the most useful thing in this library is the [Grid]{@link module:grid~Grid} class, which provides a lot of convenience methods for manipulating the grid.  At the end of the day, those methods boil down to "find this element and click it" so they're as realistic as possible for testing purposes.
 
-## Example
+## Third-Party Library Documentation
+
+These third party libraries are used for testing.
+
+* [Selenium Webdriver JS API](https://www.selenium.dev/selenium/docs/api/javascript/module/selenium-webdriver/index.html)
+* [Mocha Test Framework](https://mochajs.org/#table-of-contents)
+* [Chai Assert Library](https://www.chaijs.com/api/assert/)
+* [Bluebird Async Library](http://bluebirdjs.com/docs/api-reference.html)
+
+## Full Example Test
 
 Here's an example from the filtering test.
 
@@ -98,7 +107,3 @@ describe('Filter', function() {
   });
 });
 ```
-
-## External Links
-
-* [Selenium Webdriver JS API](https://www.selenium.dev/selenium/docs/api/javascript/module/selenium-webdriver/index.html)

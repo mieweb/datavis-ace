@@ -49,6 +49,21 @@ $ npm install
 $ pip install -r requirements.txt
 ```
 
+!!! help "Installing Node with `nvm`"
+
+    See instructions [on the NVM GitHub repository](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+!!! help "Setting up a Python virtualenv for DataVis"
+
+    1. [install pyenv](https://github.com/pyenv/pyenv#installation)
+    2. [install the virtualenv plugin](https://github.com/pyenv/pyenv-virtualenv#installation)
+    3. Install an appropriate version of Python and make a virtualenv for your DataVis work.
+       ```
+       [wcdatavis] $ pyenv install 3.10.1
+       [wcdatavis] $ pyenv virtualenv 3.10.1 datavis
+       [wcdatavis] $ pyenv local datavis
+       ```
+
 ## Compiling
 
 After installing the [Pre-Requisites](#pre-requisites), run `make` to build the JS and CSS files for DataVis.  You can also run `make tests` to (1) build and copy the JS and CSS files to `tests/pages`, and (2) generate the data files needed for testing.  See [Building Test Data](#building-test-data) below.
@@ -107,6 +122,15 @@ The manual is written in Markdown using a Python program called *mkdocs*.  After
 
 !!! tip
     When actively working on the documentation, you can also use `mkdocs serve` to start a separate server that only provides the documentation, but reloads automatically as you edit the pages.
+
+When writing for the manual, the following links may be useful:
+
+* [Writing Your Docs with MkDocs](https://www.mkdocs.org/user-guide/writing-your-docs/)
+* [Python-Markdown Extensions](https://python-markdown.github.io/extensions/) — We use the `extra`, `admonition`, `codehilite`, `smarty`, and `toc` extensions.  We can always enable more as needed.
+
+* [PyMdown Extensions](https://facelessuser.github.io/pymdown-extensions/extensions/arithmatex/) — We use the `details` and `superfences` extensions, the latter mostly for the automatic generation of mermaid diagrams.
+
+* [Mermaid Syntax](https://mermaid-js.github.io/mermaid/#/./n00b-syntaxReference)
 
 ### Testing JS API Docs
 
