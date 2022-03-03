@@ -47,7 +47,7 @@ var MirageView = makeSubclass('MirageView', View, function (opts) {
 
 	self.source = new MirageSource(self.opts);
 }, {
-	prefsModule: 'mirageView'
+	prefsModule: 'mirage'
 });
 
 // #initFromView {{{2

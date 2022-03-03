@@ -587,7 +587,7 @@ var ComputedView = makeSubclass('ComputedView', View, function (source, opts) {
 
 	self.isBoundToPrefs = false;
 }, {
-	prefsModule: 'computedView'
+	prefsModule: 'view'
 });
 
 // Mixins {{{2

@@ -979,14 +979,14 @@ Grid.prototype.setView = function () {
 	// If the perspective is meant for live data then configure the grid to use a ComputedView.
 	// Otherwise, configure the grid to use a MirageView.
 
-	if (p.isLive()) {
-		self.debug('SET VIEW', 'Switching to Computed View for live data for perspective "%s"', p.name);
-		self.view = self.prefs.modules['computedView'].target;
+	if (p.isMirage()) {
+		self.debug('SET VIEW', 'Switching to Mirage View for pre-computed data for perspective "%s"', p.name);
+		self.view = self.prefs.modules['mirage'].target;
+		self.view.setPerspectiveName(p.name);
 	}
 	else {
-		self.debug('SET VIEW', 'Switching to Mirage View for pre-computed data for perspective "%s"', p.name);
-		self.view = self.prefs.modules['mirageView'].target;
-		self.view.setPerspectiveName(p.name);
+		self.debug('SET VIEW', 'Switching to Computed View for live data for perspective "%s"', p.name);
+		self.view = self.prefs.modules['view'].target;
 	}
 };
 // #_addTitleWidgets {{{2

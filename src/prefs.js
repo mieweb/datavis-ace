@@ -768,9 +768,7 @@ Prefs.prototype.addPerspective = function (id, name, config, perspectiveOpts, co
 Prefs.prototype.addMainPerspective = function (cont) {
 	var self = this;
 
-	self.addPerspective(null, Prefs.MAIN_PERSPECTIVE_NAME, {
-		isLive: true
-	}, null, cont);
+	self.addPerspective(null, Prefs.MAIN_PERSPECTIVE_NAME, {}, null, cont);
 };
 
 // #deletePerspective {{{2

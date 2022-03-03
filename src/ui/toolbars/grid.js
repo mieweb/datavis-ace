@@ -765,7 +765,7 @@ var ComputedViewToolbar = makeSubclass('ComputedViewToolbar', ToolbarSection, fu
 
 						grid.prefs.clonePerspective(null, perspectiveName, function (config) {
 							config.mirageView = deepCopy(config.computedView);
-							config.isLive = false;
+							config.isMirage = true;
 
 							return config;
 						}, function () {

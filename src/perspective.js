@@ -125,9 +125,7 @@ var Perspective = makeSubclass('Perspective', Object, function (id, name, config
 
 	self.id = id;
 	self.name = name;
-	self.config = deepDefaults(config, {
-		isLive: true
-	});
+	self.config = config;
 	self.modules = modules;
 	self.isUnsaved = false;
 	self.opts = deepDefaults(opts, {
@@ -230,13 +228,13 @@ Perspective.prototype.save = function (cont) {
 	return cont(self.config);
 };
 
-// #isLive {{{2
+// #isMirage {{{2
 
 /**
- * Indicates if the Perspective configures the results of live data or not.
+ * Indicates if the Perspective configures the results of mirage data.
  *
- * If true, then the perspective configures live data processed from a Source via a ComputedView.
- * If false, then the perspective configures static data processed from a MirageSource via a
+ * If false, then the perspective configures live data processed from a Source via a ComputedView.
+ * If true, then the perspective configures static data processed from a MirageSource via a
  * MirageView.  The main reasons we have this flag are:
  *
  *   - so code handling the `perspectiveChanged` event can switch from a ComputedView to a
@@ -247,10 +245,10 @@ Perspective.prototype.save = function (cont) {
  * @return {boolean}
  */
 
-Perspective.prototype.isLive = function () {
+Perspective.prototype.isMirage = function () {
 	var self = this;
 
-	return self.config.isLive;
+	return self.config.isMirage;
 };
 
 // #getVersion {{{2

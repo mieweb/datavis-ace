@@ -611,8 +611,8 @@ PrefsModuleMeta.prototype.reset = function () {
  */
 var PREFS_MODULE_REGISTRY = new OrdMap();
 
-PREFS_MODULE_REGISTRY.set('computedView', PrefsModuleComputedView);
-PREFS_MODULE_REGISTRY.set('mirageView', PrefsModuleMirageView);
+PREFS_MODULE_REGISTRY.set('view', PrefsModuleComputedView);
+PREFS_MODULE_REGISTRY.set('mirage', PrefsModuleMirageView);
 PREFS_MODULE_REGISTRY.set('grid', PrefsModuleGrid);
 PREFS_MODULE_REGISTRY.set('graph', PrefsModuleGraph);
 PREFS_MODULE_REGISTRY.set('meta', PrefsModuleMeta);
