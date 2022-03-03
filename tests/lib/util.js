@@ -1,11 +1,42 @@
+/** @module util */
+
 const _ = require('lodash');
 const {By, Key} = require('selenium-webdriver');
 const child_process = require('child_process');
 const Promise = require("bluebird");
 
+/**
+ * Gives a single promise that resolves all the promises created when mapping the given function
+ * over the given data.
+ *
+ * @alias module:util.asyncMap
+ *
+ * @param {any[]} data
+ * An array of data items.
+ *
+ * @param {function} f
+ * An asynchronous function to apply to each element in `data`.
+ *
+ * @returns {Promise}
+ * A single promise that resolves all the promises resulting from mapping `f` over `data`.
+ */
+
 async function asyncMap(data, f) {
 	return Promise.all(_.map(data, f));
 }
+
+/**
+ * Iterate through all the items, invoking the specified callback on each.
+ *
+ * @alias module:util.asyncEach
+ *
+ * @param {any[]} data
+ * An array of items.  If any item is a promise then it's resolved first.
+ *
+ * @param {function} callback
+ * A function to invoke on each data item.  If it produces a promise, then it's resolved before
+ * moving onto the next item, and any exception causes processing to stop.
+ */
 
 async function asyncEach(data, callback) {
 	if (!_.isArray(data)) {
@@ -40,6 +71,33 @@ async function asyncEach(data, callback) {
 		recur(resolve, reject);
 	});
 }
+
+/**
+ * Filters out items from an array.
+ *
+ * @alias module:util.asyncFilter
+ *
+ * @param {any[]} data
+ * List of items to filter.  If an item is a promise, it's resolved first.
+ *
+ * @param {function} predicate
+ * A function that returns true when the item passes, and false otherwise.  Can return a promise, in
+ * which case it's resolved immediately (errors count as "not passing").
+ *
+ * @param {object} opts
+ * Additional options.
+ *
+ * @param {boolean} [opts.reportPosition=false]
+ * If true, then the result is an array of objects like this: `{data: data[x], pos: x}` which allows
+ * you to track which items were removed by the filter.
+ *
+ * @returns {any[]}
+ * The input `data` but with non-passing items removed.
+ *
+ * @example
+ * let allOptions = await dropdown.findElements(By.css("option"));
+ * let matchingOption = await asyncFilter(allOptions, async (o) => await o.getAttribute('value') === value);
+ */
 
 async function asyncFilter(data, predicate, opts = {}) {
 	if (opts.reportPosition == null) {
@@ -86,6 +144,18 @@ async function asyncFilter(data, predicate, opts = {}) {
 	});
 }
 
+/**
+ * Selects an item from a dropdown that has matching text.
+ *
+ * @alias module:util.selectByText
+ *
+ * @param {selenium-webdriver.WebElement} dropdown
+ * The dropdown to search.
+ *
+ * @param {string} text
+ * The text to look for, which must match exactly.
+ */
+
 async function selectByText(dropdown, text) {
 	let allOptions = await dropdown.findElements(By.css("option"));
 	let matchingOption = await asyncFilter(allOptions, async (o) => await o.getText() === text);
@@ -96,6 +166,18 @@ async function selectByText(dropdown, text) {
 
 	return matchingOption[0].click();
 }
+
+/**
+ * Selects an item from a dropdown by value.
+ *
+ * @alias module:util.selectByValue
+ *
+ * @param {selenium-webdriver.WebElement} dropdown
+ * The dropdown to search.
+ *
+ * @param {string} value
+ * The value of the item to select.
+ */
 
 async function selectByValue(dropdown, value) {
 	let allOptions = await dropdown.findElements(By.css("option"));
@@ -108,6 +190,19 @@ async function selectByValue(dropdown, value) {
 	return matchingOption[0].click();
 }
 
+/**
+ * Selects a radio button by value.
+ *
+ * @alias module:util.radioByValue
+ *
+ * @param {selenium-webdriver.WebElement} inputs
+ * The list of radio buttons to search through (typically these should all have the same `name`
+ * attribute).
+ *
+ * @param {string} value
+ * The value of the item to select.
+ */
+
 async function radioByValue(inputs, value) {
 	let matchingRadio = await asyncFilter(inputs, async (o) => await o.getAttribute('value') === value);
 
@@ -117,6 +212,19 @@ async function radioByValue(inputs, value) {
 
 	return matchingRadio[0].click();
 }
+
+/**
+ * Selects checkboxes by value.
+ *
+ * @alias module:util.checkboxByValue
+ *
+ * @param {selenium-webdriver.WebElement} inputs
+ * The list of checkboxes to search through (typically these should all have the same `name`
+ * attribute).  These are all unchecked first, so only the matching ones end up checked.
+ *
+ * @param {string} values
+ * The values of the checkboxes to select.
+ */
 
 async function checkboxByValue(inputs, values) {
 	// Uncheck all inputs.
@@ -139,6 +247,15 @@ async function checkboxByValue(inputs, values) {
 		}
 	});
 }
+
+/**
+ * Pauses execution.
+ *
+ * @alias module:util.sleep
+ *
+ * @param {int} time
+ * Number of seconds to sleep for.
+ */
 
 function sleep(time) {
 	child_process.spawnSync('sleep', [time]);

@@ -1,3 +1,8 @@
+/**
+ * Contains classes and methods for directly interacting with a DataVis grid on a page.
+ * @module grid
+ */
+
 const _ = require('lodash');
 const Promise = require("bluebird");
 const {By, Key} = require('selenium-webdriver');
@@ -8,39 +13,115 @@ const {Type: LoggingType} = require('selenium-webdriver/lib/logging');
 
 // Grid UI {{{1
 
+/**
+ * @class
+ * Provides basic functions for locating items within the grid's user interface.
+ */
+
 class GridUi {
+	/**
+	 * Construct a view of the grid's user interface on a page.
+	 *
+	 * @param {selenium-webdriver.ThenableWebDriver} driver
+	 * @param {string} [id="grid"]
+	 */
+
 	constructor(driver, id = 'grid') {
 		this.driver = driver;
 		this.id = id;
 	}
 
+	/**
+	 * Locate the button to delete the current perspective.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.prefsDeleteBtn.click();
+	 */
+
 	get prefsDeleteBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Delete"]'));
 	}
+
+	/**
+	 * Locate the button to reset preferences.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.prefsResetBtn.click();
+	 */
 
 	get prefsResetBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Reset"]'));
 	}
 
+	/**
+	 * Locate the button to switch to the previous perspective.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.prefsBackBtn.click();
+	 */
+
 	get prefsBackBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Back"]'));
 	}
+
+	/**
+	 * Locate the button to switch to the next perspective.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.prefsForwardBtn.click();
+	 */
 
 	get prefsForwardBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Forward"]'));
 	}
 
+	/**
+	 * Locate the button to save the perspective.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.prefsSaveBtn.click();
+	 */
+
 	get prefsSaveBtn() {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Save"]'));
 	}
+
+	/**
+	 * Locate configuration (gear) button.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.gearBtn.click();
+	 */
 
 	get gearBtn() {
 		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Options"]'));
 	}
 
+	/**
+	 * Locate the refresh button to reload data.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * await g.ui.refreshBtn.click();
+	 */
+
 	get refreshBtn() {
 		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Refresh"]'));
 	}
+
+	/**
+	 * Locate the table that contains the data.
+	 *
+	 * @example
+	 * let g = new Grid(driver);
+	 * let trs = await this.ui.table.findElements(By.css('tbody > tr'));
+	 */
 
 	get table() {
 		return this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));

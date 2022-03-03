@@ -1,69 +1,68 @@
-# Class Overview & Relationships
+# Architectural Overview
 
-This is a reference for all the main classes involved in the datavis
-library, and how they relate to each other.
+This is a reference for all the main classes involved in the datavis library, and how they relate to each other.
 
-## GRAPH
+This diagram shows the flow of data broadly through the system.
 
-## GRID
+```mermaid
+graph TD
+  Source --> View
+  View --> Grid
+  View --> Graph
+```
 
-This is the user interface for the grid, including the title bar and
-menu. It is named after the `<WCGRID>` layout tag that creates it.
-
-It should be noted that while a lot of the table generation code is
-still hanging around from the old design (that is function-based, not
-object-oriented), the WCGRID class is considered the wrapper around all
-those functions. Eventually it will be refactored to actually be so in
-the implementation.
-
-  - GridTable (×1) *when not in pivot mode*
-    
-    This directly renders the data in an HTML table. When in pivot mode,
-    the PivotControl manages the GridTable.
-
-  - GridFilterSet (×1) *when not in pivot mode*
-    
-    A collection of all filters on all columns in the grid. WCGRID does
-    not interact with the individual GridFilter instances, only with the
-    GridFilterSet.
-    
-    Important methods:
-    
-      - `add()` — Invoked by the "add filter" button.
-      - `reset()` — Invoked by the "reset" link.
-
-  - PivotControl (×1) *when in pivot mode*
-    
-    This manages the user interface for changing the group or pivot of
-    the data. It manages its own GridFilterSet and GridTable for
-    filtering and showing the data.
-
-  - Prefs (×1)
-
-## PivotControl
-
-  - GridTable (×1)
-  - GridFilterSet (×1)
-
-## GridTable
-
-  - View (×1)
-    
-    The view is used as the source of data that is output within the
-    grid.
-    
-    Important methods:
-    
-      - `getData()`
-
-## View
-
-  - Source (×1) — The backing source of the data used by this view.
+* The source is in charge of obtaining the data from an origin, and transforming what it gets into the internal representation used by DataVis.
+* The view is repsonsible for implementing operations on the data:
+    * *filtering* — Removing data elements we're not interested in.
+    * *grouping* — Categorizing data based on shared values; in tables this is shown vertically.
+    * *pivotting* — A second layer of categorization; in tables this is shown horizontally.
+    * *aggregation* — Computation based on the data in their categories.
+* The grid/graph takes the data from the view and presents it to the user, along with any user interface necessary to interface with the lower components (e.g. to refresh the source, or to change the operations performed by the view).
 
 ## Source
 
-The Source class presents a unified interface for obtaining data and
-metadata (e.g. field information) from some provider. A Source instance
-wraps an instance of a class which implements the specifics of getting
-data from the provider. These provider classes are registered by name in
-the `Source.sources` object.
+```mermaid
+graph LR
+  Source --- SourceParam
+  Source --- Origin["HttpSource<br>FileSource<br>LocalSource"]
+  style Origin text-align:right
+```
+
+Each source has an origin, which is responsible for:
+
+* fetching the data and decoding it (e.g. from JSON)
+* fetching type information and decoding it into a dictionary
+
+The source takes this information from the origin, and performs the following operations:
+
+* data conversion, using custom callbacks to transform the data
+* type decoding, e.g. converting strings into dates/currencies
+
+See [the source section of the manual](../source/) for more information.
+
+## View
+
+```mermaid
+graph LR
+  View --- Source
+  View --- Aggregate["AGGREGATE_REGISTRY<br>AggregateInfo"]
+  View --- GroupFunction["GROUP_FUNCTION_REGISTRY<br>GroupFunction"]
+```
+
+## Grid
+
+```mermaid
+graph LR
+  Grid --- View
+  Grid --- GridRenderer
+  GridRenderer --- GridTable
+  GridTable --- GridTablePlain
+  GridTable --- GridTableGroupSummary
+  GridTable --- GridTableGroupDetails
+  GridTable --- GridTablePivot
+  Grid --- Toolbars["PrefsToolbar<br>PlainToolbar<br>GroupToolbar<br>PivotToolbar<br>RendererToolbar"]
+  style Toolbars text-align:right
+  Grid --- Controls["FilterControl<br>GroupControl<br>PivotControl<br>AggregateControl"]
+  style Controls text-align:right
+  Grid --- GridFilterSet
+```
