@@ -714,13 +714,9 @@ Graph.prototype.redraw = function () {
 	var self = this;
 
 	self.prefs.prime(function () {
-		self.view.prime(function () {
-			self.checkGraphConfig();
-			self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
-			self.drawFromConfig();
-		}, {
-			who: self
-		});
+		self.checkGraphConfig();
+		self.renderer = new GraphRendererGoogle(self, self.ui.graph, self.view, self.opts);
+		self.drawFromConfig();
 	}, {
 		who: self
 	});
