@@ -39,7 +39,7 @@ mkdocs:
 	mkdocs build
 
 serve:
-	npm run http-server
+	python bin/data-server.py
 
 tests:	$(DIST_FILES)
 	$(MAKE) -C tests
