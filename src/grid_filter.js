@@ -289,8 +289,8 @@ GridFilter.prototype.makeOperatorDrop = function (include) {
 
 		if (self.input) {
 			['$exists', '$notexists'].indexOf(self.getOperator()) >= 0
-				? self.input.hide()
-				: self.input.show();
+				? self.hideInput()
+				: self.showInput();
 		}
 
 		// For non-blank operators, only update the filter spec when the input has something in it.
@@ -382,6 +382,22 @@ GridFilter.prototype.adjustInputWidth = function (opts) {
 	if (typeof opts.callback === 'function') {
 		opts.callback(targetWidth);
 	}
+};
+
+// #showInput {{{3
+
+GridFilter.prototype.showInput = function (input) {
+	var self = this;
+
+	self.input.show();
+};
+
+// #hideInput {{{3
+
+GridFilter.prototype.hideInput = function (input) {
+	var self = this;
+
+	self.input.hide();
 };
 
 // StringTextboxGridFilter {{{2
@@ -515,7 +531,7 @@ var StringDropdownGridFilterSumo = makeSubclass('StringDropdownGridFilterSumo', 
 			self.gridFilterSet.update(false);
 		});
 
-	self.operatorDrop = self.makeOperatorDrop(['$in', '$nin']);
+	self.operatorDrop = self.makeOperatorDrop(['$in', '$nin', '$exists', '$notexists']);
 
 	self.div.append(self.operatorDrop);
 	self.div.append(self.input);
@@ -607,6 +623,21 @@ StringDropdownGridFilterSumo.prototype.setOperator = function (op) {
 	return self.super.setOperator(op);
 };
 
+// #showInput {{{3
+
+StringDropdownGridFilterSumo.prototype.showInput = function (op) {
+	var self = this;
+
+	self.input.closest('div.SumoSelect').show();
+};
+
+// #hideInput {{{3
+
+StringDropdownGridFilterSumo.prototype.hideInput = function (op) {
+	var self = this;
+
+	self.input.closest('div.SumoSelect').hide();
+};
 
 // NumberTextboxGridFilter {{{2
 
