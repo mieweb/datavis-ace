@@ -40,7 +40,7 @@ import { MirageView } from './mirage_view.js';
 import { GridRenderer } from './grid_renderer.js';
 import './grid_table.js';
 import './renderers/grid/handlebars.js';
-import { ColConfigWin } from './col_config_win.js';
+import { ColConfigWin } from './ui/windows/col_config.js';
 import { HandlebarsEditor } from './ui/handlebars.js';
 import {
 	ComputedViewToolbar,
@@ -1869,6 +1869,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	var setInitial = function () {
 		self.debug('COLCONFIG', 'Setting initial from %s: %O', opts.from || '[unknown]', colConfig);
 		self.initColConfig = colConfig.clone();
+		self.colConfigWin.setInitColConfig(self.initColConfig);
 	};
 
 	/**

@@ -21,6 +21,10 @@ button.wcdv_button_left {
 	margin-left: 0.5em;
 }
 
+button.wcdv_button_right {
+	margin-right: 0.5em;
+}
+
 /*
  * In-cell buttons like the one used to show the full value of a cell when the maxHeight is set in
  * column config.
@@ -1018,6 +1022,30 @@ html:not(.ie11) .wcdv_grid_table table th.wcdv_cell_empty div {
 .wcdv_width_1em {
 	text-align: center;
 	width: 1em;
+}
+
+div.wcdv_button_bar {
+	text-align: right;
+}
+
+div.wcdv_button_bar button:first-child {
+	margin-left: 0em;
+}
+
+div.wcdv_button_bar button {
+	margin-left: 0.5em;
+}
+
+div.wcdv_button_bar button span.fa {
+	margin-right: 0.25em;
+}
+
+div.wcdv_button_bar button[data-role="ok"] span.fa {
+	color: #2e7d32;
+}
+
+div.wcdv_button_bar button[data-role="cancel"] span.fa {
+	color: #c62828;
 }
 
 /*

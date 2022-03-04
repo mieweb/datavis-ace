@@ -6,7 +6,7 @@ import {
 	getPropDef,
 	makeSubclass,
 	moveArrayElement,
-} from './util/misc.js';
+} from '../../util/misc.js';
 
 // ColConfigWin {{{1
 
@@ -20,6 +20,14 @@ var ColConfigWin = makeSubclass('ColConfigWin', Object, function (grid, colConfi
 		self.colConfig = colConfig;
 	});
 });
+
+// #setInitialColConfig {{{2
+
+ColConfigWin.prototype.setInitColConfig = function (initColConfig) {
+	var self = this;
+
+	self.initColConfig = initColConfig;
+};
 
 // #show {{{2
 
@@ -46,28 +54,6 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			"ui-dialog": "ui-corner-all wcdv_dialog",
 			"ui-dialog-titlebar": "ui-corner-all",
 		},
-		buttons: [{
-			text: 'OK',
-			icon: 'ui-icon-check',
-			click: function () {
-				// Overwrite the "initial" configuration with one derived from the current one, based on the
-				// order of the keys saved by the reordering the table rows.
-
-				self.colConfig.clear();
-				_.each(keys, function (k) {
-					self.colConfig.set(k, current.get(k));
-				});
-
-				orderWin.dialog('close');
-				onSave(self.colConfig);
-			}
-		}, {
-			text: 'Cancel',
-			icon: 'ui-icon-cancel',
-			click: function () {
-				orderWin.dialog('close');
-			}
-		}],
 		show: orderWinEffect,
 		hide: orderWinEffect,
 		close: function () {
@@ -84,7 +70,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'overflow-y': 'scroll'
 		}).appendTo(orderWin));
 
-	var colTableHeader = jQuery('<thead><th class="wcdv_bottom_border_teal">Field</th><th class="wcdv_bottom_border_teal">Display</th><th colspan="5" class="wcdv_bottom_border_teal">Options</th>')
+	var colTableHeader = jQuery('<thead><th class="wcdv_bottom_border_teal wcdv_width_1em"></th><th class="wcdv_bottom_border_teal">Field</th><th class="wcdv_bottom_border_teal">Display</th><th colspan="6" class="wcdv_bottom_border_teal">Options</th>')
 		.appendTo(colTable);
 
 	var keys = current.keys();
@@ -96,10 +82,29 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		})
 		.appendTo(colTable);
 
+	var trsByField = {};
+
 	current.each(function (colConfig, field) {
 		var tr, td;
 
-		tr = jQuery('<tr>');
+		tr = jQuery('<tr>', {
+			'data-field': field
+		});
+
+		trsByField[field] = tr;
+
+		td = jQuery('<td>')
+			.addClass('wcdv_width_1em')
+			.appendTo(tr);
+
+		jQuery('<button>', {
+			'type': 'button',
+			'title': 'Click and drag to reorder columns'
+		})
+			.addClass('wcdv_icon_button drag-handle wcdv_button_right')
+			.append(fontAwesome('fa-bars'))
+			.appendTo(td);
+
 		td = jQuery('<td>')
 			.text(field)
 			.appendTo(tr);
@@ -213,12 +218,40 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
-		var dragButton = jQuery('<button>', {
+		jQuery('<button>', {
 			'type': 'button',
-			'title': 'Click and drag to reorder columns'
+			'title': 'Move to top of column list'
 		})
-			.addClass('wcdv_icon_button drag-handle')
-			.append(fontAwesome('fa-arrows-v'))
+			.addClass('wcdv_icon_button wcdv_button_left')
+			.on('click', function () {
+				var oldIndex = tr.index();
+				colTableBody.prepend(tr);
+				var newIndex = tr.index();
+				colTableBody.children('tr').eq(oldIndex).effect('highlight', 750);
+				colTableBody.children('tr').eq(newIndex).effect('highlight', 750);
+				moveArrayElement(keys, oldIndex, newIndex);
+			})
+			.append(fontAwesome('fa-angle-double-up'))
+			.appendTo(td);
+
+		td = jQuery('<td>')
+			.addClass('wcdv_width_1em')
+			.appendTo(tr);
+
+		jQuery('<button>', {
+			'type': 'button',
+			'title': 'Move to bottom of column list'
+		})
+			.addClass('wcdv_icon_button wcdv_button_left')
+			.on('click', function () {
+				var oldIndex = tr.index();
+				colTableBody.append(tr);
+				var newIndex = tr.index();
+				colTableBody.children('tr').eq(oldIndex).effect('highlight', 750);
+				colTableBody.children('tr').eq(newIndex).effect('highlight', 750);
+				moveArrayElement(keys, oldIndex, newIndex);
+			})
+			.append(fontAwesome('fa-angle-double-down'))
 			.appendTo(td);
 
 		tr.appendTo(colTableBody);
@@ -227,13 +260,75 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	var pinnedMsg = jQuery('<div>')
 		.addClass('wcdv_info_banner')
 		.append(fontAwesome('fa-info-circle'))
-		.append(' Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown below.')
+		.append(' Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown above.')
 		.hide()
 		.appendTo(orderWin);
 
 	if (pinnedCount > 0) {
 		pinnedMsg.show();
 	}
+
+	jQuery('<hr>')
+		.appendTo(orderWin);
+
+	var buttonBar = jQuery('<div>')
+		.addClass('wcdv_button_bar')
+		.appendTo(orderWin);
+
+	if (self.initColConfig) {
+		jQuery('<button>', {
+			'type': 'button',
+			'class': '',
+			'title': 'Reset Column Order'
+		})
+			.append(fontAwesome('fa-undo'))
+			.append('Reset Column Order')
+			.on('click', function (evt) {
+				keys = self.initColConfig.keys();
+				_.each(keys, function (k) {
+					if (trsByField[k] !== null) {
+						colTableBody.append(trsByField[k]);
+						trsByField[k].effect('highlight', 750);
+					}
+				});
+			})
+			.appendTo(buttonBar);
+	}
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': 'OK',
+		'data-role': 'ok'
+	})
+		.append(fontAwesome('fa-check'))
+		.append('OK')
+		.on('click', function () {
+			// Overwrite the "initial" configuration with one derived from the current one, based on the
+			// order of the keys saved by the reordering the table rows.
+
+			self.colConfig.clear();
+			_.each(keys, function (k) {
+				self.colConfig.set(k, current.get(k));
+			});
+
+			orderWin.dialog('close');
+			onSave(self.colConfig);
+		})
+		.appendTo(buttonBar);
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': 'Cancel',
+		'data-role': 'cancel'
+	})
+		.append(fontAwesome('fa-ban'))
+		.append('Cancel')
+		.on('click', function () {
+			orderWin.dialog('close');
+		})
+		.appendTo(buttonBar);
 
 	orderWin.dialog('open');
 };
