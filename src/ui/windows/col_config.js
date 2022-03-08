@@ -10,24 +10,16 @@ import {
 
 // ColConfigWin {{{1
 
-var ColConfigWin = makeSubclass('ColConfigWin', Object, function (grid, colConfig) {
+var ColConfigWin = makeSubclass('ColConfigWin', Object, function (grid) {
 	var self = this;
 
 	self.grid = grid;
-	self.colConfig = colConfig;
 
-	grid.on('colConfigUpdate', function (colConfig) {
+	grid.on('colConfigUpdate', function (colConfig, initColConfig) {
 		self.colConfig = colConfig;
+		self.initColConfig = initColConfig;
 	});
 });
-
-// #setInitialColConfig {{{2
-
-ColConfigWin.prototype.setInitColConfig = function (initColConfig) {
-	var self = this;
-
-	self.initColConfig = initColConfig;
-};
 
 // #show {{{2
 

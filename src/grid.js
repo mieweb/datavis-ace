@@ -448,6 +448,8 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	self.rootHasFixedHeight = false;
 	self.timing = new Timing();
 
+	self.colConfigWin = new ColConfigWin(self);
+
 	self.defn = self._normalize(defn); // Definition used to retrieve data and output grid.
 	self.opts = opts; // Other tag options, not related to the grid.
 	self.grid = null; // List of all grids generated as a result.
@@ -509,7 +511,6 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 
 	self.defn.grid = self;
 
-	self.colConfigWin = new ColConfigWin(self, self.colConfig);
 	self.handlebarsEditor = new HandlebarsEditor(self, function () {
 		self.redraw();
 	});
@@ -1869,7 +1870,6 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	var setInitial = function () {
 		self.debug('COLCONFIG', 'Setting initial from %s: %O', opts.from || '[unknown]', colConfig);
 		self.initColConfig = colConfig.clone();
-		self.colConfigWin.setInitColConfig(self.initColConfig);
 	};
 
 	/**
@@ -1998,7 +1998,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	if (opts.sendEvent) {
 		self.fire('colConfigUpdate', {
 			notTo: opts.dontSendEventTo
-		}, self.colConfig);
+		}, self.colConfig, self.initColConfig);
 	}
 
 	if (opts.redraw) {
