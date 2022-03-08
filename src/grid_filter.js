@@ -928,7 +928,7 @@ DateRangeGridFilter.prototype.getOperator = function () {
 	var self = this;
 
 	if (self.isRange()) {
-		log.error('<< TSNH >> GridFilterSet called #getOperator() on a range');
+		return ['$gte', '$lte'];
 	}
 
 	return '$gte';
@@ -939,7 +939,7 @@ DateRangeGridFilter.prototype.getOperator = function () {
 DateRangeGridFilter.prototype.isRange = function () {
 	var self = this;
 
-	return self.selectedDates.length > 1;
+	return self.selectedDates != null && self.selectedDates.length > 1;
 };
 
 // BooleanCheckboxGridFilter {{{2
