@@ -1368,6 +1368,47 @@ Prefs.prototype.reset = function (cont) {
 	});
 };
 
+// #inspect {{{2
+
+Prefs.prototype.inspect = function () {
+	var self = this;
+	var paths = Array.prototype.slice.call(arguments);
+	var fmtRe = new RegExp('^(.*)/(\\w+)$');
+
+	console.group('INSPECT RESULTS');
+
+	_.each(self.perspectives, function (perspective, uuid) {
+		var s = '', x = [];
+		_.each(paths, function (path) {
+			var m = path.match(fmtRe);
+			var f = m && m[2].length > 0 ? m[2] : 'string';
+			path = m ? m[1].split('.') : path.split('.');
+
+			if (s.length > 0) {
+				s += ', ';
+			}
+
+			s += path[path.length - 1] + ' = ';
+
+			var y = getProp(perspective, path);
+
+			if (typeof(y) === 'string' || typeof(y) === 'number') {
+				s += y;
+			}
+			else if (f === 'json') {
+				s += JSON.stringify(y);
+			}
+			else {
+				s += '%O';
+				x.push(deepCopy(y));
+			}
+		});
+		console.log.apply(null, [s].concat(x));
+	});
+
+	console.groupEnd();
+};
+
 // Exports {{{1
 
 export {
