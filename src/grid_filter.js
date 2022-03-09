@@ -1388,8 +1388,11 @@ GridFilterSet.prototype.update = function () {
 
 // #set {{{2
 
-GridFilterSet.prototype.set = function (field, fieldSpec) {
+GridFilterSet.prototype.set = function (field, fieldSpec, opts) {
 	var self = this;
+	opts = deepDefaults(opts, {
+		updateView: true
+	});
 
 	if (typeof fieldSpec !== 'object') {
 		fieldSpec = { '$eq': fieldSpec };
@@ -1404,6 +1407,10 @@ GridFilterSet.prototype.set = function (field, fieldSpec) {
 
 	var widget = filters[0];
 
+	if (!opts.updateView) {
+		self.delayUpdate = true;
+	}
+
 	if (widget instanceof DateRangeGridFilter && '$lte' in fieldSpec && '$gte' in fieldSpec) {
 		widget.setValue([fieldSpec['$gte'], fieldSpec['$lte']]);
 	}
@@ -1416,6 +1423,10 @@ GridFilterSet.prototype.set = function (field, fieldSpec) {
 			widget.setOperator(op);
 			widget.setValue(val);
 		});
+	}
+
+	if (!opts.updateView) {
+		self.delayUpdate = false;
 	}
 };
 

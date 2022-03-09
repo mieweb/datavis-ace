@@ -1821,7 +1821,7 @@ FilterControl.prototype.draw = function (parent) {
 		self.clear({ updateView: false });
 		_.each(spec, function (fieldSpec, field) {
 			self.addField(field, getProp(self.colConfig.get(field), 'displayText'), { updateView: false });
-			self.gfs.set(field, fieldSpec);
+			self.gfs.set(field, fieldSpec, { updateView: false });
 		});
 	});
 
