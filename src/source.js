@@ -70,16 +70,6 @@ var LocalSource = makeSubclass('LocalSource', Object, function (spec) {
 	}
 });
 
-// #unlimit {{{2
-
-Source.prototype.unlimit = function () {
-	var self = this;
-
-	if (typeof self.origin.unlimit === 'function') {
-		return self.origin.unlimit();
-	}
-};
-
 // #getData {{{2
 
 LocalSource.prototype.getData = function (params, cont) {
@@ -679,6 +669,16 @@ Source.sources = {
 
 Source.converters = {};
 
+// #unlimit {{{2
+
+Source.prototype.unlimit = function () {
+	var self = this;
+
+	if (typeof self.origin.unlimit === 'function') {
+		return self.origin.unlimit();
+	}
+};
+
 // #getName {{{2
 
 Source.prototype.getName = function () {
@@ -715,7 +715,7 @@ Source.prototype.getData = function (cont) {
 
 	self.locks.getData.lock();
 	self.fire('fetchDataBegin', {async: true});
-	return self.origin.getData(self.createParams(), function (ok, data) {
+	return self.origin.getData(self.createParams(), function (ok, data, partial_result) {
 		if (!ok) {
 			self.locks.getData.unlock();
 			self.fire('fetchDataEnd', {async: true});
