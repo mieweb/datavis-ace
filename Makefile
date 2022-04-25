@@ -11,6 +11,7 @@ PUB_PATH=zeus.med-web.com:~/public_html/datavis
 all:	$(DIST_FILES)
 
 npm-setup:
+	@if [ -f .nvmrc ] ; then printf '\033[34;1mPlease run `nvm use` to ensure the right version of Node is used.\033[0m\n' ; fi
 	npm install
 
 npm-teardown:

@@ -2,11 +2,28 @@
 
 ## Managing Branches
 
-DataVis has (mainly) two branches: `stable` and `master`.  In general, `stable` is what's out there in the wild, and `master` is what's next.  There are also feature branches when necessary, like if it's a really big change or will take a while to finish.
+DataVis has three different kinds of branches:
 
-* For bug fixes, commit into the `stable` branch and merge to `master`.
-* For minor new features and refactoring, commit into `master` and merge into `stable` when they're well tested.
-* For major new features, commit to a feature branch, merging from `master` to keep up-to-date.  When done, merge info `master` and delete the feature branch.  Merge from `master` to `stable` when you're ready.
+- **development** (`master`): Mostly stable and fully merged branch.  Eventually this will become the next major release.
+
+- **stable** (e.g. `v1`, `v2`): Stable and released version of DataVis.  Only minor enhancements and bug fixes are allowed.  Hereafter, just called the "stable" branch, although there is one for each major release.
+
+- **feature** (e.g. `server_limit`, `mirage`): Feature branches are for active development where you want to commit stuff that doesn't fully work yet.
+
+How do you know where changes should go?
+
+* For bug fixes, commit into the stable branch and merge to `master`.
+* For minor new features and refactoring, commit into `master` and merge into stable when they're well tested.
+* For major new features, commit to a feature branch, merging from `master` to keep up-to-date.  When done, merge info `master` and delete the feature branch.
+
+### Tips for Switching Branches
+
+Always, *always* do the following:
+
+- `make teardown`
+- `make setup`
+
+This ensures that all dependencies are fully wiped out and rebuilt for the current branch.  You may also get a message about running `nvm use` — that means a specific version of Node is required for the support code.
 
 ## Conventions
 
@@ -15,7 +32,7 @@ The number one convention is to avoid making unnecessary diffs.  Follow the styl
 ### Formatting Standards
 
 * Code is indented with tabs. Each tab is 2 visual spaces.
-* Don’t [cuddle your else keywords](http://wiki.c2.com/?CuddledElseBlocks).
+* Don't [cuddle your else keywords](http://wiki.c2.com/?CuddledElseBlocks).
 * Combine declarations for variables without initializers; use separate declarations for variables with initializers.
 
 ### General Guidelines
