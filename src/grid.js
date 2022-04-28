@@ -646,6 +646,10 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	self.groupControl = new GroupControl(self, self.colConfig, self.view, self.features, self.timing);
 	self.groupControl.draw(self.ui.groupControl);
 
+	if (self.view.source.origin.isLimited) {
+		self.ui.groupControl.hide();
+	}
+
 	self.groupControl.on('fieldAdded', function (fieldAdded, fields) {
 		self.ui.pivotControl.show();
 		self.ui.aggregateControl.show();
@@ -1435,6 +1439,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 		.on('click', function () {
 			self.view.unlimit();
 			self.refresh();
+			self.ui.groupControl.show();
 		})
 		.appendTo(self.ui.rowCount);
 	}
