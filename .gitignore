@@ -1,5 +1,6 @@
 .*.swp
 .DS_Store
+.nova
 .python-version
 .vscode
 TAGS
@@ -23,5 +24,7 @@ tests/pages/wcdatavis.css
 tests/pages/*.csv
 tests/pages/*.json
 tests/pages/*.xml
+third-party/*.js
+third-party/*.css
 npm-debug.log
 reports

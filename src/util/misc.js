@@ -4,7 +4,7 @@ import moment from 'moment';
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
 import jQuery from 'jquery';
-import JSONFormatter from 'json-formatter-js';
+import JSONFormatter from '../../third-party/json-formatter.esm.js';
 
 import OrdMap from './ordmap.js';
 import Lock from './lock.js';
@@ -3463,7 +3463,13 @@ export function format(fcc, fti, cell, opts) {
 				result = cell.value;
 			}
 			else {
-				result = new JSONFormatter(cell.value, 0).render();
+				result = new JSONFormatter(cell.value, 0, {
+					onToggle: function (isOpen) {
+						if (window.TableTool) {
+							TableTool.update();
+						}
+					}
+				}).render();
 			}
 			break;
 		case 'string':
