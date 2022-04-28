@@ -4,7 +4,7 @@ DIST_FILES=$(addprefix dist/,wcdatavis.js wcdatavis.min.js wcdatavis.css)
 EXAMPLE_FILES=$(patsubst dist/%,examples/%,$(DIST_FILES))
 PUB_PATH=zeus.med-web.com:~/public_html/datavis
 
-.PHONY:	all doc doc-publish doc-clean doc-serve jsdoc mkdocs serve tests test examples clean tags
+.PHONY:	all doc doc-publish doc-clean doc-serve jsdoc mkdocs serve tests test examples dist-clean clean tags
 .PHONY:	setup teardown npm-setup npm-teardown python-setup python-teardown publish tests-publish
 .DEFAULT:	all
 
@@ -78,13 +78,13 @@ examples:	tests $(EXAMPLE_FILES)
 $(EXAMPLE_FILES):examples/%:	dist/%
 	cp $^ $@
 
-clean:
-	$(MAKE) -C tests clean
-	rm -rf doc/html
+dist-clean:
 	rm -f dist/wcdatavis.js dist/wcdatavis.min.js
 	rm -f $(EXAMPLE_FILES)
 	rm -f examples/test/*.json
-	rm -rf jsdoc
+
+clean:	doc-clean dist-clean
+	$(MAKE) -C tests $@
 
 tags:
 	ctags -R -f TAGS --languages=JavaScript --sort=foldcase src
