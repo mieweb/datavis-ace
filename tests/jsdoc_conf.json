@@ -3,7 +3,7 @@
         "plugins/markdown"
     ],
     "opts": {
-        "template": "../jaguarjs-jsdoc",
+        "template": "../third-party/jaguarjs-jsdoc",
         "destination": "jsdoc",
         "readme": "README.md"
     },
