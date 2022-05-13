@@ -1853,9 +1853,7 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum, dis
 		// in place because we lack the ability to set filters that match all group functions' results.
 		// For example, day of week, because we can't filter to show "only Mondays."
 
-		if (_.every(data.groupSpec, function (gs) {
-			return gs.fun == null || GROUP_FUNCTION_REGISTRY.get(gs.fun).canFilter
-		})) {
+		if (_.every(data.groupSpec, function (gs) { return gs.fun == null || GROUP_FUNCTION_REGISTRY.get(gs.fun).canFilter; })) {
 			self._addDrillDownClass(td);
 		}
 
@@ -5430,8 +5428,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 									colValIdx: pivotNum
 								});
 
-								if (_.every(data.groupSpec, function (gs) { return gs.fun == null; })
-										&& _.every(data.pivotSpec, function (ps) { return ps.fun == null; })) {
+								if (_.every(data.groupSpec, function (gs) { return gs.fun == null || GROUP_FUNCTION_REGISTRY.get(gs.fun).canFilter; })
+										&& _.every(data.pivotSpec, function (ps) { return ps.fun == null || GROUP_FUNCTION_REGISTRY.get(ps.fun).canFilter; })) {
 									self._addDrillDownClass(td);
 								}
 
@@ -5494,8 +5492,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 									self.csv.addCol(td.innerText);
 								}
 
-								if (_.every(data.groupSpec, function (gs) { return gs.fun == null; })
-										&& _.every(data.pivotSpec, function (ps) { return ps.fun == null; })) {
+								if (_.every(data.groupSpec, function (gs) { return gs.fun == null || GROUP_FUNCTION_REGISTRY.get(gs.fun).canFilter; })
+										&& _.every(data.pivotSpec, function (ps) { return ps.fun == null || GROUP_FUNCTION_REGISTRY.get(ps.fun).canFilter; })) {
 									self._addDrillDownClass(td);
 								}
 
@@ -5676,7 +5674,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							self.csv.addCol(td.text());
 						}
 
-						if (_.every(data.pivotSpec, function (ps) { return ps.fun == null; })) {
+						if (_.every(data.pivotSpec, function (ps) { return ps.fun == null || GROUP_FUNCTION_REGISTRY.get(ps.fun).canFilter; })) {
 							self._addDrillDownClass(td.get(0));
 						}
 
