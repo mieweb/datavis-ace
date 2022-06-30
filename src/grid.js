@@ -646,10 +646,6 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	self.groupControl = new GroupControl(self, self.colConfig, self.view, self.features, self.timing);
 	self.groupControl.draw(self.ui.groupControl);
 
-	if (self.view.source.origin.isLimited) {
-		self.ui.groupControl.hide();
-	}
-
 	self.groupControl.on('fieldAdded', function (fieldAdded, fields) {
 		self.ui.pivotControl.show();
 		self.ui.aggregateControl.show();
@@ -1431,6 +1427,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 	self.ui.rowCount.text(text.join(', '));
 
 	if (self.view.source.origin.isLimited && !document.getElementById(self.id + '_isLimitedNotice') && info.numRows == self.view.source.origin.opts.autoLimit) {
+		self.ui.groupControl.hide();
 		jQuery('<span>', {
 			'id': self.id + '_isLimitedNotice',
 			'style': 'color:red; font-weight:bold; margin-left:50px',
