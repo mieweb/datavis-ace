@@ -732,7 +732,7 @@ export function eachUntil(l, f, r) {
 
 export function eachUntilObj(o, f, r, extra) {
 	for (var k in o) {
-		if (o.hasOwnProperty(k) && f(o[k], k, extra) === r) {
+		if (Object.prototype.hasOwnProperty.call(o, k) && f(o[k], k, extra) === r) {
 			return false;
 		}
 	}
@@ -835,7 +835,7 @@ export var shallowCopy = function (x) {
 		result = {};
 
 		for (var k in x) {
-			if (x.hasOwnProperty(k)) {
+			if (Object.prototype.hasOwnProperty.call(x, k)) {
 				result[k] = x[k];
 			}
 		}
@@ -892,7 +892,7 @@ export var deepCopy = function (x0) {
 			result = {};
 
 			for (var k in x) {
-				if (x.hasOwnProperty(k)) {
+				if (Object.prototype.hasOwnProperty.call(x, k)) {
 					path.push(k);
 					result[k] = recursive(x[k], depth + 1);
 					path.pop();
@@ -1124,7 +1124,7 @@ export function copyProps(src, dest, props, opts) {
 	opts = opts || {};
 
 	_.each(props, function (p) {
-		if (src.hasOwnProperty(p) || (opts.followPrototype && p in src)) {
+		if (Object.prototype.hasOwnProperty.call(src, p) || (opts.followPrototype && p in src)) {
 			dest[p] = src[p];
 		}
 	});
@@ -2134,7 +2134,7 @@ export function makeSetters(cls, setterList) {
 			}
 		};
 	});
-};
+}
 
 // delegate {{{2
 
@@ -2151,7 +2151,7 @@ export function delegate(from, to, methods) {
 			return this[to][m].apply(this[to], args);
 		};
 	});
-};
+}
 
 // setName {{{2
 
@@ -2177,7 +2177,7 @@ export function mixinNameSetting(cls) {
 
 		return self.name;
 	}
-};
+}
 
 // Locking {{{1
 

@@ -1805,7 +1805,7 @@ View.prototype.filter = function (cont) {
 		}
 
 		for (var operator in fltr) {
-			if (!fltr.hasOwnProperty(operator)) {
+			if (!Object.prototype.hasOwnProperty.call(fltr, operator)) {
 				continue;
 			}
 

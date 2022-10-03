@@ -1106,9 +1106,9 @@ mixinEventHandling(GridFilterSet, [
 
 GridFilterSet.prototype.add = function (field, target, opts) {
 	var self = this
-		, opts = opts || {}
 		, filter;
 
+	opts = opts || {};
 	filter = self.build(field, target, opts);
 
 	if (filter == null) {

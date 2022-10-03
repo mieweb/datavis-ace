@@ -26,6 +26,7 @@ import Lock from './util/lock.js';
 
 import { ComputedView } from './computed_view.js';
 import { MirageView } from './mirage_view.js';
+import { Perspective } from './perspective.js';
 import { Grid } from './grid.js';
 import { Graph } from './graph.js';
 

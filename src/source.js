@@ -9,6 +9,7 @@ import {
 	debug,
 	deepCopy,
 	deepDefaults,
+	getComparisonFn,
 	getParamsFromUrl,
 	getProp,
 	log,

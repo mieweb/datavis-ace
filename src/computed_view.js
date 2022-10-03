@@ -231,7 +231,7 @@ import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
  *
  * Contains the rows that belong to the particular group/pivot combination.  Indexed first by the
  * so-called `rowValIndex` and then by the `colValIndex` (which correspond to elements of
- * `data.rowVals` and `data.colVals`, respectively — see {@link ComputedView~Data}).
+ * `data.rowVals` and `data.colVals`, respectively — see {@link ComputedView~Data}).
  *
  * @example
  * view.getData((data) => {
@@ -1983,7 +1983,7 @@ ComputedView.prototype.filter = function (cont) {
 		}
 
 		for (var operator in fltr) {
-			if (!fltr.hasOwnProperty(operator)) {
+			if (!Object.prototype.hasOwnProperty.call(fltr, operator)) {
 				continue;
 			}
 
@@ -3476,8 +3476,10 @@ ComputedView.prototype.getData = function (cont, reason) {
 
 	cont = cont || I;
 
+	var lockMsg;
+
 	if (self.lock.isLocked()) {
-		var lockMsg = 'Waiting to get data';
+		lockMsg = 'Waiting to get data';
 		if (reason != null) {
 			lockMsg += ': ' + reason;
 		}
@@ -3486,7 +3488,7 @@ ComputedView.prototype.getData = function (cont, reason) {
 		}, lockMsg);
 	}
 	else {
-		var lockMsg = 'Getting data';
+		lockMsg = 'Getting data';
 		if (reason != null) {
 			lockMsg += ': ' + reason;
 		}
