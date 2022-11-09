@@ -4,21 +4,25 @@
     "$< repeat(9, VALUE) >$",
     {
       constant: "Alpha",
-      seq: "$< sequence('seq1', 1) >$"
+      seq: "$< sequence('seq1', 1) >$",
+      fruit: "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
     },
     "$< repeat(10, VALUE) >$",
     {
       constant: "Bravo",
-      seq: "$< sequence('seq2', 1) >$"
+      seq: "$< sequence('seq2', 1) >$",
+      fruit: "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
     },
     "$< repeat(11, VALUE) >$",
     {
       constant: "Charlie",
-      seq: "$< sequence('seq3', 1) >$"
+      seq: "$< sequence('seq3', 1) >$",
+      fruit: "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
     }
   ],
   typeInfo: [
     { field: 'constant', type: 'string' },
-    { field: 'seq', type: 'number' }
+    { field: 'seq', type: 'number' },
+    { field: 'fruit', type: 'string' }
   ]
 }
