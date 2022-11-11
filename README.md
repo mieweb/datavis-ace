@@ -6,26 +6,20 @@ DataVis is a tool for exploring, manipulating, and visualizing data. It can impo
 
 ### Traditional Website
 
-1. Run `npm install` to get dependencies.
-2. Run `npm run rollup` to build the JS file.
-3. Run `npm run uglify` to compress the JS and CSS files.
-4. Copy `dist/wcdatavis.js` and `dist/wcdatavis.css` to your server.
-5. Include them like any other JS and CSS files.
+1. Run `make setup` to get dependencies.
+2. Run `make` to build the JS file.
+3. Copy `dist/wcdatavis.js` and `dist/wcdatavis.css` to your server.
+4. Include them like any other JS and CSS files.
 
 ## How to Develop
 
 See the [Development section of the Manual](doc/md/development/index.md) for a full explanation.  What follows is a synopsis.
 
-### Pre-Requisites
-
-1. Run `git submodule update --init` to get all the source code.
-2. Run `npm install` to get the Node tools needed to build/test.
-3. Run `pip install -r requirements.txt` to get Python tools needed to test.
-
 ### Quickstart
 
 We use GNU Make to provide a simple interface to the various tools to build and test DataVis.
 
+* `make setup` — Installs all dependencies.
 * `make` — Build the compressed DataVis JS and CSS files.
 * `make tests` — Same as `make`, then copy to tests directory, and build test data.
   * `make DICT_FILE=[path] tests` — To set the dictionary file path when generating test data.
@@ -60,4 +54,5 @@ We use GNU Make to provide a simple interface to the various tools to build and 
 
 ### Submodules
 
-* `jaguarjs-jsdoc` — Submodule for the JSDoc template used to build documentation.
+* `jaguarjs-jsdoc` — JSDoc template used to build documentation.
+* `json-formatter-js` — A library to render JSON objects in a tree view.

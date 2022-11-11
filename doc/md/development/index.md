@@ -61,9 +61,7 @@ The number one convention is to avoid making unnecessary diffs.  Follow the styl
 The DataVis support tooling is written in both JavaScript and Python.  For the latter, I recommend setting up a virtualenv using the latest stable Python 3 release first.  Then you can run the following to get all the required packages.
 
 ```
-$ git submodule update --init
-$ npm install
-$ pip install -r requirements.txt
+$ make setup
 ```
 
 !!! help "Installing Node with `nvm`"
