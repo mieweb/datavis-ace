@@ -543,10 +543,10 @@ export var stringValueType = (function () {
 		else if (re_datetime.test(s)) {
 			return 'datetime';
 		}
-		else if (s.startsWith('{') && s.endsWith('}')) {
+		else if (typeof s === 'string' && s.startsWith('{') && s.endsWith('}')) {
 			return 'json';
 		}
-		else if (s.startsWith('[') && s.endsWith(']')) {
+		else if (typeof s === 'string' && s.startsWith('[') && s.endsWith(']')) {
 			return 'json';
 		}
 		else if (typeof s === 'string' && s.charAt(0) === '$') {
