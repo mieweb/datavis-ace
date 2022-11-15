@@ -28,6 +28,7 @@ RANDOMS = {}
 RANDOM_SEED = { 'seed': None }
 LAST = {}
 BLANK_CHANCE = { 'chance': 0 }
+NULL_CHANCE = { 'chance': 0 }
 
 def init_random(name=None):
     if name == None:
@@ -150,6 +151,10 @@ def blank_chance(c):
     # print('Setting blank chance: {}'.format(c), file=sys.stderr)
     BLANK_CHANCE['chance'] = c
 
+def null_chance(c):
+    # print('Setting null chance: {}'.format(c), file=sys.stderr)
+    NULL_CHANCE['chance'] = c
+
 def repeat(times, val):
     if isinstance(times, str):
         times = int(times)
@@ -211,7 +216,8 @@ def process(node):
             'lipsum': lipsum,
             'last': last,
             'RANDOM_SEED': RANDOM_SEED,
-            'BLANK_CHANCE': BLANK_CHANCE }
+            'BLANK_CHANCE': BLANK_CHANCE,
+            'NULL_CHANCE': NULL_CHANCE }
     r = re.compile(r'\$<\s*(.*?)\s*>\$')
     def recur(node):
         if type(node) is dict:
@@ -248,6 +254,10 @@ def process(node):
                 if BLANK_CHANCE['chance'] > 0:
                     init_random('__BLANK_CHANCE')
                     if random_float('__BLANK_CHANCE') < BLANK_CHANCE['chance']:
+                        return ''
+                if NULL_CHANCE['chance'] > 0:
+                    init_random('__NULL_CHANCE')
+                    if random_float('__NULL_CHANCE') < NULL_CHANCE['chance']:
                         return None
                 return val
         return node
