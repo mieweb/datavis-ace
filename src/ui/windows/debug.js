@@ -27,7 +27,7 @@ DebugWin.prototype.show = function (grid, view, source) {
 		duration: 100
 	};
 
-	var win = jQuery('<div>', { title: 'Debug Info' }).css({
+	var win = jQuery('<div>', { id: 'wcdv_debugwin', title: 'Debug Info' }).css({
 		'display': 'flex',
 		'flex-direction': 'column'
 	}).dialog({
@@ -53,31 +53,79 @@ DebugWin.prototype.show = function (grid, view, source) {
 
 	var tabs = [{
 		name: 'Source',
-		id: 'sourceConfigTab',
-		elt: (function () {
-			var info = new OrdMap();
-			info.set('Source type', source.type);
-			info.set('Source name', source.name);
-			info.set('Source spec', source.origin.spec);
-			return jQuery('<div>')
-				.append(info.asHtmlDefnList());
-// 				.append(new JSONFormatter(source.origin.spec, 0).render());
-		})()
+		id: 'sourceTab',
+		items: [{
+			name: 'Configuration',
+			elt: (function () {
+				var info = new OrdMap();
+				info.set('Source type', source.type);
+				info.set('Source name', source.name);
+				info.set('Source spec', source.origin.spec);
+				return jQuery('<div>')
+					.append(info.asHtmlDefnList());
+			})()
+		}, {
+			name: 'Params',
+			elt: jQuery('<div>')
+				.append(new JSONFormatter(source.params, 0).render())
+		}, {
+			name: 'Type Info',
+			elt: jQuery('<div>')
+				.append(new JSONFormatter(source.cache.typeInfo.asMap(), 0).render())
+		}]
 	}, {
-		name: 'Params',
-		id: 'paramsTab',
-		elt: jQuery('<div>')
-			.append(new JSONFormatter(source.params, 0).render())
+		name: 'View',
+		id: 'viewTab',
+		items: [{
+			name: 'Current Config',
+			elt: (function () {
+				var info = new OrdMap();
+				info.set('View name', view.name);
+				info.set('Filter config', view.getFilter());
+				info.set('Group config', view.getGroup());
+				info.set('Pivot config', view.getPivot());
+				info.set('Aggregate config', view.getAggregate());
+				return jQuery('<div>')
+					.append(info.asHtmlDefnList());
+			})()
+		}]
 	}, {
-		name: 'Type Info',
-		id: 'typeInfoTab',
-		elt: jQuery('<div>')
-			.append(new JSONFormatter(source.cache.typeInfo.asMap(), 0).render())
+		name: 'Grid',
+		id: 'gridTab',
+		items: [{
+			name: 'Columns',
+			elt: jQuery('<div>')
+				.append(new JSONFormatter(grid.colConfig.asMap(), 0).render())
+		}]
 	}, {
-		name: 'Col Config',
-		id: 'colConfigTab',
-		elt: jQuery('<div>')
-			.append(new JSONFormatter(grid.colConfig.asMap(), 0).render())
+		name: 'Prefs',
+		id: 'prefsTab',
+		items: [{
+			name: 'Configuration',
+			elt: (function () {
+				var info = new OrdMap();
+				info.set('Auto-Save', grid.prefs.opts.autoSave);
+				info.set('Backend Type', grid.prefs.opts.backend.type);
+				info.set('Current Perspective', jQuery('<span>' + grid.prefs.currentPerspective.id + '<br/><i>' + grid.prefs.currentPerspective.name + '</i></span>'));
+				info.set('Bardo', grid.prefs.bardo);
+				return jQuery('<div>')
+					.append(info.asHtmlDefnList());
+			})()
+		}, {
+			name: 'Perspectives',
+			elt: (function () {
+				var info = new OrdMap();
+				_.each(grid.prefs.perspectives, function (p) {
+					info.set(p.id, {
+						'Name': p.name,
+						'Config': p.config,
+						'Status': p.isUnsaved ? 'Modified' : 'Saved'
+					});
+				});
+				return jQuery('<div>')
+					.append(info.asHtmlDefnList());
+			})()
+		}]
 	}];
 
 	var tabsList = jQuery('<ul>').css({
@@ -98,13 +146,20 @@ DebugWin.prototype.show = function (grid, view, source) {
 	})
 		.append(tabsList);
 	_.each(tabs, function (t) {
-		t.elt.attr({id: t.id}).css({
+		var container = jQuery('<div>', {id: t.id}).css({
 			'flex-grow': '1',
 			'flex-shrink': '1',
 			'flex-basis': 'auto',
 			'overflow': 'scroll'
 		});
-		tabsDiv.append(t.elt);
+		_.each(t.items, function (ti) {
+			container.append(jQuery('<h3>').text(ti.name));
+			container.append(ti.elt);
+		});
+		container.accordion({
+			heightStyle: "content"
+		});
+		tabsDiv.append(container);
 	});
 	tabsDiv.appendTo(win).tabs();
 

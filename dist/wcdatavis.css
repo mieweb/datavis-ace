@@ -1015,6 +1015,22 @@ html:not(.ie11) .wcdv_grid_table table th.wcdv_cell_empty div {
     background-color: #E0F2F1;
 }
 
+#wcdv_debugwin dt {
+	font-weight: bold;
+}
+
+#wcdv_debugwin dt::after {
+	content: ":";
+}
+
+#wcdv_debugwin dd {
+	margin-inline-start: 1.5em;
+}
+
+#wcdv_debugwin .json-formatter-row {
+	font-family: unset;
+}
+
 .wcdv_minimal_width {
 	width: 1px;
 }

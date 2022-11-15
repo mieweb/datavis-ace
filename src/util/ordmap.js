@@ -268,16 +268,21 @@ OrdMap.prototype.asMap = function () {
 OrdMap.prototype.asHtmlDefnList = function () {
 	var dl = jQuery('<dl>');
 	this.each(function (v, k) {
-		dl.append(jQuery('<dt>').text(k));
+		var dt = jQuery('<dt>').text(k);
+		var dd = jQuery('<dd>');
 		if (v instanceof jQuery || v instanceof Element) {
-			dl.append(jQuery('<dd>').append(v));
+			dd.append(v);
 		}
 		else if (_.isObject(v)) {
-			dl.append(jQuery('<dd>').append(new JSONFormatter(v, 0).render()));
+			dd.append(new JSONFormatter(v, 0).render());
 		}
 		else {
-			dl.append(jQuery('<dd>').text(v));
+			dd.text(v);
 		}
+		jQuery('<div>')
+			.append(dt)
+			.append(dd)
+			.appendTo(dl);
 	});
 	return dl;
 };
