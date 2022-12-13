@@ -11,7 +11,9 @@ data:
 
 pages:
 	cp $(PAGES_DEPENDS) pages
-	cp data/*.{csv,json,xml} pages
+	cp data/*.csv pages
+	cp data/*.json pages
+	cp data/*.xml pages
 	cp data/third-party/*.csv pages
 
 doc:
