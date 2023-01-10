@@ -563,7 +563,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		})
 		.appendTo(self.ui.root);
 
-	self._addTitleWidgets(self.ui.titlebar, doingServerFilter, !!self.opts.runImmediately, self.id);
+	self._addTitleWidgets(self.ui.titlebar, doingServerFilter, self.id);
 
 	self.ui.content = jQuery('<div>', {
 		'class': 'wcdv_grid_content'
@@ -805,26 +805,26 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		self.colConfigFromTypeInfo(typeInfo);
 	});
 
-	if (self.opts.runImmediately) {
-		self.prefs.prime(function () {
-			// Create a way to switch back and forth between the two types of views depending on if a
-			// perspective is live or not.
+	self.prefs.prime(function () {
+		// Create a way to switch back and forth between the two types of views depending on if a
+		// perspective is live or not.
 
-			self.prefs.on('perspectiveChanged', function (id, p) {
-				self.setView();
-				self.redraw();
-			}, {
-				info: 'Changing view type to match new perspective'
-			});
-
+		self.prefs.on('perspectiveChanged', function (id, p) {
 			self.setView();
 			self.redraw();
+		}, {
+			info: 'Changing view type to match new perspective'
 		});
-	}
-	else {
-		self.hasRun = false;
-		self.hide();
-	}
+
+		if (self.opts.runImmediately) {
+			self.setView();
+			self.redraw();
+		}
+		else {
+			self.hasRun = false;
+			self.hide();
+		}
+	});
 
 	/*
 	 * Store self object so it can be accessed from other JavaScript in the page.
@@ -1003,11 +1003,10 @@ Grid.prototype.setView = function () {
  *
  * @param {object} header
  * @param {boolean} doingServerFilter If true, then we are filtering and sorting on the server.
- * @param {boolean} runImmediately If true, then the grid will be refreshed right away.
  * @param {string} id
  */
 
-Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, runImmediately, id) {
+Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 	var self = this;
 
 	self.ui.spinner = jQuery('<span>', {
