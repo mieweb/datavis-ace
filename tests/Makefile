@@ -18,6 +18,7 @@ pages:
 
 doc:
 	$(JSDOC) -p -c jsdoc_conf.json lib
+	@printf '\033[32;1mRun `make doc-publish` to publish documentation to $(PUB_PATH)\033[0m\n'
 
 doc-publish:	doc
 	rsync -a --delete jsdoc/ $(DOC_PUB_PATH)/jsdoc-tests/

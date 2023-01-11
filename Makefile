@@ -27,10 +27,17 @@ python-teardown:
 	-pyenv virtualenv-delete -f datavis
 	-pyenv local --unset
 
+jsdoc-setup:
+	cd third-party/jaguarjs-jsdoc && npm i
+
+jsdoc-teardown:
+	cd third-party/jaguarjs-jsdoc && rm -rf node_modules
+
 setup:	npm-setup python-setup
 	git submodule update --init
+	$(MAKE) jsdoc-setup
 
-teardown:	npm-teardown python-teardown
+teardown:	npm-teardown python-teardown jsdoc-teardown
 
 dist/wcdatavis.js:	rollup.config.js datavis.js third-party/json-formatter.esm.js $(SOURCE)
 	npm run rollup
@@ -61,6 +68,7 @@ doc-serve:
 
 jsdoc:
 	$(JSDOC) -p -c jsdoc_conf.json src
+	$(MAKE) -C tests $@
 
 mkdocs:
 	mkdocs build
