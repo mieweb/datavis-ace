@@ -125,6 +125,22 @@ class GridUi {
 	get table() {
 		return this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
 	}
+
+	/**
+	 * Locate the plain table headers.
+	 */
+
+	get plainDataHeaders() {
+		return this.table.findElements(By.css(`thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title`));
+	}
+
+	/**
+	 * Locate the plain table data rows.
+	 */
+
+	get plainDataRows() {
+		return this.table.findElements(By.css(`tbody > tr`));
+	}
 }
 
 // Grid {{{1
@@ -239,22 +255,6 @@ class Grid {
 		return this.driver.executeScript(`MIE.WC_DataVis.grids['${this.id}'].view.source.origin.url = '${url}'`);
 	}
 
-	// #getNumRows {{{2
-
-	/**
-	 * Tells how many rows there are in the table.  Includes any total rows at the bottom, if the data
-	 * has been grouped or pivotted.  Also includes any "show more" rows, in limited plain output.
-	 *
-	 * @returns {number}
-	 * Number of rows in the table.
-	 */
-
-	async getNumRows() {
-		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
-		//const visible = await asyncFilter(trs, async (elt) => await elt.isDisplayed());
-		return trs.length;
-	}
-
 	// Sorting {{{2
 
 	/**
@@ -299,7 +299,7 @@ class Grid {
 	 */
 
 	async setGroupMode(kind) {
-		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value=${kind}]`)).click();
+		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value="${kind}"]`)).click();
 	}
 
 	// #getGroup {{{3
@@ -355,7 +355,7 @@ class Grid {
 			if (visibleWins.length > 1) {
 				throw new Error('Found too many visible jQuery UI windows');
 			}
-			return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname=${groupFun}]`)).click();
+			return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname="${groupFun}"]`)).click();
 		}
 	}
 
@@ -416,7 +416,7 @@ class Grid {
 		if (visibleWins.length > 1) {
 			throw new Error('Found too many visible jQuery UI windows');
 		}
-		return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname=${groupFunName}]`)).click();
+		return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname="${groupFunName}"]`)).click();
 	}
 
 	// #getGroupCell {{{3
@@ -523,6 +523,28 @@ class Grid {
 		return this.driver.findElement(By.css('div.wcdv_pivot_control .wcdv_control_clear_button')).click();
 	}
 
+	async findColValIdx(colVal) {
+		let cviMin = 0, cviMax = 9999;
+		for (let i = 0; i < colVal.length; i += 1) {
+			let tr = await this.driver.findElement(By.css(`tr[data-wcdv-pfi="${i}"]`));
+			let th = await asyncFilter(await tr.findElements(By.css(`th[data-wcdv-cvi]`)), async (elt) => {
+				let span = await elt.findElement(By.css('div.wcdv_heading_container > span.wcdv_heading_title'));
+				return await span.getText() === colVal[i]
+					&& await elt.getAttribute('data-wcdv-cvi') >= cviMin
+					&& await elt.getAttribute('data-wcdv-cvi') <= cviMax;
+			});
+			if (th.length === 0) {
+				throw new Error(`Unable to locate a header named "${colVal[i]}" with a CVI in [${cviMin}, ${cviMax}]`);
+			}
+			if (th.length > 1) {
+				throw new Error(`Found too many headers named "${colVal[i]}" with a CVI in [${cviMin}, ${cviMax}]`);
+			}
+			cviMin = +(await th[0].getAttribute('data-wcdv-cvi'));
+			cviMax = +(await th[0].getAttribute('colspan')) + cviMin - 1;
+		}
+		return cviMin;
+	}
+
 	// Aggregates {{{2
 
 	async addAggregate(funName, field) {
@@ -539,6 +561,68 @@ class Grid {
 
 	async clearAggregates() {
 		return this.driver.findElement(By.css('div.wcdv_aggregate_control .wcdv_control_clear_button')).click();
+	}
+
+	/**
+	 * Find the table cell for an aggregate result.
+	 *
+	 * @param {string} type
+	 * What type of aggregate to drill down into.  Must be one of: group, pivot, cell, all.
+	 *
+	 * @param {string[]} rowVal
+	 * If `type` is "group" or "cell," the rowVal to look for.
+	 *
+	 * @param {string[]} colVal
+	 * If `type` is "pivot" or "cell," the colVal to look for.
+	 *
+	 * @param {number} aggNum
+	 * Which aggregate to look for, starting at zero.
+	 *
+	 * @returns Promise
+	 * The table cell that contains the aggregate result.
+	 */
+
+	async findAggregateResult(type, rowVal, colVal, aggNum) {
+		switch (type) {
+		case 'group':
+			break;
+		case 'pivot':
+			let cvi = await this.findColValIdx(colVal);
+			return this.driver.findElement(By.css(`td[data-wcdv-agg-scope=pivot][data-wcdv-cvi="${cvi}"][data-wcdv-agg-num="${aggNum}"]`));
+		case 'cell':
+			break;
+		case 'all':
+			break;
+		default:
+			throw new Error('Call Error: `type` must be one of: [group, pivot, cell, all]');
+		}
+	}
+
+	async getAggregateResult(type, rowVal, colVal, aggNum) {
+		let td = await this.findAggregateResult(type, rowVal, colVal, aggNum);
+		return td.getText();
+	}
+
+	/**
+	 * Drill down into an aggregate result by double-clicking its table cell.  Drilling down actually
+	 * happens for a specific aggregate function, but at the moment they all have the same population,
+	 * so this function just picks the first one to double-click on.
+	 *
+	 * @param {string} type
+	 * What type of aggregate to drill down into.  Must be one of: group, pivot, cell.  I mean,
+	 * technically there is an "all" aggregate type, but you can't drill down into it because nothing
+	 * would change, you're already looking at all the data.
+	 *
+	 * @param {string[]} rowVal
+	 * If `type` is "group" or "cell," the rowVal to look for.
+	 *
+	 * @param {string[]} colVal
+	 * If `type` is "pivot" or "cell," the colVal to look for.
+	 */
+
+	async drillDown(type, rowVal, colVal) {
+		let td = await this.findAggregateResult(type, rowVal, colVal, 0);
+		return this.driver.actions().doubleClick(td).perform();
 	}
 
 	// Filter {{{2
@@ -742,6 +826,32 @@ class Grid {
 
 	// Data Checking - Plain {{{2
 
+	// #getNumRows {{{3
+
+	/**
+	 * Tells how many rows there are in the table.  Includes any total rows at the bottom, if the data
+	 * has been grouped or pivotted.  Also includes any "show more" rows, in limited plain output.
+	 *
+	 * @returns {number}
+	 * Number of rows in the table.
+	 */
+
+	async getNumRows() {
+		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
+		//const visible = await asyncFilter(trs, async (elt) => await elt.isDisplayed());
+		return trs.length;
+	}
+
+	// #getColumns {{{3
+
+	async getColumns() {
+		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+		const headers = await table.findElements(By.css('thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title'));
+		return Promise.all(_.map(headers, (elt) => elt.getText()));
+	}
+
+	// #getCell {{{3
+
 	/**
 	 * Get a cell from a plain table, given the name of the column and the row number.
 	 *
@@ -796,13 +906,9 @@ class Grid {
 		}
 	}
 
-	async getColumns() {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
-		const headers = await table.findElements(By.css('thead > tr > th > div.wcdv_heading_container > span.wcdv_heading_title'));
-		return Promise.all(_.map(headers, (elt) => elt.getText()));
-	}
+	// #getPlainData_asArrays {{{3
 
-	async getPlainData() {
+	async getPlainData_asArrays() {
 		const trs = await this.ui.table.findElements(By.css('tbody > tr'));
 		return Promise.all(_.map(trs, async (tr) => {
 			let tds = await tr.findElements(By.css('td'));
@@ -817,6 +923,30 @@ class Grid {
 			}));
 		}));
 	}
+
+	// #getPlainData_asObjects {{{3
+
+	async getPlainData_asObjects(fields) {
+		const ths = await this.ui.plainDataHeaders;
+		const trs = await this.ui.plainDataRows;
+
+		const headers = await Promise.map(ths, async (th) => th.getText());
+
+		fields = fields != null
+			? _.map(fields, (f) => headers.indexOf(f))
+			: _.range(headers.length);
+
+		return Promise.map(trs, async (tr) => {
+			let row = {};
+			const tds = await tr.findElements(By.css(`td:not(.wcdv_group_col_spacer)`));
+			await Promise.each(fields, async (i) => {
+				const t = await tds[i].getText();
+				row[headers[i]] = (t === ' ' ? '' : t);
+			});
+			return row;
+		});
+	}
+
 
 	// Data Checking - Group {{{2
 
@@ -954,7 +1084,7 @@ class Grid {
 				throw new Error(`No such rowval: ${JSON.stringify(rowVal)}`);
 			}
 
-			const tds = await trs[rowValPos].findElements(By.css(`tbody > tr > td[data-rowval-index]`));
+			const tds = await trs[rowValPos].findElements(By.css(`tbody > tr > td[data-wcdv-rvi]`));
 			if (tds.length === 0) {
 				throw new Error(`No cell for rowval: ${JSON.stringify(rowVal)}`);
 			}
@@ -980,7 +1110,7 @@ class Grid {
 			throw new Error('not implemented');
 		}
 		else {
-			const tds = await table.findElement(By.css(`tbody > tr > td[data-rowval-index=${rowValIdx}]`));
+			const tds = await table.findElement(By.css(`tbody > tr > td[data-wcdv-rvi="${rowValIdx}"]`));
 			if (tds.length === 0) {
 				throw new Error(`No such rowval index: ${rowValIdx}`);
 			}

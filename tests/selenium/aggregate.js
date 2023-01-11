@@ -1,5 +1,6 @@
 const {assert} = require('chai');
 const _ = require('lodash');
+const {Promise} = require('bluebird');
 const Grid = require('../lib/grid.js');
 const {sleep} = require('../lib/util.js');
 const setup = require('../lib/setup.js');
@@ -299,5 +300,47 @@ describe('Aggregate', function() {
 				});
 			});
 		});
+	});
+
+	describe('pivot', function () {
+		let grid;
+
+		before(async function () {
+			await driver.get('http://localhost:3000/grid/default.html');
+			grid = new Grid(driver);
+			await grid.waitForIdle();
+
+			await grid.addGroup('country');
+			await grid.waitForIdle();
+
+			await grid.addPivot('fruit');
+			await grid.waitForIdle();
+		});
+
+		after(async function () {
+			await driver.executeScript('window.localStorage.clear()');
+		});
+
+		//it('has correct group aggregates', async function () { });
+
+		it('has correct pivot aggregates', async function () {
+			await Promise.each([
+				[['Banana'], 4],
+				[['Blueberry'], 11],
+				[['Cherry'], 9],
+				[['Grape'], 23],
+				[['Kiwi'], 25],
+				[['Mango'], 17],
+				[['Orange'], 7],
+				[['Pineapple'], 3],
+				[['Strawberry'], 1],
+			], async (t) => {
+				const [cv, res] = t;
+				assert.equal(await grid.getAggregateResult('pivot', null, cv, 0), res);
+			});
+		});
+
+		//it('has correct cell aggregates', async function () { });
+		//it('has correct all aggregates', async function () { });
 	});
 });
