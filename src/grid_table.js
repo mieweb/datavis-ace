@@ -972,8 +972,8 @@ GridTable.prototype._addDrillDownHandler = function (tbl, data) {
 
 		var elt = jQuery(this);
 		var filter = deepCopy(self.view.getFilter());
-		var rowValIndex = elt.attr('data-rowval-index');
-		var colValIndex = elt.attr('data-colval-index');
+		var rowValIndex = elt.dvAttr('rvi');
+		var colValIndex = elt.dvAttr('cvi');
 
 		if (rowValIndex != null) {
 			_.each(data.rowVals[rowValIndex], function (x, i) {
@@ -1168,8 +1168,8 @@ GridTable.prototype._getDisplayFormat = function () {
  *
  * For group & pivot output, you need to set:
  *
- *   - `data-rowval-index` on the TR (for group & cell aggregates)
- *   - `data-colval-index` on the TD (for pivot & cell aggregates)
+ *   - `data-wcdv-rvi` on the TR (for group & cell aggregates)
+ *   - `data-wcdv-cvi` on the TD (for pivot & cell aggregates)
  *   - `data-wcdv-agg-scope` on the TD
  *   - `data-wcdv-agg-num` on the TD
  */
@@ -1234,16 +1234,16 @@ GridTable.prototype._setupFullValueWin = function (data) {
 
 			switch (aggScope) {
 			case 'cell':
-				rvi = +tr.attr('data-rowval-index');
-				cvi = +td.attr('data-colval-index');
+				rvi = +tr.dvAttr('rvi');
+				cvi = +td.dvAttr('cvi');
 				aggResult = data.agg.results[aggScope][aggNum][rvi][cvi];
 				break;
 			case 'group':
-				rvi = +tr.attr('data-rowval-index');
+				rvi = +tr.dvAttr('rvi');
 				aggResult = data.agg.results[aggScope][aggNum][rvi];
 				break;
 			case 'pivot':
-				cvi = +td.attr('data-colval-index');
+				cvi = +td.dvAttr('cvi');
 				aggResult = data.agg.results[aggScope][aggNum][cvi];
 				break;
 			case 'all':
@@ -1818,7 +1818,7 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum, dis
 		var text;
 
 		var td = document.createElement('td');
-		td.setAttribute('data-rowval-index', groupNum);
+		td.setAttribute('data-wcdv-rvi', groupNum);
 		td.setAttribute('data-wcdv-agg-scope', 'group');
 		td.setAttribute('data-wcdv-agg-num', aggNum);
 
@@ -4727,7 +4727,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 
 	_.each(data.data, function (rowGroup, groupNum) {
 		var tr = document.createElement('tr');
-		tr.setAttribute('data-rowval-index', groupNum);
+		tr.setAttribute('data-wcdv-rvi', groupNum);
 
 		self.csv.addRow();
 
@@ -5016,9 +5016,10 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 				.append(span, headingThControls);
 
 			th = jQuery('<th>')
-				.attr({
-					'data-wcdv-field': field,
-					'data-wcdv-draggable-origin': 'GRID_TABLE_HEADER'
+				.dvAttr({
+					'gfi': fieldIdx,
+					'field': field,
+					'draggable-origin': 'GRID_TABLE_HEADER'
 				})
 				.append(headingThContainer)
 				._makeDraggableField();
@@ -5077,6 +5078,11 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			};
 		}
 
+		//                ↓↓↓↓↓↓↓↓↓↓↓↓↓
+		// +-------------+-------------+--------------------------------------+-----------+
+		// |             | PIVOT FIELD | COLVAL 1.1              | COLVAL 1.2 |           |
+		// +-------------+-------------+------------+------------+------------+-----------+
+
 		var span = jQuery('<span>').addClass('wcdv_heading_title').text(fcc.displayText || pivotField);
 		self.csv.addCol(fcc.displayText || pivotField);
 
@@ -5087,9 +5093,9 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			.append(span, headingThControls);
 
 		var th = jQuery('<th>')
-			.attr({
-				'data-wcdv-field': pivotField,
-				'data-wcdv-draggable-origin': 'GRID_TABLE_HEADER'
+			.dvAttr({
+				'field': pivotField,
+				'draggable-origin': 'GRID_TABLE_HEADER'
 			})
 			.append(headingThContainer)
 			._makeDraggableField();
@@ -5100,6 +5106,12 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 		self.ui.thMap[pivotField] = th;
 		tr.append(th);
+
+
+		//                              ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		// +-------------+-------------+--------------------------------------+-----------+
+		// |             | PIVOT FIELD | COLVAL 1.1              | COLVAL 1.2 |           |
+		// +-------------+-------------+------------+------------+------------+-----------+
 
 		// Create headers for the fields that we've pivotted by.  The headers are the column values for
 		// those fields.
@@ -5164,6 +5176,7 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 					.append(span, headingThControls);
 
 				th = jQuery('<th>')
+					.dvAttr('cvi', colValIndex)
 					.append(headingThContainer);
 
 				self.setCss(th, colVal);
@@ -5289,7 +5302,8 @@ GridTablePivot.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 
 	for (var pivotFieldIdx = 0; pivotFieldIdx < data.pivotFields.length; pivotFieldIdx += 1) {
 		self.csv.addRow();
-		tr = jQuery('<tr>');
+		tr = jQuery('<tr>')
+			.dvAttr('pfi', pivotFieldIdx);
 		_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 			if (typeof what === 'string') {
 				switch (what) {
@@ -5395,7 +5409,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 		self.csv.addRow();
 
 		var tr = document.createElement('tr');
-		tr.setAttribute('data-rowval-index', groupNum);
+		tr.setAttribute('data-wcdv-rvi', groupNum);
 
 		_.each(self.opts.displayOrder, function (what, displayOrderIndex) {
 			if (typeof what === 'string') {
@@ -5425,8 +5439,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							_.each(df.cell, function (dispFmt, dfCellIndex) {
 								var td = document.createElement('td');
 								td.classList.add('wcdv_pivot_cell');
-								td.setAttribute('data-rowval-index', groupNum);
-								td.setAttribute('data-colval-index', pivotNum);
+								td.setAttribute('data-wcdv-rvi', groupNum);
+								td.setAttribute('data-wcdv-cvi', pivotNum);
 
 								td.innerHTML = templates.cell[dfCellIndex]({
 									rowValIdx: groupNum,
@@ -5455,8 +5469,8 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 								var td = document.createElement('td');
 								td.classList.add('wcdv_pivot_cell');
-								td.setAttribute('data-rowval-index', groupNum);
-								td.setAttribute('data-colval-index', pivotNum);
+								td.setAttribute('data-wcdv-rvi', groupNum);
+								td.setAttribute('data-wcdv-cvi', pivotNum);
 								td.setAttribute('data-wcdv-agg-scope', 'cell');
 								td.setAttribute('data-wcdv-agg-num', aggInfo.aggNum);
 
@@ -5647,11 +5661,11 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							self.csv.addCol('');
 						}
 
-						var td = jQuery('<td>').attr({
-							'data-colval-index': colValIdx
+						var td = jQuery('<td>').dvAttr({
+							'cvi': colValIdx,
+							'agg-scope': 'pivot',
+							'agg-num': aggInfo.aggNum
 						});
-						td.attr('data-wcdv-agg-scope', 'pivot');
-						td.attr('data-wcdv-agg-num', aggInfo.aggNum);
 						var aggResult = data.agg.results.pivot[aggNum][colValIdx];
 
 						if (isElement(aggResult)) {

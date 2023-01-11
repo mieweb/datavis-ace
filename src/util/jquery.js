@@ -478,5 +478,60 @@ jQuery.fn.extend({
 		return this.children().filter(function (i, elt) {
 			return jQuery(elt).attr('data-wcdv-field') === field;
 		});
+	},
+
+	/**
+	 * A shortcut for accessing DataVis-specific attributes on elements.
+	 *
+	 * @param {string|object} name
+	 * When a string, the partial name of the attribute.  When an object, sets the values of a bunch
+	 * of attributes at once.  In both cases, the attribute names are prefixed with `data-wcdv-`.
+	 *
+	 * @param {string} [val]
+	 * Assigns this value to the attribute, if provided.
+	 *
+	 * @returns {string|jQuery}
+	 * When getting, returns the attribute value, which is always a string because HTML.  When
+	 * setting, returns `this` for chaining purposes.
+	 */
+
+	dvAttr: function () {
+		var args = Array.prototype.slice.call(arguments);
+
+		if (args.length === 1) {
+			if (typeof args[0] === 'string') {
+				return this.attr('data-wcdv-' + args[0]);
+			}
+			else if (typeof args[0] === 'object') {
+				for (var p in args[0]) {
+					if (Object.prototype.hasOwnProperty.call(args[0], p)) {
+						args[0]['data-wcdv-' + p] = args[0][p];
+						delete args[0][p];
+					}
+				}
+				return this.attr(args[0]);
+			}
+			else {
+				throw new Error('Call Error: Sole argument must be a string (getter) or object (setter)');
+			}
+		}
+		else if (args.length === 2) {
+			if (typeof args[0] !== 'string') {
+				throw new Error('Call Error: With two arguments, first argument must be a string');
+			}
+			if (args[1] != null && typeof args[1] !== 'string' && typeof args[1] !== 'number') {
+				if (typeof args[1] === 'boolean') {
+					args[1] = args[1] ? '1' : '0';
+				}
+				else {
+					throw new Error('Call Error: With two arguments, second must be a string, number, boolean, or null');
+				}
+			}
+
+			return this.attr('data-wcdv-' + args[0], args[1]);
+		}
+		else {
+			throw new Error('Call Error: dvAttr(string|object), dvAttr(string, string|number|boolean)');
+		}
 	}
 });

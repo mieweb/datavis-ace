@@ -45,9 +45,9 @@ describe('Source Parameters', function () {
 				await input.clear();
 				await grid.refresh();
 				await grid.waitForIdle();
-				// let actual = _.map(await grid.getPlainData(), '0');
+				// let actual = _.map(await grid.getPlainData_asArrays(), '0');
 				// assert.notInclude(actual, 'text');
-				assert.deepInclude(await grid.getPlainData(), ['text', '']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['text', '']);
 			});
 
 			it('and put something in it', async function () {
@@ -56,7 +56,7 @@ describe('Source Parameters', function () {
 				await input.sendKeys('gojira');
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['text', 'gojira']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['text', 'gojira']);
 			});
 		});
 
@@ -67,7 +67,7 @@ describe('Source Parameters', function () {
 				await grid.refresh();
 				await grid.waitForIdle();
 				// The parameter should not be sent, so it should not show up in response.
-				let actual = _.map(await grid.getPlainData(), '0');
+				let actual = _.map(await grid.getPlainData_asArrays(), '0');
 				assert.notInclude(actual, 'checkbox');
 			});
 
@@ -77,7 +77,7 @@ describe('Source Parameters', function () {
 				await grid.refresh();
 				await grid.waitForIdle();
 				// The parameter should be sent, so it should be in the response.
-				let data = await grid.getPlainData();
+				let data = await grid.getPlainData_asArrays();
 				assert.include(_.map(data, '0'), 'checkbox');
 				// The parameter should have a single value.
 				let checkboxData = _.find(data, {'0': 'checkbox'})[1].split(',');
@@ -90,7 +90,7 @@ describe('Source Parameters', function () {
 				await grid.refresh();
 				await grid.waitForIdle();
 				// The parameter should be sent, so it should be in the response.
-				let data = await grid.getPlainData();
+				let data = await grid.getPlainData_asArrays();
 				assert.include(_.map(data, '0'), 'checkbox');
 				// The parameter should have multiple values.
 				let checkboxData = _.find(data, {'0': 'checkbox'})[1].split(',');
@@ -105,7 +105,7 @@ describe('Source Parameters', function () {
 				await radioByValue(input, 'pan');
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['radio', 'pan']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['radio', 'pan']);
 			});
 		});
 
@@ -115,7 +115,7 @@ describe('Source Parameters', function () {
 				await selectByValue(input, 'red');
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['select', 'red']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['select', 'red']);
 			});
 		});
 
@@ -125,9 +125,9 @@ describe('Source Parameters', function () {
 				await input.clear();
 				await grid.refresh();
 				await grid.waitForIdle();
-				// let actual = _.map(await grid.getPlainData(), '0');
+				// let actual = _.map(await grid.getPlainData_asArrays(), '0');
 				// assert.notInclude(actual, 'textarea');
-				assert.deepInclude(await grid.getPlainData(), ['textarea', '']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['textarea', '']);
 			});
 
 			it('and put something in it', async function () {
@@ -136,7 +136,7 @@ describe('Source Parameters', function () {
 				await input.sendKeys('valley of the kings');
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['textarea', 'valley of the kings']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['textarea', 'valley of the kings']);
 			});
 		});
 	}
@@ -145,7 +145,7 @@ describe('Source Parameters', function () {
 		befores('http://localhost:3000/grid/sourceParams/form.html');
 		afters();
 		it('shows initial values of all form elements', async function () {
-			let actual = await grid.getPlainData();
+			let actual = await grid.getPlainData_asArrays();
 			let expected = [
 				['checkbox', 'pepperoni,mushrooms'],
 				['groupOutput', 'detail'],
@@ -163,7 +163,7 @@ describe('Source Parameters', function () {
 		befores('http://localhost:3000/grid/sourceParams/inputs.html');
 		afters();
 		it('shows initial values of specified inputs', async function () {
-			let actual = await grid.getPlainData();
+			let actual = await grid.getPlainData_asArrays();
 			let expected = [
 				['checkbox', 'pepperoni,mushrooms'],
 				['hidden', 'hidden'],
@@ -181,14 +181,14 @@ describe('Source Parameters', function () {
 				await input.click();
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['toggle-checkbox', 'on']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['toggle-checkbox', 'on']);
 			});
 			it ('and uncheck it', async function () {
 				let input = await driver.findElement(By.css('input[name="toggle-checkbox"]:checked'));
 				await input.click();
 				await grid.refresh();
 				await grid.waitForIdle();
-				assert.deepInclude(await grid.getPlainData(), ['toggle-checkbox', 'off']);
+				assert.deepInclude(await grid.getPlainData_asArrays(), ['toggle-checkbox', 'off']);
 			});
 		});
 	});
