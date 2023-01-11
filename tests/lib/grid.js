@@ -136,6 +136,9 @@ class GridUi {
  */
 
 class Grid {
+
+	// Constructor {{{2
+
 	/**
 	 * Construct a proxy to a grid on a page.
 	 *
@@ -149,6 +152,8 @@ class Grid {
 		this.ui = new GridUi(this.driver, this.id);
 	}
 
+	// #dumpLogs {{{2
+
 	/**
 	 * Print out console messages from the browser.  Prints all the messages that were produced since
 	 * the last time this method was called.
@@ -159,6 +164,8 @@ class Grid {
 			console.log(l.message.replace(/\\u003C/g, '<'));
 		});
 	}
+
+	// #waitForIdle {{{2
 
 	/**
 	 * Wait for the grid to become idle.
@@ -199,6 +206,8 @@ class Grid {
 		}, opts.timeout);
 	}
 
+	// #refresh {{{2
+
 	/**
 	 * Refresh the grid.
 	 */
@@ -207,6 +216,8 @@ class Grid {
 		return this.ui.refreshBtn.click();
 	}
 
+	// #toggleControls {{{2
+
 	/**
 	 * Toggle the control panel.
 	 */
@@ -214,6 +225,8 @@ class Grid {
 	async toggleControls() {
 		return this.ui.gearBtn.click();
 	}
+
+	// #setSourceUrl {{{2
 
 	/**
 	 * Set the source URL.  Useful for simulating when data changes on the server.  You'll still need
@@ -227,11 +240,7 @@ class Grid {
 		return this.driver.executeScript(`MIE.WC_DataVis.grids['${this.id}'].view.source.origin.url = '${url}'`);
 	}
 
-	async getGroupCell(groupNum, colNum) {
-		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
-		const tds = await trs[groupNum].findElements(By.css('td'));
-		return tds[colNum].getText();
-	}
+	// #getNumRows {{{2
 
 	/**
 	 * Tells how many rows there are in the table.  Includes any total rows at the bottom, if the data
@@ -245,17 +254,6 @@ class Grid {
 		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
 		//const visible = await asyncFilter(trs, async (elt) => await elt.isDisplayed());
 		return trs.length;
-	}
-
-	/**
-	 * Set the group mode between summary and detail.
-	 *
-	 * @param {string} kind
-	 * The group mode.  Must be either "summary" or "detail."
-	 */
-
-	async setGroupMode(kind) {
-		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value=${kind}]`)).click();
 	}
 
 	// Sorting {{{2
@@ -281,13 +279,32 @@ class Grid {
 
 	// Group {{{2
 
+	// #setGroupMode {{{3
+
+	/**
+	 * Set the group mode between summary and detail.
+	 *
+	 * @param {string} kind
+	 * The group mode.  Must be either "summary" or "detail."
+	 */
+
+	async setGroupMode(kind) {
+		return this.driver.findElement(By.css(`input[type=radio][name=groupOutput][value=${kind}]`)).click();
+	}
+
+	// #getGroup {{{3
+
 	async getGroup() {
 		const li = await this.driver.findElements(By.css('div.wcdv_group_control > div > ul > li[data-wcdv-field] > div.wcdv_field > span:first-of-type'));
 		return Promise.all(_.map(li, (elt) => elt.getText()));
 	}
 
+	// #setGroup {{{3
+
 	async setGroup() {
 	}
+
+	// #addGroup {{{3
 
 	async addGroup(field, groupFun) {
 		const control = this.driver.findElement(By.css('div.wcdv_group_control'));
@@ -313,6 +330,8 @@ class Grid {
 		}
 	}
 
+	// #removeGroup {{{3
+
 	async removeGroup(field) {
 		const groupFields = asyncFilter(this.driver.findElements(By.css('div.wcdv_group_control > div > ul > li[data-wcdv-field]')), async (li) => await li.getText() === field);
 
@@ -323,9 +342,13 @@ class Grid {
 		return groupFields[0].findElements(By.css('button.wcdv_remove')).click();
 	}
 
+	// #clearGroup {{{3
+
 	async clearGroup() {
 		return this.driver.findElement(By.css('div.wcdv_group_control .wcdv_control_clear_button')).click();
 	}
+
+	// #setGroupFun {{{3
 
 	async setGroupFun(field, groupFunName) {
 		const groupField = this.driver.findElement(By.css(`div.wcdv_group_control > div > ul > li[data-wcdv-field="${field}"]`));
@@ -344,6 +367,69 @@ class Grid {
 			throw new Error('Found too many visible jQuery UI windows');
 		}
 		return visibleWins[0].findElement(By.css(`button.wcdv_option[data-wcdv-groupfunname=${groupFunName}]`)).click();
+	}
+
+	// #getGroupCell {{{3
+
+	async getGroupCell(groupNum, colNum) {
+		const trs = await this.driver.findElements(By.css('div.wcdv_grid div.wcdv_grid_table > table > tbody > tr'));
+		const tds = await trs[groupNum].findElements(By.css('td'));
+		return tds[colNum].getText();
+	}
+
+	// #forEachGroup {{{3
+
+	/**
+	 * Navigates the group tree.
+	 *
+	 * @param {function} [eachFn]
+	 * A function to call for each TR representing a rowValElt in the group.
+	 *
+	 * @param {function} [endFn]
+	 * A function to call for the final TR representing a rowValElt in the group.  Note that if you
+	 * provide both this and `eachFn` then both are called on the last rowValElt.
+	 *
+	 * @param {string[]} path
+	 * A rowVal representing the group to expand.  Example: `['Grape', 'South Korea']` when grouping
+	 * by "Fruit" and "Country."
+	 */
+	
+	async forEachGroup(eachFn, endFn, path) {
+		let groupId = 0;
+		let traversedPath = [];
+		let groupRows = [];
+		for (let i = 0; i < path.length; i += 1) {
+			traversedPath.push(`${path[i]} (${groupId})`);
+			groupRows = await asyncFilter(
+				await this.driver.findElements(By.css(`tr[data-wcdv-in-group="${groupId}"]`)),
+				async (elt) => {
+					return await elt.findElement(By.css('th.wcdv_group_value > span')).getText() === path[i];
+				});
+
+			if (groupRows.length === 0) {
+				throw new Error(`Unable to locate group row in path: ${traversedPath.join(' → ')}`);
+			}
+			if (groupRows.length > 1) {
+				throw new Error(`Found too many group rows in path: ${traversedPath.join(' → ')}`);
+			}
+
+			if (typeof eachFn === 'function') {
+				await eachFn(groupRows[0]);
+			}
+
+			groupId = await groupRows[0].getAttribute('data-wcdv-toggles-group');
+		}
+
+		return typeof endFn === 'function' ? endFn(groupRows[0]) : async () => undefined;
+	}
+
+	// #expandGroup {{{3
+	
+	async expandGroup(...path) {
+		return this.forEachGroup(async (elt) => {
+			await elt.findElement(By.css('button.wcdv_expand_button[data-wcdv-expanded="0"]')).click();
+			return this.waitForIdle();
+		}, null, path);
 	}
 
 	// Pivot {{{2
@@ -574,25 +660,9 @@ class Grid {
 	// #selectGroup {{{3
 
 	async selectGroup(...path) {
-		let groupId = 0;
-		let traversedPath = [];
-		let groupRows = [];
-		for (let i = 0; i < path.length; i += 1) {
-			traversedPath.push(`${path[i]} (${groupId})`);
-			groupRows = await asyncFilter(
-				await this.driver.findElements(By.css(`tr[data-wcdv-in-group="${groupId}"]`)),
-				async (elt) => {
-					return await elt.findElement(By.css('th.wcdv_group_value > span')).getText() === path[i];
-				});
-			if (groupRows.length === 0) {
-				throw new Error(`Unable to locate group row in path: ${traversedPath.join(' → ')}`);
-			}
-			if (groupRows.length > 1) {
-				throw new Error(`Found too many group rows in path: ${traversedPath.join(' → ')}`);
-			}
-			groupId = await groupRows[0].getAttribute('data-wcdv-toggles-group');
-		}
-		return groupRows[0].findElement(By.css('input.wcdv_select_group[type="checkbox"]')).click()
+		return this.forEachGroup(null, async (elt) => {
+			return elt.findElement(By.css('input.wcdv_select_group[type="checkbox"]')).click();
+		}, path);
 	}
 
 	// #getSelection {{{3

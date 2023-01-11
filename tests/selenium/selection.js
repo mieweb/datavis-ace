@@ -1,4 +1,5 @@
-const assert = require('assert');
+const {assert} = require('chai');
+const _ = require('lodash');
 const Grid = require('../lib/grid.js');
 const {sleep} = require('../lib/util.js');
 const setup = require('../lib/setup.js');
@@ -119,6 +120,44 @@ describe('Selection', function() {
 			assert.equal(selection.length, 11);
 			assert.equal(selection[0]['rowId'], 6);
 			assert.equal(selection[10]['rowId'], 98);
+		});
+
+		it('can select a nested group', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
+
+			await grid.addGroup('fruit');
+			await grid.addGroup('country');
+
+			await grid.expandGroup('Grape');
+			let selection;
+
+			// Add "South Korea"
+
+			await grid.selectGroup('Grape', 'South Korea');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 5);
+			assert.deepEqual(_.map(selection, 'rowId'), [10, 30, 60, 70, 80]);
+
+			// Add "England"
+
+			await grid.selectGroup('Grape', 'England');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 8);
+			assert.deepEqual(_.map(selection, 'rowId'), [10, 30, 60, 70, 80, 4, 74, 84]);
+
+			// Remove "South Korea"
+
+			await grid.selectGroup('Grape', 'South Korea');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 3);
+			assert.deepEqual(_.map(selection, 'rowId'), [4, 74, 84]);
+
+			// Remove "England"
+
+			await grid.selectGroup('Grape', 'England');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 0);
 		});
 	});
 });
