@@ -84,4 +84,41 @@ describe('Selection', function() {
 		});
 	});
 	*/
+
+	describe('after grouping', function () {
+		it('can select all', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
+
+			await grid.addGroup('fruit');
+
+			await grid.selectAll();
+			let selection = await grid.getSelection();
+
+			assert.equal(selection.length, 100);
+		});
+
+		it('can select one group', async function () {
+			let grid = new Grid(driver);
+			await grid.waitForIdle();
+
+			await grid.addGroup('fruit');
+
+			await grid.selectGroup('Banana');
+			let selection = await grid.getSelection();
+			assert.equal(selection.length, 4);
+			assert.equal(selection[0]['rowId'], 12);
+			assert.equal(selection[3]['rowId'], 44);
+
+			await grid.selectGroup('Banana');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 0);
+
+			await grid.selectGroup('Blueberry');
+			selection = await grid.getSelection();
+			assert.equal(selection.length, 11);
+			assert.equal(selection[0]['rowId'], 6);
+			assert.equal(selection[10]['rowId'], 98);
+		});
+	});
 });

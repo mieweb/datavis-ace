@@ -524,9 +524,41 @@ class Grid {
 
 	// Selection {{{2
 
+	// #selectAll {{{3
+
 	async selectAll() {
-		return this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table > thead > tr > th > input[name=checkAll][type=checkbox]')).click();
+		const input = this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table > thead > tr > th > input[name=checkAll][type=checkbox]'));
+
+		if (await input.getAttribute('checked')) {
+			throw Error('All items already checked');
+		}
+
+		// For the partially checked state, you need to click it twice. The first unchecks it.
+		if (await input.getAttribute('indeterminate')) {
+			await input.click();
+		}
+
+		return input.click();
 	}
+
+	// #unselectAll {{{2
+
+	/**
+	 * Unselect all checkboxes.
+	 */
+
+	async unselectAll() {
+		const input = this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table > thead > tr > th > input[name=checkAll][type=checkbox]'));
+
+		if (await input.getAttribute('checked') === false && await input.getAttribute('indeterminate') === false) {
+			throw Error('All items already unchecked');
+		}
+
+		// For the partially checked state, clicking it once unchecks it.
+		return input.click();
+	}
+
+	// #selectRow {{{3
 
 	async selectRow(rowNum) {
 		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
@@ -539,8 +571,31 @@ class Grid {
 		return input.click();
 	}
 
-	async selectGroup(path) {
+	// #selectGroup {{{3
+
+	async selectGroup(...path) {
+		let groupId = 0;
+		let traversedPath = [];
+		let groupRows = [];
+		for (let i = 0; i < path.length; i += 1) {
+			traversedPath.push(`${path[i]} (${groupId})`);
+			groupRows = await asyncFilter(
+				await this.driver.findElements(By.css(`tr[data-wcdv-in-group="${groupId}"]`)),
+				async (elt) => {
+					return await elt.findElement(By.css('th.wcdv_group_value > span')).getText() === path[i];
+				});
+			if (groupRows.length === 0) {
+				throw new Error(`Unable to locate group row in path: ${traversedPath.join(' → ')}`);
+			}
+			if (groupRows.length > 1) {
+				throw new Error(`Found too many group rows in path: ${traversedPath.join(' → ')}`);
+			}
+			groupId = await groupRows[0].getAttribute('data-wcdv-toggles-group');
+		}
+		return groupRows[0].findElement(By.css('input.wcdv_select_group[type="checkbox"]')).click()
 	}
+
+	// #getSelection {{{3
 
 	async getSelection() {
 		return this.driver.executeScript(`return MIE.WC_DataVis.grids['${this.id}'].getSelection().rows.map((row) => {

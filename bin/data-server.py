@@ -37,6 +37,12 @@ class StaticHandler(tornado.web.StaticFileHandler):
     def get_content_version(cls, absolute_path):
         return None # no caching
 
+    def write_error(self, status_code, **kwargs):
+        templateLoader = tornado.template.Loader(os.path.join(os.path.abspath(os.path.dirname(__file__)), "templates"))
+        e = kwargs['exc_info'][1]
+        self.set_header("Content-Type", "text/html")
+        self.finish(templateLoader.load("error.html").generate(code=e.status_code, msg=str(e)))
+
     def validate_absolute_path(self, root, path):
         absolute_path = os.path.join(root, path)
         if not os.path.isdir(absolute_path) or os.path.isfile(os.path.join(absolute_path, self.default_filename)):

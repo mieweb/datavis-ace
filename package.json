@@ -58,6 +58,8 @@
     "mocha": "=10.1.0",
     "rollup": "=3.3.0",
     "selenium-webdriver": "=4.6.1",
+    "serve": "=14.1.2",
+    "serve-handler": "=6.1.5",
     "uglify-js": "=3.17.4"
   }
 }
