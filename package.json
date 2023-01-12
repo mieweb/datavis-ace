@@ -13,7 +13,7 @@
   "author": "Taylor Venable <tvenable@mieweb.com>",
   "files": [
     "src/*.js",
-    "src/util/*.js",
+    "src/**/*.js",
     "dist/wcdatavis.css"
   ],
   "main": "index.js",
