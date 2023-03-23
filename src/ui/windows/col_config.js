@@ -1,6 +1,7 @@
 import _ from 'underscore';
 import jQuery from 'jquery';
 
+import { trans } from '../../trans.js';
 import {
 	fontAwesome,
 	getPropDef,
@@ -33,7 +34,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		duration: 100
 	};
 
-	var orderWin = jQuery('<div>', { title: 'Columns' }).dialog({
+	var orderWin = jQuery('<div>', { title: trans('GRID.COLCONFIG_WIN.TITLE') }).dialog({
 		autoOpen: false,
 		modal: true,
 		width: 600,
@@ -62,7 +63,12 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'overflow-y': 'scroll'
 		}).appendTo(orderWin));
 
-	var colTableHeader = jQuery('<thead><th class="wcdv_bottom_border_teal wcdv_width_1em"></th><th class="wcdv_bottom_border_teal">Field</th><th class="wcdv_bottom_border_teal">Display</th><th colspan="6" class="wcdv_bottom_border_teal">Options</th>')
+	var colTableHeader = jQuery('<thead>' +
+			'<th class="wcdv_bottom_border_teal wcdv_width_1em"></th>' +
+			'<th class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.FIELD') + '</th>' +
+			'<th class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.DISPLAY') + '</th>' +
+			'<th colspan="6" class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.OPTIONS') + '</th>' +
+		'</thead>')
 		.appendTo(colTable);
 
 	var keys = current.keys();
@@ -91,7 +97,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		jQuery('<button>', {
 			'type': 'button',
-			'title': 'Click and drag to reorder columns'
+			'title': trans('GRID.COLCONFIG_WIN.REORDER_COLS')
 		})
 			.addClass('wcdv_icon_button drag-handle wcdv_button_right')
 			.append(fontAwesome('fa-bars'))
@@ -113,12 +119,12 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		var renameBtn = jQuery('<button>', {
 			'type': 'button',
-			'title': 'Rename column in table.'
+			'title': trans('GRID.COLCONFIG_WIN.RENAME_COL')
 		})
 			.addClass('wcdv_icon_button')
 			.append(fontAwesome('fa-pencil'))
 			.on('click', function () {
-				var newName = prompt('Rename field "' + field + '" to what?');
+				var newName = prompt(trans('GRID.COLCONFIG_WIN.RENAME_COL.PROMPT'));
 
 				if (newName) {
 					colConfig.displayText = newName;
@@ -136,7 +142,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		var isPinnedCheckbox = jQuery('<input>', {
 			'type': 'checkbox',
-			'title': 'Pin column to left side of table?'
+			'title': trans('GRID.COLCONFIG_WIN.PIN_COL')
 		})
 			.prop('checked', getPropDef(false, colConfig, 'isPinned'))
 			.on('change', function () {
@@ -167,7 +173,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		var isHiddenCheckbox = jQuery('<input>', {
 			'type': 'checkbox',
-			'title': 'Hide column?'
+			'title': trans('GRID.COLCONFIG_WIN.HIDE_COL')
 		})
 			.prop('disabled', !getPropDef(true, colConfig, 'canHide'))
 			.prop('checked', getPropDef(false, colConfig, 'isHidden'))
@@ -183,7 +189,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		var allowHtmlCheckbox = jQuery('<input>', {
 			'type': 'checkbox',
-			'title': 'Allow HTML to be rendered?'
+			'title': trans('GRID.COLCONFIG_WIN.ALLOW_HTML')
 		})
 			.prop('checked', getPropDef(false, colConfig, 'allowHtml'))
 			.on('change', function () {
@@ -212,7 +218,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		jQuery('<button>', {
 			'type': 'button',
-			'title': 'Move to top of column list'
+			'title': trans('GRID.COLCONFIG_WIN.MOVE_COL_TO_TOP')
 		})
 			.addClass('wcdv_icon_button wcdv_button_left')
 			.on('click', function () {
@@ -232,7 +238,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 		jQuery('<button>', {
 			'type': 'button',
-			'title': 'Move to bottom of column list'
+			'title': trans('GRID.COLCONFIG_WIN.MOVE_COL_TO_BOTTOM')
 		})
 			.addClass('wcdv_icon_button wcdv_button_left')
 			.on('click', function () {
@@ -252,7 +258,8 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	var pinnedMsg = jQuery('<div>')
 		.addClass('wcdv_info_banner')
 		.append(fontAwesome('fa-info-circle'))
-		.append(' Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown above.')
+		.append(' ')
+		.append(trans('GRID.COLCONFIG_WIN.PINNED_COL_WARNING'))
 		.hide()
 		.appendTo(orderWin);
 
@@ -271,7 +278,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		jQuery('<button>', {
 			'type': 'button',
 			'class': '',
-			'title': 'Reset Column Order'
+			'title': trans('GRID.COLCONFIG_WIN.RESET_COL_ORDER')
 		})
 			.append(fontAwesome('fa-undo'))
 			.append('Reset Column Order')
@@ -290,11 +297,11 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	jQuery('<button>', {
 		'type': 'button',
 		'class': '',
-		'title': 'OK',
+		'title': trans('DIALOG.OK'),
 		'data-role': 'ok'
 	})
 		.append(fontAwesome('fa-check'))
-		.append('OK')
+		.append(trans('DIALOG.OK'))
 		.on('click', function () {
 			// Overwrite the "initial" configuration with one derived from the current one, based on the
 			// order of the keys saved by the reordering the table rows.
@@ -312,11 +319,11 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	jQuery('<button>', {
 		'type': 'button',
 		'class': '',
-		'title': 'Cancel',
+		'title': trans('DIALOG.CANCEL'),
 		'data-role': 'cancel'
 	})
 		.append(fontAwesome('fa-ban'))
-		.append('Cancel')
+		.append(trans('DIALOG.CANCEL'))
 		.on('click', function () {
 			orderWin.dialog('close');
 		})

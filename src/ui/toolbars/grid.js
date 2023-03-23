@@ -2,6 +2,7 @@ import _ from 'underscore';
 import jQuery from 'jquery';
 import sprintf from 'sprintf-js';
 
+import {trans} from '../../trans.js';
 import {
 	deepCopy,
 	fontAwesome,
@@ -36,7 +37,7 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'limit', 'autoShowMore'],
 		true,
-		'Show More on Scroll',
+		trans('GRID_TOOLBAR.PLAIN.SHOW_MORE_ON_SCROLL'),
 		grid.ui.limit_div
 	);
 
@@ -56,7 +57,7 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 				'limit': false
 			});
 		})
-		.text('Show All Rows')
+		.text(trans('GRID_TOOLBAR.PLAIN.SHOW_ALL_ROWS'))
 		.appendTo(grid.ui.limit_div)
 	;
 
@@ -64,7 +65,7 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 		'type': 'button'
 	})
 		.append(fontAwesome('fa-columns'))
-		.append('Columns')
+		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))
 		.on('click', function (evt) {
 			grid.colConfigWin.show(grid.ui.controls, function (colConfig) {
 				grid.setColConfig(colConfig, {
@@ -79,7 +80,7 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 		'type': 'button'
 	})
 		.append(fontAwesome('fa-pencil'))
-		.append('Handlebars Editor')
+		.append(trans('GRID_TOOLBAR.PLAIN.HANDLEBARS_EDITOR'))
 		.on('click', function (evt) {
 			grid.handlebarsEditor.show();
 		})
@@ -152,8 +153,8 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		, 'detail'
 		, null
 		, 'groupOutput'
-		, [{label: 'Summary', value: 'summary'}
-			, {label: 'Detail', value: 'detail'}]
+		, [{label: trans('GRID_TOOLBAR.GROUP.MODE.SUMMARY'), value: 'summary'}
+			, {label: trans('GRID_TOOLBAR.GROUP.MODE.DETAIL'), value: 'detail'}]
 		, null
 		, function (selected) {
 			enableDisable(selected);
@@ -166,7 +167,7 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'whenGroup', 'showTotalRow'],
 		true,
-		'Total Row',
+		trans('GRID_TOOLBAR.GROUP.TOTAL_ROW'),
 		self.ui.root,
 		function (isChecked) {
 			var agg = grid.view.getAggregate();
@@ -189,7 +190,7 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'whenGroup', 'pinRowvals'],
 		false,
-		'Pin Groups',
+		trans('GRID_TOOLBAR.GROUP.PIN_GROUPS'),
 		self.ui.root,
 		function (isChecked) {
 			grid.redraw();
@@ -200,7 +201,7 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		'type': 'button'
 	})
 		.append(fontAwesome('fa-columns'))
-		.append('Columns')
+		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))
 		.on('click', function (evt) {
 			grid.colConfigWin.show(grid.ui.controls, function (colConfig) {
 				grid.setColConfig(colConfig, {
@@ -215,7 +216,7 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		'type': 'button'
 	})
 		.append(fontAwesome('fa-pencil'))
-		.append('Handlebars Editor')
+		.append(trans('GRID_TOOLBAR.PLAIN.HANDLEBARS_EDITOR'))
 		.on('click', function (evt) {
 			grid.handlebarsEditor.show();
 		})
@@ -268,7 +269,7 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'whenPivot', 'showTotalCol'],
 		true,
-		'Total Row/Column',
+		trans('GRID_TOOLBAR.PIVOT.TOTAL_ROW_COLUMN'),
 		self.ui.root,
 		function (isChecked) {
 			var agg = grid.view.getAggregate();
@@ -295,7 +296,7 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'whenGroup', 'pinRowvals'],
 		false,
-		'Pin Groups',
+		trans('GRID_TOOLBAR.GROUP.PIN_GROUPS'),
 		self.ui.root,
 		function (isChecked) {
 			grid.redraw();
@@ -306,7 +307,7 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		grid.defn,
 		['table', 'whenPivot', 'hideBottomValueAggResults'],
 		false,
-		'Hide Zero Values',
+		trans('GRID_TOOLBAR.PIVOT.HIDE_ZERO_VALUES'),
 		self.ui.root,
 		function (isChecked) {
 			grid.redraw();
@@ -317,7 +318,7 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		'type': 'button'
 	})
 		.append(fontAwesome('fa-pencil'))
-		.append('Handlebars Editor')
+		.append(trans('GRID_TOOLBAR.PLAIN.HANDLEBARS_EDITOR'))
 		.on('click', function (evt) {
 			grid.handlebarsEditor.show();
 		})
@@ -400,7 +401,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.append(fontAwesome('fa-undo'))
 		.on('click', function () {
-			if (confirm('Are you sure you want to reset all configuration, delete all perspectives, and start over?')) {
+			if (confirm(trans('GRID_TOOLBAR.PREFS.RESET.CONFIRM'))) {
 				grid.prefs.reset();
 			}
 		})
@@ -442,10 +443,10 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 	// name of a new perspective.
 
 	var dropdown = jQuery('<select>')
-		.append(jQuery('<option>', { value: 'NEW' }).text('New Perspective...'))
+		.append(jQuery('<option>', { value: 'NEW' }).text(trans('GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE')))
 		.on('change', function (evt) {
 			if (dropdown.val() === 'NEW') {
-				var name = prompt('Enter new perspective name', grid.prefs.currentPerspective.name);
+				var name = prompt(trans('GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE.PROMPT'), grid.prefs.currentPerspective.name);
 				if (name) {
 					grid.prefs.addPerspective(null, name);
 					grid.prefs.save();
@@ -484,7 +485,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 	;
 
 	if (grid.prefs.backend instanceof PrefsBackendTemporary) {
-		warnMsgText.text('The preferences system is not configured to permanently save perspectives.');
+		warnMsgText.text(trans('GRID_TOOLBAR.PREFS.BACKEND_DOES_NOT_SAVE'));
 		warnMsg.show();
 	}
 
@@ -492,7 +493,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 
 	var saveAsBtnTooltipContent = jQuery('<div>')
 		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
-		.append('This pre-defined perspective cannot be saved with this name.  Click to save with a new name.  After that, any changes will be saved under the new name.');
+		.append(trans('GRID_TOOLBAR.PREFS.SAVE_AS.TOOLTIP'));
 
 	var saveAsBtn = jQuery('<button>', {'type': 'button', 'title': 'Save As...'})
 		.append(fontAwesome('fa-save'))
@@ -514,7 +515,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 
 	var saveBtnTooltipContent = jQuery('<div>')
 		.append(fontAwesome('fa-info-circle').css('padding-right', '0.25em').addClass('wcdv_text-primary'))
-		.append('Click to save the current configuration.  The next time this grid is visited, the previously saved configuration will automatically be used.');
+		.append(trans('GRID_TOOLBAR.PREFS.SAVE.TOOLTIP'));
 
 	var saveBtn = jQuery('<button>', {'type': 'button', 'title': 'Save'})
 		.append(fontAwesome('fa-save'))
@@ -554,7 +555,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 				alert('Cannot rename essential perspective!');
 			}
 			else {
-				var newName = prompt('Rename view "' + p.name + '" to what?');
+				var newName = prompt(trans('GRID_TOOLBAR.PREFS.RENAME_PERSPECTIVE.PROMPT', p.name));
 				if (newName) {
 					grid.prefs.renamePerspective(id, newName);
 				}
@@ -573,7 +574,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.append(fontAwesome('fa-trash'))
 		.on('click', function () {
-			if (confirm('Are you sure you want to delete this perspective?')) {
+			if (confirm(trans('GRID_TOOLBAR.PREFS.DELETE_PERSPECTIVE.CONFIRM'))) {
 				grid.prefs.deletePerspective(dropdown.val());
 			}
 		})
@@ -701,7 +702,7 @@ var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (
 
 	var configBtn = jQuery('<button>', {'type': 'button', 'title': 'Display Options'})
 		.append(fontAwesome('fa-table'))
-		.append('Display Options')
+		.append(trans('GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS'))
 		.on('click', function () {
 			var gridTableOptsWin = new GridTableOptsWin(grid.renderer);
 			gridTableOptsWin.show(function (newOpts) {
@@ -748,9 +749,9 @@ var ComputedViewToolbar = makeSubclass('ComputedViewToolbar', ToolbarSection, fu
 
 	jQuery('<button>', {'type': 'button', 'title': 'Store Displayed Data'})
 		.append(fontAwesome('fa-save'))
-		.append('Store Displayed Data')
+		.append(trans('GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA'))
 		.on('click', function () {
-			var perspectiveName = prompt('Enter new perspective name', grid.prefs.currentPerspective.name);
+			var perspectiveName = prompt(trans('GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE.PROMPT'), grid.prefs.currentPerspective.name);
 			if (perspectiveName != null) {
 				grid.mirageView.initFromView(grid.view.prefs, grid.view, grid.view.source, function () {
 					// XXX Clone the new perspective, redraw the grid, then switch to the mirage and save it?

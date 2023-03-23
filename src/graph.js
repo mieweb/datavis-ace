@@ -373,7 +373,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 		'style': 'font-size: 18px',
 		'class': 'wcdv_icon_button wcdv_text-primary'
 	})
-		.attr('title', trans('SHOWHIDEOPTS'))
+		.attr('title', trans('GRAPH.TITLEBAR.SHOW_HIDE_CONTROLS'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			self.ui.toolbar.toggle();
@@ -389,7 +389,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 		'style': 'font-size: 18px',
 		'class': 'wcdv_icon_button wcdv_text-primary showhide'
 	})
-		.attr('title', trans('SHOWHIDE'))
+		.attr('title', trans('GRAPH.TITLEBAR.SHOW_HIDE'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			self.toggle();

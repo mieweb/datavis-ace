@@ -1,6 +1,7 @@
 import _ from 'underscore';
 import jQuery from 'jquery';
 
+import { trans } from './trans.js';
 import {
 	debug,
 	deepCopy,
@@ -437,6 +438,7 @@ AggregateControlField.prototype.draw = function () {
 					'value': self.opts.fields[i],
 					'data-wcdv-bad-field': 'yup'
 				})
+					// FIXME: i18n
 					.text(self.opts.fields[i] + ' — Invalid')
 					.appendTo(dropdown);
 			}
@@ -987,7 +989,7 @@ GridControl.prototype.addViewConfigChangeHandler = function (event, sync) {
 			'disabled': true,
 			'selected': true
 		})
-			.text('Select Field')
+			.text(trans('GRID_CONTROL.SELECT_FIELD'))
 			.appendTo(self.ui.dropdown);
 	};
 
@@ -1173,7 +1175,7 @@ GroupControl.prototype.draw = function (parent) {
 		.addClass('wcdv_control_title_bar')
 		.appendTo(self.ui.root);
 	jQuery('<span>', { 'class': 'wcdv_control_title' })
-		.text('Group Fields')
+		.text(trans('GRID_CONTROL.GROUP.TITLE'))
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {
@@ -1347,7 +1349,7 @@ PivotControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.root);
 	jQuery('<span>')
 		.addClass('wcdv_control_title')
-		.text('Pivot Fields')
+		.text(trans('GRID_CONTROL.PIVOT.TITLE'))
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {
@@ -1501,7 +1503,7 @@ AggregateControl.prototype.draw = function (parent) {
 		.appendTo(self.ui.root);
 	jQuery('<span>')
 		.addClass('wcdv_control_title')
-		.text('Aggregate')
+		.text(trans('GRID_CONTROL.AGGREGATE.TITLE'))
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {
@@ -1515,7 +1517,7 @@ AggregateControl.prototype.draw = function (parent) {
 	});
 
 	jQuery('<option>', { 'value': '', 'disabled': true, 'selected': true })
-		.text('Select Aggregate')
+		.text(trans('GRID_CONTROL.SELECT_AGGREGATE'))
 		.appendTo(self.ui.dropdown);
 
 	AGGREGATE_REGISTRY.each(function (aggFunDefn, aggFunShortName) {
@@ -1688,7 +1690,7 @@ AggregateControl.prototype.addFieldDropdowns = function (agg) {
 	while (self.ui.fields.length < agg.prototype.fieldCount) {
 		var x = {};
 		x.div = jQuery('<div>').css({'margin-top': '4px'}).appendTo(self.ui.root);
-		x.label = jQuery('<label>').text('Field:').appendTo(x.div);
+		x.label = jQuery('<label>').text(trans('GRID_CONTROL.FIELD') + ':').appendTo(x.div);
 		x.dropdown = jQuery('<select>').on('change', function () { self.triggerAggChange(); }).appendTo(x.div);
 		self.ui.fields.push(x);
 	}
@@ -1802,7 +1804,7 @@ FilterControl.prototype.draw = function (parent) {
 		.addClass('wcdv_control_title_bar')
 		.appendTo(self.ui.root);
 	jQuery('<span>', { 'class': 'wcdv_control_title' })
-		.text('Filters')
+		.text(trans('GRID_CONTROL.FILTER.TITLE'))
 		.appendTo(self.ui.title);
 	self.ui.clearBtn = self.makeClearButton(self.ui.title);
 	self.ui.fields = jQuery('<ul>', {

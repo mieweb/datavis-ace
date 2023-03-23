@@ -545,7 +545,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	}
 
 	self.ui.titlebar = jQuery('<div class="wcdv_grid_titlebar">')
-		.attr('title', trans('SHOWHIDE'))
+		.attr('title', trans('GRID.TITLEBAR.SHOW_HIDE'))
 		.on('click', function (evt) {
 			evt.stopPropagation();
 			self.toggle();
@@ -741,7 +741,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		self._showSpinner();
 		if (self.opts.title) {
 			self.ui.title._addTrailing(',');
-			self.ui.statusSpan.show().text('Loading...');
+			self.ui.statusSpan.show().text(trans('GRID.TITLEBAR.LOADING'));
 			self.ui.rowCount.hide();
 		}
 		if (self.view.source.isCancellable()) {
@@ -751,14 +751,14 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	self.view.on('fetchDataEnd', function () {
 		self._hideSpinner();
 		self.ui.cancelFetchBtn.hide();
-		self.ui.statusSpan.show().text('Loaded');
+		self.ui.statusSpan.show().text(trans('GRID.TITLEBAR.LOADED'));
 	});
 	self.view.source.on('fetchDataCancel', function () {
 		self.ui.cancelFetchBtn.hide();
 		if (initialRender) {
 			if (self.opts.title) {
 				self.ui.title._addTrailing(',');
-				self.ui.statusSpan.show().text('Not Loaded');
+				self.ui.statusSpan.show().text(trans('GRID.TITLEBAR.NOT_LOADED'));
 				self.ui.rowCount.hide();
 			}
 			self._setSpinner('not-loaded');
@@ -781,7 +781,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		self._showSpinner();
 		if (self.opts.title) {
 			self.ui.title._addTrailing(',');
-			self.ui.statusSpan.show().text('Processing...');
+			self.ui.statusSpan.show().text(trans('GRID.TITLEBAR.WORKING'));
 			self.ui.rowCount.hide();
 		}
 	});
@@ -1050,7 +1050,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 
 	self.ui.cancelFetchBtn = jQuery('<button>', {'type': 'button'})
 		.css({'margin-left': '0.5em'})
-		.text('Cancel')
+		.text(trans('GRID.TITLEBAR.CANCEL'))
 		.on('click', function (evt) {
 			evt.stopPropagation();
 			self.view.source.cancel();
@@ -1085,7 +1085,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 			'style': 'font-size: 18px',
 			'class': 'wcdv_icon_button wcdv_text-primary'
 		})
-			.attr('title', trans('SHOW_DEBUG'))
+			.attr('title', trans('GRID.TITLEBAR.SHOW_DEBUG_INFO'))
 			.click(function (evt) {
 				evt.stopPropagation();
 				self.debugWin.show(self, self.view, self.view.source);
@@ -1117,7 +1117,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		'style': 'font-size: 18px',
 		'class': 'wcdv_icon_button wcdv_text-primary'
 	})
-		.attr('title', 'Refresh')
+		.attr('title', trans('GRID.TITLEBAR.REFRESH'))
 		.on('click', function (evt) {
 			evt.stopPropagation();
 			self.refresh();
@@ -1131,7 +1131,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		duration: 100
 	};
 
-	var pWin = jQuery('<div>', { title: 'Perspective' }).dialog({
+	var pWin = jQuery('<div>', { title: trans('GRID.PERSPECTIVE_WIN.TITLE') }).dialog({
 		autoOpen: false,
 		modal: true,
 		width: 500,
@@ -1160,12 +1160,12 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		'style': 'font-size: 18px',
 		'class': 'wcdv_icon_button wcdv_text-primary'
 	})
-		.attr('title', trans('SHOWHIDEOPTS'))
+		.attr('title', trans('GRID.TITLEBAR.SHOW_HIDE_CONTROLS'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			if (evt.shiftKey) {
 				if (self.prefs.currentPerspective.opts.isTemporary) {
-					pWinWarning.text('This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.');
+					pWinWarning.text(trans('GRID.PERSPECTIVE_WIN.TEMP_PERSPECTIVE_WARNING'));
 					pWinWarning.show();
 				}
 				else {
@@ -1189,7 +1189,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		'style': 'font-size: 18px',
 		'class': 'wcdv_icon_button wcdv_text-primary showhide'
 	})
-		.attr('title', trans('SHOWHIDE'))
+		.attr('title', trans('GRID.TITLEBAR.SHOW_HIDE'))
 		.click(function (evt) {
 			evt.stopPropagation();
 			self.toggle();
@@ -1364,7 +1364,7 @@ Grid.prototype.redraw = function (contOk, contFail) {
 					else {
 						var addComma = self.ui.rowCount.text().length > 0;
 						var str = addComma ? ', ' : '';
-						str += selection.length + ' ' + (selection.length === 1 ? 'record' : 'records') + ' selected';
+						str += trans(selection.length === 1 ? 'GRID.TITLEBAR.SELECTED_COUNT_SINGULAR' : 'GRID.TITLEBAR.SELECTED_COUNT_PLURAL', selection.length);
 						self.ui.selectionInfo.text(str);
 					}
 					self.fire('selectionChange', null, selection);
@@ -1431,15 +1431,15 @@ Grid.prototype._updateRowCount = function (info, ops) {
 
 	if (info.numRows != null) {
 		if (info.totalRows != null) {
-			text.push(info.numRows + ' / ' + info.totalRows + ' record' + (info.numRows === 1 ? '' : 's'));
+			text.push(info.numRows + ' / ' + trans(info.totalRows === 1 ? 'GRID.TITLEBAR.RECORD_COUNT_SINGULAR' : 'GRID.TITLEBAR.RECORD_COUNT_PLURAL', info.totalRows));
 		}
 		else {
-			text.push(info.numRows + ' record' + (info.numRows === 1 ? '' : 's'));
+			text.push(trans(info.numRows === 1 ? 'GRID.TITLEBAR.RECORD_COUNT_SINGULAR' : 'GRID.TITLEBAR.RECORD_COUNT_PLURAL', info.numRows));
 		}
 	}
 
 	if (info.isGroup || info.isPivot) {
-		text.push(info.numGroups + ' group' + (info.numGroups === 1 ? '' : 's'));
+		text.push(trans(info.numGroups === 1 ? 'GRID.TITLEBAR.GROUP_COUNT_SINGULAR' : 'GRID.TITLEBAR.GROUP_COUNT_PLURAL', info.numGroups));
 	}
 
 	self.ui.rowCount.text(text.join(', '));
@@ -1449,7 +1449,7 @@ Grid.prototype._updateRowCount = function (info, ops) {
 		jQuery('<span>', {
 			'id': self.id + '_isLimitedNotice',
 			'style': 'color:red; font-weight:bold; margin-left:50px',
-			'text': 'You are not looking at all of the records. Click to fetch the rest (this may take a while).'
+			'text': trans('GRID.TITLEBAR.DATA_LIMITED_WARNING')
 		})
 		.on('click', function () {
 			self.view.unlimit();
@@ -1639,13 +1639,13 @@ Grid.prototype._setSpinner = function (what) {
 
 	switch (what) {
 	case 'loading':
-		self.ui.spinner.html(fontAwesome('F021', 'fa-spin', 'Loading...'));
+		self.ui.spinner.html(fontAwesome('F021', 'fa-spin', trans('GRID.TITLEBAR.LOADING')));
 		break;
 	case 'not-loaded':
-		self.ui.spinner.html(fontAwesome('F05E', null, 'Not Loaded'));
+		self.ui.spinner.html(fontAwesome('F05E', null, trans('GRID.TITLEBAR.NOT_LOADED')));
 		break;
 	case 'working':
-		self.ui.spinner.html(fontAwesome('F1CE', 'fa-spin', 'Working...'));
+		self.ui.spinner.html(fontAwesome('F1CE', 'fa-spin', trans('GRID.TITLEBAR.WORKING')));
 		break;
 	}
 };
@@ -1842,13 +1842,13 @@ Grid.prototype._setExportStatus = function (status) {
 	switch (status) {
 	case 'notReady':
 		self.csvReady = false;
-		self.ui.exportBtn.attr('title', 'Generate CSV');
+		self.ui.exportBtn.attr('title', trans('GRID.TITLEBAR.GENERATE_CSV'));
 		self.ui.exportBtn.children('span.fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-file-o'));
 		break;
 	case 'ready':
 		self.csvReady = true;
-		self.ui.exportBtn.attr('title', 'Download CSV');
+		self.ui.exportBtn.attr('title', trans('GRID.TITLEBAR.DOWNLOAD_CSV'));
 		self.ui.exportBtn.children('span.fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-download'));
 		break;
