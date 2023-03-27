@@ -1,115 +1,11 @@
 import {sprintf} from 'sprintf-js';
 import OrdMap from './util/ordmap.js';
 
+import trans_en from './lang/en.js';
+
 var TRANSLATION_REGISTRY = new OrdMap();
-TRANSLATION_REGISTRY.set('en-US', {
-	'DIALOG.OK': 'OK',
-	'DIALOG.CANCEL': 'Cancel',
 
-	'GRAPH.TITLEBAR.SHOW_HIDE': 'Show/Hide Graph',
-	'GRAPH.TITLEBAR.SHOW_HIDE_CONTROLS': 'Show/Hide Graph Controls',
-
-	'GRID.TITLEBAR.CANCEL': 'Cancel',
-	'GRID.TITLEBAR.LOADING': 'Loading...',
-	'GRID.TITLEBAR.WOARKING': 'Working...',
-	'GRID.TITLEBAR.LOADED': 'Loaded',
-	'GRID.TITLEBAR.NOT_LOADED': 'Not Loaded',
-	'GRID.TITLEBAR.RECORD_COUNT_SINGULAR': '%d record',
-	'GRID.TITLEBAR.RECORD_COUNT_PLURAL': '%d records',
-	'GRID.TITLEBAR.GROUP_COUNT_SINGULAR': '%d group',
-	'GRID.TITLEBAR.GROUP_COUNT_PLURAL': '%d groups',
-	'GRID.TITLEBAR.SELECTED_COUNT_PLURAL': '%d record selected',
-	'GRID.TITLEBAR.SELECTED_COUNT_PLURAL': '%d records selected',
-	'GRID.TITLEBAR.DATA_LIMITED_WARNING': 'You are not looking at all of the records. Click to fetch the rest (this may take a while).',
-
-	'GRID.TITLEBAR.GENERATE_CSV': 'Generate CSV',
-	'GRID.TITLEBAR.DOWNLOAD_CSV': 'Download CSV',
-	'GRID.TITLEBAR.REFRESH': 'Refresh',
-	'GRID.TITLEBAR.SHOW_HIDE': 'Show/Hide Grid',
-	'GRID.TITLEBAR.SHOW_HIDE_CONTROLS': 'Show/Hide Grid Controls',
-	'GRID.TITLEBAR.SHOW_DEBUG_INFO': 'Show Grid Debug Info',
-
-	// Grid toolbar
-
-	'GRID_TOOLBAR.PLAIN.SHOW_MORE_ON_SCROLL': 'Show More on Scroll',
-	'GRID_TOOLBAR.PLAIN.SHOW_ALL_ROWS': 'Show All Rows',
-	'GRID_TOOLBAR.PLAIN.COLUMNS': 'Columns',
-	'GRID_TOOLBAR.PLAIN.HANDLEBARS_EDITOR': 'Handlebars Editor',
-
-	'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Summary',
-	'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Detail',
-	'GRID_TOOLBAR.GROUP.TOTAL_ROW': 'Total Row',
-	'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Pin Groups',
-
-	'GRID_TOOLBAR.PIVOT.TOTAL_ROW_COLUMN': 'Total Row/Column',
-	'GRID_TOOLBAR.PIVOT.HIDE_ZERO_VALUES': 'Hide Zero Values',
-
-	'GRID_TOOLBAR.PREFS.RESET.CONFIRM': 'Are you sure you want to reset all configuration, delete all perspectives, and start over?',
-	'GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE': 'New Perspective...',
-	'GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE.PROMPT': 'Enter new perspective name',
-	'GRID_TOOLBAR.PREFS.DELETE_PERSPECTIVE.CONFIRM': 'Are you sure you want to delete this perspective?',
-	'GRID_TOOLBAR.PREFS.RENAME_PERSPECTIVE.PROMPT': 'Rename perspective "%s" to what?',
-
-	'GRID_TOOLBAR.PREFS.BACKEND_DOES_NOT_SAVE': 'The preferences system is not configured to permanently save perspectives.',
-	'GRID_TOOLBAR.PREFS.SAVE.TOOLTIP': 'Click to save the current configuration.  The next time this grid is visited, the previously saved configuration will automatically be used.',
-	'GRID_TOOLBAR.PREFS.SAVE_AS.TOOLTIP': 'This pre-defined perspective cannot be saved with this name.  Click to save with a new name.  After that, any changes will be saved under the new name.',
-
-	'GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS': 'Display Options',
-
-	'GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA': 'Store Displayed Data',
-
-	// Perspective window
-
-	'GRID.PERSPECTIVE_WIN.TITLE': 'Perspective',
-	'GRID.PERSPECTIVE_WIN.TEMP_PERSPECTIVE_WARNING': 'This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.',
-
-	// Column configuration
-
-	'GRID.COLCONFIG_WIN.TITLE': 'Columns',
-	'GRID.COLCONFIG_WIN.TBL.FIELD': 'Field',
-	'GRID.COLCONFIG_WIN.TBL.DISPLAY': 'Display',
-	'GRID.COLCONFIG_WIN.TBL.OPTIONS': 'Options',
-	'GRID.COLCONFIG_WIN.REORDER_COLS': 'Click and drag to reorder columns',
-	'GRID.COLCONFIG_WIN.RENAME_COL': 'Rename column in table.',
-	'GRID.COLCONFIG_WIN.RENAME_COL.PROMPT': 'Rename field "%s" to what?',
-	'GRID.COLCONFIG_WIN.PIN_COL': 'Pin column to left side of table?',
-	'GRID.COLCONFIG_WIN.HIDE_COL': 'Hide column?',
-	'GRID.COLCONFIG_WIN.ALLOW_HTML': 'Allow HTML to be rendered?',
-	'GRID.COLCONFIG_WIN.MOVE_COL_TO_TOP': 'Move to top of column list',
-	'GRID.COLCONFIG_WIN.MOVE_COL_TO_BOTTOM': 'Move to bottom of column list',
-	'GRID.COLCONFIG_WIN.PINNED_COL_WARNING': 'Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown above.',
-	'GRID.COLCONFIG_WIN.RESET_COL_ORDER': 'Reset Column Order',
-
-	// Grid controls
-
-	'GRID_CONTROL.FIELD': 'Field',
-	'GRID_CONTROL.SELECT_FIELD': 'Select Field',
-	'GRID_CONTROL.SELECT_AGGREGATE': 'Select Aggregate',
-	'GRID_CONTROL.FILTER.TITLE': 'Filters',
-	'GRID_CONTROL.GROUP.TITLE': 'Group Fields',
-	'GRID_CONTROL.PIVOT.TITLE': 'Pivot Fields',
-	'GRID_CONTROL.AGGREGATE.TITLE': 'Aggregate',
-
-	// Aggregate function names
-
-	'AGGREGATE.NAME.COUNT': 'Count',
-	'AGGREGATE.NAME.COUNT_DISTINCT': 'Count Distinct',
-	'AGGREGATE.NAME.VALUES': 'Values',
-	'AGGREGATE.NAME.VALUES_WITH_COUNTS': 'Values w/ Counts',
-	'AGGREGATE.NAME.DISTINCT_VALUES': 'Distinct Values',
-	'AGGREGATE.NAME.SUM': 'Sum',
-	'AGGREGATE.NAME.AVERAGE': 'Average',
-	'AGGREGATE.NAME.MIN': 'Min',
-	'AGGREGATE.NAME.MAX': 'Max',
-	'AGGREGATE.NAME.FIRST': 'First',
-	'AGGREGATE.NAME.LAST': 'Last',
-	'AGGREGATE.NAME.NTH': 'Nth',
-	'AGGREGATE.NAME.SUM_OVER_SUM': 'Sum/Sum',
-	'AGGREGATE.NAME.COUNT_OVER_COUNT': 'Count/Count',
-
-	'AGGREGATE.FIELD.NUMERATOR': 'Num',
-	'AGGREGATE.FIELD.DENOMINATOR': 'Denom',
-});
+TRANSLATION_REGISTRY.set('en', trans_en);
 
 var trans = (function () {
 	var alreadyWarnedAboutLang = {};
@@ -117,7 +13,15 @@ var trans = (function () {
 	return function () {
 		var args = Array.prototype.slice.call(arguments);
 		var k = args.shift()
-			, lang = window.DATAVIS_LANG || navigator.language;
+			, lang = window.DATAVIS_LANG;
+
+		//if (lang == null && window.Intl && window.Intl.Locale) {
+		//	lang = window.Intl.Locale().language;
+		//}
+
+		if (lang == null) {
+			lang = navigator.language.split('-')[0];
+		}
 
 		if (!TRANSLATION_REGISTRY.isSet(lang)) {
 			if (!alreadyWarnedAboutLang[lang]) {
@@ -130,7 +34,7 @@ var trans = (function () {
 		}
 
 		var s = (TRANSLATION_REGISTRY.get(lang) || {})[k]
-			|| (TRANSLATION_REGISTRY.get('en-US') || {})[k]
+			|| (TRANSLATION_REGISTRY.get('en') || {})[k]
 			|| k;
 
 		if (args.length > 0) {
@@ -138,7 +42,7 @@ var trans = (function () {
 			s = sprintf.apply(null, args);
 		}
 
-		if (lang === 'xx-XX') {
+		if (lang === 'xx') {
 			// x-ing a paragrab
 			s = s.replace(/[A-Za-z]/g, 'x');
 		}

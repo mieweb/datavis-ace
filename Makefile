@@ -131,6 +131,11 @@ dist-clean:
 clean:	doc-clean dist-clean
 	$(MAKE) -C tests $@
 
+# Translations {{{1
+
+src/lang/en.js:	en.tsv trans.tsv
+	gawk -f ./bin/make-lang-packs.awk $^
+
 # Miscellaneous {{{1
 
 .PHONY:	tags
