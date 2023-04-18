@@ -65,7 +65,6 @@ third-party/json-formatter.esm.js:
 
 .PHONY:	doc
 doc:	jsdoc mkdocs
-	$(MAKE) -C tests $@
 	@printf '\033[32;1mRun `make doc-publish` to publish documentation to $(PUB_PATH)\033[0m\n'
 
 .PHONY:	doc-publish
@@ -86,7 +85,7 @@ doc-serve:
 
 .PHONY:	jsdoc
 jsdoc:
-	$(JSDOC) -p -c jsdoc_conf.json src
+	$(JSDOC) -p -c jsdoc_conf.json -r src
 	$(MAKE) -C tests $@
 
 .PHONY:	mkdocs

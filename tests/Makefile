@@ -1,6 +1,6 @@
-JSDOC=../node_modules/.bin/jsdoc
-PAGES_DEPENDS=../dist/wcdatavis.js ../dist/wcdatavis.css ../examples/base.css
-DOC_PUB_PATH=zeus.med-web.com:~/public_html/datavis
+JSDOC := ../node_modules/.bin/jsdoc
+PAGES_DEPENDS := ../dist/wcdatavis.js ../dist/wcdatavis.css ../examples/base.css
+PUB_PATH := zeus.med-web.com:~/public_html/datavis
 
 .PHONY:	all
 all:	data pages
@@ -19,12 +19,12 @@ pages:
 
 .PHONY:	jsdoc
 jsdoc:
-	$(JSDOC) -p -c jsdoc_conf.json lib
+	$(JSDOC) -p -c jsdoc_conf.json -r lib
 	@printf '\033[32;1mRun `make doc-publish` to publish documentation to $(PUB_PATH)\033[0m\n'
 
 .PHONY:	doc-publish
-doc-publish:	doc
-	rsync -a --delete jsdoc/ $(DOC_PUB_PATH)/jsdoc-tests/
+doc-publish:	jsdoc
+	rsync -a --delete jsdoc/ $(PUB_PATH)/jsdoc-tests/
 
 .PHONY:	doc-clean
 doc-clean:
