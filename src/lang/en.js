@@ -73,6 +73,7 @@ export default {
   'GRID.TITLEBAR.RECORD_COUNT_SINGULAR': '%d record',
   'GRID.TITLEBAR.REFRESH': 'Refresh',
   'GRID.TITLEBAR.SELECTED_COUNT_PLURAL': '%d records selected',
+  'GRID.TITLEBAR.SELECTED_COUNT_SINGULAR': '%d record selected',
   'GRID.TITLEBAR.SHOW_DEBUG_INFO': 'Show Grid Debug Info',
   'GRID.TITLEBAR.SHOW_HIDE': 'Show/Hide Grid',
   'GRID.TITLEBAR.SHOW_HIDE_CONTROLS': 'Show/Hide Grid Controls',

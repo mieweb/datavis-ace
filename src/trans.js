@@ -2,10 +2,12 @@ import {sprintf} from 'sprintf-js';
 import OrdMap from './util/ordmap.js';
 
 import trans_en from './lang/en.js';
+import trans_es from './lang/es.js';
 
 var TRANSLATION_REGISTRY = new OrdMap();
 
 TRANSLATION_REGISTRY.set('en', trans_en);
+TRANSLATION_REGISTRY.set('es', trans_es);
 
 var trans = (function () {
 	var alreadyWarnedAboutLang = {};

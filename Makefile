@@ -1,5 +1,6 @@
 JSDOC := ./node_modules/.bin/jsdoc
 SOURCE := $(shell find src -type f -name '*.js')
+LANG_PACKS := src/lang/en.js src/lang/es.js
 DIST_FILES := $(addprefix dist/,wcdatavis.js wcdatavis.min.js wcdatavis.css)
 EXAMPLE_FILES := $(patsubst dist/%,examples/%,$(DIST_FILES))
 PUB_PATH := zeus.med-web.com:~/public_html/datavis
@@ -51,7 +52,7 @@ teardown:	npm-teardown python-teardown jsdoc-teardown
 
 # Building DataVis {{{1
 
-dist/wcdatavis.js:	rollup.config.js datavis.js third-party/json-formatter.esm.js $(SOURCE)
+dist/wcdatavis.js:	rollup.config.js datavis.js third-party/json-formatter.esm.js $(SOURCE) $(LANG_PACKS)
 	npm run rollup
 
 dist/wcdatavis.min.js:	dist/wcdatavis.js
@@ -123,6 +124,7 @@ $(EXAMPLE_FILES):examples/%:	dist/%
 .PHONY:	dist-clean
 dist-clean:
 	rm -f dist/wcdatavis.js dist/wcdatavis.min.js
+	rm -f src/lang/*.js
 	rm -f $(EXAMPLE_FILES)
 	rm -f examples/test/*.json
 
