@@ -1039,7 +1039,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		.hide()
 		.append(' (')
 		.append(jQuery('<span>', {'class': 'link'})
-			.text('clear filter')
+			.text(trans('GRID.TITLEBAR.CLEAR_FILTER'))
 			.on('click', function (evt) {
 				evt.stopPropagation();
 				self.ui.clearFilter.hide();

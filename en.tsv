@@ -19,6 +19,7 @@ GRID.TITLEBAR.GROUP_COUNT_SINGULAR	%d group
 GRID.TITLEBAR.GROUP_COUNT_PLURAL	%d groups
 GRID.TITLEBAR.SELECTED_COUNT_SINGULAR	%d record selected
 GRID.TITLEBAR.SELECTED_COUNT_PLURAL	%d records selected
+GRID.TITLEBAR.CLEAR_FILTER	clear filter
 GRID.TITLEBAR.DATA_LIMITED_WARNING	You are not looking at all of the records. Click to fetch the rest (this may take a while).
 	
 GRID.TITLEBAR.GENERATE_CSV	Generate CSV

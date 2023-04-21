@@ -61,6 +61,7 @@ export default {
   'GRID.TABLE.SORT_MENU.DESCENDING': '%s, Descending',
   'GRID.TABLE.SORT_MENU.RESET_SORT': 'Reset Sort',
   'GRID.TITLEBAR.CANCEL': 'Cancel',
+  'GRID.TITLEBAR.CLEAR_FILTER': 'clear filter',
   'GRID.TITLEBAR.DATA_LIMITED_WARNING': 'You are not looking at all of the records. Click to fetch the rest (this may take a while).',
   'GRID.TITLEBAR.DOWNLOAD_CSV': 'Download CSV',
   'GRID.TITLEBAR.GENERATE_CSV': 'Generate CSV',
