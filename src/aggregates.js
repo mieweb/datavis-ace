@@ -597,7 +597,7 @@ CountDistinctAggregate.prototype.calculateStep = function (acc, next) {
 	var cell = next[self.opts.fields[0]];
 	var key = getNatRep(cell.value);
 
-	if (acc.set[key] == null) {
+	if (key != null && key != '' && acc.set[key] == null) {
 		acc.set[key] = true;
 		acc.count += 1;
 	}
