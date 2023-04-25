@@ -1045,7 +1045,7 @@ Prefs.prototype.setCurrentPerspective = function (id, cont, opts) {
 
 	if (self.perspectives[id] == null) {
 		if (self.availablePerspectives.indexOf(id) < 0) {
-			self.logError('SET CURRENT PERSPECTIVE', 'Perspective does not exist: id = "%s"', id);
+			self.logWarning('SET CURRENT PERSPECTIVE', 'Perspective does not exist: id = "%s"', id);
 			if (self.availablePerspectives.length === 0) {
 				return self.addMainPerspective(cont);
 			}
