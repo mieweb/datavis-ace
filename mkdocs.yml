@@ -41,7 +41,9 @@ nav:
   - Development:
       - Overview: development/index.md
       - Generating Data: development/json_gen.md
-      - Writing Tests: development/selenium.md
+      - Testing: development/testing.md
+      - Documentation: development/docs.md
+      - Making a Release: development/release.md
   - Glossary: glossary.md
   - About DataVis: about.md
 # SEE ALSO: https://squidfunk.github.io/mkdocs-material/extensions/pymdown/
