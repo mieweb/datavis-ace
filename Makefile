@@ -156,7 +156,6 @@ help:
 	@printf -- '- \033[1mmake setup\033[0m — Installs all dependencies.\n'
 	@printf -- '- \033[1mmake datavis\033[0m — Build the compressed DataVis JS and CSS files.\n'
 	@printf -- '- \033[1mmake tests\033[0m — Same as \033[1mmake datavis\033[0m, then copy to tests directory, and build test data.\n'
-	@printf -- '  - \033[1mmake \033[34mDICT_FILE=[path]\033[37m tests\033[0m — To set the dictionary file path when generating test data.\n'
 	@printf -- '- \033[1mmake serve\033[0m — Start local server for interactive testing.\n'
 	@printf -- '- \033[1mmake test\033[0m — Same as \033[1mmake tests\033[0m, then run automated tests using Mocha & Selenium.\n'
 	@printf -- '- \033[1mmake doc\033[0m — Build all documentation.\n'

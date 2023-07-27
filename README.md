@@ -24,7 +24,6 @@ We use GNU Make to provide a simple interface to the various tools to build and 
 * `make setup` — Installs all dependencies.
 * `make datavis` — Build the compressed DataVis JS and CSS files.
 * `make tests` — Same as `make`, then copy to tests directory, and build test data.
-  * `make DICT_FILE=[path] tests` — To set the dictionary file path when generating test data.
 * `make serve` — Start local server for interactive testing.
 * `make test` — Same as `make tests`, then run automated tests using Mocha & Selenium.
 * `make doc` — Build all documentation.

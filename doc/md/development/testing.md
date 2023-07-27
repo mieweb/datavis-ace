@@ -6,8 +6,6 @@ The program that generates the data is written in Python, and uses the packages 
 
 Test data is generated from [JSON5](https://json5.org) test files located in the `tests/data/templates` directory.  The resulting data files can be found in `tests/data` and get copied to `tests/pages` for use by the automated tests.  See [the json-gen documentation](json_gen.md) for more information about the template files.
 
-You'll also need a word list, as some of the data files contain random dictionary words.  The tests expect the word list from the `words` package, specifically version `3.0-17.el6` from CentOS.  By default, `json-gen` expects to find this word list at `/usr/share/dict/words` — if you have this file elsewhere, you can specify that path as the `DICT_FILE` environment variable when running *make*.
-
 ## Writing Tests
 
 Automated tests for DataVis are written in JavaScript using [Selenium](https://seleniumhq.github.io/selenium/docs/api/javascript/) and [Mocha](https://mochajs.org).  The [Chai](https://www.chaijs.com/api/assert/) assertion and [Bluebird](http://bluebirdjs.com/docs/api-reference.html) promise libraries are also heavily used.  At first, I found writing these asynchronous tests pretty mind-bending, but with a library of useful utility functions, it gets easier.

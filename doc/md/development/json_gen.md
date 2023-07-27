@@ -69,7 +69,7 @@ The following functions are used to generate test data.  In all of the following
 : Selects an element from the specified list at random, following the requested distribution.  The following distributions are supported: *uniform* (the default), *normal*, *triangular*.
 
 `word_dict(rng_name)`
-: Uses a word at random from the dictionary (the file at `/usr/share/dict/words`, can be overridden with the `DICT_FILE` environment variable).
+: Uses a word at random from the dictionary.
 
 `state(rng_name)`
 : Uses the name of a random state in the United States.

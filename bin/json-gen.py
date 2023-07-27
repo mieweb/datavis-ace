@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import os.path
 
 from babel.dates import format_date, format_datetime, format_time
 from babel.numbers import format_decimal
@@ -9,6 +10,7 @@ from datetime import date, datetime, time
 import copy
 import csv
 import decimal
+import gzip
 import json
 import random
 import re
@@ -21,7 +23,12 @@ import json5
 import dicttoxml
 import xml.dom.minidom
 
-WORDS = open(os.getenv('DICT_FILE', '/usr/share/dict/words')).read().splitlines()
+script_dir = os.path.dirname(os.path.realpath(__file__))
+
+WORDS = []
+with gzip.open(os.path.join(script_dir, 'words.gz'), 'rt') as h:
+    WORDS = h.read().splitlines()
+
 STATES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
 LIPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.'
 RANDOMS = {}
