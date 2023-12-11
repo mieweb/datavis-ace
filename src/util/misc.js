@@ -2360,11 +2360,11 @@ export function fontAwesome(icon, cls, title) {
 		span.text(String.fromCharCode(parseInt(icon, 16)));
 	}
 
-	if (cls !== undefined) {
+	if (cls != undefined) {
 		span.addClass(cls);
 	}
 
-	if (title !== undefined) {
+	if (title != undefined) {
 		span.attr('title', title);
 	}
 

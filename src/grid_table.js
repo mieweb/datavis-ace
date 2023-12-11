@@ -1331,21 +1331,34 @@ GridTable.prototype.draw = function (root, opts, cont) {
 				var btn = this;
 				var opType = btn.getAttribute('data-operation-type');
 				var opIndex = btn.getAttribute('data-operation-index');
-				var sel, rowNum, field, op;
+				var sel, cellElt, rowElt, rowNum, field, op;
 
 				switch (opType) {
-				case 'multiple':
-					break;
 				case 'row':
-					rowNum = +(jQuery(btn).parents('tr').attr('data-row-num'));
+					rowElt = jQuery(btn).parents('tr');
+					rowNum = +(rowElt.attr('data-row-num'));
 					op = self.defn.operations.row[opIndex];
-					op.callback(self.data.data[rowNum]);
+					op.callback({
+						rowId: rowNum,
+						rowElt: rowElt,
+						row: self.data.dataByRowId[rowNum],
+						opBtn: jQuery(btn)
+					});
 					break;
 				case 'cell':
+					cellElt = jQuery(btn).parents('td');
 					field = jQuery(btn).parents('td').attr('data-wcdv-field');
+					rowElt = jQuery(btn).parents('tr');
 					rowNum = +(jQuery(btn).parents('tr').attr('data-row-num'));
 					op = self.defn.operations.cell[field][opIndex];
-					op.callback(self.data.data[rowNum].rowData[field].value, self.data.data[rowNum]);
+					op.callback({
+						rowId: rowNum,
+						rowElt: rowElt,
+						row: self.data.dataByRowId[rowNum],
+						cellElt: cellElt,
+						cell: self.data.dataByRowId[rowNum][field].value,
+						opBtn: jQuery(btn)
+					});
 					break;
 				}
 			});

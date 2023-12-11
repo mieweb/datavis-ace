@@ -102,6 +102,7 @@ GRID_CONTROL.FIELD.REMOVE	Remove
 GRID_CONTROL.FIELD.SHOW_FUNCTIONS	Show functions available for this field	
 GRID_CONTROL.AGGREGATE.EDIT_OPTIONS	Edit options	
 GRID_CONTROL.AGGREGATE.OPTIONS_DIALOG.TITLE	Options for %s	
+GRID_CONTROL.OPERATIONS.TITLE	Operations	
 		
 // Aggregate function names		
 		

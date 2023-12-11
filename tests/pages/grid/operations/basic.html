@@ -37,10 +37,10 @@ $(document).ready(function () {
 		},
 		operations: {
 			row: [{
-				icon: 'fa-plus',
-				tooltip: 'Add',
+				icon: 'fa-search',
+				tooltip: 'Inspect',
 				callback: function (row) {
-					console.info('Performing "add" operation on row: %O', row);
+					console.info('Performing "inspect" operation on row: %O', row);
 				}
 			}, {
 				icon: 'fa-trash',
@@ -53,22 +53,51 @@ $(document).ready(function () {
 				'string1': [{
 					icon: 'fa-heart',
 					tooltip: 'Like',
-					callback: function (val, row) {
-						alert('Hey I heard you like the word "' + val + '" — me too.');
+					callback: function (info) {
+						console.info('Performing "like" operation on row: %O', info.row);
+						info.cellElt.attr('data-liked', +!+info.cellElt.attr('data-liked'));
+						info.opBtn.css('color', !!+info.cellElt.attr('data-liked') ? 'red' : '')
 					}
 				}, {
 					icon: 'fa-book',
 					tooltip: 'Look Up',
-					callback: function (val, row) {
-						window.open('https://www.thefreedictionary.com/' + encodeURI(val), '_blank');
+					callback: function (info) {
+						window.open('https://www.thefreedictionary.com/' + encodeURI(info.cell), '_blank');
 					}
 				}]
 			},
 			all: [{
 				icon: 'fa-flask',
-				tooltip: 'Take Ye Flask',
+				label: 'Take Ye Flask',
+				callback: function (info) {
+					alert(info.rows.length + ' rows selected');
+				}
+			}, {
+				icon: 'fa-battery-0',
+				category: 'Power'
+			}, {
+				icon: 'fa-battery-1',
+				category: 'Power'
+			}, {
+				icon: 'fa-battery-2',
+				category: 'Power'
+			}, {
+				icon: 'fa-battery-3',
+				category: 'Power'
+			}, {
+				icon: 'fa-battery-4',
+				category: 'Power'
+			}, {
+				icon: 'fa-thumbs-o-up',
+				category: 'Rating',
 				callback: function (sel) {
-					alert(sel.length + ' rows selected');
+					alert('good');
+				}
+			}, {
+				icon: 'fa-thumbs-o-down',
+				category: 'Rating',
+				callback: function (sel) {
+					alert('bad');
 				}
 			}]
 		},

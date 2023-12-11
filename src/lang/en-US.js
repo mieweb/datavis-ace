@@ -88,6 +88,7 @@ export default {
   'GRID_CONTROL.FIELD.SHOW_FUNCTIONS': 'Show functions available for this field',
   'GRID_CONTROL.FILTER.TITLE': 'Filters',
   'GRID_CONTROL.GROUP.TITLE': 'Group Fields',
+  'GRID_CONTROL.OPERATIONS.TITLE': 'Operations',
   'GRID_CONTROL.PIVOT.TITLE': 'Pivot Fields',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Select Aggregate',
   'GRID_CONTROL.SELECT_FIELD': 'Select Field',

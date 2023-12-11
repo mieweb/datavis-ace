@@ -51,6 +51,7 @@ import {
 	PrefsToolbar,
 	RendererToolbar,
 } from './ui/toolbars/grid.js';
+import { OperationsPalette } from './operations_palette.js';
 import { FileSource } from './source.js';
 import { trans } from './trans.js';
 
@@ -615,6 +616,9 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	self.ui.groupControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_group_control' });
 	self.ui.pivotControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_pivot_control' });
 	self.ui.aggregateControl = jQuery('<div>', { 'class': 'wcdv_control_pane wcdv_aggregate_control' });
+	self.ui.operationsPalette = jQuery('<div>', { 'class': 'wcdv_grid_control' }).css({
+		display: 'block'
+	});
 	self.ui.grid = jQuery('<div>', { 'id': defn.table.id, 'class': 'wcdv_grid_table' });
 
 	if (self.rootHasFixedHeight) {
@@ -683,6 +687,13 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 			self.pivotControl.sortableSync();
 		});
 
+	self.operationsPalette = new OperationsPalette(self);
+	if (getProp(self.defn, 'operations', 'all') != null) {
+		self.operationsPalette.setOperations(self.defn.operations);
+		self.operationsPalette.draw(self.ui.operationsPalette);
+		self.ui.operationsPalette.show();
+	}
+
 	// Aggregate Control
 
 	self.aggregateControl = new AggregateControl(self, self.colConfig, self.view, self.features, self.timing);
@@ -711,6 +722,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 				.append(self.ui.groupControl)
 				.append(self.ui.pivotControl)
 				.append(self.ui.aggregateControl))
+			.append(self.ui.operationsPalette)
 			.append(self.ui.grid)
 			.append(self.ui.footer))
 	;
@@ -2113,6 +2125,16 @@ Grid.prototype.colConfigFromTypeInfo = function (typeInfo, opts) {
 	//	? typeInfoColConfig
 	//	: OrdMap.fromMerge([self.colConfig, typeInfoColConfig]), opts);
 	self.setColConfig(typeInfoColConfig, opts);
+};
+
+// #setOperations {{{2
+
+Grid.prototype.setOperations = function (ops) {
+	var self = this;
+
+	if (self.operationsPalette) {
+		self.operationsPalette.setOperations(ops);
+	}
 };
 
 // Exports {{{1
