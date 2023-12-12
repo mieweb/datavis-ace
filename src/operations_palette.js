@@ -92,8 +92,11 @@ OperationsPalette.prototype.drawPalette = function () {
 				'class': 'wcdv_operation',
 				'data-operation-index': op.idx
 			}).appendTo(catDiv);
+			if (op.label == null) {
+				btn.addClass('no_label');
+			}
 			if (op.icon) {
-				btn.append(fontAwesome(op.icon, op.label == null ? 'no_label' : null));
+				btn.append(fontAwesome(op.icon));
 			}
 			if (op.label) {
 				btn.append(op.label);

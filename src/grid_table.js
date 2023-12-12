@@ -2573,6 +2573,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td.classList.add('wcdv_group_col_spacer');
 			td.classList.add('wcdv_pivot_colval_boundary');
 			td.classList.add('wcdv_nowrap');
+			td.classList.add('wcdv_row_operations');
 
 			_.each(self.defn.operations.row, function (op, index) {
 				td.appendChild(makeOperationButton('row', op, index));

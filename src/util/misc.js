@@ -2650,21 +2650,25 @@ export function makeOperationButton(type, op, index, opts) {
 	btn.setAttribute('data-operation-type', type);
 	btn.setAttribute('data-operation-index', index);
 	btn.classList.add('wcdv_operation');
-	if (op.label) {
-		btn.classList.add('wcdv_nowrap');
+	// Cell operations don't get labels, because they would take up too much space.
+	if (type === 'cell') {
+		btn.classList.add('wcdv_icon_button');
+		btn.classList.add('wcdv_icon_button_incell');
+		btn.classList.add('wcdv_icon_button_nolabel');
+		btn.style.float = 'initial';
+		btn.appendChild(fontAwesome(op.icon).get(0));
+	}
+	else {
 		if (op.icon) {
 			btn.appendChild(fontAwesome(op.icon).get(0));
 		}
-		btn.append(op.label);
-	}
-	else {
-		btn.classList.add('wcdv_icon_button');
-		if (opts.inCell) {
-			btn.classList.add('wcdv_icon_button_incell');
-			btn.classList.add('wcdv_icon_button_nolabel');
-			btn.style.float = 'initial';
+		if (op.label) {
+			btn.classList.add('wcdv_nowrap');
+			btn.append(op.label);
 		}
-		btn.appendChild(fontAwesome(op.icon).get(0));
+		else {
+			btn.classList.add('no_label');
+		}
 	}
 	if (op.tooltip) {
 		btn.setAttribute('title', op.tooltip);
