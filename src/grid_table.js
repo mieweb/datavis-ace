@@ -2548,6 +2548,11 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 	var renderDataRow = function (row) {
 		var tr, td;
+		var rowDataForCallbacks = {};
+
+		_.each(row.rowData, function (v, k) {
+			rowDataForCallbacks[k] = v.value;
+		});
 
 		tr = document.createElement('tr');
 		tr.setAttribute('id', self.defn.table.id + '_' + row.rowNum);
@@ -2576,7 +2581,20 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td.classList.add('wcdv_row_operations');
 
 			_.each(self.defn.operations.row, function (op, index) {
-				td.appendChild(makeOperationButton('row', op, index));
+				var opBtn = makeOperationButton('row', op, index);
+				if (typeof op.hideWhen === 'function' && op.hideWhen(rowDataForCallbacks)) {
+					// A function means we're hiding the button on this row, but maybe not on others. In
+					// order to keep all operation buttons lined up, simply make the button invisible.
+					opBtn.style.visibility = 'hidden';
+				}
+				if (typeof op.hideWhen === 'boolean' && op.hideWhen) {
+					opBtn.style.display = 'none';
+				}
+				if ((typeof op.disableWhen === 'function' && op.disableWhen(rowDataForCallbacks))
+						|| (typeof op.disableWhen === 'boolean' && op.disableWhen)) {
+					opBtn.disabled = true;
+				}
+				td.appendChild(opBtn);
 			});
 
 			tr.appendChild(td);
