@@ -37,24 +37,24 @@ function addHelpers(env, data) {
 			throw new Error('In Handlebars "rowval" helper, `groupField` must be a number or string');
 		}
 
-		var groupFieldIndex;
+		var gfi;
 
 		if (typeof groupField === 'number') {
-			groupFieldIndex = groupField;
+			gfi = groupField;
 
-			if (groupFieldIndex < 0) {
+			if (gfi < 0) {
 				throw new Error('In Handlebars "rowval" helper, group field index "' + groupField + '" out of range');
 			}
 		}
 		else {
-			groupFieldIndex = data.groupFields.indexOf(groupField);
+			gfi = data.groupFields.indexOf(groupField);
 
-			if (groupFieldIndex < 0) {
+			if (gfi < 0) {
 				throw new Error('In Handlebars "rowval" helper, specified field "' + groupField + '" is not part of group');
 			}
 		}
 
-		return data.rowVals[this.rowValIndex][groupFieldIndex];
+		return data.rowVals[this.rowValIdx][gfi];
 	});
 
 	// colval {{{2
@@ -81,7 +81,7 @@ function addHelpers(env, data) {
 			}
 		}
 
-		return data.colVals[this.colValIndex][pivotFieldIndex];
+		return data.colVals[this.colValIdx][pivotFieldIndex];
 	});
 
 	// aggregate {{{2
@@ -89,24 +89,35 @@ function addHelpers(env, data) {
 	env.registerHelper('aggregate', function (type, aggNum) {
 		var ctx = this;
 
-		if (data.isGroup && ['group', 'all'].indexOf(type) < 0) {
+		if (data.isPlain) {
+			throw new Error('In Handlebars "aggregate" helper, data must be grouped to use this helper');
+		}
+		else if (data.isGroup && ['group', 'all'].indexOf(type) < 0) {
 			throw new Error('In Handlebars "aggregate" helper, `type` must be one of: { group, all }');
 		}
 		else if (data.isPivot && ['cell', 'group', 'pivot', 'all'].indexOf(type) < 0) {
 			throw new Error('In Handlebars "aggregate" helper, `type` must be one of: { cell, group, pivot, all }');
 		}
 
-		if (typeof aggNum !== 'number') {
-			throw new Error('In Handlebars "aggregate" helper, `aggNum` must be a number');
+		if (data.isGroup && ctx.rowValIdx == null) {
+			throw new Error('missing rowvalidx from context');
+		}
+		if (data.isPivot && (ctx.rowValIdx == null || ctx.colValIdx == null)) {
+			throw new Error('missing rowValIdx or colValIdx from context');
+		}
+
+		if (typeof aggNum !== 'number' || parseInt(aggNum) != aggNum) {
+			return '[HELPER/AGGREGATE: AGGNUM MUST BE AN INT]';
 		}
 
 		if (ai[type].length <= aggNum) {
-			// throw new Error('In Handlebars "aggregate" helper, `aggNum` must be in range: 0 to ' + (ai[type].length - 1));
 			return '[HELPER/AGGREGATE: AGGNUM OUT OF RANGE]';
 		}
 
 		var aggInfo = data.agg.info[type][aggNum];
-		var aggResult = data.agg.results[type][aggNum][ctx.rowValIdx][ctx.colValIdx];
+		var aggResult = data.isGroup ? data.agg.results[type][aggNum][ctx.rowValIdx]
+			: data.isPivot ? data.agg.results[type][aggNum][ctx.rowValIdx][ctx.colValIdx]
+			: null;
 		var text;
 
 		if (aggResult instanceof jQuery) {

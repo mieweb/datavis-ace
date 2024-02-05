@@ -10,6 +10,8 @@ import {
 	outerHtml,
 } from '../../util/misc.js';
 
+import hbUtil from '../../util/handlebars.js';
+
 import {GridRenderer} from '../../grid_renderer.js';
 
 // GridRendererHandlebars {{{1
@@ -19,55 +21,7 @@ var GridRendererHandlebars = makeSubclass('GridRendererHandlebars', GridRenderer
 
 	self.super.ctor.apply(self, arguments);
 
-	Handlebars.registerHelper('rowval', function (groupField) {
-		if (['number', 'string'].indexOf(typeof groupField) < 0) {
-			throw new Error('In Handlebars "rowval" helper, `groupField` must be a number or string');
-		}
-
-		var groupFieldIndex;
-
-		if (typeof groupField === 'number') {
-			groupFieldIndex = groupField;
-
-			if (groupFieldIndex < 0) {
-				throw new Error('In Handlebars "rowval" helper, group field index "' + groupField + '" out of range');
-			}
-		}
-		else {
-			groupFieldIndex = self.data.groupFields.indexOf(groupField);
-
-			if (groupFieldIndex < 0) {
-				throw new Error('In Handlebars "rowval" helper, specified field "' + groupField + '" is not part of group');
-			}
-		}
-
-		return self.data.rowVals[this.rowValIndex][groupFieldIndex];
-	});
-
-	Handlebars.registerHelper('colval', function (pivotField) {
-		if (['number', 'string'].indexOf(typeof pivotField) < 0) {
-			throw new Error('In Handlebars "rowval" helper, `pivotField` must be a number or string');
-		}
-
-		var pivotFieldIndex;
-
-		if (typeof pivotField === 'number') {
-			pivotFieldIndex = pivotField;
-
-			if (pivotFieldIndex < 0) {
-				throw new Error('In Handlebars "rowval" helper, pivot field index "' + pivotField + '" out of range');
-			}
-		}
-		else {
-			pivotFieldIndex = self.data.pivotFields.indexOf(pivotField);
-
-			if (pivotFieldIndex < 0) {
-				throw new Error('In Handlebars "rowval" helper, specified field "' + pivotField + '" is not part of pivot');
-			}
-		}
-
-		return self.data.colVals[this.colValIndex][pivotFieldIndex];
-	});
+	self.hbEnv = hbUtil.makeEnv();
 });
 
 // #_validateFeatures {{{2
@@ -140,9 +94,9 @@ GridRendererHandlebars.prototype._draw_group = function (root, data, typeInfo, o
 		}
 
 		if (self.item != null) {
-			_.each(data.data, function (group, rowValIndex) {
+			_.each(data.data, function (group, rowValIdx) {
 				var context = {
-					rowValIndex: rowValIndex
+					rowValIdx: rowValIdx
 				};
 				html += self.item(context);
 			});
@@ -173,12 +127,12 @@ GridRendererHandlebars.prototype._draw_pivot = function (root, data, typeInfo, o
 		}
 
 		if (self.item != null) {
-			_.each(data.data, function (group, rowValIndex) {
-				_.each(group, function (pivot, colValIndex) {
+			_.each(data.data, function (group, rowValIdx) {
+				_.each(group, function (pivot, colValIdx) {
 					var div = jQuery('<div>').appendTo(root);
 					var context = {
-						rowValIndex: rowValIndex,
-						colValIndex: colValIndex
+						rowValIdx: rowValIdx,
+						colValIdx: colValIdx
 					};
 					html += self.item(context);
 				});
@@ -207,6 +161,8 @@ GridRendererHandlebars.prototype.draw = function (root, cont, opts) {
 			return cont();
 		}
 
+		hbUtil.addHelpers(self.hbEnv, data);
+
 		var k1 = data.isPlain ? 'plain'
 			: data.isGroup ? 'group'
 			: data.isPivot ? 'pivot'
@@ -220,19 +176,19 @@ GridRendererHandlebars.prototype.draw = function (root, cont, opts) {
 		var config = self.opts[configKey] || {};
 
 		if (config.empty != null) {
-			self.empty = Handlebars.compile(config.empty);
+			self.empty = self.hbEnv.compile(config.empty);
 		}
 
 		if (config.before != null) {
-			self.before = Handlebars.compile(config.before);
+			self.before = self.hbEnv.compile(config.before);
 		}
 
 		if (config.item != null) {
-			self.item = Handlebars.compile(config.item);
+			self.item = self.hbEnv.compile(config.item);
 		}
 
 		if (config.after != null) {
-			self.after = Handlebars.compile(config.after);
+			self.after = self.hbEnv.compile(config.after);
 		}
 
 		self['_draw_' + k1](root, data, typeInfo, opts);
