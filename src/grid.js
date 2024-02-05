@@ -40,6 +40,7 @@ import { MirageView } from './mirage_view.js';
 import { GridRenderer } from './grid_renderer.js';
 import './grid_table.js';
 import './renderers/grid/handlebars.js';
+import './renderers/grid/squirrelly.js';
 import { ColConfigWin } from './ui/windows/col_config.js';
 import { DebugWin } from './ui/windows/debug.js';
 import { HandlebarsEditor } from './ui/handlebars.js';
