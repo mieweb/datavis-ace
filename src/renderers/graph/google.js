@@ -17,11 +17,38 @@ import {
 import {AggregateInfo} from '../../aggregates';
 import {GROUP_FUNCTION_REGISTRY} from '../../group_fun.js';
 
+import OrdMap from '../../util/ordmap.js';
 import { GraphRenderer } from '../../graph_renderer.js';
 
 // GraphRendererGoogle {{{1
 
-var GraphRendererGoogle = makeSubclass('GraphRendererGoogle', GraphRenderer);
+var GraphRendererGoogle = makeSubclass('GraphRendererGoogle', GraphRenderer, null, {
+	graphTypes: OrdMap.fromArray([{
+		value: 'area',
+		name: 'Area Chart',
+		modes: ['plain'],
+	}, {
+		value: 'line',
+		name: 'Line Chart',
+		modes: ['plain'],
+	}, {
+		value: 'bar',
+		name: 'Bar Chart',
+		modes: ['plain', 'group', 'pivot'],
+	}, {
+		value: 'column',
+		name: 'Column Chart',
+		modes: ['plain', 'group', 'pivot'],
+	}, {
+		value: 'pie',
+		name: 'Pie Chart',
+		modes: ['plain', 'group', 'pivot'],
+	}, {
+		value: 'gantt',
+		name: 'Gantt Chart',
+		modes: ['plain'],
+	}])
+});
 
 // #draw_plain {{{2
 
@@ -385,8 +412,10 @@ GraphRendererGoogle.prototype._ensureGoogleChartsLoaded = function (cont) {
 
 // #draw {{{2
 
-GraphRendererGoogle.prototype._draw = function (devConfig, userConfig) {
+GraphRendererGoogle.prototype.draw = function (devConfig, userConfig) {
 	var self = this;
+
+	self.super.addRedrawHandlers();
 
 	devConfig = devConfig || {};
 	userConfig = userConfig || {};

@@ -411,9 +411,11 @@ Graph.prototype._addAggregateButtons = function (toolbar) {
 		})
 		.appendTo(toolbar);
 
-	GRAPH_TYPES.each(function (gt) {
-		self.ui.graphTypeDropdown.append(jQuery('<option>', { 'value': gt.value }).text(gt.name));
-	});
+	if (getProp(self.renderer, 'prototype', 'graphTypes')) {
+		self.renderer.prototype.graphTypes.each(function (gt) {
+			self.ui.graphTypeDropdown.append(jQuery('<option>', { 'value': gt.value }).text(gt.name));
+		});
+	}
 
 	var aggDropdownId = gensym();
 	jQuery('<label>', { 'for': aggDropdownId }).text('Aggregate: ').appendTo(toolbar);
@@ -905,9 +907,11 @@ GraphControl.prototype.draw = function () {
 
 		self.ui.graphType = jQuery('<select>');
 
-		GRAPH_TYPES.each(function (gt) {
-			self.ui.graphType.append(jQuery('<option>', { 'value': gt.value }).text(gt.name));
-		});
+		if (getProp(self.renderer, 'prototype', 'graphTypes')) {
+			self.renderer.prototype.graphTypes.each(function (gt) {
+				self.ui.graphType.append(jQuery('<option>', { 'value': gt.value }).text(gt.name));
+			});
+		}
 
 		self.ui.root.append(jQuery('<div>').append(self.ui.graphType));
 
@@ -967,41 +971,6 @@ GraphControl.prototype.draw = function () {
 		// Pivot Data Configuration
 	}, { limit: 1 });
 };
-
-
-// GRAPH_TYPES {{{1
-
-var GRAPH_TYPES = OrdMap.fromArray([{
-	value: 'area',
-	name: 'Area Chart',
-	modes: ['plain'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}, {
-	value: 'line',
-	name: 'Line Chart',
-	modes: ['plain'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}, {
-	value: 'bar',
-	name: 'Bar Chart',
-	modes: ['plain', 'group', 'pivot'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}, {
-	value: 'column',
-	name: 'Column Chart',
-	modes: ['plain', 'group', 'pivot'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}, {
-	value: 'pie',
-	name: 'Pie Chart',
-	modes: ['plain', 'group', 'pivot'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}, {
-	value: 'gantt',
-	name: 'Gantt Chart',
-	modes: ['plain'],
-	renderers: [GRAPH_RENDERER_REGISTRY.get('google')],
-}], 'value');
 
 // Exports {{{1
 

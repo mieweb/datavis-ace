@@ -59,7 +59,7 @@ GraphRenderer.prototype._validateConfig = function () {
 
 // #addRedrawHandlers {{{2
 
-GraphRenderer.prototype.addRedrawHandlers = function (f) {
+GraphRenderer.prototype.addRedrawHandlers = function () {
 	var self = this;
 
 	debug.info('GRAPH // RENDER', 'Adding redraw handlers');
@@ -68,21 +68,8 @@ GraphRenderer.prototype.addRedrawHandlers = function (f) {
 	self.view.on('workEnd', function () {
 		debug.info('GRAPH RENDERER // HANDLER (View.dataUpdated)',
 			'Redrawing graph because the view has finished doing work');
-		f();
+		self.draw();
 	}, { who: self });
-};
-
-// #draw {{{2
-
-GraphRenderer.prototype.draw = function (devConfig, userConfig) {
-	var self = this;
-
-	var reallyDraw = function () {
-		self._draw(devConfig, userConfig);
-	};
-
-	self.addRedrawHandlers(reallyDraw);
-	reallyDraw();
 };
 
 // Exports {{{1
