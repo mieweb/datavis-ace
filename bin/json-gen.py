@@ -85,8 +85,8 @@ def random_float(name='random_float', min=0, max=1, **opts):
 def random_date(name='random_date', min='1900-01-01', max='2100-01-01', **opts):
     global LAST
     r = init_random(name)
-    min = time.mktime(time.strptime(min, '%Y-%m-%d'))
-    max = time.mktime(time.strptime(max, '%Y-%m-%d'))
+    min = int(time.mktime(time.strptime(min, '%Y-%m-%d')))
+    max = int(time.mktime(time.strptime(max, '%Y-%m-%d')))
     val = date.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
         ret = format_date(val, opts['format'])
@@ -98,8 +98,8 @@ def random_date(name='random_date', min='1900-01-01', max='2100-01-01', **opts):
 def random_time(name='random_time', min='00:00:00', max='23:59:59', **opts):
     global LAST
     r = init_random(name)
-    min = time.mktime(time.strptime('2000-01-01 ' + min, '%Y-%m-%d %H:%M:%S'))
-    max = time.mktime(time.strptime('2000-01-01 ' + max, '%Y-%m-%d %H:%M:%S'))
+    min = int(time.mktime(time.strptime('2000-01-01 ' + min, '%Y-%m-%d %H:%M:%S')))
+    max = int(time.mktime(time.strptime('2000-01-01 ' + max, '%Y-%m-%d %H:%M:%S')))
     val = datetime.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
         ret = format_datetime(val, opts['format'])
@@ -111,8 +111,8 @@ def random_time(name='random_time', min='00:00:00', max='23:59:59', **opts):
 def random_datetime(name='random_datetime', min='1900-01-01 00:00:00', max='2099-12-31 23:59:59', **opts):
     global LAST
     r = init_random(name)
-    min = time.mktime(time.strptime(min, '%Y-%m-%d %H:%M:%S'))
-    max = time.mktime(time.strptime(max, '%Y-%m-%d %H:%M:%S'))
+    min = int(time.mktime(time.strptime(min, '%Y-%m-%d %H:%M:%S')))
+    max = int(time.mktime(time.strptime(max, '%Y-%m-%d %H:%M:%S')))
     val = datetime.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
         ret = format_datetime(val, opts['format'])
