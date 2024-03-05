@@ -23,7 +23,7 @@ Always, *always* do the following:
 - `make teardown`
 - `make setup`
 
-This ensures that all dependencies are fully wiped out and rebuilt for the current branch.  You may also get a message about running `nvm use` — that means a specific version of Node is required for the support code.
+This ensures that all dependencies are fully wiped out and rebuilt for the current branch.  You may also get a message about running `nvm use` — that means a specific version of Node is required for the support code.
 
 ## Conventions
 

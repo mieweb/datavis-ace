@@ -11,7 +11,7 @@ The proper, internal name of the latter is a “perspective,” see
 
 ## Getting Data
 
-An output (e.g. `GridTable`) should never access the data source
+An output (e.g. `GridTable`) should never access the data source
 directly, it should only use the view to get data. This is because the
 view handles filtering, sorting, grouping, and other things which the
 data source does not. So how does the view return its data? There are
@@ -94,7 +94,7 @@ whether the data has been grouped or pivotted.
 
   - `isPlain`
 
-    True if the data is plain (i.e. not grouped or pivotted).
+    True if the data is plain (i.e. not grouped or pivotted).
 
   - `isGroup`
 
@@ -106,7 +106,7 @@ whether the data has been grouped or pivotted.
 
   - `groupFields`
 
-    A list of the fields (from the source, e.g. columns in a system
+    A list of the fields (from the source, e.g. columns in a system
     report) that we’re grouping by, in order.
 
   - `rowVals`
@@ -118,7 +118,7 @@ whether the data has been grouped or pivotted.
 
   - `pivotFields`
 
-    A list of the fields (from the source, e.g. columns in a system
+    A list of the fields (from the source, e.g. columns in a system
     report) that we’re pivotting by, in order.
 
   - `colVals`
@@ -148,8 +148,8 @@ whether the data has been grouped or pivotted.
       - `rowNum`
 
         This is a unique identifier used to track a row. This is
-        currently used to facilitate filtering (e.g. “hide rows 2, 3,
-        and 7”) and reordering (e.g. “move row X above row Y”).
+        currently used to facilitate filtering (e.g. “hide rows 2, 3,
+        and 7”) and reordering (e.g. “move row X above row Y”).
 
       - `rowData`
 

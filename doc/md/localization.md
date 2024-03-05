@@ -2,7 +2,7 @@
 
 ## Generating Translation Strings
 
-Language packs are Javascript files that contain a single exported object. They are located in the `src/lang` directory, and named after the ISO 639-1 language code, e.g. `en.js` for English. They are created automatically from the two following TSV files using the GNU Awk script in `bin/make-lang-packs.awk` — which is run automatically when using `make` to build DataVis.
+Language packs are Javascript files that contain a single exported object. They are located in the `src/lang` directory, and named after the ISO 639-1 language code, e.g. `en.js` for English. They are created automatically from the two following TSV files using the GNU Awk script in `bin/make-lang-packs.awk` — which is run automatically when using `make` to build DataVis.
 
 The file `en.tsv` in the root directory contains all English translations for all labels supported by DataVis. To add more translations to DataVis, add them to this file. The file is a TSV (tab-separated values) file without quoted values. The following columns should exist:
 

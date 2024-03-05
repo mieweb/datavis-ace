@@ -77,9 +77,9 @@
     option is not used. The default format strings are:
     
       - number: \[none\]
-      - currency: `$0,0.00` (e.g. “$1,000.23”)
-      - date: `LL` (e.g. “September 4, 1986”)
-      - datetime: `LLL` (e.g. “September 4, 1986 8:30 PM”)
+      - currency: `$0,0.00` (e.g. “$1,000.23”)
+      - date: `LL` (e.g. “September 4, 1986”)
+      - datetime: `LLL` (e.g. “September 4, 1986 8:30 PM”)
 
   - `format_dateOnly` — string, default = “`LL`”
     
@@ -167,12 +167,12 @@ does not affect the ordering of the groups themselves.
 
 ### Sorting Pivot Fields
 
-Sorting pivot fields (e.g. "State") changes the order of the pivotted
-columns to be in the order indicated (e.g. Alabama, Alaska, Arizona, …
+Sorting pivot fields (e.g. "State") changes the order of the pivotted
+columns to be in the order indicated (e.g. Alabama, Alaska, Arizona, …
 for ascending order).
 
 ### Sorting Pivot Values
 
-Sorting pivot values (e.g. "Indiana") changes the order of the rows,
+Sorting pivot values (e.g. "Indiana") changes the order of the rows,
 based on the value of the aggregate function, to be in the order
 indicated.

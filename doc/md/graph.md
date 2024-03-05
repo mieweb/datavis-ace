@@ -32,7 +32,7 @@ which corresponds to a bucket of data.
 
   - `categoryField` : string (plain mode only)
     
-    Name of the field which gives the category (i.e. “bucket”) of the
+    Name of the field which gives the category (i.e. “bucket”) of the
     box. In column / vertical graphs, this is the x-axis value; in bar /
     horizontal graphs, this is the y-axis value. The “display text” of
     the corresponding column in the grid overrides the field name in the
