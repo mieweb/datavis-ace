@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="../../jquery.min.js"></script>
+		<script src="../../jquery-ui.min.js"></script>
+		<script src="../../jquery.blockUI.js"></script>
+		<script src="../../jquery.contextMenu.min.js"></script>
+		<script src="../../jquery.sumoselect.min.js"></script>
+		<script src="../../flatpickr.min.js"></script>
+		<script src="../../wcdatavis.js"></script>
+		<link rel="stylesheet" href="../../font-awesome.css"/>
+		<link rel="stylesheet" href="../../jquery-ui.min.css"/>
+		<link rel="stylesheet" href="../../jquery.contextMenu.min.css"/>
+		<link rel="stylesheet" href="../../sumoselect.min.css"/>
+		<link rel="stylesheet" href="../../flatpickr.min.css"/>
+		<link rel="stylesheet" href="../../base.css"/>
+		<link rel="stylesheet" href="../../wcdatavis.css"/>
+		<script>
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	var prefs = new MIE.WC_DataVis.Prefs('TEST:GRID:BUGS:CSV-DUPLICATE-ROWS', null, {
+		backend: {
+			type: 'temporary'
+		}
+	});
+	var source = new MIE.WC_DataVis.Source({
+		type: 'http',
+		url: '../../random1000.json',
+	});
+	var computedView = new MIE.WC_DataVis.ComputedView(source, {
+		prefs: prefs
+	});
+	var grid = new MIE.WC_DataVis.Grid({
+		id: 'grid',
+		computedView: computedView,
+		prefs: prefs,
+		source: source,
+	}, {
+		title: 'Test - Grid - Bugs - CSV Duplicate Rows',
+		showControls: true
+	});
+
+		// The grid already handles the `getTypeInfo` event on the view to modify the column
+		// configuration (setting up a basic colConfig from the typeInfo if it doesn't exist). Changing
+		// the colConfig causes the grid to be rendered. By setting a second handler here, this code
+		// should run while the table is rendering, changing the colConfig and causing it to be rendered
+		// again. This means we'll have two rendering processes happening at the same time, which means
+		// the CSV buffer will contain data from both.
+
+		computedView.on('getTypeInfo', function (typeInfo) {
+			grid.colConfig.each(function (cc, field) {
+				if (field.startsWith('currency')) {
+					grid.colConfig.unset(field);
+					// cc.displayText = (cc.displayText || field).toUpperCase();
+				}
+			});
+			grid.setColConfig(grid.colConfig, {from: 'reset', savePrefs: false, redraw: false});
+		});
+});
+		</script>
+	</head>
+	<body>
+		<div id="grid"></div>
+	</body>
+</html>

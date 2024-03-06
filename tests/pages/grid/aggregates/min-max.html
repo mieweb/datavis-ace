@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="../../jquery.min.js"></script>
+		<script src="../../jquery-ui.min.js"></script>
+		<script src="../../jquery.blockUI.js"></script>
+		<script src="../../jquery.contextMenu.min.js"></script>
+		<script src="../../jquery.sumoselect.min.js"></script>
+		<script src="../../flatpickr.min.js"></script>
+		<script src="../../wcdatavis.js"></script>
+		<link rel="stylesheet" href="../../font-awesome.css"/>
+		<link rel="stylesheet" href="../../jquery-ui.min.css"/>
+		<link rel="stylesheet" href="../../jquery.contextMenu.min.css"/>
+		<link rel="stylesheet" href="../../sumoselect.min.css"/>
+		<link rel="stylesheet" href="../../flatpickr.min.css"/>
+		<link rel="stylesheet" href="../../base.css"/>
+		<link rel="stylesheet" href="../../wcdatavis.css"/>
+		<script>
+MinOverMaxConcatAggregate = MIE.makeSubclass('MinOverMaxConcatAggregate', MIE.WC_DataVis.Aggregate, null, {
+	name: 'Min/Max (Concat)',
+	enabled: true,
+	fieldCount: 2,
+	type: 'string',
+	inheritFormatting: false,
+	bottomValue: '',
+	init: function () {
+		return { a: null, b: null }
+	}
+});
+
+MinOverMaxConcatAggregate.prototype.checkOpts = function () {
+	if (this.opts.typeInfo == null) {
+		MIE.log.error('Aggregate ' + this.name + ': Missing `opts.typeInfo`');
+		return false;
+	}
+
+	if (this.opts.compare == null) {
+		this.opts.compare = MIE.WC_DataVis.Util.getComparisonFn.byType(this.opts.typeInfo[0].type);
+	}
+
+	if (typeof this.opts.compare !== 'function') {
+		MIE.log.error('Aggregate ' + this.name + ': Missing `opts.compare`');
+		return false;
+	}
+
+	return this.super.checkOpts();
+};
+
+MinOverMaxConcatAggregate.prototype.calculateStep = function (acc, next) {
+	var a = this.getRealValue(next[this.opts.fields[0]]);
+	var b = this.getRealValue(next[this.opts.fields[1]]);
+
+	return {
+		a: acc.a == null ? a : this.opts.compare(acc.a, a) < 0 ? acc.a : a,
+		b: acc.b == null ? b : this.opts.compare(acc.b, b) < 0 ? b : acc.b
+	};
+};
+
+MinOverMaxConcatAggregate.prototype.calculateDone = function (obj) {
+	return obj.a == null || obj.b == null ? this.bottomValue : obj.a + ' / ' + obj.b;
+};
+
+MinOverMaxConcatAggregate.prototype.getFullName = function () {
+	return 'Min(' + this.opts.fields[0] + ') / Max(' + this.opts.fields[1] + ')';
+};
+
+MIE.WC_DataVis.AGGREGATE_REGISTRY.set('minOverMax_concat', MinOverMaxConcatAggregate);
+
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	var source = new MIE.WC_DataVis.Source({
+		type: 'http',
+		url: '../../random100.json'
+	});
+	var computedView = new MIE.WC_DataVis.ComputedView(source);
+	new MIE.WC_DataVis.Grid({
+		id: 'grid',
+		computedView: computedView,
+		table: {
+			features: {
+				limit: false,
+				rowSelect: true,
+			}
+		}
+	}, {
+		title: 'Test - Grid - Default',
+		showControls: true
+	});
+});
+		</script>
+	</head>
+	<body>
+		<div id="grid"></div>
+	</body>
+</html>
