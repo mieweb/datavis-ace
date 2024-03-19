@@ -719,7 +719,12 @@ tr.wcdvgrid_more td {
  */
 
 .wcdv_grid_table table {
-	border-collapse: collapse;
+	/*
+	 * If we use border-collapse then the border of the sticky header <th> elements will scroll with
+	 * the table body, rather than being stuck with the <th> elements. Using border-spacing instead.
+	 */
+	/* border-collapse: collapse; */
+	border-spacing: 0;
 	background-color: #FFFFFF;
 	font-size: 1em;
 	width: 100%;
@@ -1174,6 +1179,25 @@ button.wcdv_option {
     -webkit-transform: scale(1.0);
     transform: scale(1.0);
   }
+}
+
+/* STICKY TABLE HEADER/FOOTER */
+
+table thead.sticky,
+table tfoot.sticky {
+  position: sticky;
+}
+table thead.sticky {
+  inset-block-start: 0; /* "top" */
+	/*
+	 * If we fail to do this, then the "expand" button in group details output will show through the
+	 * header cell in the same column.
+	 */
+  z-index: 1;
+}
+table tfoot.sticky {
+  inset-block-end: 0; /* "bottom" */
+  z-index: 1;
 }
 
 /* vim:set noet sw=4 ts=4: */

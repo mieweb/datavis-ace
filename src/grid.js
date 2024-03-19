@@ -539,7 +539,9 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		// When using TableTool, we can't just set the height of the whole grid and use flex to control
 		// the height of the table automatically.  See DV-196.
 		// Remove the height CSS property here, so the renderer can use it for data-ttheight instead.
-		if (self.features.floatingHeader && self.defn.table.floatingHeader.method === 'tabletool' && window.TableTool != null) {
+		if (self.features.floatingHeader &&
+				getProp(self.defn, 'table', 'floatingHeader', 'method') === 'tabletool' &&
+				window.TableTool != null) {
 			self.ui.root.css('height', '');
 		}
 	}
@@ -630,7 +632,8 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		// When using TableTool, we can't just set the height of the whole grid and use flex to control
 		// the height of the table automatically.  See DV-196.
 		// Don't use the height: 0px trick in this situation and let TableTool manage the table height.
-		if (!self.features.floatingHeader || self.defn.table.floatingHeader.method !== 'tabletool') {
+		// FIXME Is this needed with the CSS method?
+		if (!self.features.floatingHeader || getProp(self.defn, 'table', 'floatingHeader', 'method') !== 'tabletool') {
 			// This is a trick to make 'flex: 1 1 auto' work right in Firefox, IE, Edge.
 			// Otherwise, the table takes up as much space as it needs and doesn't scroll.
 			self.ui.grid.css('height', '0px');

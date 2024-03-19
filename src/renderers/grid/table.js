@@ -358,6 +358,9 @@ GridTable.prototype._validateFloatTableHeader = function () {
 				self.features.floatingHeader = false;
 			}
 			break;
+		case 'css':
+			// TODO Check for browser support.
+			break;
 		default:
 			log.error('GRID TABLE // CONFIG', 'Unrecognized floating header method: ' + config.method);
 			self.features.floatingHeader = false;
@@ -376,6 +379,9 @@ GridTable.prototype._validateFloatTableHeader = function () {
 		}
 		else if (window.TableTool) {
 			config.method = 'tabletool';
+		}
+		else if (true /* TODO Replace with actual check for browser support. */) {
+			config.method = 'css';
 		}
 		else {
 			self.features.floatingHeader = false;
@@ -1411,6 +1417,10 @@ GridTable.prototype.draw = function (root, opts, cont) {
 						self.ui.tbl.attr('data-tttype', 'sidescroll');
 						self.ui.tbl.attr('data-ttsidecells', data.groupFields.length);
 					}
+					break;
+				case 'css':
+					self.ui.thead.addClass('sticky');
+					self.ui.tfoot.addClass('sticky');
 					break;
 				}
 			}
