@@ -45,6 +45,10 @@ class StaticHandler(tornado.web.StaticFileHandler):
 
     def validate_absolute_path(self, root, path):
         absolute_path = os.path.join(root, path)
+        # Because of the way that we build links in the directory listing, the URL for a directory
+        # needs to end in a slash. Redirect if it doesn't.
+        if os.path.isdir(absolute_path) and self.request.uri[-1] != '/':
+            return self.redirect(self.request.uri + '/', True)
         if not os.path.isdir(absolute_path) or os.path.isfile(os.path.join(absolute_path, self.default_filename)):
             return super().validate_absolute_path(root, path)
         else:
