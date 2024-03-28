@@ -54,6 +54,10 @@ OperationsPalette.prototype.draw = function (parent) {
 
 	if (self.operations.length > 0) {
 		self.drawPalette();
+		parent.show();
+	}
+	else {
+		parent.hide();
 	}
 
 	self.ui.palette.on('click.wcdv_operation', 'button.wcdv_operation', function () {
