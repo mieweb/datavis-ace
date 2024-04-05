@@ -1,0 +1,34 @@
+{
+  "$< random_seed(0) >$": null,
+  "data": [
+    "$< repeat(ARGS['COUNT'], VALUE) >$",
+    {
+        "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "state": "$< state() >$"
+      , "float1": "$< random_float('float1', 0, 9999, output_type='number') >$"
+      , "float2": "$< random_float('float2', 0, 9999, output_type='string') >$"
+      , "float3": "$< random_float('float3', 0, 9999, output_type='string', format='#,##0.###') >$"
+      , "float4": "$< random_float('float4', 0, 9999, output_type='number') >$"
+      , "float5": "$< random_float('float5', 0, 9999, output_type='string') >$"
+      , "float6": "$< random_float('float6', 0, 9999, output_type='string', format='#,##0.###') >$"
+      , "float7": "$< random_float('float7', 0, 9999, output_type='number') >$"
+      , "float8": "$< random_float('float8', 0, 9999, output_type='string') >$"
+      , "float9": "$< random_float('float9', 0, 9999, output_type='string', format='#,##0.###') >$"
+    }
+  ],
+  "typeInfo": [
+      { "field": "country", "type": "string" }
+    , { "field": "fruit", "type": "string" }
+    , { "field": "state", "type": "string" }
+    , { "field": "float1", "type": "number", "internalType": "primitive" }
+    , { "field": "float2", "type": "number", "internalType": "primitive" }
+    , { "field": "float3", "type": "number", "internalType": "primitive" }
+    , { "field": "float4", "type": "number", "internalType": "numeral" }
+    , { "field": "float5", "type": "number", "internalType": "numeral" }
+    , { "field": "float6", "type": "number", "internalType": "numeral" }
+    , { "field": "float7", "type": "number", "internalType": "bignumber" }
+    , { "field": "float8", "type": "number", "internalType": "bignumber" }
+    , { "field": "float9", "type": "number", "internalType": "bignumber" }
+  ]
+}

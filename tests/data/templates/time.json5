@@ -1,0 +1,44 @@
+{
+  "$< random_seed(0) >$": null,
+  "data": [
+    "$< repeat(ARGS['COUNT'], VALUE) >$",
+    {
+        "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "state": "$< state() >$"
+      // random times with seconds
+      , "time1": "$< random_time('time1', format='HH:mm:ss') >$"
+      , "time2": "$< random_time('time2', format='hh:mm:ss a') >$"
+      , "time3": "$< random_time('time3', format='h:mm:ss a') >$"
+      // random times without seconds
+      , "time4": "$< random_time('time4', format='HH:mm') >$"
+      , "time5": "$< random_time('time5', format='hh:mm a') >$"
+      , "time6": "$< random_time('time6', format='h:mm a') >$"
+      // random times with seconds, within the same minute
+      , "time7": "$< random_time('time7', min='08:00:00', max='08:00:59', format='HH:mm:ss') >$"
+      , "time8": "$< random_time('time8', min='08:00:00', max='08:00:59', format='hh:mm:ss a') >$"
+      , "time9": "$< random_time('time9', min='08:00:00', max='08:00:59', format='h:mm:ss a') >$"
+      // random times with seconds, within the same hour
+      , "time10": "$< random_time('time10', min='08:00:00', max='08:59:59', format='HH:mm:ss') >$"
+      , "time11": "$< random_time('time11', min='08:00:00', max='08:59:59', format='hh:mm:ss a') >$"
+      , "time12": "$< random_time('time12', min='08:00:00', max='08:59:59', format='h:mm:ss a') >$"
+    }
+  ],
+  "typeInfo": [
+      { "field": "country", "type": "string" }
+    , { "field": "fruit", "type": "string" }
+    , { "field": "state", "type": "string" }
+    , { "field": "time1", "type": "time", "format": "HH:mm:ss" }
+    , { "field": "time2", "type": "time", "format": "hh:mm:ss a" }
+    , { "field": "time3", "type": "time", "format": "h:mm:ss a" }
+    , { "field": "time4", "type": "time", "format": "HH:mm" }
+    , { "field": "time5", "type": "time", "format": "hh:mm a" }
+    , { "field": "time6", "type": "time", "format": "h:mm a" }
+    , { "field": "time7", "type": "time", "format": "HH:mm:ss" }
+    , { "field": "time8", "type": "time", "format": "hh:mm:ss a" }
+    , { "field": "time9", "type": "time", "format": "h:mm:ss a" }
+    , { "field": "time10", "type": "time", "format": "HH:mm:ss" }
+    , { "field": "time11", "type": "time", "format": "hh:mm:ss a" }
+    , { "field": "time12", "type": "time", "format": "h:mm:ss a" }
+  ]
+}

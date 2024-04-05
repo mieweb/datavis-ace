@@ -1,0 +1,24 @@
+{
+  "$< random_seed(0) >$": null,
+  "data": [
+    "$< repeat(ARGS['COUNT'], VALUE) >$",
+    {
+        "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "state": "$< state() >$"
+      , "currency1": "$< random_float('currency1', 0, 9999, output_type='number', fixed=2) >$"
+      , "currency2": "$< random_float('currency2', 0, 9999, output_type='string', format='#,##0.##') >$"
+      , "currency3": "$< random_float('currency3', 0, 9999, output_type='string', format='$#,##0.##') >$"
+      , "currency4": "$< random_float('currency4', 0, 9999, output_type='string', format='$#,##0.##') >$"
+    }
+  ],
+  "typeInfo": [
+      { "field": "country", "type": "string" }
+    , { "field": "fruit", "type": "string" }
+    , { "field": "state", "type": "string" }
+    , { "field": "currency1", "type": "currency" }
+    , { "field": "currency2", "type": "currency" }
+    , { "field": "currency3", "type": "currency" }
+    , { "field": "currency4", "type": "string" }
+  ]
+}

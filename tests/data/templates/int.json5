@@ -1,0 +1,34 @@
+{
+  "$< random_seed(0) >$": null,
+  data: [
+    "$< repeat(ARGS['COUNT'], VALUE) >$",
+    {
+        "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "state": "$< state() >$"
+      , "int1": "$< random_int('int1', 0, 9999, output_type='number') >$"
+      , "int2": "$< random_int('int2', 0, 9999, output_type='string') >$"
+      , "int3": "$< random_int('int3', 0, 9999, output_type='string', format='#,##0') >$"
+      , "int4": "$< random_int('int4', 0, 9999, output_type='number') >$"
+      , "int5": "$< random_int('int5', 0, 9999, output_type='string') >$"
+      , "int6": "$< random_int('int6', 0, 9999, output_type='string', format='#,##0') >$"
+      , "int7": "$< random_int('int7', 0, 9999, output_type='number') >$"
+      , "int8": "$< random_int('int8', 0, 9999, output_type='string') >$"
+      , "int9": "$< random_int('int9', 0, 9999, output_type='string', format='#,##0') >$"
+    }
+  ],
+  "typeInfo": [
+      { "field": "country", "type": "string" }
+    , { "field": "fruit", "type": "string" }
+    , { "field": "state", "type": "string" }
+    , { "field": "int1", "type": "number", "internalType": "primitive" }
+    , { "field": "int2", "type": "number", "internalType": "primitive" }
+    , { "field": "int3", "type": "number", "internalType": "primitive" }
+    , { "field": "int4", "type": "number", "internalType": "numeral" }
+    , { "field": "int5", "type": "number", "internalType": "numeral" }
+    , { "field": "int6", "type": "number", "internalType": "numeral" }
+    , { "field": "int7", "type": "number", "internalType": "bignumber" }
+    , { "field": "int8", "type": "number", "internalType": "bignumber" }
+    , { "field": "int9", "type": "number", "internalType": "bignumber" }
+  ]
+}

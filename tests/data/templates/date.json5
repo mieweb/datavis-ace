@@ -1,0 +1,22 @@
+{
+  "$< random_seed(0) >$": null,
+  "data": [
+    "$< repeat(ARGS['COUNT'], VALUE) >$",
+    {
+        "country": "$< cycle('country', ['United States', 'Canada', 'Mexico', 'England', 'France', 'Germany', 'Switzerland', 'Japan', 'China', 'South Korea']) >$"
+      , "fruit": "$< random_element('fruit', ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Grape', 'Kiwi', 'Mango', 'Orange', 'Pineapple', 'Strawberry'], 'normal') >$"
+      , "state": "$< state() >$"
+      , "date1": "$< random_date('date1', format='yyyy-MM-dd') >$"
+      , "date2": "$< random_date('date2', format='MMM d, yyyy') >$"
+      , "date3": "$< random_date('date3', format='MM/dd/yyyy') >$"
+    }
+  ],
+  "typeInfo": [
+      { "field": "country", "type": "string" }
+    , { "field": "state", "type": "string" }
+    , { "field": "fruit", "type": "string" }
+    , { "field": "date1", "type": "date" }
+    , { "field": "date2", "type": "date", "format": "MMMM D, YYYY" }
+    , { "field": "date3", "type": "date", "format": "MM/DD/YYYY" }
+  ]
+}
