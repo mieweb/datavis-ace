@@ -10,6 +10,8 @@ import OrdMap from './ordmap.js';
 import Lock from './lock.js';
 import EXPERIMENTAL_FEATURES from '../flags.js';
 
+import types from '../types.js';
+
 /**
  * @namespace util
  */
@@ -2907,13 +2909,9 @@ export function deprecated(defn, msg, ref) {
 	emailWarning(defn, output);
 }
 
-export function convert(cell, fti) {
-	var value = cell.value;
-	var error = function (msg) {
-		log.error('Unable to convert cell value, %s: field = "%s", fti.type = %s, fti.internalType = %s, value = %O (%s)', msg, fti.field || '[unknown]', fti.type, fti.internalType, value, typeof value);
-	};
-
+var decode = function (cell, fti) {
 	if (cell.decoded) {
+		// We already did this one.
 		return;
 	}
 
@@ -2921,138 +2919,17 @@ export function convert(cell, fti) {
 		cell.orig = cell.value;
 	}
 
-	switch (fti.type) {
-	case 'number':
-	case 'currency':
-		if (typeof cell.value === 'number') {
-			switch (fti.internalType) {
-			case 'primitive':
-				// number -> primitive ... Nothing to do.
-				break;
-			case 'numeral':
-				// number -> numeral
-				cell.value = numeral(cell.value);
-				break;
-			case 'bignumber':
-				// number -> bignumber
-				cell.value = new BigNumber(cell.value);
-				break;
-			default:
-				return error('unsupported internal representation');
-			}
-		}
-		else if (typeof cell.value === 'string') {
-			if (cell.value === '') {
-				cell.value = null;
-			}
-			else {
-				switch (fti.internalType) {
-				case 'primitive':
-					// string -> primitive
-					cell.value = parseNumber(cell.value);
-					if (cell.value == null) {
-						return error('cannot decode primitive number');
-					}
-					break;
-				case 'numeral':
-					// string -> numeral
-					var newVal = parseNumber(cell.value);
-					if (newVal == null) {
-						cell.value = null;
-						return error('cannot decode primitive number');
-					}
-					cell.value = numeral(newVal);
-					break;
-				case 'bignumber':
-					var newVal = parseNumber(cell.value, 'string');
-					if (newVal == null) {
-						cell.value = null;
-						return error('invalid value');
-					}
-					cell.value = new BigNumber(newVal);
-					break;
-				default:
-					return error('unsupported internal representation');
-				}
-			}
-		}
-		else if (numeral.isNumeral(cell.value) || BigNumber.isBigNumber(cell.value)) {
-			// Already converted.
-		}
-		else {
-			return error('unsupported value type');
-		}
-		break;
-	case 'date':
-	case 'time':
-	case 'datetime':
-		if (typeof cell.value === 'string') {
-			if (cell.value === '') {
-				cell.value = null;
-			}
-			else {
-				switch (fti.internalType) {
-				case 'moment':
-					// string -> moment
-					cell.value = moment(cell.value, fti.format);
-					break;
-				case 'string':
-					// string -> string ... Nothing to do.
-					break;
-				default:
-					return error('unsupported internal representation');
-				}
-			}
-		}
-		else if (cell.value instanceof Date) {
-			switch (fti.internalType) {
-			case 'moment':
-				// date -> moment
-				cell.value = moment(cell.value, fti.format);
-				break;
-			default:
-				return error('unsupported internal representation');
-			}
-		}
-		else if (moment.isMoment(cell.value)) {
-			// Already converted.
-		}
-		else {
-			return error('unsupported value type');
-		}
-		break;
-	case 'json':
-		if (typeof cell.value === 'string') {
-			try {
-				cell.value = JSON.parse(cell.value);
-			}
-			catch (e) {
-				// Do nothing - leave `cell.value` the way it was.
-			}
-		}
-		else {
-			return error('unsupported value type');
-		}
-		break;
-	case 'string':
-		if (typeof cell.value === 'string') {
-			// Nothing to do.
-		}
-		else if (cell.value == null) {
-			cell.value = '';
-		}
-		else {
-			// We have the data in some other type, like a date or a number, but the user wants to treat
-			// it as a string.  This is strange, but it's easy to convert so we just let it go.
-			cell.value = '' + cell.value;
-		}
-		break;
-	default:
-		return error('unsupported target type');
+	if (typeof cell.orig === 'string') {
+		// We'll be decoding from a string to some type.
+		cell.value = types.registry.get(fti.type).parse(cell.orig, fti.internalType, fti.format);
+	}
+	else {
+		// We'll be decoding from another type, e.g. float to BigNumber.
+		cell.value = types.registry.get(fti.type).decode(cell.orig, fti.internalType);
 	}
 
 	cell.decoded = true;
-}
+};
 
 /**
  * Correctly format a value according to its type and user specification.
@@ -3092,12 +2969,13 @@ export function format(fcc, fti, cell, opts) {
 
 	fcc = fcc || {};
 	fti = fti || {};
-	opts = opts || {};
+	opts = opts || {
+		decode: true
+	};
 
 	_.defaults(opts, {
 		debug: false,
 		overrideType: null,
-		convert: true,
 		saferCaching: true
 	});
 
@@ -3369,8 +3247,8 @@ export function format(fcc, fti, cell, opts) {
 		case 'date':
 		case 'time':
 		case 'datetime':
-			if (opts.convert) {
-				convert(cell, fti);
+			if (opts.decode) {
+				decode(cell, fti);
 			}
 
 			if (moment.isMoment(cell.value)) {
@@ -3404,8 +3282,8 @@ export function format(fcc, fti, cell, opts) {
 			break;
 		case 'number':
 		case 'currency':
-			if (opts.convert) {
-				convert(cell, fti);
+			if (opts.decode) {
+				decode(cell, fti);
 			}
 
 			// Bail for invalid, blank, or NaN values.  Unfortunately you need to use different methods to

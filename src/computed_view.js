@@ -620,7 +620,7 @@ mixinEventHandling(ComputedView, [
 , 'invalidAggregate'    // An aggregate function is invalid.
 ]);
 
-delegate(ComputedView, 'source', ['getUniqueVals', 'convertAll', 'setToolbar']);
+delegate(ComputedView, 'source', ['getUniqueVals', 'decodeAll', 'setToolbar']);
 
 mixinDebugging(ComputedView);
 mixinLogging(ComputedView);
@@ -790,22 +790,6 @@ ComputedView.prototype.unlimit = function () {
 ComputedView.prototype.toString = function () {
 	var self = this;
 	return 'ComputedView(' + self.name + ')';
-};
-
-// #_maybeDecode {{{2
-
-ComputedView.prototype._maybeDecode = function (tag, fti) {
-	var self = this;
-
-	if (fti.needsDecoding) {
-		self.debug(null, 'Converting data: { field = "%s", type = "%s" }',
-			fti.field, fti.type);
-
-		self.source.convertAll(self.data.dataByRowId, fti.field);
-	}
-
-	fti.deferDecoding = false;
-	fti.needsDecoding = false;
 };
 
 // #addClient {{{2
@@ -1018,7 +1002,7 @@ ComputedView.prototype.sort = function (cont) {
 		// lot simpler (i.e. no need to compare a Moment object --- which has already been decoded ---
 		// with a string containing a date).
 
-		self._maybeDecode('SORT', fti);
+		Source.decodeAll(self.data.dataByRowId, fti.field, self.typeInfo);
 
 		return cmp;
 	};
@@ -1893,7 +1877,7 @@ ComputedView.prototype.filter = function (cont) {
 			});
 		}
 
-		self._maybeDecode('FILTER', fti);
+		Source.decodeAll(self.data.dataByRowId, fti.field, self.typeInfo);
 	});
 
 	// Checks to see if the given filter passes for the given row.
@@ -2376,7 +2360,7 @@ ComputedView.prototype.group = function () {
 			log.error('Unable to group by field "%s": type is undefined');
 		}
 		else {
-			self._maybeDecode('GROUP', fti);
+			Source.decodeAll(self.data.dataByRowId, fti.field, self.typeInfo);
 			finalGroupSpec.push(fieldObj);
 		}
 	});
@@ -3013,7 +2997,7 @@ ComputedView.prototype.pivot = function () {
 			log.error('Unable to pivot by field "%s": type is undefined');
 		}
 		else {
-			self._maybeDecode('PIVOT', fti);
+			Source.decodeAll(self.data.dataByRowId, fti.field, self.typeInfo);
 			finalPivotSpec.push(fieldObj);
 		}
 	});
@@ -3348,7 +3332,9 @@ ComputedView.prototype.aggregate = function (cont) {
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		_.each(self.aggregateSpec[what], function (spec, aggNum) {
 			try {
-				info[what][aggNum] = new AggregateInfo(what, spec, aggNum, self.colConfig, self.typeInfo, _.bind(self._maybeDecode, self));
+				info[what][aggNum] = new AggregateInfo(what, spec, aggNum, self.colConfig, self.typeInfo, function (field) {
+					Source.decodeAll(self.data.dataByRowId, field, self.typeInfo);
+				});
 			}
 			catch (e) {
 				log.error('Invalid Aggregate: ' + what + '[' + aggNum + '] - ' + e.message);

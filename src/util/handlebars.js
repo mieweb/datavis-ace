@@ -85,7 +85,7 @@ function addHelpers(env, data) {
 	});
 
 	// aggregate {{{2
-	
+
 	env.registerHelper('aggregate', function (type, aggNum) {
 		var ctx = this;
 
@@ -143,7 +143,7 @@ function addHelpers(env, data) {
 			else {
 				text = format(null, null, aggResult, {
 					overrideType: aggInfo.instance.getType(),
-					convert: false
+					decode: false
 				});
 				//setTableCell(td, text);
 				return text;

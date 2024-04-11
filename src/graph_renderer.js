@@ -151,7 +151,7 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config)
 
 		_.each(configOpts, function (opt) {
 			if (config[opt.name + 'Field'] != null) {
-				self.view.source.convertAll(data.dataByRowId, config[opt.name + 'Field']);
+				Source.decodeAll(data.dataByRowId, config[opt.name + 'Field']);
 			}
 		});
 
@@ -183,7 +183,7 @@ GraphRendererGoogle.prototype.draw_plain = function (data, typeInfo, dt, config)
 		});
 
 		_.each(config.valueFields, function (field) {
-			self.view.source.convertAll(data.dataByRowId, field);
+			Source.decodeAll(data.dataByRowId, field);
 		});
 
 		_.each(data.data, function (row) {

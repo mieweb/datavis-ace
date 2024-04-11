@@ -5,7 +5,6 @@ import Papa from 'papaparse';
 import jQuery from 'jquery';
 
 import {
-	convert,
 	debug,
 	deepCopy,
 	deepDefaults,
@@ -24,6 +23,7 @@ import {
 
 import OrdMap from './util/ordmap.js';
 import Lock from './util/lock.js';
+import types from './types.js';
 
 // SourceError {{{1
 
@@ -768,6 +768,49 @@ Source.sources = {
 
 Source.converters = {};
 
+// .decode {{{2
+
+Source.decode = function (cell, fti) {
+	if (cell.decoded) {
+		// We already did this one.
+		return;
+	}
+
+	if (cell.orig === undefined) {
+		cell.orig = cell.value;
+	}
+
+	if (typeof cell.orig === 'string') {
+		// We'll be decoding from a string to some type.
+		cell.value = types.registry.get(fti.type).parse(cell.orig, fti.internalType, fti.format);
+	}
+	else {
+		// We'll be decoding from another type, e.g. float to BigNumber.
+		cell.value = types.registry.get(fti.type).decode(cell.orig, fti.internalType);
+	}
+
+	cell.decoded = true;
+};
+
+// .decodeAll {{{2
+
+Source.decodeAll = function (data, field, typeInfo) {
+	var fti = typeInfo.get(field);
+
+	if (!fti.needsDecoding) {
+		return;
+	}
+
+	console.debug('[DataVis // Source // Decoding] Decoding all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
+
+	_.each(data, function (row) {
+		Source.decode(row[field], typeInfo.get(field));
+	});
+
+	fti.deferDecoding = false;
+	fti.needsDecoding = false;
+};
+
 // #unlimit {{{2
 
 Source.prototype.unlimit = function () {
@@ -1064,18 +1107,18 @@ Source.prototype.postProcess = function (data, cont) {
 
 		self.setConversionTypeInfo(data, typeInfo);
 
-		// Step #3 - Unless conversion has been deferred on this field, convert it into the appropriate
+		// Step #3 - Unless conversion has been deferred on this field, decode it into the appropriate
 		// internal representation (numeral or moment).
 
 		_.each(data, function (row, rowNum) {
 			_.each(row, function (val, field) {
 				var fti = typeInfo.get(field);
 
-				// We also must convert now if this column is used as the discriminator.  Mostly this is
+				// We also must decode now if this column is used as the discriminator.  Mostly this is
 				// because using a date discriminator is much easier if we already have it parsed in Moment.
 
 				if (fti != null && (!fti.deferDecoding || field === self.discriminatorField)) {
-					convert(row[field], fti);
+					Source.decode(row[field], fti);
 				}
 
 			});
@@ -1237,26 +1280,6 @@ Source.prototype.setConversionTypeInfo = function (data, typeInfo) {
 				fti.needsDecoding ? 'SORT' : 'DISPLAY', f, fti.type, fti.format);
 		}
 	});
-};
-
-// #convertAll {{{2
-
-Source.prototype.convertAll = function (data, field) {
-	var self = this;
-	var fti = self.cache.typeInfo.get(field);
-
-	if (!fti.needsDecoding) {
-		return;
-	}
-
-	self.debug('CONVERSION', 'Converting all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
-
-	_.each(data, function (row) {
-		convert(row[field], self.cache.typeInfo.get(field));
-	});
-
-	fti.deferDecoding = false;
-	fti.needsDecoding = false;
 };
 
 // #clearCachedData {{{2

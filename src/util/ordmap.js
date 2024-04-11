@@ -24,6 +24,7 @@ function OrdMap() {
 	this._map = {};
 	this._size = 0;
 	this._setHandlers = {};
+	this._prepend = false;
 }
 
 Object.defineProperty(OrdMap, 'name', {value: 'OrdMap'});
@@ -77,6 +78,7 @@ OrdMap.fromMerge = function (maps) {
 
 	return o;
 };
+
 // .deserialize {{{2
 
 OrdMap.deserialize = function (x) {
@@ -96,6 +98,28 @@ OrdMap.deserialize = function (x) {
 };
 
 OrdMap.fromJSON = OrdMap.deserialize;
+
+// #setInsertOrder {{{2
+
+/**
+ * Allows the insertion order to be reversed.
+ *
+ * @param {string} dir
+ * Set the insertion order to 'append' or 'prepend' to control how adding items to the map works.
+ */
+
+OrdMap.prototype.setInsertOrder = function (dir) {
+	switch (dir) {
+	case 'append':
+		this._prepend = false;
+		break;
+	case 'prepend':
+		this._prepend = true;
+		break;
+	default:
+		throw new Error('Call Error: `dir` must be either "append" or "prepend"');
+	}
+};
 
 // #get {{{2
 
@@ -126,7 +150,12 @@ OrdMap.prototype.get = function (k, d) {
 
 OrdMap.prototype.set = function (k, v) {
 	if (!this.isSet(k)) {
-		this._keys.push(k);
+		if (this._prepend) {
+			this._keys.unshift(k);
+		}
+		else {
+			this._keys.push(k);
+		}
 		this._keyIndex[k] = this._keys.length - 1;
 		this._size += 1;
 	}

@@ -1119,7 +1119,7 @@ GridTable.prototype._setupFullValueWin = function (data) {
 				else {
 					val = format(null, null, aggResult, {
 						overrideType: aggInfo.instance.getType(),
-						convert: false
+						decode: false
 					});
 					setElement(fullValueWinDiv, val);
 				}
@@ -1716,7 +1716,7 @@ GridTable.prototype.drawBody_groupAggregates = function (data, tr, groupNum, dis
 			else {
 				text = format(null, null, aggResult, {
 					overrideType: aggType,
-					convert: false
+					decode: false
 				});
 				setTableCell(td, text);
 			}

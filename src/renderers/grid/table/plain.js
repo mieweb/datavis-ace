@@ -707,7 +707,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 						console.debug('[DataVis // %s // Footer(%s) // %s] Converting data: { field = "%s", type = "%s" }',
 							self.toString(), field, tag, fti.field, fti.type);
 
-						self.view.convertAll(data.dataByRowId, fti.field);
+						Source.decodeAll(data.dataByRowId, fti.field);
 					}
 
 					fti.deferDecoding = false;
@@ -728,7 +728,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 					else {
 						aggResult_formatted = format(null, null, aggResult, {
 							overrideType: aggInfo.instance.getType(),
-							convert: false
+							decode: false
 						});
 					}
 

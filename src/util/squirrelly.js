@@ -83,7 +83,7 @@ function addHelpers(env, data) {
 	});
 
 	// aggregate {{{2
-	
+
 	env.define('aggregate', function (content) {
 		let [ctx, type, aggNum] = content.params;
 
@@ -141,7 +141,7 @@ function addHelpers(env, data) {
 			else {
 				text = format(null, null, aggResult, {
 					overrideType: aggInfo.instance.getType(),
-					convert: false
+					decode: false
 				});
 				//setTableCell(td, text);
 				return text;

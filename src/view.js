@@ -436,7 +436,7 @@ mixinEventHandling(View, [
 , 'invalidAggregate'    // An aggregate function is invalid.
 ]);
 
-delegate(View, 'source', ['getUniqueVals', 'convertAll', 'setToolbar']);
+delegate(View, 'source', ['getUniqueVals', 'decodeAll', 'setToolbar']);
 
 makeSetters(View, [
 	{ name: 'setFilter',    prop: 'filterSpec',    event: 'filterSet'    },
@@ -606,22 +606,6 @@ mixinLogging(View);
 View.prototype.toString = function () {
 	var self = this;
 	return 'View(' + self.name + ')';
-};
-
-// #_maybeDecode {{{2
-
-View.prototype._maybeDecode = function (tag, fti) {
-	var self = this;
-
-	if (fti.needsDecoding) {
-		self.debug(null, 'Converting data: { field = "%s", type = "%s" }',
-			fti.field, fti.type);
-
-		self.source.convertAll(self.data.dataByRowId, fti.field);
-	}
-
-	fti.deferDecoding = false;
-	fti.needsDecoding = false;
 };
 
 // **** DEPRECATED **** #init {{{2

@@ -598,7 +598,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 									else {
 										text = format(null, null, aggResult, {
 											overrideType: aggType,
-											convert: false
+											decode: false
 										});
 										setTableCell(td, text);
 									}
@@ -667,7 +667,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							else {
 								addColText = format(null, null, addColResult, {
 									alwaysFormat: true,
-									convert: false
+									decode: false
 								});
 							}
 							td.innerText = addColText;
@@ -780,7 +780,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							else {
 								text = format(null, null, aggResult, {
 									overrideType: aggInfo.instance.getType(),
-									convert: false
+									decode: false
 								});
 								setTableCell(td, text);
 							}
@@ -851,7 +851,7 @@ GridTablePivot.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 							else {
 								text = format(null, null, aggResult, {
 									overrideType: aggInfo.instance.getType(),
-									convert: false
+									decode: false
 								});
 								setTableCell(td, text);
 							}

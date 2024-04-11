@@ -199,7 +199,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 							else {
 								addColText = format(null, null, addColResult, {
 									alwaysFormat: true,
-									convert: false
+									decode: false
 								});
 							}
 							td.innerText = addColText;
@@ -277,7 +277,7 @@ GridTableGroupSummary.prototype.drawBody = function (data, typeInfo, columns, co
 						else {
 							text = format(null, null, aggResult, {
 								overrideType: aggInfo.instance.getType(),
-								convert: false
+								decode: false
 							});
 							setTableCell(td, text);
 						}
