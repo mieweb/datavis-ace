@@ -216,58 +216,51 @@ types.universalCmp = function (a, b) {
 
 	// primitive {{{3
 
-	function format_primitive(val, opts) {
-		var self = this;
+	function _format_primitive(val, fmt) {
+		var method = window.Intl != null && window.Intl.NumberFormat != null ? 'intl' : 'bignumber';
 
-		if (Number.isNaN(val)) {
-			return null;
-		}
-
-		switch (opts.formatMethod) {
+		switch (method) {
 		case 'intl':
-			if (window.Intl != null && window.Intl.NumberFormat != null) {
-				var config = {
-					useGrouping: self.formatOpts.integerPart.grouping
-				};
+			var config = {
+				useGrouping: fmt.integerPart.grouping
+			};
 
-				if (self.formatOpts.decimalPlaces != null) {
-					config.minimumFractionDigits = self.formatOpts.decimalPlaces;
-					config.maximumFractionDigits = self.formatOpts.decimalPlaces;
-				}
-
-				return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
+			if (fmt.decimalPlaces != null) {
+				config.minimumFractionDigits = fmt.decimalPlaces;
+				config.maximumFractionDigits = fmt.decimalPlaces;
 			}
 			else {
-				return self.super.format(val);
+				config.minimumFractionDigits = 0;
+				config.maximumFractionDigits = 24;
 			}
+
+			return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
 		case 'bignumber':
 			return new BigNumber(val).toFormat(
-				self.formatOpts.decimalPlaces,
-				bigNumberRoundingMode(self.formatOpts),
-				bigNumberFormat(self.formatOpts)
+				fmt.decimalPlaces,
+				bigNumberRoundingMode(fmt),
+				bigNumberFormat(fmt)
 			);
 		case 'numeral':
-			return numeral(val).format(numeralFormat(self.formatOpts));
+			return numeral(val).format(numeralFormat(fmt));
 		default:
-			return self.super.format(val);
+			console.error('[DataVis // Type(Number) // Format] Unsupported primitive value formatting method: %s', method);
 		}
 	}
 
 	// numeral {{{3
 
-	function format_numeral(val, opts) {
-		var self = this;
-
+	function numeralFormat(fmt) {
 		var result = '';
 
-		result += self.formatOpts.integerPart.grouping ? '0,0' : '0';
+		result += fmt.integerPart.grouping ? '0,0' : '0';
 
-		if (self.formatOpts.decimalPlaces == null) {
+		if (fmt.decimalPlaces == null) {
 			result += '[.][0000000000000000]';
 		}
-		else if (self.formatOpts.decimalPlaces > 0) {
+		else if (fmt.decimalPlaces > 0) {
 			result += '.';
-			result += '0'.repeat(self.formatOpts.decimalPlaces);
+			result += '0'.repeat(fmt.decimalPlaces);
 		}
 
 		return result;
@@ -275,36 +268,63 @@ types.universalCmp = function (a, b) {
 
 	// bignumber {{{3
 
-	function format_bignumber(val, opts) {
-		var self = this;
-
-		var result = {
+	function bigNumberFormat(fmt) {
+		var obj = {
 			prefix: '',
-			decimalSeparator: self.formatOpts.radixPoint,
+			decimalSeparator: fmt.radixPoint,
 			secondaryGroupSize: 0,
 			suffix: ''
 		};
 
-		if (val.isNaN()) {
-			return null;
-		}
-
-		if (self.formatOpts.integerPart.grouping) {
-			result.groupSeparator = self.formatOpts.integerPart.groupSeparator;
-			result.groupSize = self.formatOpts.integerPart.groupSize;
+		if (fmt.integerPart.grouping) {
+			obj.groupSeparator = fmt.integerPart.groupSeparator;
+			obj.groupSize = fmt.integerPart.groupSize;
 		}
 		else {
-			result.groupSize = 0;
+			obj.groupSize = 0;
 		}
-		if (self.formatOpts.fractionalPart.grouping) {
-			result.fractionGroupSeparator = self.formatOpts.fractionalPart.groupSeparator;
-			result.fractionGroupSize = self.formatOpts.fractionalPart.groupSize;
+		if (fmt.fractionalPart.grouping) {
+			obj.fractionGroupSeparator = fmt.fractionalPart.groupSeparator;
+			obj.fractionGroupSize = fmt.fractionalPart.groupSize;
 		}
 		else {
-			result.fractionGroupSize = 0;
+			obj.fractionGroupSize = 0;
 		}
 
-		return result;
+		return obj;
+	}
+
+	function bigNumberRoundingMode(fmt) {
+		switch (fmt.roundingMethod) {
+		case 'up': // away from zero
+			return BigNumber.ROUND_UP;
+		case 'down': // towards zero
+			return BigNumber.ROUND_DOWN;
+		case 'ceil': // towards infinity
+			return BigNumber.ROUND_CEIL;
+		case 'floor': // towards negative infinity
+			return BigNumber.ROUND_FLOOR;
+		case 'half_up':
+			// towards nearest neighbor; halfway point goes away from zero
+			//   -2.5 => -3    -1.5 => -2    1.5 => 2    2.5 => 3
+			return BigNumber.ROUND_HALF_UP;
+		case 'half_down':
+			// towards nearest neighbor: halfway point goes towards zero
+			//   -2.5 => -2    -1.5 => -1    1.5 => 1    2.5 => 2
+			return BigNumber.ROUND_HALF_DOWN;
+		case 'half_even':
+			// towards nearest neighbor: halfway point goes to even neighbor
+			//   -2.5 => -2    -1.5 => -2    1.5 => 2    2.5 => 2
+			return BigNumber.ROUND_HALF_EVEN;
+		case 'half_ceil':
+			// towards nearest neighbor: halfway point goes towards infinity
+			//   -2.5 => -2    -1.5 => -1    1.5 => 2    2.5 => 3
+			return BigNumber.ROUND_HALF_CEIL;
+		case 'half_floor':
+			// towards nearest neighbor: halfway point goes towards negative infinity
+			//   -2.5 => -3    -1.5 => -2    1.5 => 1    2.5 => 2
+			return BigNumber.ROUND_HALF_FLOOR;
+		}
 	}
 
 	// main {{{3
@@ -315,32 +335,74 @@ types.universalCmp = function (a, b) {
 	 * @param {number|Numeral|BigNumber} val
 	 * The value that we're going to decode to a string.
 	 *
-	 * @param {Object} [opts]
+	 * @param {Object} [fmt]
 	 * Additional formatting options.
 	 */
 
-	function format(val, opts) {
+	function format(val, fmt, isCurrency) {
 		var isNegative = false
-			, formatted;
+			, str;
 
-		if (typeof val === 'number') {
+		// Number formatting works like this:
+		//
+		//   1. Is the value undefined, null, or NaN?
+		//      Return the empty string.
+		//
+		//   2. Is the value negative?
+		//      Format the positive value, then apply formatting for negative numbers.  This could be
+		//      putting a minus sign in front, or surrounding with parens (e.g. for accounting).
+
+		if (val == null) {
+			return '';
+		}
+		else if (typeof val === 'number') {
 			if (Number.isNaN(val)) {
-				return null;
+				return '';
 			}
-			formatted = _format_primitive(val);
+			if (val < 0) {
+				isNegative = true;
+				val = val * -1;
+			}
+			str = _format_primitive(val, fmt);
 		}
 		else if (numeral.isNumeral(val)) {
-			if (Number.isNaN(val)) {
-				return null;
+			// Numeral doesn't wrap NaN.
+			if (val.value() < 0) {
+				isNegative = true;
+				val = val.multiply(-1);
 			}
-			formatted = _format_numeral(val);
+			str = val.format(numeralFormat(fmt));
 		}
 		else if (BigNumber.isBigNumber(val)) {
 			if (val.isNaN()) {
-				return null;
+				return '';
 			}
-			return _format_bignumber(val);
+			if (val.isNegative()) {
+				isNegative = true;
+				val = val.abs();
+			}
+			str = val.toFormat(fmt.decimalPlaces, bigNumberRoundingMode(fmt), bigNumberFormat(fmt));
 		}
+		else {
+			console.error('[DataVis // Type(Number) // Format] Unsupported value type: %s', val);
+			return '';
+		}
+
+		if (isNegative) {
+			switch (fmt.negativeFormat) {
+			case 'minus':
+				str = (isCurrency ? fmt.currencySymbol : '') + '-' + str;
+				break;
+			case 'parens':
+				str = '(' + (isCurrency ? fmt.currencySymbol : '') + str + ')';
+				break;
+			}
+		}
+		else {
+			str = (isCurrency ? fmt.currencySymbol : '') + str;
+		}
+
+		return str;
 	}
 
 	// natRep {{{2
@@ -567,147 +629,8 @@ types.universalCmp = function (a, b) {
 
 	// format {{{2
 
-	// primitive {{{3
-
-	function format_primitive(val, opts) {
-		var self = this;
-
-		if (Number.isNaN(val)) {
-			return null;
-		}
-
-		switch (opts.formatMethod) {
-		case 'intl':
-			if (window.Intl != null && window.Intl.NumberFormat != null) {
-				var config = {
-					useGrouping: self.formatOpts.integerPart.grouping
-				};
-
-				if (self.formatOpts.decimalPlaces != null) {
-					config.minimumFractionDigits = self.formatOpts.decimalPlaces;
-					config.maximumFractionDigits = self.formatOpts.decimalPlaces;
-				}
-
-				return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
-			}
-			else {
-				return self.super.format(val);
-			}
-		case 'bignumber':
-			return new BigNumber(val).toFormat(
-				self.formatOpts.decimalPlaces,
-				bigNumberRoundingMode(self.formatOpts),
-				bigNumberFormat(self.formatOpts)
-			);
-		case 'numeral':
-			return numeral(val).format(numeralFormat(self.formatOpts));
-		default:
-			return self.super.format(val);
-		}
-	}
-
-	// numeral {{{3
-
-	function format_numeral(val, opts) {
-		var self = this;
-
-		var result = '';
-
-		result += self.formatOpts.integerPart.grouping ? '0,0' : '0';
-
-		if (self.formatOpts.decimalPlaces == null) {
-			result += '[.][0000000000000000]';
-		}
-		else if (self.formatOpts.decimalPlaces > 0) {
-			result += '.';
-			result += '0'.repeat(self.formatOpts.decimalPlaces);
-		}
-
-		return result;
-	}
-
-	// bignumber {{{3
-
-	function format_bignumber(val, opts) {
-		var self = this;
-
-		var result = {
-			prefix: '',
-			decimalSeparator: self.formatOpts.radixPoint,
-			secondaryGroupSize: 0,
-			suffix: ''
-		};
-
-		if (val.isNaN()) {
-			return null;
-		}
-
-		if (self.formatOpts.integerPart.grouping) {
-			result.groupSeparator = self.formatOpts.integerPart.groupSeparator;
-			result.groupSize = self.formatOpts.integerPart.groupSize;
-		}
-		else {
-			result.groupSize = 0;
-		}
-		if (self.formatOpts.fractionalPart.grouping) {
-			result.fractionGroupSeparator = self.formatOpts.fractionalPart.groupSeparator;
-			result.fractionGroupSize = self.formatOpts.fractionalPart.groupSize;
-		}
-		else {
-			result.fractionGroupSize = 0;
-		}
-
-		return result;
-	}
-
-	// main {{{3
-
-	function format(val, opts) {
-		var isNegative = false
-			, formatted;
-
-		if (typeof val === 'number') {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val < 0) {
-				isNegative = true;
-				val = val * -1;
-			}
-			formatted = self._format_primitive(val);
-		}
-		else if (numeral.isNumeral(val)) {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val.value() < 0) {
-				isNegative = true;
-				val.multiply(-1);
-			}
-			formatted = self._format_numeral(val);
-		}
-		else if (BigNumber.isBigNumber(val)) {
-			if (val.isNaN()) {
-				return null;
-			}
-			if (val.isNegative()) {
-				isNegative = true;
-				val = val.abs();
-			}
-			formatted = self._format_bignumber(val);
-		}
-
-		if (isNegative) {
-			switch (self.formatOpts.negativeFormat) {
-			case 'minus':
-				return self.formatOpts.currencySymbol + '-' + result;
-			case 'parens':
-				return '(' + self.formatOpts.currencySymbol + result + ')';
-			}
-		}
-		else {
-			return self.formatOpts.currencySymbol + result;
-		}
+	function format(val, fmt) {
+		return types.registry.get('number').format(val, fmt, true);
 	}
 
 	// register {{{2
@@ -1191,7 +1114,7 @@ types.universalCmp = function (a, b) {
 
 	// bignumber {{{3
 
-	function format_bignumber(val, opts) {
+	function _format_bignumber(val, opts) {
 		var self = this;
 
 		var result = {
@@ -1338,101 +1261,6 @@ types.universalCmp = function (a, b) {
 	}
 
 	// format {{{2
-
-	// primitive {{{3
-
-	function format_primitive(val, opts) {
-		var self = this;
-
-		if (Number.isNaN(val)) {
-			return null;
-		}
-
-		switch (opts.formatMethod) {
-		case 'intl':
-			if (window.Intl != null && window.Intl.NumberFormat != null) {
-				var config = {
-					useGrouping: self.formatOpts.integerPart.grouping
-				};
-
-				if (self.formatOpts.decimalPlaces != null) {
-					config.minimumFractionDigits = self.formatOpts.decimalPlaces;
-					config.maximumFractionDigits = self.formatOpts.decimalPlaces;
-				}
-
-				return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
-			}
-			else {
-				return self.super.format(val);
-			}
-		case 'bignumber':
-			return new BigNumber(val).toFormat(
-				self.formatOpts.decimalPlaces,
-				bigNumberRoundingMode(self.formatOpts),
-				bigNumberFormat(self.formatOpts)
-			);
-		case 'numeral':
-			return numeral(val).format(numeralFormat(self.formatOpts));
-		default:
-			return self.super.format(val);
-		}
-	}
-
-	// numeral {{{3
-
-	function format_numeral(val, opts) {
-		var self = this;
-
-		var result = '';
-
-		result += self.formatOpts.integerPart.grouping ? '0,0' : '0';
-
-		if (self.formatOpts.decimalPlaces == null) {
-			result += '[.][0000000000000000]';
-		}
-		else if (self.formatOpts.decimalPlaces > 0) {
-			result += '.';
-			result += '0'.repeat(self.formatOpts.decimalPlaces);
-		}
-
-		return result;
-	}
-
-	// bignumber {{{3
-
-	function format_bignumber(val, opts) {
-		var self = this;
-
-		var result = {
-			prefix: '',
-			decimalSeparator: self.formatOpts.radixPoint,
-			secondaryGroupSize: 0,
-			suffix: ''
-		};
-
-		if (val.isNaN()) {
-			return null;
-		}
-
-		if (self.formatOpts.integerPart.grouping) {
-			result.groupSeparator = self.formatOpts.integerPart.groupSeparator;
-			result.groupSize = self.formatOpts.integerPart.groupSize;
-		}
-		else {
-			result.groupSize = 0;
-		}
-		if (self.formatOpts.fractionalPart.grouping) {
-			result.fractionGroupSeparator = self.formatOpts.fractionalPart.groupSeparator;
-			result.fractionGroupSize = self.formatOpts.fractionalPart.groupSize;
-		}
-		else {
-			result.fractionGroupSize = 0;
-		}
-
-		return result;
-	}
-
-	// main {{{3
 
 	function format(val, opts) {
 		var isNegative = false

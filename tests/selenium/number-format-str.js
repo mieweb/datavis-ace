@@ -1,7 +1,6 @@
 const assert = require('assert');
 const Grid = require('../lib/grid.js');
 const {asyncEach} = require('../lib/util.js');
-const child_process = require('child_process');
 const setup = require ('../lib/setup.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
