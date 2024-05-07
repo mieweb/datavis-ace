@@ -1240,90 +1240,49 @@ types.universalCmp = function (a, b) {
 
 	// parse {{{2
 
-	function parse(val, opts) {
+	function parse(str, ir, fmt) {
 		var parsed
+			, ir = ir || 'obj'
 			, opts = opts || {};
 
-		if (typeof val === 'number') {
-			switch (opts.internalRepresentation) {
-			case 'primitive': return val;
-			case 'numeral': return numeral(val);
-			case 'bignumber': return new BigNumber(val);
-			default:
-				throw new Error('Unsupported internal representation for Number type: ' + opts.internalRepresentation);
-			}
-		}
-		else if (typeof val === 'string') {
-			switch (opts.internalRepresentation) {
-			case 'primitive':
-				return _parse(val, 'number');
-			case 'numeral':
-				parsed = _parse(val, 'number');
-				if (parsed == null) {
-					return null;
-				}
-				return numeral(parsed);
-			case 'bignumber':
-				parsed = _parse(val, 'string');
-				if (parsed == null) {
-					return null;
-				}
-				return new BigNumber(parsed);
-			default:
-				throw new Error('Unsupported internal representation for Number type: ' + opts.internalRepresentation);
-			}
+		if (typeof str !== 'string') {
+			console.error('[DataVis // Type(JSON) // Parse] Call Error: `str` must be a string');
+			return null;
 		}
 
-		return null;
+		switch (ir) {
+		case 'obj':
+			return JSON.parse(str);
+		default:
+			return null;
+		}
+	}
+
+	// decode {{{2
+
+	function decode(val, ir, fmt) {
+		if (typeof val === 'string') {
+			return parse(val, ir, fmt);
+		}
+		else if (typeof val === 'object') {
+			return val;
+		}
 	}
 
 	// format {{{2
 
 	function format(val, opts) {
-		var isNegative = false
-			, formatted;
-
-		if (typeof val === 'number') {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val < 0) {
-				isNegative = true;
-				val = val * -1;
-			}
-			formatted = self._format_primitive(val);
-		}
-		else if (numeral.isNumeral(val)) {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val.value() < 0) {
-				isNegative = true;
-				val.multiply(-1);
-			}
-			formatted = self._format_numeral(val);
-		}
-		else if (BigNumber.isBigNumber(val)) {
-			if (val.isNaN()) {
-				return null;
-			}
-			if (val.isNegative()) {
-				isNegative = true;
-				val = val.abs();
-			}
-			formatted = self._format_bignumber(val);
-		}
-
-		if (isNegative) {
-			switch (self.formatOpts.negativeFormat) {
-			case 'minus':
-				return self.formatOpts.currencySymbol + '-' + result;
-			case 'parens':
-				return '(' + self.formatOpts.currencySymbol + result + ')';
-			}
+		if (typeof val === 'string') {
+			return val;
 		}
 		else {
-			return self.formatOpts.currencySymbol + result;
+			return new JSONFormatter(val, 0, {
+				onToggle: function (isOpen) {
+					if (window.TableTool) {
+						TableTool.update();
+					}
+				}
+			}).render();
 		}
 	}
 
@@ -1333,10 +1292,11 @@ types.universalCmp = function (a, b) {
 	types.registry.set('json', {
 		matches: matches,
 		parse: parse,
+		decode: decode,
 		format: format,
-		natRep: natRep,
-		compare: compare,
+		natRep: null,
+		compare: null,
 	});
-});
+})();
 
 export default types;
