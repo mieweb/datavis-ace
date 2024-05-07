@@ -21,55 +21,55 @@ Type guessing is an important part of DataVis’ functionality. Every type that 
 
 The following types are builtin to DataVis:
 
-- `string`
-- `number`
-- `currency`
-- `date`
-- `datetime`
-- `time`
-- `json`
+- `string` — The fallback, used to represent anything for which we don’t have a more specific type.
+- `number` — General purpose numbers.
+- `currency` — Support for fixed-precision arithmetic and output.
+- `date` — Dates without times.
+- `datetime` — Dates with times.
+- `time` — Times without dates.
+- `json` — JSON objects, formatted and decorated so you can browse them interactively.
 
 ### Number and Currency
 
 The number and currency types supports the following internal representations:
 
-- `primitive` — Uses the browser’s native floats to store values.
-- `bignumber` — Uses the BigNumber arbitrary-precision arithmetic library.
-- `numeral` — Uses the Numeral library.
+- `primitive` — Uses the browser’s native floats to store values, and it’s good enough most of the time, but it can cause aggregate function accuracy to suffer from the accumulation of error. Comparison for equality is done using `Number.EPSILON` if it exists.
+- `bignumber` — Uses the BigNumber arbitrary-precision arithmetic library. This is the default internal type for currency, where it is configured to maintain four decimal places for arithmetic operations and two decimal places for output.
+- `numeral` — Uses the Numeral library. There is probably little need to use this anymore; it was the preferred way to format numbers with a specific number of decimal places before browsers widely supported the `Intl.NumberFormat` object. Nowadays you can do everything that Numeral offers via native browser functions.
 
 ### Date, Datetime, and Time
 
 The date type supports the following internal representations:
 
-- `string` — Values are stored internally as strings. This is the fastest.
+- `string` — Values are stored internally as strings. This is the fastest, because the lexicographic sorting is also chronological. However, when applying a group function (e.g. by year & month) they will be converted into another internal type anyway.
   - Dates are stored in the format `YYYY-MM-DD`.
   - Datetimes are stored in the format `YYYY-MM-DD HH:mm:ss`.
   - Times are stored in the format `HH:mm:ss`.
-- `date` — Values are stored as Date instances. (For the time type, the date component is simply ignored.)
-- `moment` — Values are stored in Moment instances.
+- `date` — Values are stored as Date instances. Time type values are stored with the date of January 1, 2000 and only the time component is formatted.
+- `moment` — Values are stored in Moment instances. Time type values are stored with the date of January 1, 2000 and only the time component is formatted.
 
 ## Type Functions
 
 Every entry in the registry is an object defining the type’s behavior. The following properties are required to fully implement a new type. All of the functions can be performance bottlenecks if care is not taken.
 
-- `matches(str)` — Returns true if the string is something we can parse into a member of this type. Used by the type guessing logic.
-- `parse(str, ir, fmt)` — Parses the string value into a value for the type. The nature of the value is determined by the *ir* parameter, which describes the “internal representation” of the value. For example, numbers can be represented internally by primitive floats, using the BigNumber library, or using the Numeral library. The fmt argument describes how to parse the string; usually this is passed to a library function such as `moment()`. Returns null if the string cannot be parsed.
-- `convert(val, ir)` — Convert a value of the type into a different internal representation. This is mainly used when:
+- `matches(str) : bool` — Returns true if the string is something we can parse into a member of this type. Used by the type guessing logic.
+- `parse(str, ir, fmt) : obj` — Parses the string value into a value for the type. The nature of the value is determined by the *ir* parameter, which describes the “internal representation” of the value. For example, numbers can be represented internally by primitive floats, using the BigNumber library, or using the Numeral library. The fmt argument describes how to parse the string; usually this is passed to a library function such as `moment()`. Returns null if the string cannot be parsed.
+- `decode(val, ir, fmt) : obj` — Convert a value of the type into a different internal representation. This is mainly used when:
   - the serialization format of the data has support for a representation of the type, but we’re using a different one (e.g. using a JSON number as currency)
   - when combining data from multiple columns e.g. in an aggregate function
 
-- `format(val, fmt)` — Formats a value so that it can be printed. Since a type can have multiple internal representations, the format function must handle them all; e.g. the number type handles values of primitive floats, BigNumber objects, and Numeral objects. Returns null if the value cannot be formatted, or if the value is `NaN`. The result is typically cached so that rendering the same value over and over does not invoke this function repeatedly.
-- `natRep(val)` — Converts a value from its internal representation into a string that can be used as the key of a JavaScript object. This is mainly used for grouping functionality in the view. The mapping must be one-to-one, so that different values cannot produce the same “native representation.”
-- `compare(a, b)` — Returns -1 if a < b, 0 if a = b, and 1 if a > b. Returns null if the values cannot be compared. This is used for sorting data.
+- `format(val, fmt) : str | elt` — Formats a value so that it can be printed. Since a type can have multiple internal representations, the format function must handle them all; e.g. the number type handles values of primitive floats, BigNumber objects, and Numeral objects. Returns the empty string if the value cannot be formatted, or if the value is `null`, `undefined`, or `NaN`.
+- `natRep(val) : str` — Converts a value from its internal representation into a string that can be used as the key of a JavaScript object. This is mainly used for grouping functionality in the view. The mapping must be one-to-one, so that different values cannot produce the same “native representation.”
+- `compare(a, b) : {-1, 0, 1}` — Returns -1 if a < b, 0 if a = b, and 1 if a > b. Returns null if the values cannot be compared. This is used for sorting data.
 
-### Parsing vs Conversion
+### Parsing vs Decoding
 
-Most of the data types that we support do not have a native representation in many wire protocols. XML and CSV are all just text. JSON has numbers, but not dates or times. For this reason, we mostly talk about parsing, but it’s important to mention conversion as well.
+Most of the data types that we support do not have a native representation in many wire protocols. XML and CSV are all just text. JSON has numbers, but not dates or times. For this reason, we mostly talk about parsing, but it’s important to mention decoding as well.
 
 - *Parsing* is the process of converting a string into a value in the internal representation of the type.
-- *Conversion* is the more general process of converting a value of a type from one representation to another.
+- *Decoding* is the more general process of converting a value of a type from one representation to another.
 
-If you’re writing a custom type, and it supports more than one internal representation, you should provide the conversion function.
+If you’re writing a custom type, and it (b) supports more than one internal representation, or (b) can be serialized as something other than a string, you should provide the `decode` function.
 
 ## Registering a New Type
 
@@ -81,6 +81,7 @@ import types from 'types.js';
 (function () {
   function matches(str) { /* ... */ }
   function parse(str, ir, fmt) { /* ... */ }
+  function decode(val, ir, fmt) { /* ... */ }
   function format(val, fmt) { /* ... */ }
   function natRep(val) { /* ... */ }
   function compare(a, b) { /* ... */ }
@@ -88,9 +89,26 @@ import types from 'types.js';
   types.registry.set('custom', {
     matches: matches,
     parse: parse,
+    decode: decode,
     format: format,
     natRep: natRep,
     compare: compare
   });
-})()
+})();
 ```
+
+## Using the API
+
+Here’s a brief example of how to use the type registry to: (1) guess the type that can represent a string value, (2) convert it into a native object, and (3) print out the formatted version.
+
+```javascript
+import types from 'types.js';
+
+switch (types.guess(str)) {
+case 'date':
+  let d = types.registry.get('date').parse(str, 'date');
+  console.log('date = %s', types.registry.get('date').format(d));
+  break;
+}
+```
+

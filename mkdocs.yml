@@ -34,6 +34,7 @@ nav:
           - Table: grid/renderers/table.md
           - Handlebars: grid/renderers/handlebars.md
   - Graph: graph.md
+  - Types: types.md
   - Preferences: prefs.md
   - Performance: performance.md
   - Errors & Debugging: debugging.md

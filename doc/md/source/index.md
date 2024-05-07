@@ -46,7 +46,7 @@ The type information for each field indicates, but is not limited to, the follow
 : Name of the field.
 
 `type`
-: The type (e.g. number, string, date). This affects how filtering and sorting works, e.g. dates can be sorted chronologically instead of alphabetically.
+: The type (e.g. number, string, date). This affects how filtering and sorting works, e.g. dates can be sorted chronologically instead of alphabetically.  See [Builtin Types](../types.md#builtin-types) for more information about what types are available out of the box.
 
 `format`
 : The format (e.g. "MM-DD-YYYY") — used for dates, times, and datetimes. This is needed to prevent misinterpretation of ambiguous dates like "01/02/03."
@@ -55,27 +55,7 @@ The type information for each field indicates, but is not limited to, the follow
 : (default = true) If this is true, then type decoding of the raw data into an internal representation (e.g. from a string or number into a Moment or Numeral object) is deferred until needed (e.g. for sorting, filtering, or display).
 
 `internalType`
-: The type of the data when stored internally. For dates, can be “moment” to indicate that the value is wrapped by Moment, or “string” to indicate that the dates are represented only as strings. For numbers, can be “numeral” to indicate that the value is wrapped by Numeral, or “primitive” to indicate that a raw JS number is used.
-
-### Available Types
-
-| Type       | Description                                                                            |
-|:---------- |:-------------------------------------------------------------------------------------- |
-| `number`   | Integer of floating point number; primarily used for sorting numerically.              |
-| `currency` | A string formatted as money.                                                           |
-| `string`   | Catch all data type, can contain anything at all.                                      |
-| `date`     | A string containing a date. The default format is "YYYY-MM-DD."                        |
-| `datetime` | A string containing both a date and time. The default format is "YYYY-MM-DD HH:mm:ss." |
-
-### Available Internal Representations
-
-| Type              | Representation | Description                                       |
-| ----------------- | -------------- | ------------------------------------------------- |
-| number / currency | primitive      | Uses the browser's native floating point numbers. |
-| number / currency | bignumber      | Uses the BigNumber library.                       |
-| number / currency | numeral        | Uses the Numeral library.                         |
-| date / datetime   | string         | Uses MySQL format date / datetime strings.        |
-| date / datetime   | moment         | Uses the Moment library.                          |
+: The type of the data when stored internally. For dates, can be “moment” to indicate that the value is wrapped by Moment, or “string” to indicate that the dates are represented only as strings. For numbers, can be “numeral” to indicate that the value is wrapped by Numeral, or “primitive” to indicate that a raw JS number is used.  See [Builtin Types](../types.md#builtin-types) for more information about what internal representations can be used for different types.
 
 ### Default Internal Representations
 
@@ -129,7 +109,7 @@ Conversion functions can either be plain old JavaScript functions, or they can b
 
 ## Type Decoding
 
-After the user conversion functions have been evaluated, the data source will perform type decoding. This process transforms the data row's field values into appropriate internal representations according to the type information for that field (e.g. a string containing a date gets transformed into a Moment instance when the type info indicates the field should be treated as a date). The internal representation is used when sorting and filtering.
+After the user conversion functions have been evaluated, the data source can perform type decoding. This process transforms the data row's field values into appropriate internal representations according to the type information for that field (e.g. a string containing a date gets transformed into a Moment instance when the type info indicates the field should be treated as a date). The internal representation is used when sorting and filtering.
 
 Since type decoding can be expensive (e.g. converting millions of numbers using Numeral takes time), it can be deferred until needed. Here are some examples of when type decoding is required:
 
@@ -137,3 +117,5 @@ Since type decoding can be expensive (e.g. converting millions of numbers using 
   - At sort time (e.g. parsing dates where the lexicographic ordering isn't chronological)
 
 If your data has thousands of values where type decoding has been deferred, the first time the user sorts by that column can take a great deal of time, because all values must be decoded before they can be sorted correctly. Operations after that will all be fast, since type decoding never has to occur again.
+
+See [Parsing vs. Decoding](../types.md#parsing-vs-decoding) for more information about how type decoding is implemented for the builtin types.
