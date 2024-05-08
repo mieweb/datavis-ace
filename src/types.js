@@ -144,8 +144,6 @@ types.universalCmp = function (a, b) {
 
 	// parse {{{2
 
-	var re_comma = new RegExp(/,/g);
-
   function _parse(str, resultType) {
     if (str.charAt(0) === '(' && str.charAt(-1) === ')') {
       return _parse(str.substring(1, str.length - 1)) * -1;
@@ -213,40 +211,6 @@ types.universalCmp = function (a, b) {
 	}
 
 	// format {{{2
-
-	// primitive {{{3
-
-	function _format_primitive(val, fmt) {
-		var method = window.Intl != null && window.Intl.NumberFormat != null ? 'intl' : 'bignumber';
-
-		switch (method) {
-		case 'intl':
-			var config = {
-				useGrouping: fmt.integerPart.grouping
-			};
-
-			if (fmt.decimalPlaces != null) {
-				config.minimumFractionDigits = fmt.decimalPlaces;
-				config.maximumFractionDigits = fmt.decimalPlaces;
-			}
-			else {
-				config.minimumFractionDigits = 0;
-				config.maximumFractionDigits = 17;
-			}
-
-			return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
-		case 'bignumber':
-			return new BigNumber(val).toFormat(
-				fmt.decimalPlaces,
-				bigNumberRoundingMode(fmt),
-				bigNumberFormat(fmt)
-			);
-		case 'numeral':
-			return numeral(val).format(numeralFormat(fmt));
-		default:
-			console.error('[DataVis // Type(Number) // Format] Unsupported primitive value formatting method: %s', method);
-		}
-	}
 
 	// numeral {{{3
 
@@ -324,6 +288,40 @@ types.universalCmp = function (a, b) {
 			// towards nearest neighbor: halfway point goes towards negative infinity
 			//   -2.5 => -3    -1.5 => -2    1.5 => 1    2.5 => 2
 			return BigNumber.ROUND_HALF_FLOOR;
+		}
+	}
+
+	// primitive {{{3
+
+	function _format_primitive(val, fmt) {
+		var method = window.Intl != null && window.Intl.NumberFormat != null ? 'intl' : 'bignumber';
+
+		switch (method) {
+		case 'intl':
+			var config = {
+				useGrouping: fmt.integerPart.grouping
+			};
+
+			if (fmt.decimalPlaces != null) {
+				config.minimumFractionDigits = fmt.decimalPlaces;
+				config.maximumFractionDigits = fmt.decimalPlaces;
+			}
+			else {
+				config.minimumFractionDigits = 0;
+				config.maximumFractionDigits = 17;
+			}
+
+			return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
+		case 'bignumber':
+			return new BigNumber(val).toFormat(
+				fmt.decimalPlaces,
+				bigNumberRoundingMode(fmt),
+				bigNumberFormat(fmt)
+			);
+		case 'numeral':
+			return numeral(val).format(numeralFormat(fmt));
+		default:
+			console.error('[DataVis // Type(Number) // Format] Unsupported primitive value formatting method: %s', method);
 		}
 	}
 
@@ -542,11 +540,11 @@ types.universalCmp = function (a, b) {
 			return false;
 		}
 
-		if (s.charAt(0) === '$') {
+		if (val.charAt(0) === '$') {
 			return types.registry.get('number').matches(val.substring(1));
 		}
-		else if (s.startsWith('(') && s.endsWith(')')) {
-			return types.registry.get('number').matches(val.substring(1, s.length - 1));
+		else if (val.startsWith('(') && val.endsWith(')')) {
+			return types.registry.get('number').matches(val.substring(1, val.length - 1));
     }
 		return false;
 	}
@@ -660,9 +658,10 @@ types.universalCmp = function (a, b) {
 	// parse {{{2
 
 	function parse(val, ir, fmt) {
-		var parsed
-			, ir = ir || 'string'
-			, opts = opts || {};
+		var parsed;
+
+		ir = ir || 'string';
+		fmt = fmt || {};
 
 		if (typeof val !== 'string') {
 			console.error('[DataVis // Type(Date) // Parse] Call Error: `val` must be a string');
@@ -770,9 +769,10 @@ types.universalCmp = function (a, b) {
 	// parse {{{2
 
 	function parse(str, ir, fmt) {
-		var parsed
-			, ir = ir || 'string'
-			, opts = opts || {};
+		var parsed;
+
+		ir = ir || 'string';
+		fmt = fmt || {};
 
 		if (typeof str !== 'string') {
 			console.error('[DataVis // Type(Date) // Parse] Call Error: `str` must be a string');
@@ -789,8 +789,6 @@ types.universalCmp = function (a, b) {
 		default:
 			return null;
 		}
-
-		return null;
 	}
 
 	// decode {{{2
@@ -898,8 +896,9 @@ types.universalCmp = function (a, b) {
 	// parse {{{2
 
 	function parse(str, ir, fmt) {
-		var parsed
-			, ir = ir || 'string';
+		var parsed;
+
+		ir = ir || 'string';
 
 		if (typeof str !== 'string') {
 			console.error('[DataVis // Type(Time) // Parse] Call Error: `str` must be a string');
@@ -910,14 +909,12 @@ types.universalCmp = function (a, b) {
 		case 'string':
 			return str;
 		case 'native':
-			var d = Date.parse('2000-01-01T' + str + '.000Z');
+			return Date.parse('2000-01-01T' + str + '.000Z');
 		case 'moment':
 			return moment('2000-01-01 ' + str, 'YYYY-MM-DD ' + (fmt || 'HH:mm:ss'));
 		default:
 			return null;
 		}
-
-		return null;
 	}
 
 	// decode {{{2
@@ -997,235 +994,6 @@ types.universalCmp = function (a, b) {
 	});
 })();
 
-// Duration {{{1
-
-(function () {
-
-  var re_number = new RegExp(/(^-?[1-9]{1}[0-9]{0,2}(,?\d{3})*(\.\d+)?(e[+-]?\d+)?$)|(^0(e[+-]?\d+)?$)|(^-?0?\.\d+(e[+-]?\d+)?$)/);
-	var re_comma = new RegExp(/,/g);
-
-	// matches {{{2
-
-	function matches(val) {
-		return (typeof val === 'number') || (typeof val === 'string' && re_number.test(val));
-	}
-
-	// parse {{{2
-
-  function _parse(strVal, resultType) {
-    if (strVal.charAt(0) === '$') {
-      return _parse(strVal.substring(1));
-    }
-    else if (strVal.charAt(0) === '(' && strVal.charAt(-1) === ')') {
-      return _parse(strVal.substring(1, strVal.length - 1)) * -1;
-    }
-    else if (!re_number.test(strVal)) {
-			// Not a number that we can recognize.
-			return null;
-		}
-		else {
-			var noCommas = strVal.replace(re_comma, '');
-			return resultType === 'string' ? noCommas
-				: strVal.indexOf('.') >= 0 || strVal.indexOf('e') >= 0 ? parseFloat(noCommas)
-				: parseInt(noCommas);
-		}
-  }
-
-	function parse(str, ir, fmt) {
-		var parsed
-			, opts = opts || {};
-
-		if (typeof str === 'number') {
-			switch (opts.internalRepresentation) {
-			case 'primitive': return str;
-			case 'numeral': return numeral(str);
-			case 'bignumber': return new BigNumber(str);
-			default:
-				throw new Error('Unsupported internal representation for Number type: ' + opts.internalRepresentation);
-			}
-		}
-		else if (typeof str === 'string') {
-			switch (opts.internalRepresentation) {
-			case 'primitive':
-				return _parse(str, 'number');
-			case 'numeral':
-				parsed = _parse(str, 'number');
-				if (parsed == null) {
-					return null;
-				}
-				return numeral(parsed);
-			case 'bignumber':
-				parsed = _parse(str, 'string');
-				if (parsed == null) {
-					return null;
-				}
-				return new BigNumber(parsed);
-			default:
-				throw new Error('Unsupported internal representation for Number type: ' + opts.internalRepresentation);
-			}
-		}
-
-		return null;
-	}
-
-	// format {{{2
-
-	// primitive {{{3
-
-	function format_primitive(val, opts) {
-		var self = this;
-
-		if (Number.isNaN(val)) {
-			return null;
-		}
-
-		switch (opts.formatMethod) {
-		case 'intl':
-			if (window.Intl != null && window.Intl.NumberFormat != null) {
-				var config = {
-					useGrouping: self.formatOpts.integerPart.grouping
-				};
-
-				if (self.formatOpts.decimalPlaces != null) {
-					config.minimumFractionDigits = self.formatOpts.decimalPlaces;
-					config.maximumFractionDigits = self.formatOpts.decimalPlaces;
-				}
-
-				return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
-			}
-			else {
-				return self.super.format(val);
-			}
-		case 'bignumber':
-			return new BigNumber(val).toFormat(
-				self.formatOpts.decimalPlaces,
-				bigNumberRoundingMode(self.formatOpts),
-				bigNumberFormat(self.formatOpts)
-			);
-		case 'numeral':
-			return numeral(val).format(numeralFormat(self.formatOpts));
-		default:
-			return self.super.format(val);
-		}
-	}
-
-	// numeral {{{3
-
-	function format_numeral(val, opts) {
-		var self = this;
-
-		var result = '';
-
-		result += self.formatOpts.integerPart.grouping ? '0,0' : '0';
-
-		if (self.formatOpts.decimalPlaces == null) {
-			result += '[.][0000000000000000]';
-		}
-		else if (self.formatOpts.decimalPlaces > 0) {
-			result += '.';
-			result += '0'.repeat(self.formatOpts.decimalPlaces);
-		}
-
-		return result;
-	}
-
-	// bignumber {{{3
-
-	function _format_bignumber(val, opts) {
-		var self = this;
-
-		var result = {
-			prefix: '',
-			decimalSeparator: self.formatOpts.radixPoint,
-			secondaryGroupSize: 0,
-			suffix: ''
-		};
-
-		if (val.isNaN()) {
-			return null;
-		}
-
-		if (self.formatOpts.integerPart.grouping) {
-			result.groupSeparator = self.formatOpts.integerPart.groupSeparator;
-			result.groupSize = self.formatOpts.integerPart.groupSize;
-		}
-		else {
-			result.groupSize = 0;
-		}
-		if (self.formatOpts.fractionalPart.grouping) {
-			result.fractionGroupSeparator = self.formatOpts.fractionalPart.groupSeparator;
-			result.fractionGroupSize = self.formatOpts.fractionalPart.groupSize;
-		}
-		else {
-			result.fractionGroupSize = 0;
-		}
-
-		return result;
-	}
-
-	// main {{{3
-
-	function format(val, opts) {
-		var isNegative = false
-			, formatted;
-
-		if (typeof val === 'number') {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val < 0) {
-				isNegative = true;
-				val = val * -1;
-			}
-			formatted = self._format_primitive(val);
-		}
-		else if (numeral.isNumeral(val)) {
-			if (Number.isNaN(val)) {
-				return null;
-			}
-			if (val.value() < 0) {
-				isNegative = true;
-				val.multiply(-1);
-			}
-			formatted = self._format_numeral(val);
-		}
-		else if (BigNumber.isBigNumber(val)) {
-			if (val.isNaN()) {
-				return null;
-			}
-			if (val.isNegative()) {
-				isNegative = true;
-				val = val.abs();
-			}
-			formatted = self._format_bignumber(val);
-		}
-
-		if (isNegative) {
-			switch (self.formatOpts.negativeFormat) {
-			case 'minus':
-				return self.formatOpts.currencySymbol + '-' + result;
-			case 'parens':
-				return '(' + self.formatOpts.currencySymbol + result + ')';
-			}
-		}
-		else {
-			return self.formatOpts.currencySymbol + result;
-		}
-	}
-
-	// natRep {{{2
-	// compare {{{2
-	// register {{{2
-
-	types.registry.set('duration', {
-		matches: matches,
-		parse: parse,
-		format: format,
-		natRep: natRep,
-		compare: compare,
-	});
-});
-
 // JSON {{{1
 
 (function () {
@@ -1241,9 +1009,10 @@ types.universalCmp = function (a, b) {
 	// parse {{{2
 
 	function parse(str, ir, fmt) {
-		var parsed
-			, ir = ir || 'obj'
-			, opts = opts || {};
+		var parsed;
+
+		ir = ir || 'obj';
+		fmt = fmt || {};
 
 		if (typeof str !== 'string') {
 			console.error('[DataVis // Type(JSON) // Parse] Call Error: `str` must be a string');
@@ -1279,7 +1048,7 @@ types.universalCmp = function (a, b) {
 			return new JSONFormatter(val, 0, {
 				onToggle: function (isOpen) {
 					if (window.TableTool) {
-						TableTool.update();
+						window.TableTool.update();
 					}
 				}
 			}).render();
