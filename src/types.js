@@ -231,7 +231,7 @@ types.universalCmp = function (a, b) {
 			}
 			else {
 				config.minimumFractionDigits = 0;
-				config.maximumFractionDigits = 24;
+				config.maximumFractionDigits = 17;
 			}
 
 			return Intl.NumberFormat(window.DATAVIS_LANG, config).format(val);
