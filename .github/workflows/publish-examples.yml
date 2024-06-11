@@ -18,5 +18,8 @@ jobs:
     - name: Build DataVis
       run: make datavis
 
+    - name: Build tests
+      run: make tests
+
     - name: Publish examples
       run: make tests-publish
