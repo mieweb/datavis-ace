@@ -695,6 +695,11 @@ class Grid {
 			await input.sendKeys(value, Key.ENTER);
 			break;
 		}
+		case 'date': {
+			const input = await controlField[0].findElement(By.css('div.wcdv_filter_control_filter > select:nth-of-type(2)'));
+			await selectByValue(input, value);
+			break;
+		}
 		default:
 			throw new Error('unsupported filter type: ' + type);
 		}

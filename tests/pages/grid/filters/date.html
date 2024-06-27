@@ -32,8 +32,8 @@ $(document).ready(function () {
 	];
 	var finalData = _.map(data, d => ({
 		date_string: d,
-		date_moment: moment(d),
-		date_native: moment(d).toDate()
+		date_moment: d,
+		date_native: d
 	}));
 
 	window.localData = {
