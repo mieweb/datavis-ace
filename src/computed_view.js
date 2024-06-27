@@ -1833,7 +1833,8 @@ ComputedView.prototype.isFiltered = function () {
 
 ComputedView.prototype.filter = function (cont) {
 	var self = this
-		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Filtering'];
+		, timingEvt = ['Data Source "' + self.source.name + '" : ' + self.name, 'Filtering']
+		, now = moment(getProp(window, 'MIE', 'WC_DataVis', 'CURRENT_DATE'));
 
 	if (self.filterSpec == null) {
 		if (!self.wasPreviouslyFiltered) {
@@ -2039,16 +2040,19 @@ ComputedView.prototype.filter = function (cont) {
 					}
 					switch (operand) {
 					case 'DAY':
-						return d.format('YYYY-MM-DD') === moment().format('YYYY-MM-DD');
+						return d.format('YYYY-MM-DD') === now.format('YYYY-MM-DD');
 						break;
 					case 'WEEK':
-						return d.format('YYYY-WW') === moment().format('YYYY-WW');
+						return d.format('YYYY-WW') === now.format('YYYY-WW');
 						break;
 					case 'MONTH':
-						return d.format('YYYY-MM') === moment().format('YYYY-MM');
+						return d.format('YYYY-MM') === now.format('YYYY-MM');
+						break;
+					case 'QUARTER':
+						return d.format('YYYY-Q') === now.format('YYYY-Q');
 						break;
 					case 'YEAR':
-						return d.format('YYYY') === moment().format('YYYY');
+						return d.format('YYYY') === now.format('YYYY');
 						break;
 					default:
 						console.error('Invalid "$this" operand "' + operand + '" for field "' + field + '"');
@@ -2068,16 +2072,19 @@ ComputedView.prototype.filter = function (cont) {
 					}
 					switch (operand) {
 					case 'DAY':
-						return d.format('YYYY-MM-DD') === moment().subtract(1, 'days').format('YYYY-MM-DD');
+						return d.format('YYYY-MM-DD') === now.clone().subtract(1, 'days').format('YYYY-MM-DD');
 						break;
 					case 'WEEK':
-						return d.format('YYYY-WW') === moment().subtract(1, 'weeks').format('YYYY-WW');
+						return d.format('YYYY-WW') === now.clone().subtract(1, 'weeks').format('YYYY-WW');
 						break;
 					case 'MONTH':
-						return d.format('YYYY-MM') === moment().subtract(1, 'months').format('YYYY-MM');
+						return d.format('YYYY-MM') === now.clone().subtract(1, 'months').format('YYYY-MM');
+						break;
+					case 'QUARTER':
+						return d.format('YYYY-Q') === now.clone().subtract(1, 'quarters').format('YYYY-Q');
 						break;
 					case 'YEAR':
-						return d.format('YYYY') === moment().subtract(1, 'years').format('YYYY');
+						return d.format('YYYY') === now.clone().subtract(1, 'years').format('YYYY');
 						break;
 					default:
 						console.error('Invalid "$last" operand "' + operand + '" for field "' + field + '"');
