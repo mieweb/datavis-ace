@@ -51,19 +51,19 @@ var DateFilter = makeSubclass('DateFilter', GridFilter, function () {
 	self.inputs = {};
 		// used for: on, before, after
 	self.inputs.single = jQuery('<input>').attr({
-		type: 'date'
+		type: self.typeInfo.type === 'date' ? 'date' : 'datetime-local'
 	}).on('blur', function () {
 		self.gridFilterSet.update(false);
 	});
 	// used for: between
 	self.inputs.range = jQuery('<div>');
 	self.inputs.rangeStart = jQuery('<input>').attr({
-		type: 'date'
+		type: self.typeInfo.type === 'date' ? 'date' : 'datetime-local'
 	}).on('blur', function () {
 		self.gridFilterSet.update(false);
 	});
 	self.inputs.rangeEnd = jQuery('<input>').attr({
-		type: 'date'
+		type: self.typeInfo.type === 'date' ? 'date' : 'datetime-local'
 	}).on('blur', function () {
 		self.gridFilterSet.update(false);
 	});
@@ -188,21 +188,13 @@ DateFilter.prototype.getValue = function () {
 	case '$eq':
 	case '$ne':
 	case '$gte':
-		if (self.inputs.single.val() === '') {
-			// User hasn't entered a complete value in the date input.
-			break;
-		}
-		result = self.inputs.single.val();
-		if (self.typeInfo.internalType === 'moment') {
-			result = moment(result);
-		}
-		break;
 	case '$lte':
 		if (self.inputs.single.val() === '') {
 			// User hasn't entered a complete value in the date input.
 			break;
 		}
-		result = self.inputs.single.val() + ' 23:59:59';
+		result = self.typeInfo.type === 'date' ? self.inputs.single.val()
+			: self.inputs.single.val().replace('T', ' ');
 		if (self.typeInfo.internalType === 'moment') {
 			result = moment(result);
 		}
@@ -222,8 +214,8 @@ DateFilter.prototype.getValue = function () {
 			break;
 		case 'datetime':
 			result = [
-					self.inputs.rangeStart.val() + ' 00:00:00'
-				, self.inputs.rangeEnd.val() + ' 23:59:59'
+					self.inputs.rangeStart.val().replace('T', ' ')
+				, self.inputs.rangeEnd.val().replace('T', ' ')
 			];
 			break;
 		}
