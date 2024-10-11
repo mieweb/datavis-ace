@@ -23,6 +23,7 @@
     "url": "https://github.mieweb.com/datavis/wcdatavis.git"
   },
   "scripts": {
+    "dev": "vite",
     "lint": "eslint src",
     "test": "mocha -t 10000 tests/selenium/*.js",
     "rollup": "rollup --bundleConfigAsCjs -c rollup.config.js",
@@ -65,6 +66,7 @@
     "selenium-webdriver": "=4.17.0",
     "serve": "=14.2.1",
     "serve-handler": "=6.1.5",
-    "uglify-js": "=3.17.4"
+    "uglify-js": "=3.17.4",
+    "vite": "^5.4.8"
   }
 }
