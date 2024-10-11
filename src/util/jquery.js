@@ -154,7 +154,7 @@ jQuery.fn.extend({
 			'disabled': jQuery(self).prop('disabled'),
 			'title': self.attr('title')
 		})
-			.addClass('wcdv_icon_button wcdv_button_left')
+			.addClass('wcdv_icon_button wcdv_button_left primary')
 			.on('click', function () {
 				self._toggleCheck();
 				self.trigger('change');

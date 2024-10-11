@@ -175,7 +175,7 @@ DebugWin.prototype.show = function (grid, view, source) {
 	var words = ['Very Cool', 'Thanks', 'Nice!', 'All Right', 'Whatever'];
 	jQuery('<button>', {
 		'type': 'button',
-		'class': '',
+		'class': 'primary',
 		'title': 'Very Cool'
 	})
 		.append(fontAwesome('fa-thumbs-up'))

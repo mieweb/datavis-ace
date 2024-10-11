@@ -36,6 +36,8 @@
     "jquery": "=3.7.1",
     "jquery-contextmenu": "=2.9.2",
     "jquery-ui": "=1.13.2",
+    "mie-ds-brand-grayscale-light": "^1.0.26",
+    "mie-ds-core": "^3.0.18",
     "moment": "=2.30.1",
     "numeral": "=2.0.6",
     "papaparse": "=5.4.1",

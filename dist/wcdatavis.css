@@ -1,20 +1,25 @@
+
 /* WC DATAVIS STYLES */
 
-.wcdv_button {
+button {
 	cursor: pointer;
+}
+
+.wcdv_button {
 	vertical-align: middle;
 }
 
 button.wcdv_icon_button {
-	cursor: pointer;
+	width: 30px;
+    height: 30px;
 }
 
 button.wcdv_icon_button,
 .wcdv_spinner {
 	border: none;
-	background-color: transparent;
-	padding: 0;
-	vertical-align: middle;
+    background-color: transparent;
+    padding: 0;
+    vertical-align: middle;
 }
 
 button.wcdv_button_left {
@@ -41,16 +46,16 @@ td button.wcdv_icon_button_incell {
 	margin-left: 4px; /* to keep left-aligned data (like numbers) from running into it */
 	padding: 2px;
 	border-radius: 2px;
-	background-color: #E0E0E080;
-	color: #80808080;
+	/* background-color: #E0E0E080; */
+	/* color: #80808080; */
 }
 
 td:hover button.wcdv_icon_button_incell {
-	background-color: #C0C0C080;
+	/* background-color: #C0C0C080; */
 }
 
 td button.wcdv_icon_button_incell:hover {
-	color: #404040;
+	/* color: #404040; */
 }
 
 td button.wcdv_icon_button_incell span.fa {
@@ -58,7 +63,6 @@ td button.wcdv_icon_button_incell span.fa {
 }
 
 button.wcdv_icon_button span.fa {
-	cursor: pointer;
 	/*font-size: 120%;*/
 	font-size: 18px;
 }
@@ -72,19 +76,19 @@ button.wcdv_icon_button_nolabel span.fa {
  */
 
 button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_off {
-	color: #000;
+	/* color: #000; */
 	padding: 0.2em;
 	border-radius: 0.2em;
 }
 button.wcdv_icon_button > span.fa.wcdv_icon_checkbox_on {
-	background-color: #0095D6;
-	color: #FFF;
+	/* background-color: #0095D6; */
+	/* color: #FFF; */
 	padding: 0.2em;
 	border-radius: 0.2em;
 }
 
-.wcdv_grid button > span.fa,
-.wcdv_graph button > span.fa,
+/* .wcdv_grid button > span.fa,
+.wcdv_graph button > span.fa, */
 .wcdv_spinner > span.fa {
 	margin-right: 0.25em;
 }
@@ -104,14 +108,13 @@ button.wcdv_expand_button {
 }
 
 button.wcdv_expand_button > span.fa {
-	cursor: pointer;
 	margin-right: inherit;
 	font-size: 15px;
-	color: #737373;
+	/* color: #737373; */
 }
 
 .wcdv_grid, .wcdv_graph {
-	background-color: white;
+	/* background-color: white; */
 	margin-top: 1em;
 	display: flex;
 	flex-direction: column;
@@ -125,7 +128,7 @@ button.wcdv_expand_button > span.fa {
 	border-left: solid 8px #bf311a;
     padding: 4px;
     margin-bottom: 4px;
-    background-color: #fadfdb;
+    /* background-color: #fadfdb; */
 }
 
 .wcdv_info_banner {
@@ -151,8 +154,7 @@ hr.wcdv_hr_gradient {
 .wcdv_grid_titlebar {
 	border: 1px solid #c7c7c7;
 	padding: 0 0 0 8px;
-        cursor: pointer;
-	color: #737373;
+	/* color: #737373; */
 	flex: 0 0 auto;
 }
 
@@ -192,6 +194,10 @@ hr.wcdv_hr_gradient {
 	text-align: center;
 	line-height: 30px;
 	user-select: none;
+}
+
+.wcdv_titlebar_controls > * {
+	margin-right: 0.5em;
 }
 
 .wcdv_titlebar_controls span.fa:last-child {
@@ -241,11 +247,11 @@ hr.wcdv_hr_gradient {
 }
 
 .wcdv_grid_toolbar > span.fa {
-	color: #888;
+	/* color: #888; */
 	font-size: 18px;
 }
 .wcdv_grid_toolbar > span.fa:hover {
-	color: #444;
+	/* color: #444; */
 }
 
 .wcdv_grid_toolbar button .fa {
@@ -292,7 +298,7 @@ hr.wcdv_hr_gradient {
 }
 
 .wcdv_grid_toolbar span.fa.wcdv_info_icon {
-	color: #737373;
+	/* color: #737373; */
 	margin-left: 0.5em;
 }
 
@@ -320,7 +326,7 @@ hr.wcdv_hr_gradient {
 }
 
 .wcdv_control_title {
-	color: #737373;
+	/* color: #737373; */
 	text-transform: uppercase;
 	font-weight: bold;
 	display: inline-block;
@@ -591,7 +597,7 @@ td.wcdv_row_operations > button.wcdv_operation:first-child {
 }
 
 .wcdv_sort_arrow_active {
-	color: #FFF;
+	/* color: #FFF; */
 }
 .wcdv_sort_arrow_inactive {
 	display: none;
@@ -673,10 +679,10 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
  */
 
 tr.wcdvgrid_more td {
-	background-color: #F6F6F9;
+	/* background-color: #F6F6F9; */
 	border-top: 3px double #808080;
 	font-weight: normal;
-	color: #646464;
+	/* color: #646464; */
 	font-size: .85em;
 	font-weight: normal;
 	padding-bottom: 3px;
@@ -725,25 +731,25 @@ tr.wcdvgrid_more td {
 	 */
 	/* border-collapse: collapse; */
 	border-spacing: 0;
-	background-color: #FFFFFF;
+	/* background-color: #FFFFFF; */
 	font-size: 1em;
 	width: 100%;
 }
 
 .wcdv_grid_table table th {
-	background-color: #FFF;
-    color: #737373;
+	/* background-color: #FFF; */
+    /* color: #737373; */
 	font-weight: normal;
 	text-align: left;
 }
 
 .wcdv_grid_table table thead th {
-	background-color: #737373;
-	color: #FFF;
+	/* background-color: #737373; */
+	/* color: #FFF; */
 }
 
 .wcdv_sort_column_active.wcdv_bg-primary{
-	color: #FFF;
+	/* color: #FFF; */
 }
 
 /*
@@ -761,9 +767,9 @@ tr.wcdvgrid_more td {
 }
 
 .wcdv_grid_table table > thead > tr + tr > th{
-	background-color: #f0f0f5;
-    color: #000;
-    border-bottom: 1px solid #000;
+	/* background-color: #f0f0f5; */
+    /* color: #000;
+    border-bottom: 1px solid #000; */
 }
 
 /*
@@ -773,7 +779,7 @@ tr.wcdvgrid_more td {
 */
 
 .wcdv_grid_table table > tfoot {
-	background-color: #F6F6F9;
+	/* background-color: #F6F6F9; */
 	border-top: 3px double #808080;
 }
 
@@ -785,17 +791,12 @@ tr.wcdvgrid_more td {
 	border-bottom: none;
 }
 
-.wcdv_grid_table table.zebra > tbody > tr:nth-child(even), .wcdv_grid_table table > tbody > tr.even {
-	/* blue: background-color: #e3f2fd; */
-	background-color: #e8f5e9;
-}
-
 .wcdv_grid_table table.zebra > tbody > tr.odd {
-	background-color: white;
+	/* background-color: white; */
 }
 
 .wcdv_grid_table table td.wcdv_selected_row {
-	background-color: rgba(255, 235, 59, .4);
+	/* background-color: rgba(255, 235, 59, .4); */
 }
 
 /*
@@ -891,7 +892,7 @@ tr.wcdvgrid_more td {
 	cursor: zoom-in;
 }
 .wcdv_grid_table table td.wcdv_drill_down:active {
-	background-color: #fff9c4;
+	/* background-color: #fff9c4; */
 }
 
 .wcdv_maxheight_wrapper {
@@ -982,23 +983,19 @@ html:not(.ie11) .wcdv_grid_table table th.wcdv_cell_empty div {
 */
 
 .wcdv_bg-primary{
-	background-color: #0095D6 !important;
+	/* background-color: #0095D6 !important; */
 }
 
 .wcdv_text-primary{
-	color: #0095D6;
+	/* color: #0095D6; */
 }
 
 .wcdv_border-primary{
-	border-color: #0095D6 !important;
-}
-
-.wcdv_grid_table table.zebra > tbody > tr:nth-child(even), .wcdv_grid_table table > tbody > tr.even{
-	background-color: #f0f0f5;
+	/* border-color: #0095D6 !important; */
 }
 
 .wcdv_grid_table table td.wcdv_selected_row{
-	background-color: #0095d642;
+	/* background-color: #0095d642; */
 }
 
 .context-menu-icon.context-menu-icon--fa::before{
@@ -1093,15 +1090,7 @@ div.wcdv_button_bar button {
 }
 
 div.wcdv_button_bar button span.fa {
-	margin-right: 0.25em;
-}
-
-div.wcdv_button_bar button[data-role="ok"] span.fa {
-	color: #2e7d32;
-}
-
-div.wcdv_button_bar button[data-role="cancel"] span.fa {
-	color: #c62828;
+	/* margin-right: 0.25em; */
 }
 
 /*

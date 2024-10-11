@@ -336,7 +336,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 	self.ui.exportBtn = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.on('click', function (evt) {
 			evt.stopPropagation();
@@ -351,7 +351,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 	self.ui.refreshBtn = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.attr('title', 'Refresh')
 		.on('click', function (evt) {
@@ -369,7 +369,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 	jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.attr('title', trans('GRAPH.TITLEBAR.SHOW_HIDE_CONTROLS'))
 		.click(function (evt) {
@@ -385,7 +385,7 @@ Graph.prototype._addTitleWidgets = function (titlebar) {
 	self.ui.showHideButton = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary showhide'
+		'class': 'wcdv_icon_button primary showhide'
 	})
 		.attr('title', trans('GRAPH.TITLEBAR.SHOW_HIDE'))
 		.click(function (evt) {

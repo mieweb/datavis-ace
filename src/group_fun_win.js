@@ -73,7 +73,7 @@ var GroupFunWin = makeSubclass('GroupFunWin', Object, function (title, groupFuns
 	groupFuns.each(function (gf, gfName) {
 		self.buttons[gfName] = jQuery('<button>', {
 			'type': 'button',
-			'class': 'wcdv_option',
+			'class': 'wcdv_option primary',
 			'data-wcdv-groupfunname': gfName,
 			'title': gf.displayName
 		})
@@ -101,7 +101,7 @@ var GroupFunWin = makeSubclass('GroupFunWin', Object, function (title, groupFuns
 
 	self.buttons['none'] = jQuery('<button>', {
 		'type': 'button',
-		'class': 'wcdv_option',
+		'class': 'wcdv_option primary',
 		'data-wcdv-groupfunname': 'none',
 		'title': trans('GRID.GROUP_FUN.NONE')
 	})

@@ -127,7 +127,7 @@ GridControlField.prototype.draw = function () {
 	self.ui.removeButton = jQuery('<button>', {'type': 'button'})
 		.append(fontAwesome('F146'))
 		.attr('title', trans('GRID_CONTROL.FIELD.REMOVE'))
-		.addClass('wcdv_icon_button wcdv_remove wcdv_text-primary')
+		.addClass('wcdv_icon_button wcdv_remove primary')
 		.on('click', function () {
 			self.control.removeField(self);
 		})
@@ -256,7 +256,7 @@ FunGridControlField.prototype.draw = function () {
 			'data-wcdv-role': 'set-group-fun',
 			title: trans('GRID_CONTROL.FIELD.SHOW_FUNCTIONS')
 		})
-			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
+			.addClass('wcdv_icon_button wcdv_button_left primary')
 			.on('click', function () {
 				self.showFunWin();
 			})
@@ -452,7 +452,7 @@ AggregateControlField.prototype.draw = function () {
 			'type': 'button',
 			title: trans('GRID_CONTROL.AGGREGATE.EDIT_OPTIONS')
 		})
-			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
+			.addClass('wcdv_icon_button wcdv_button_left primary')
 			.on('click', function () {
 				self.ui.optionsDialog.dialog('open');
 			})
@@ -466,7 +466,7 @@ AggregateControlField.prototype.draw = function () {
 		self.ui.graphBtn = jQuery('<button>', {
 			'type': 'button'
 		})
-			.addClass('wcdv_icon_button wcdv_text-primary')
+			.addClass('wcdv_icon_button primary')
 			.on('click', function () {
 				// TODO Think of a better way to do this.  I feel like the coupling here is too high.
 
@@ -532,6 +532,7 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			'margin-top': '1ex'
 		})
 		.append(jQuery('<button>', {'type': 'button'})
+			.addClass('primary')
 			.append(fontAwesome('F00C'))
 			.append('OK')
 			.on('click', function () {
@@ -540,6 +541,7 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 				self.ui.optionsDialog.dialog('close');
 			}))
 		.append(jQuery('<button>', {'type': 'button'})
+			.addClass('primary')
 			.css('margin-left', '1em')
 			.append(fontAwesome('F05E'))
 			.append('Cancel')

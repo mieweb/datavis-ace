@@ -2355,6 +2355,51 @@ export function onVisibilityChange(parent, elt, callback) {
 	}
 }
 
+// // dropDown {{{2
+
+// export function dropDown(options, onChange, selectText = 'Choose an option') {
+// 	var htmlOptions = $('<div>')
+// 		.addClass('dropdown-options');
+// 	for(var i in options) {
+// 		let option = options[i];
+// 		htmlOptions.append(dropDownOption(option.value, option.text));
+// 	}
+// 	var dropdown = $('<div>')
+// 		.addClass('ds-dropdown-wrapper')
+// 		.append(
+// 			$('<div>')
+// 				.addClass('ds-dropdown-container')
+// 				.append(
+// 					$('<div>')
+// 						.addClass('ds-dropdown')
+// 						.append(
+// 							$('<input readonly>')
+// 								.addClass('ds-dropdown')
+// 								// .on('change', onChange)
+// 						)
+// 						.append(
+// 							htmlOptions
+// 						)
+// 				)
+// 				.append(
+// 					$('<label>')
+// 						.addClass('ds-dropdown-label')
+// 						.text(selectText)
+// 				)
+// 		);
+// 	return dropdown;
+// }
+
+// // dropDownOption {{{2
+
+// export function dropDownOption(value, text) {
+// 	var option = $('<div>')
+// 		.addClass('dropdown-option')
+// 		.attr('data-value', value)
+// 		.text(text);
+// 	return option;
+// }
+
 // fontAwesome {{{2
 
 export function fontAwesome(icon, cls, title) {

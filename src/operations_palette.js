@@ -93,7 +93,7 @@ OperationsPalette.prototype.drawPalette = function () {
 		_.each(ops, function (op) {
 			var btn = jQuery('<button>', {
 				'type': 'button',
-				'class': 'wcdv_operation',
+				'class': 'wcdv_operation primary',
 				'data-operation-index': op.idx
 			}).appendTo(catDiv);
 			if (op.label == null) {

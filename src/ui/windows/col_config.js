@@ -99,7 +99,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'type': 'button',
 			'title': trans('GRID.COLCONFIG_WIN.REORDER_COLS')
 		})
-			.addClass('wcdv_icon_button drag-handle wcdv_button_right')
+			.addClass('wcdv_icon_button drag-handle wcdv_button_right primary')
 			.append(fontAwesome('fa-bars'))
 			.appendTo(td);
 
@@ -121,7 +121,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'type': 'button',
 			'title': trans('GRID.COLCONFIG_WIN.RENAME_COL')
 		})
-			.addClass('wcdv_icon_button')
+			.addClass('wcdv_icon_button primary')
 			.append(fontAwesome('fa-pencil'))
 			.on('click', function () {
 				var newName = prompt(trans('GRID.COLCONFIG_WIN.RENAME_COL.PROMPT', field));
@@ -220,7 +220,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'type': 'button',
 			'title': trans('GRID.COLCONFIG_WIN.MOVE_COL_TO_TOP')
 		})
-			.addClass('wcdv_icon_button wcdv_button_left')
+			.addClass('wcdv_icon_button wcdv_button_left primary')
 			.on('click', function () {
 				var oldIndex = tr.index();
 				colTableBody.prepend(tr);
@@ -240,7 +240,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'type': 'button',
 			'title': trans('GRID.COLCONFIG_WIN.MOVE_COL_TO_BOTTOM')
 		})
-			.addClass('wcdv_icon_button wcdv_button_left')
+			.addClass('wcdv_icon_button wcdv_button_left primary')
 			.on('click', function () {
 				var oldIndex = tr.index();
 				colTableBody.append(tr);
@@ -277,7 +277,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 	if (self.initColConfig) {
 		jQuery('<button>', {
 			'type': 'button',
-			'class': '',
+			'class': 'primary',
 			'title': trans('GRID.COLCONFIG_WIN.RESET_COL_ORDER')
 		})
 			.append(fontAwesome('fa-undo'))
@@ -296,7 +296,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 	jQuery('<button>', {
 		'type': 'button',
-		'class': '',
+		'class': 'primary',
 		'title': trans('DIALOG.OK'),
 		'data-role': 'ok'
 	})
@@ -318,7 +318,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 
 	jQuery('<button>', {
 		'type': 'button',
-		'class': '',
+		'class': 'primary',
 		'title': trans('DIALOG.CANCEL'),
 		'data-role': 'cancel'
 	})

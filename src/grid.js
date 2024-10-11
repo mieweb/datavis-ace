@@ -529,6 +529,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 
 	self.ui.root = jQuery(document.getElementById(self.id))
 		.addClass('wcdv_grid')
+		.addClass('table')
 		.attr('data-title', self.id + '_title');
 
 	self.ui.root.children().remove();
@@ -1062,6 +1063,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		.appendTo(notHeader);
 
 	self.ui.cancelFetchBtn = jQuery('<button>', {'type': 'button'})
+		.addClass('primary')
 		.css({'margin-left': '0.5em'})
 		.text(trans('GRID.TITLEBAR.CANCEL'))
 		.on('click', function (evt) {
@@ -1096,7 +1098,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		jQuery('<button>', {
 			'type': 'button',
 			'style': 'font-size: 18px',
-			'class': 'wcdv_icon_button wcdv_text-primary'
+			'class': 'wcdv_icon_button primary'
 		})
 			.attr('title', trans('GRID.TITLEBAR.SHOW_DEBUG_INFO'))
 			.click(function (evt) {
@@ -1112,7 +1114,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 	self.ui.exportBtn = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.on('click', function (evt) {
 			evt.stopPropagation();
@@ -1128,7 +1130,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 	self.ui.refreshBtn = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.attr('title', trans('GRID.TITLEBAR.REFRESH'))
 		.on('click', function (evt) {
@@ -1171,7 +1173,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 	jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary'
+		'class': 'wcdv_icon_button primary'
 	})
 		.attr('title', trans('GRID.TITLEBAR.SHOW_HIDE_CONTROLS'))
 		.click(function (evt) {
@@ -1200,7 +1202,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 	self.ui.showHideButton = jQuery('<button>', {
 		'type': 'button',
 		'style': 'font-size: 18px',
-		'class': 'wcdv_icon_button wcdv_text-primary showhide'
+		'class': 'wcdv_icon_button primary showhide'
 	})
 		.attr('title', trans('GRID.TITLEBAR.SHOW_HIDE'))
 		.click(function (evt) {

@@ -566,7 +566,7 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 
 				expandBtn = jQuery('<button>', {
 					'type': 'button',
-					'class': 'wcdv_icon_button wcdv_expand_button',
+					'class': 'wcdv_icon_button wcdv_expand_button primary',
 					'data-wcdv-expanded': '0',
 					'disabled': disabled
 				})
@@ -702,9 +702,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 					.append(fontAwesome('F13A'))
 					.append(jQuery('<span>Showing rows 1–' + i + ' of ' + childRowValEltsLen + '.</span>')
 						.css({'padding-left': '0.5em'}))
-					.append(jQuery('<button type="button">Load ' + limitConfig.chunkSize + ' more rows.</button>')
+					.append(jQuery('<button type="button" class="primary">Load ' + limitConfig.chunkSize + ' more rows.</button>')
 						.css({'margin-left': '0.5em'}))
-					.append(jQuery('<button type="button" class="wcdv_show_all">Load all rows.</button>')
+					.append(jQuery('<button type="button" class="wcdv_show_all primary">Load all rows.</button>')
 						.css({'margin-left': '0.5em'})
 					)
 					.append(spinnerDiv)
@@ -852,9 +852,9 @@ GridTableGroupDetail.prototype.drawBody = function (data, typeInfo, columns, con
 					.append(fontAwesome('F13A'))
 					.append(jQuery('<span>Showing rows 1–' + i + ' of ' + metadataNode.rows.length + '.</span>')
 						.css({'padding-left': '0.5em'}))
-					.append(jQuery('<button type="button">Load ' + limitConfig.chunkSize + ' more rows.</button>')
+					.append(jQuery('<button type="button" class="primary">Load ' + limitConfig.chunkSize + ' more rows.</button>')
 						.css({'margin-left': '0.5em'}))
-					.append(jQuery('<button type="button" class="wcdv_show_all">Load all rows.</button>')
+					.append(jQuery('<button type="button" class="wcdv_show_all primary">Load all rows.</button>')
 						.css({'margin-left': '0.5em'})
 					)
 					.append(spinnerDiv)

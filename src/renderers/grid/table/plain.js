@@ -818,7 +818,7 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 GridTablePlain.prototype.makeRowReorderBtn = function () {
 	var self = this;
 
-	return jQuery('<button type="button" class="drag-handle fa">')
+	return jQuery('<button type="button" class="drag-handle primary fa">')
 		.html(fontAwesome('f07d',null,'Drag or press up/down arrows to move'));
 };
 
