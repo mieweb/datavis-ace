@@ -181,13 +181,6 @@ hr.wcdv_hr_gradient {
 	text-decoration: underline;
 }
 
-.wcdv_grid_titlebar .showhide {
-	background-color: transparent;
-	border: 0;
-	cursor: pointer;
-	padding: 0;
-}
-
 .wcdv_titlebar_controls span.fa {
 	cursor: pointer;
 	width: 30px;
@@ -465,6 +458,23 @@ hr.wcdv_hr_gradient {
 }
 
 /* FILTER CONTROL */
+
+/* menu header via data attribute */
+.data-title:before {
+	content: attr(data-menutitle);
+	display: block;
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+	background: #DDD;
+	padding: 2px;
+	font-size: 11px;
+	font-weight: bold;
+}
+.data-title li:first-child {
+	margin-top: 20px;
+}
 
 .wcdv_filter_control ul li .wcdv_field {
 	display: flex;

@@ -434,7 +434,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	opts = deepDefaults(opts, {
 		runImmediately: true,
 		showOnDataChange: true,
-		showToolbar: true,
+		showToolbar: false,
 		showControls: false,
 	});
 
@@ -644,7 +644,7 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 	if (!self.opts.showToolbar) {
 		self.ui.toolbar.hide();
 	}
-
+	
 	if (!self.opts.showControls) {
 		self.ui.controls.hide();
 	}

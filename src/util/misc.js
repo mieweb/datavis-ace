@@ -3903,6 +3903,16 @@ export var EagerPipeline = makeSubclass('EagerPipeline', Object, function (x) {
 	this.x = x;
 });
 
+export function setupCustomContextMenuType(gridFilter) {
+	$.contextMenu.types.filter = function(item, opt, root) {
+		$(gridFilter.div)
+			.appendTo(this);
+	
+		this.addClass('labels');
+	};
+	
+}
+
 // #andThen {{{2
 
 EagerPipeline.prototype.andThen = function (f) {

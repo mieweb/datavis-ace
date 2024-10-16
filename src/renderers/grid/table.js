@@ -27,6 +27,7 @@ import {
 	setPropDef,
 	setTableCell,
 	setElement,
+	setupCustomContextMenuType,
 } from '../../util/misc.js';
 
 import Lock from '../../util/lock.js';
@@ -786,11 +787,32 @@ GridTable.prototype._addFilterToHeader = function (container, field, displayText
 		return;
 	}
 
-	jQuery(fontAwesome('fa-filter', 'wcdv_filter_icon', trans('GRID.TABLE.ADD_FILTER_HELP', field)))
+	let filter_selector_class = gensym();
+	jQuery(fontAwesome('fa-filter', 'wcdv_filter_icon ' + filter_selector_class, trans('GRID.TABLE.ADD_FILTER_HELP', field)))
 		.on('click', function () {
 			self.grid.filterControl.addField(field, displayText, {
-				openControls: true
+				openControls: false
 			});
+			setupCustomContextMenuType(self.grid.filterControl.gfs.filters.byCol[field][0]);
+
+			var filterIcon_menu = jQuery.contextMenu({
+				selector: '.' + filter_selector_class,
+				className: 'data-title',
+				appendTo: self.ui.contextMenus,
+				trigger: 'left',
+				callback: function (itemKey, opt) {
+					// This should never be called, it's only for items that don't specify their own callback,
+					// which they all should be doing.
+					console.log(itemKey);
+				},
+				items: {
+					label: {type: "filter", customName: "Filter by " + displayText, callback: function(){ return false; }},
+				}
+			});
+			$('.data-title').attr('data-menutitle', 'Filter by ' + displayText);
+			self.contextMenuSelectors.push('.' + filter_selector_class);
+			console.log(self.ui.contextMenus);
+
 		})
 		.tooltip({
 			classes: {
