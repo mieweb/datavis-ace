@@ -55,7 +55,8 @@ def random_int(name='random_int', min=0, max=100, **opts):
     val = r.randint(min, max)
     if opts.get('output_type') == 'string':
         if 'format' in opts:
-            ret = format_decimal(val, format=opts['format'])
+            locale = opts.get('locale', 'en_US')
+            ret = format_decimal(val, format=opts['format'], locale=locale)
         else:
             ret = str(val)
     else:
@@ -69,7 +70,9 @@ def random_float(name='random_float', min=0, max=1, **opts):
     val = r.uniform(min, max)
     if opts.get('output_type') == 'string':
         if 'format' in opts:
-            ret = format_decimal(val, format=opts['format'])
+            locale = opts.get('locale', 'en_US')  # Use a default locale
+            ret = format_decimal(val, opts['format'], locale=locale)
+            #ret = format_decimal(val, format=opts['format'])
         elif 'fixed' in opts:
             ret = str(decimal.Decimal(val).quantize(decimal.Decimal('1.' + ('0' * opts['fixed']))))
         else:
@@ -89,7 +92,9 @@ def random_date(name='random_date', min='1900-01-01', max='2100-01-01', **opts):
     max = int(time.mktime(time.strptime(max, '%Y-%m-%d')))
     val = date.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
-        ret = format_date(val, opts['format'])
+        locale = opts.get('locale', 'en_US')  # Use a default locale
+        ret = format_date(val, opts['format'], locale=locale)
+       # ret = format_date(val, opts['format'])
     else:
         ret = str(val)
     LAST[name] = ret
@@ -102,9 +107,11 @@ def random_time(name='random_time', min='00:00:00', max='23:59:59', **opts):
     max = int(time.mktime(time.strptime('2000-01-01 ' + max, '%Y-%m-%d %H:%M:%S')))
     val = datetime.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
-        ret = format_datetime(val, opts['format'])
+        locale = opts.get('locale', 'en_US')
+        ret = format_datetime(val, opts['format'],locale=locale)
     else:
-        ret = format_datetime(val, 'HH:mm:ss')
+        locale = opts.get('locale', 'en_US')
+        ret = format_datetime(val, 'HH:mm:ss',locale=locale)
     LAST[name] = ret
     return ret
 
@@ -115,7 +122,8 @@ def random_datetime(name='random_datetime', min='1900-01-01 00:00:00', max='2099
     max = int(time.mktime(time.strptime(max, '%Y-%m-%d %H:%M:%S')))
     val = datetime.fromtimestamp(r.randint(min, max))
     if 'format' in opts:
-        ret = format_datetime(val, opts['format'])
+        locale = opts.get('locale', 'en_US')
+        ret = format_datetime(val, opts['format'],locale=locale)
     else:
         ret = str(val)
     LAST[name] = ret

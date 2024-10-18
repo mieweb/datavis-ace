@@ -10,4 +10,6 @@ RUN mkdir -p /app
 WORKDIR /app
 RUN git config --global --add safe.directory /app
 
+EXPOSE 5173
+
 
