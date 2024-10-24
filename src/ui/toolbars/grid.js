@@ -520,13 +520,13 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 		.append(fontAwesome('fa-save'))
 		.addClass('wcdv_icon_button wcdv_text-primary')
 		.hide()
-		.tooltip({
-			classes: {
-				'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
-			},
-			show: { delay: 1000 },
-			content: saveBtnTooltipContent
-		})
+		// .tooltip({
+		// 	classes: {
+		// 		'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
+		// 	},
+		// 	show: { delay: 1000 },
+		// 	content: saveBtnTooltipContent
+		// })
 		.on('click', function () {
 			grid.prefs.reallySave();
 		})
