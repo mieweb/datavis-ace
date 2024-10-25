@@ -1,6 +1,6 @@
 {
   "name": "wcdatavis",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "Data visualization library",
   "keywords": [
     "grid",
@@ -39,7 +39,7 @@
     "numeral": "=2.0.6",
     "papaparse": "=5.3.2",
     "sprintf-js": "=1.1.2",
-    "sumoselect": "git+ssh://git@github.mieweb.com:datavis/jquery.sumoselect.git#master2",
+    "sumoselect": "git+ssh://git@github.mieweb.com:datavis/jquery.sumoselect.git",
     "underscore": "=1.13.6"
   },
   "devDependencies": {
