@@ -166,9 +166,12 @@ var StringDropdownGridFilterSumo = makeSubclass('StringDropdownGridFilterSumo', 
 	self.afterAdd = function (target) {
 		self.gridFilterSet.view.getUniqueVals(function (uniqueVals) {
 			_.each(getPropDef([], uniqueVals, self.field, 'values'), function (val) {
-				jQuery('<option>').attr({
+				var elt = jQuery('<option>').attr({
 					'value': val
-				}).text(val === '' ? '[blank]' : val).appendTo(self.input);
+				});
+				var fcc = self.gridFilterSet.view.colConfig.get(self.field) || {};
+				elt[fcc.allowHtml ? 'html' : 'text'](val === '' ? '[blank]' : val);
+				elt.appendTo(self.input);
 			});
 			self.input.SumoSelect({
 				triggerChangeCombined: true,
