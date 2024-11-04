@@ -6,14 +6,14 @@ import babel from '@rollup/plugin-babel';
 
 export default {
 	input: 'datavis.js',
-	external: [
-		'jquery'
-	],
+	// external: [
+	// 	'jquery'
+	// ],
 	output: {
 		file: 'dist/wcdatavis.js',
 		format: 'iife',
 		globals: {
-			jquery: 'jQuery',
+			// jquery: 'jQuery',
 			fs: 'undefined',
 			stream: 'undefined',
 		}

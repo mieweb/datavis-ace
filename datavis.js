@@ -1,3 +1,4 @@
+import jQuery from 'jquery';
 import 'block-ui';
 import 'flatpickr';
 import 'jquery-ui/dist/jquery-ui.min.js';

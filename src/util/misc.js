@@ -2,6 +2,7 @@ import BigNumber from 'bignumber.js/bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
 import _ from 'underscore';
+import jQuery from 'jquery';
 import sprintf from 'sprintf-js';
 import JSONFormatter from 'json-formatter-js';
 
