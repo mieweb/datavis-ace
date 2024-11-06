@@ -8,6 +8,7 @@ import { trans } from './trans.js';
 import {
 	fontAwesome,
 	makeSubclass,
+	mixinDebugging,
 } from './util/misc.js';
 
 import { Grid } from './grid.js';
@@ -29,18 +30,22 @@ var OperationsPalette = makeSubclass('OperationsPalette', Object, function (grid
 	}
 
 	self.grid = grid;
+	self.parent = null;
 });
+
+mixinDebugging(OperationsPalette);
 
 // #draw {{{2
 
 OperationsPalette.prototype.draw = function (parent) {
 	var self = this;
+	self.parent = parent;
 
 	self.ui.root = jQuery('<div>', {
 		'class': 'wcdv_control_pane'
 	}).css({
 		'display': 'block'
-	}).appendTo(parent);
+	}).appendTo(self.parent);
 	self.ui.title = jQuery('<div>')
 		.addClass('wcdv_control_title_bar')
 		.appendTo(self.ui.root);
@@ -52,13 +57,7 @@ OperationsPalette.prototype.draw = function (parent) {
 		'white-space': 'nowrap'
 	}).appendTo(self.ui.root);
 
-	if (self.operations.length > 0) {
-		self.drawPalette();
-		parent.show();
-	}
-	else {
-		parent.hide();
-	}
+	self.autoReveal();
 
 	self.ui.palette.on('click.wcdv_operation', 'button.wcdv_operation', function () {
 		var btn = this;
@@ -75,6 +74,10 @@ OperationsPalette.prototype.draw = function (parent) {
 };
 
 // #drawPalette {{{2
+
+/**
+ * Draw just the operation buttons themselves.
+ */
 
 OperationsPalette.prototype.drawPalette = function () {
 	var self = this;
@@ -109,7 +112,24 @@ OperationsPalette.prototype.drawPalette = function () {
 	});
 };
 
+// #autoReveal {{{2
+
+OperationsPalette.prototype.autoReveal = function () {
+	var self = this;
+	if (self.operations.length > 0) {
+		self.drawPalette();
+		self.parent.show();
+	}
+	else {
+		self.parent.hide();
+	}
+};
+
 // #destroy {{{2
+
+/**
+ * Remove any event handlers on the palette and remove its container from the DOM.
+ */
 
 OperationsPalette.prototype.destroy = function () {
 	var self = this;
@@ -119,6 +139,10 @@ OperationsPalette.prototype.destroy = function () {
 };
 
 // #setOperations {{{2
+
+/**
+ * Set the operations for the palette, after it has already been created.
+ */
 
 OperationsPalette.prototype.setOperations = function (ops) {
 	var self = this;
@@ -139,8 +163,10 @@ OperationsPalette.prototype.setOperations = function (ops) {
 
 	self.operations = ops.all;
 
+	self.debug('setOperations', 'New operations = %O', self.operations);
+
 	if (self.ui.palette != null) {
-		self.drawPalette();
+		self.autoReveal();
 	}
 };
 

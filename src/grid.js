@@ -695,11 +695,8 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 		});
 
 	self.operationsPalette = new OperationsPalette(self);
-	if (getProp(self.defn, 'operations', 'all') != null) {
-		self.operationsPalette.setOperations(self.defn.operations);
-		self.operationsPalette.draw(self.ui.operationsPalette);
-		self.ui.operationsPalette.show();
-	}
+	self.operationsPalette.setOperations(self.defn.operations);
+	self.operationsPalette.draw(self.ui.operationsPalette);
 
 	// Aggregate Control
 
@@ -2169,10 +2166,13 @@ Grid.prototype.setOperations = function (ops) {
 
 	if (self.operationsPalette != null) {
 		self.operationsPalette.setOperations(ops);
-		self.operationsPalette.draw(self.ui.operationsPalette);
 	}
 
 	self.defn.operations = ops;
+
+	// We need to redraw the grid because operations that affect one row at a time might change,
+	// therefore the buttons in the row need to be redrawn.
+
 	self.redraw();
 };
 
