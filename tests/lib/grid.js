@@ -6,7 +6,7 @@ const _ = require('lodash');
 const Promise = require("bluebird");
 const {By, Key} = require('selenium-webdriver');
 const until = require('selenium-webdriver/lib/until');
-const {asyncMap, asyncFilter, blur, selectByText, selectByValue, sleep} = require('./util.js');
+const {asyncMap, asyncEach, asyncFilter, blur, selectByText, selectByValue, hasClass, getClass, sleep} = require('./util.js');
 
 const {Type: LoggingType} = require('selenium-webdriver/lib/logging');
 
@@ -782,7 +782,7 @@ class Grid {
 		return input.click();
 	}
 
-	// #unselectAll {{{2
+	// #unselectAll {{{3
 
 	/**
 	 * Unselect all checkboxes.
@@ -832,6 +832,67 @@ class Grid {
 			}
 			return result;
 		});`);
+	}
+
+	// Operations {{{2
+
+	// #getOperations {{{3
+
+	/**
+	 * Get the operations.
+	 *
+	 * @param {string} type What type of operations to glean from the grid.
+	 *
+	 * - `all` = Get the names of all operations from the palette in the control panel.
+	 * - `row` = Get the names operations shown in the operations column on the left side of the table.
+	 * - `cell` = Get the names operations within the specified cell.
+	 *
+	 * @param {object} [opts] Additional options.
+	 * @param {string} [opts.rowNum] When `type = 'cell'`: what row to check.
+	 * @param {string} [opts.colName] When `type = 'cell'`: what column to check.
+	 */
+
+	async getOperations(type, opts) {
+		switch (type) {
+		case 'all':
+			const panes = await this.driver.findElements(By.css('div.wcdv_control_pane'));
+			const operationsPanes = await asyncFilter(panes, async (elt) => {
+				const titles = await elt.findElements(By.css('span.wcdv_control_title'));
+				return titles.length === 1 && await titles[0].getText() === 'OPERATIONS';
+			});
+			if (operationsPanes.length !== 1) {
+				throw new Error('Unable to locate operations pane');
+			}
+			const categories = await operationsPanes[0].findElements(By.css('div.wcdv_operations_category'));
+			let result = {};
+			await asyncEach(categories, async (elt) => {
+				const categoryName = await elt.findElement(By.css('span')).getText() || '';
+				const operationButtons = await elt.findElements(By.css('button.wcdv_operation'));
+				result[categoryName] = await asyncMap(operationButtons, async (btn) =>
+					(await hasClass(btn, 'no_label'))
+						? (await getClass(btn.findElement(By.css('span')), /fa-/))[0]
+						: await btn.getText());
+			});
+			return result;
+			break;
+		case 'row': {
+			const tr = await this.ui.table.findElement(By.css(`tbody > tr[data-row-num="${opts.row}"]`));
+			if (tr == null) {
+				throw new Error(`No such row: ${opts.row}`);
+			}
+			const operationButtons = await tr.findElements(By.css('td.wcdv_row_operations > button'));
+			return await asyncMap(operationButtons, async (btn) =>
+				await btn.getAttribute('title') ||(await getClass(btn.findElement(By.css('span')), /fa-/))[0]);
+			break;
+		}
+		case 'cell': {
+			const td = await this.getCell(opts.col, opts.row, {result: 'element'});
+			const operationButtons = await td.findElements(By.css('button.wcdv_operation'));
+			return await asyncMap(operationButtons, async (btn) =>
+				await btn.getAttribute('title') ||(await getClass(btn.findElement(By.css('span')), /fa-/))[0]);
+			break;
+		}
+		}
 	}
 
 	// Data Checking - Plain {{{2

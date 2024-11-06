@@ -252,6 +252,15 @@ async function blur(driver) {
 	return driver.executeScript('!!document.activeElement ? document.activeElement.blur() : 0');
 }
 
+async function hasClass(elt, cls) {
+	return (await elt.getAttribute('class')).split(' ').indexOf(cls) >= 0;
+}
+
+async function getClass(elt, pat) {
+	const classes = (await elt.getAttribute('class')).split(' ');
+	return classes.filter((cls) => pat.test(cls));
+}
+
 /**
  * Pauses execution.
  *
@@ -274,5 +283,7 @@ module.exports = {
 	radioByValue,
 	checkboxByValue,
 	blur,
+	hasClass,
+	getClass,
 	sleep,
 };
