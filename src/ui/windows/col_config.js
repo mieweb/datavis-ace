@@ -66,7 +66,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			'<th class="wcdv_bottom_border_teal wcdv_width_1em"></th>' +
 			'<th class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.FIELD') + '</th>' +
 			'<th class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.DISPLAY') + '</th>' +
-			'<th colspan="6" class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.OPTIONS') + '</th>' +
+			'<th colspan="7" class="wcdv_bottom_border_teal">' + trans('GRID.COLCONFIG_WIN.TBL.OPTIONS') + '</th>' +
 		'</thead>')
 		.appendTo(colTable);
 
@@ -80,6 +80,7 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 		.appendTo(colTable);
 
 	var trsByField = {};
+	var clearRenderCache = [];
 
 	current.each(function (colConfig, field) {
 		var tr, td;
@@ -197,6 +198,27 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(td)
 			._makeIconCheckbox('fa-code');
 
+		td = jQuery('<td>')
+			.addClass('wcdv_width_1em')
+			.appendTo(tr);
+
+		var allowFormattingCheckbox = jQuery('<input>', {
+			'type': 'checkbox',
+			'title': trans('GRID.COLCONFIG_WIN.ALLOW_FORMATTING')
+		})
+			.prop('checked', getPropDef(false, colConfig, 'allowFormatting'))
+			.on('change', function () {
+				if (clearRenderCache.indexOf(field) >= 0) {
+					clearRenderCache = _.without(clearRenderCache, field);
+				}
+				else {
+					clearRenderCache.push(field);
+				}
+				colConfig.allowFormatting = allowFormattingCheckbox.prop('checked');
+			})
+			.appendTo(td)
+			._makeIconCheckbox('fa-paint-brush');
+
 		/*
 		td = jQuery('<td>')
 			.addClass('wcdv_width_1em')
@@ -311,7 +333,9 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			});
 
 			orderWin.dialog('close');
-			onSave(self.colConfig);
+			onSave(self.colConfig, {
+				clearRenderCache: clearRenderCache.length > 0 ? clearRenderCache : null
+			});
 		})
 		.appendTo(buttonBar);
 

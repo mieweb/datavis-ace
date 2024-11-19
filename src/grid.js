@@ -1419,6 +1419,20 @@ Grid.prototype.refresh = function () {
 	self.view.refresh();
 };
 
+// #clearRenderCache {{{2
+
+/**
+ * Clear the cache of the render on each cell.
+ */
+
+Grid.prototype.clearRenderCache = function (cols) {
+	var self = this;
+
+	if (self.renderer != null) {
+		self.renderer.clearRenderCache(cols);
+	}
+}
+
 // #_updateRowCount {{{2
 
 /**
@@ -1815,6 +1829,7 @@ Grid.prototype._normalizeColumns = function (defn) {
 			hideMidnight: false,
 			format_dateOnly: 'LL',
 			allowHtml: false,
+			allowFormatting: false,
 			canHide: true
 		});
 

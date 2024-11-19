@@ -53,6 +53,7 @@ export default {
   'FILTER.DATE.OPERATOR.ON': 'on',
   'GRAPH.TITLEBAR.SHOW_HIDE': 'Show/Hide Graph',
   'GRAPH.TITLEBAR.SHOW_HIDE_CONTROLS': 'Show/Hide Graph Controls',
+  'GRID.COLCONFIG_WIN.ALLOW_FORMATTING': 'Allow embedded DataVis formatting?',
   'GRID.COLCONFIG_WIN.ALLOW_HTML': 'Allow HTML to be rendered?',
   'GRID.COLCONFIG_WIN.HIDE_COL': 'Hide column?',
   'GRID.COLCONFIG_WIN.MOVE_COL_TO_BOTTOM': 'Move to bottom of column list',

@@ -2262,6 +2262,16 @@ export function outerHtml(elt) {
 	return jQuery('<div>').append(elt).html();
 }
 
+// escapeHtml {{{2
+
+/**
+ * Escapes HTML metacharacters in a string.
+ */
+
+export function escapeHtml(elt) {
+	return elt.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll("'", '&apos;');
+}
+
 // getText {{{2
 
 /**
@@ -2930,6 +2940,13 @@ var decode = function (cell, fti) {
 	cell.decoded = true;
 };
 
+var fmtRegexps = {
+	toplevel: /\{\{dv\.fmt:(.*?)\}\}(.*?)\{\{\/\}\}/,
+	color: /^(fg|bg)=([0-9A-F]{6})$/,
+	textStyle: /^ts=([bisu]+)$/,
+	cssClass: /^cls=(.*)$/,
+};
+
 /**
  * Correctly format a value according to its type and user specification.
  *
@@ -3179,6 +3196,68 @@ export function format(fcc, fti, cell, opts) {
 		default:
 			log.error('Unable to format - unknown type: { field = "%s", type = "%s", value = "%s" }',
 				fti.field, t, cell.value);
+		}
+	}
+
+	if (fcc.allowFormatting) {
+		if (typeof result === 'string') {
+			var foundFmtStr = false;
+			var fmtResult = ''
+				, fmtClass = ''
+				, fmtStyle = '';
+			var m0 = null;
+			while ((m0 = result.match(fmtRegexps.toplevel)) != null) {
+				foundFmtStr = true;
+				fmtClass = '';
+				fmtStyle = '';
+				// Extract up to the start of the match, escaping it.
+				fmtResult += escapeHtml(result.substring(0, m0.index));
+				_.each(m0[1].split(','), function (f) {
+					var m1;
+					// Foreground and background color.
+					m1 = f.match(fmtRegexps.color);
+					if (m1 != null) {
+						fmtStyle += (m1[1] === 'bg' ? 'background-' : '') + 'color: #' + m1[2] + ';';
+						return;
+					}
+					// Text style and weight.
+					m1 = f.match(fmtRegexps.textStyle);
+					if (m1 != null) {
+						if (m1[1].indexOf('b') >= 0) {
+							fmtStyle += 'font-weight: bold;';
+						}
+						if (m1[1].indexOf('i') >= 0) {
+							fmtStyle += 'font-style: italic;';
+						}
+						if (m1[1].indexOf('u') >= 0) {
+							fmtStyle += 'text-decoration: underline;';
+						}
+						if (m1[1].indexOf('s') >= 0) {
+							fmtStyle += 'text-decoration: line-through;';
+						}
+					}
+					// Generic CSS class.
+					m1 = f.match(fmtRegexps.cssClass);
+					if (m1 != null) {
+						fmtClass += (fmtClass.length > 0 ? ' ' : '') + m1[1];
+					}
+				});
+				// Make a span to hold our formatted value.
+				fmtResult += '<span';
+				if (fmtStyle != null) {
+					fmtResult += ' style="' + fmtStyle + '"';
+				}
+				if (fmtClass != null) {
+					fmtResult += ' class="' + fmtClass + '"';
+				}
+				fmtResult += '>' + escapeHtml(m0[2]) + '</span>';
+				// Move along so we can match more text after the {{/}}.
+				result = result.substring(m0[0].length);
+			}
+			// No need to make an element if nothing was formatted.
+			if (foundFmtStr) {
+				return jQuery('<div>').html(fmtResult);
+			}
 		}
 	}
 

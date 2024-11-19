@@ -66,7 +66,10 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 		.append(fontAwesome('fa-columns'))
 		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))
 		.on('click', function (evt) {
-			grid.colConfigWin.show(grid.ui.controls, function (colConfig) {
+			grid.colConfigWin.show(grid.ui.controls, function (colConfig, opts) {
+				if (opts.clearRenderCache) {
+					grid.clearRenderCache(opts.clearRenderCache);
+				}
 				grid.setColConfig(colConfig, {
 					from: 'ui'
 				});

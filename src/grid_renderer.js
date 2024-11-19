@@ -238,6 +238,33 @@ GridRenderer.prototype.hasOperations = function (type, field) {
 	}
 };
 
+GridRenderer.prototype.clearRenderCache = function (cols) {
+	var self = this;
+
+	if (self.data != null) {
+		if (self.data.isPlain) {
+			_.each(self.data.data, function (row) {
+				if (cols != null) {
+					_.each(cols, function (c) {
+						row.rowData[c].cachedRender = null;
+					});
+				}
+				else {
+					_.each(row.rowData, function (c) {
+						c.cachedRender = null;
+					});
+				}
+			});
+		}
+		else if (self.data.isGroup) {
+			// do nothing
+		}
+		else if (self.data.isPivot) {
+			// do nothing
+		}
+	}
+};
+
 // Registry {{{1
 
 GridRenderer.registry = new OrdMap();

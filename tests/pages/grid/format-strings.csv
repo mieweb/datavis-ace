@@ -1,0 +1,28 @@
+test
+no formatting
+{{bad
+{{dv}}bad
+{{dv.fmt}}bad
+{{dv.fmt}}bad{{
+{{dv.fmt}}bad{{}}
+{{dv.fmt}}bad{{/}}
+{{dv.fmt:}}bad{{/}}
+{{dv.fmt:bg=CC0000}}red background{{/}}
+{{dv.fmt:bg=00CC00}}green background{{/}}
+{{dv.fmt:fg=CC0000}}red text{{/}}
+{{dv.fmt:fg=00CC00}}green text{{/}}
+"{{dv.fmt:bg=0000CC,fg=FFFFFF}}white on blue{{/}}"
+{{dv.fmt:ts=i}}italic{{/}}
+{{dv.fmt:ts=b}}bold{{/}}
+{{dv.fmt:ts=u}}underscore{{/}}
+{{dv.fmt:ts=s}}strike-thru{{/}}
+"{{dv.fmt:ts=biu}}bold, italic, underscore{{/}}"
+"{{dv.fmt:bg=00CC00,fg=FFFFFF,ts=b}}bold white on green{{/}}"
+{{dv.fmt:fg=CC0000}}red{{/}} {{dv.fmt:fg=00CC00}}green{{/}}
+html <b>inject</b>
+{{dv.fmt:ts=i}}italic{{/}} html <b>inject</b> {{dv.fmt:ts=i}}italic{{/}}
+{{dv.fmt:ts=i}}html <b>inject</b>{{/}}
+{{dv.fmt:cls=pink-box}}pink box{{/}}
+{{dv.fmt:cls=highlight}}highlight{{/}}
+{{dv.fmt:cls=pink-box highlight}}pink box highlight{{/}}
+"{{dv.fmt:cls=pink-box,cls=highlight}}pink box highlight{{/}}"

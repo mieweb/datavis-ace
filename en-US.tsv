@@ -84,6 +84,7 @@ GRID.COLCONFIG_WIN.RENAME_COL.PROMPT	Rename field "%s" to what?
 GRID.COLCONFIG_WIN.PIN_COL	Pin column to left side of table?	
 GRID.COLCONFIG_WIN.HIDE_COL	Hide column?	
 GRID.COLCONFIG_WIN.ALLOW_HTML	Allow HTML to be rendered?	
+GRID.COLCONFIG_WIN.ALLOW_FORMATTING	Allow embedded DataVis formatting?	
 GRID.COLCONFIG_WIN.MOVE_COL_TO_TOP	Move to top of column list	
 GRID.COLCONFIG_WIN.MOVE_COL_TO_BOTTOM	Move to bottom of column list	
 GRID.COLCONFIG_WIN.PINNED_COL_WARNING	Pinned columns always appear before any others in plain (non-grouped) output, in the relative order shown above.	

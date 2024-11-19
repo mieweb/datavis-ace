@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="../jquery.min.js"></script>
+		<script src="../jquery-ui.min.js"></script>
+		<script src="../jquery.blockUI.js"></script>
+		<script src="../jquery.contextMenu.min.js"></script>
+		<script src="../jquery.sumoselect.min.js"></script>
+		<script src="../flatpickr.min.js"></script>
+		<script src="../wcdatavis.js"></script>
+		<link rel="stylesheet" href="../font-awesome.css"/>
+		<link rel="stylesheet" href="../jquery-ui.min.css"/>
+		<link rel="stylesheet" href="../jquery.contextMenu.min.css"/>
+		<link rel="stylesheet" href="../sumoselect.min.css"/>
+		<link rel="stylesheet" href="../flatpickr.min.css"/>
+		<link rel="stylesheet" href="../base.css"/>
+		<link rel="stylesheet" href="../wcdatavis.css"/>
+		<style>
+			span.pink-box {
+				border: solid 2px #e91e63;
+				padding: 2px;
+			}
+			span.highlight {
+				background-color: #ffeb3b;
+			}
+		</style>
+		<script>
+$(document).ready(function () {
+	MIE.DEBUGGING = true;
+
+	var source = new MIE.WC_DataVis.Source({
+		type: 'http',
+		url: 'format-strings.csv'
+	});
+	var computedView = new MIE.WC_DataVis.ComputedView(source);
+	new MIE.WC_DataVis.Grid({
+		id: 'grid',
+		computedView: computedView,
+		table: {
+			features: {
+				limit: false,
+				rowSelect: true,
+			},
+			columns: [{
+				field: 'test',
+				allowFormatting: true
+			}]
+		}
+	}, {
+		title: 'Test - Grid - Formatting Strings',
+		showControls: true
+	});
+});
+		</script>
+	</head>
+	<body>
+		<div id="grid"></div>
+	</body>
+</html>
