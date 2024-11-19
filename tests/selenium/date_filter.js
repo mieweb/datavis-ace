@@ -1,13 +1,13 @@
 const assert = require('assert');
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
-const setup = require('../lib/setup.js');
+const {setupServer} = require('../lib/util.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Date Filter', function() {
-	setup.server();
+	setupServer();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;

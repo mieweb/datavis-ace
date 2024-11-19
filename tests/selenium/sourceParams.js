@@ -1,14 +1,13 @@
 const {assert} = require('chai');
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
-const {asyncEach, selectByValue, radioByValue, checkboxByValue, sleep, clearTextInput} = require('../lib/util.js');
-const setup = require('../lib/setup.js');
+const {setupServer, asyncEach, selectByValue, radioByValue, checkboxByValue, sleep, clearTextInput} = require('../lib/util.js');
 
 const {Builder, By, Key} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Source Parameters', function () {
-	setup.server();
+	setupServer();
 	const logging = new LoggingPrefs();
 	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;

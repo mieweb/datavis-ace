@@ -1,9 +1,12 @@
 /** @module util */
 
+const http = require('http');
+const server = require('./server.js');
+
 const _ = require('lodash');
 const {By, Key} = require('selenium-webdriver');
 const child_process = require('child_process');
-const Promise = require("bluebird");
+const Promise = require('bluebird');
 
 /**
  * Gives a single promise that resolves all the promises created when mapping the given function
@@ -261,6 +264,11 @@ async function getClass(elt, pat) {
 	return classes.filter((cls) => pat.test(cls));
 }
 
+async function isVisible(elt) {
+	const style = (await elt.getAttribute('style')).split(';').map((s) => s.trim());
+	return style.indexOf('display: none') < 0;
+}
+
 /**
  * Pauses execution.
  *
@@ -272,6 +280,33 @@ async function getClass(elt, pat) {
 
 function sleep(time) {
 	child_process.spawnSync('sleep', [time]);
+}
+
+/**
+ * Installs test before/after callbacks to manage the web server used for testing.  This server
+ * listens on port 3000 (it's important for now that this port be free), and when testing is done
+ * the server is shut down.  In this way, tests are entirely self-contained, there's no need to set
+ * up another web server to host what we're testing.
+ *
+ * @alias module:setup.server
+ * @example
+ * setup.server();
+ */
+
+function setupServer() {
+	let s;
+
+	before(function () {
+		s = http.createServer(server.handler({
+      cleanUrls: false,
+			public: 'tests/pages'
+    }));
+		return s.listen(3000);
+	});
+
+	after(function () {
+		return s.close();
+	});
 }
 
 module.exports = {
@@ -286,4 +321,6 @@ module.exports = {
 	hasClass,
 	getClass,
 	sleep,
+	isVisible,
+	setupServer,
 };
