@@ -1042,6 +1042,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 
 	self.ui.statusSpan = jQuery('<span>').appendTo(notHeader);
 	self.ui.rowCount = jQuery('<span>').appendTo(notHeader);
+
 	self.ui.selectionInfo = jQuery('<span>').appendTo(notHeader);
 
 	self.ui.clearFilter = jQuery('<span>')
@@ -1066,6 +1067,18 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		})
 		.hide()
 		.appendTo(notHeader);
+
+	self.ui.autoLimit = jQuery('<span>', {
+		'class': 'auto_limit_warning'
+	})
+	.text(trans('GRID.TITLEBAR.DATA_LIMITED_WARNING'))
+	.on('click', function () {
+		self.ui.autoLimit.hide();
+		self.view.unlimit();
+		self.refresh();
+	})
+	.hide()
+	.appendTo(notHeader);
 
 	if (typeof self.opts.helpText === 'string' && self.opts.helpText !== '') {
 		notHeader.append(' ');
@@ -1472,19 +1485,16 @@ Grid.prototype._updateRowCount = function (info, ops) {
 
 	self.ui.rowCount.text(text.join(', '));
 
-	if (self.view.source.origin.isLimited && !document.getElementById(self.id + '_isLimitedNotice') && (info.totalRows || info.numRows) == self.view.source.origin.opts.autoLimit) {
+	// When we have been auto-limited, show the banner message showing as much and prevent people from
+	// grouping (because we don't have all the data, grouping / pivotting is misleading).
+
+	if (self.view.source.origin.isLimited) {
+		self.ui.autoLimit.show();
 		self.ui.groupControl.hide();
-		jQuery('<span>', {
-			'id': self.id + '_isLimitedNotice',
-			'style': 'color:red; font-weight:bold; margin-left:50px',
-			'text': trans('GRID.TITLEBAR.DATA_LIMITED_WARNING')
-		})
-		.on('click', function () {
-			self.view.unlimit();
-			self.refresh();
-			self.ui.groupControl.show();
-		})
-		.appendTo(self.ui.rowCount);
+	}
+	else {
+		self.ui.autoLimit.hide();
+		self.ui.groupControl.show();
 	}
 
 	if (self.ui.clearFilter) {

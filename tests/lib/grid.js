@@ -141,6 +141,14 @@ class GridUi {
 	get plainDataRows() {
 		return this.table.findElements(By.css(`tbody > tr`));
 	}
+
+	/**
+	 * Locate the auto-limit header.
+	 */
+
+	get autoLimitWarning() {
+		return this.driver.findElement(By.css('.headingInfo .auto_limit_warning'))
+	}
 }
 
 // Grid {{{1

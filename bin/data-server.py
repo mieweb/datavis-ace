@@ -7,7 +7,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 
-class MainHandler(tornado.web.RequestHandler):
+class PaginationHandler(tornado.web.RequestHandler):
     def get(self):
         with open("tests/data/random1000.json", "r") as f:
             data = json.load(f)
@@ -19,6 +19,21 @@ class MainHandler(tornado.web.RequestHandler):
             oldStuff = []
             newStuff = data["data"][:50]
         data["data"] = oldStuff + newStuff
+        self.write(data)
+
+    def get_content_type(self):
+        return "application/json"
+
+class AutoLimitHandler(tornado.web.RequestHandler):
+    def get(self):
+        with open("tests/data/random1000.json", "r") as f:
+            data = json.load(f)
+        state = self.get_argument("state", None)
+        if state is not None:
+            data["data"] = [ x for x in data["data"] if x["state"] == state ]
+        limit = int(self.get_argument("limit", "0"))
+        if limit > 0:
+            data["data"] = data["data"][slice(0, limit)]
         self.write(data)
 
     def get_content_type(self):
@@ -69,7 +84,8 @@ class StaticHandler(tornado.web.StaticFileHandler):
 
 if __name__ == "__main__":
     app = tornado.web.Application([
-        (r"/data-server", MainHandler),
+        (r"/ds/pagination", PaginationHandler),
+        (r"/ds/autolimit", AutoLimitHandler),
         (r"/(.*)", StaticHandler, {"path": os.getcwd(), "default_filename": "index.html"}),
         # (r"/(doc/.*)", StaticHandler, {"path": os.getcwd()}),
         # (r"/(jsdoc/.*)", StaticHandler, {"path": os.getcwd()}),

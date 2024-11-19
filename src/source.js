@@ -111,6 +111,11 @@ var HttpSource = makeSubclass('HttpSource', Object, function (spec, userTypeInfo
 	self.url = spec.url;
 	self.method = spec.method || 'GET';
 	self.dataType = spec.dataType;
+	self.autoLimit = deepDefaults(spec.autoLimit, {
+		enabled: false,
+		maxRecords: 10000,
+		cgiParam: 'limit'
+	});
 
 	self.cache = null;
 	self.userTypeInfo = userTypeInfo;
@@ -242,8 +247,19 @@ HttpSource.prototype.parseData = function (data) {
 		result.data = data.data;
 	}
 
+	self.isLimited = self.autoLimit.enabled && result.data.length === self.autoLimit.maxRecords;
+
 	return result;
 };
+
+// #unlimit {{{2
+
+HttpSource.prototype.unlimit = function () {
+	var self = this;
+
+	self.isLimited = false;
+	self.autoLimit.enabled = false;
+}
 
 // #getData {{{2
 
@@ -252,6 +268,13 @@ HttpSource.prototype.getData = function (params, cont) {
 
 	if (self.cache != null) {
 		return cont(true, self.cache.data);
+	}
+
+	// The auto-limit feature sends to the server the maximum number of records to return.  If that
+	// many records comes back, we assume that there are more available.
+
+	if (self.autoLimit.enabled) {
+		params[self.autoLimit.cgiParam] = self.autoLimit.maxRecords;
 	}
 
 	var al = logAsync('HttpSource#getData');
