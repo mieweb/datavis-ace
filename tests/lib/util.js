@@ -8,6 +8,20 @@ const {By, Key} = require('selenium-webdriver');
 const child_process = require('child_process');
 const Promise = require('bluebird');
 
+function decToHex(s, padLen) {
+	result = (+s).toString(16).toUpperCase();
+	while (result.length < padLen) {
+		result = '0' + result;
+	}
+	return result;
+}
+
+function rgbToHex(s) {
+	return s.replace(/rgb\(([0-9]+), ([0-9]+), ([0-9]+)\)/, (m, r, g, b) => {
+		return '#' + decToHex(r, 2) + decToHex(g, 2) + decToHex(b, 2);
+	});
+}
+
 /**
  * Gives a single promise that resolves all the promises created when mapping the given function
  * over the given data.
@@ -56,7 +70,7 @@ async function asyncEach(data, callback) {
 		}
 
 		const d = data[i] instanceof Promise ? await data[i] : data[i];
-		const p = callback(d);
+		const p = callback(d, i);
 		if (typeof p.then === 'function') {
 			return p.then(() => {
 				i += 1;
@@ -310,6 +324,7 @@ function setupServer() {
 }
 
 module.exports = {
+	rgbToHex,
 	asyncMap,
 	asyncEach,
 	asyncFilter,

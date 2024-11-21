@@ -3209,7 +3209,7 @@ export function format(fcc, fti, cell, opts) {
 			var m0 = null;
 			while ((m0 = result.match(fmtRegexps.toplevel)) != null) {
 				foundFmtStr = true;
-				fmtClass = '';
+				fmtClass = 'wcdv_format_string';
 				fmtStyle = '';
 				// Extract up to the start of the match, escaping it.
 				fmtResult += escapeHtml(result.substring(0, m0.index));

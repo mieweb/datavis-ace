@@ -138,7 +138,9 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(td)
 		;
 
-		td = jQuery('<td>')
+		td = jQuery('<td>', {
+			'data-prop': 'isPinned'
+		})
 			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
@@ -169,7 +171,9 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			pinnedCount += 1;
 		}
 
-		td = jQuery('<td>')
+		td = jQuery('<td>', {
+			'data-prop': 'isHidden'
+		})
 			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
@@ -185,7 +189,9 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(td)
 			._makeIconCheckbox('fa-ban');
 
-		td = jQuery('<td>')
+		td = jQuery('<td>', {
+			'data-prop': 'allowHtml'
+		})
 			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 
@@ -200,7 +206,9 @@ ColConfigWin.prototype.show = function (posElt, onSave) {
 			.appendTo(td)
 			._makeIconCheckbox('fa-code');
 
-		td = jQuery('<td>')
+		td = jQuery('<td>', {
+			'data-prop': 'allowFormatting'
+		})
 			.addClass('wcdv_width_1em')
 			.appendTo(tr);
 

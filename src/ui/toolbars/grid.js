@@ -63,7 +63,8 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 	;
 
 	self.ui.columnConfig = jQuery('<button>', {
-		'type': 'button'
+		'type': 'button',
+		'title': trans('GRID_TOOLBAR.PLAIN.COLUMNS')
 	})
 		.append(fontAwesome('fa-columns'))
 		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))

@@ -90,6 +90,18 @@ class GridUi {
 		return this.driver.findElement(By.css('div.wcdv_toolbar_view > button[title="Save"]'));
 	}
 
+	get colConfigBtn() {
+		return this.driver.findElement(By.css('div.wcdv_grid_toolbar > div.wcdv_toolbar_section > button[title="Columns"]'));
+	}
+
+	get colConfigWin() {
+		return this.driver.findElement(By.xpath('//div[@role="dialog"]//span[text()="Columns"]//ancestor::div[@role="dialog"]'));
+	}
+
+	get colConfigSave() {
+		return this.colConfigWin.findElement(By.css('button[title="OK"]'));
+	}
+
 	/**
 	 * Locate configuration (gear) button.
 	 *
@@ -1005,7 +1017,11 @@ class Grid {
 
 	// #getPlainData_asObjects {{{3
 
-	async getPlainData_asObjects(fields) {
+	async getPlainData_asObjects(fields, opts) {
+		opts = _.defaults({}, opts, {
+			result: 'text'
+		});
+
 		const ths = await this.ui.plainDataHeaders;
 		const trs = await this.ui.plainDataRows;
 
@@ -1019,8 +1035,15 @@ class Grid {
 			let row = {};
 			const tds = await tr.findElements(By.css(`td:not(.wcdv_group_col_spacer)`));
 			await Promise.each(fields, async (i) => {
-				const t = await tds[i].getText();
-				row[headers[i]] = (t === ' ' ? '' : t);
+				switch (opts.result) {
+				case 'text':
+					const t = await tds[i].getText();
+					row[headers[i]] = (t === ' ' ? '' : t);
+					break;
+				case 'element':
+					row[headers[i]] = tds[i];
+					break;
+				}
 			});
 			return row;
 		});
@@ -1201,6 +1224,24 @@ class Grid {
 	}
 
 	// }}}2
+
+	async editColConfig(field, prop, val) {
+		const table = await this.ui.colConfigWin.findElement(By.xpath('//table[@class="wcdv_colconfigwin_table"]'));
+		const tr = table.findElement(By.css(`tr[data-field="${field}"]`));
+		const td = tr.findElement(By.css(`td[data-prop="${prop}"]`));
+		const checkbox = td.findElement(By.css('input[type="checkbox"]'));
+		if (checkbox != null) {
+			// the checked property is either 'true' or null; transform val to match
+			val = val ? 'true' : null;
+			if (await checkbox.getAttribute('checked') !== val) {
+				// clicking the button changes the checkbox
+				await td.findElement(By.css('button')).click();
+				if (await checkbox.getAttribute('checked') !== val) {
+					throw new Error(`Unable to set ${prop} to ${val} for ${field}`);
+				}
+			}
+		}
+	}
 }
 
 // }}}1
