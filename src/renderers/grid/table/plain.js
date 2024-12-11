@@ -660,6 +660,16 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 			makeSelectAll(tr);
 		}
 
+		// If there are row operations, make a column in the footer to take up that space.
+		//
+		//   | [ ] | op op op | col1 | col2 | ... |
+		//   +-----+----------+------+------+-----+
+		//   |     | <here>   |                   |
+
+		if (self.hasOperations('row')) {
+			tr.append(jQuery('<td>'));
+		}
+
 		// Create the columns for the data fields, which contain aggregate function results over those
 		// fields.
 
@@ -799,6 +809,22 @@ GridTablePlain.prototype.drawFooter = function (columns, data, typeInfo) {
 				makeSelectAll(tr);
 			}
 		}
+
+		// If there are row operations, make a column in the footer to take up that space.
+		//
+		//   | [ ] | op op op | col1 | col2 | ... |
+		//   +-----+----------+------+------+-----+
+		//   |     | <here>   |                   |
+
+		if (self.hasOperations('row')) {
+			tr.append(jQuery('<td>'));
+		}
+
+		// If there are row operations, make a column in the footer to take up that space.
+		//
+		//   | [ ] | op op op | col1 | col2 | ...  |
+		//   +-----+----------+------+------+------+
+		//   |     |          | <here> ----------> |
 
 		tr.append(jQuery('<td>', {'colspan': columns.length}).append(self.opts.footer));
 
