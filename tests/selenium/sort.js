@@ -2,7 +2,7 @@ const Promise = require('bluebird');
 const assert = require('chai').assert;
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
-const {setupServer, sleep} = require('../lib/util.js');
+const {asyncEach, setupServer, sleep} = require('../lib/util.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
 const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
@@ -111,13 +111,24 @@ describe('Sort', function() {
 			],
 			tests: [
 
-				// DATA FORMAT: [field, rowValMin, rowValMax, aggMin, aggMax]
+				// DATA FORMAT: [sort, {col: [min, max], ...}]
 				//
-				//   * field: What group field to sort by.
-				//   * rowValMin: Minimum rowval in that field.
-				//   * rowValMax: Maximum rowval in that field.
+				//   * sort: Object telling how to sort.
+				//     * 'groupField': Sort by this grouped field.
+				//     * 'agg': Sort by this aggregate result.
+				//   * col: Group field or aggregate to check.
+				//
+				// Tests automatically check both ascending and descending sorts.  It'll just look for the
+				// values specified in reverse order.
 
-				['fruit', ['Apple'], ['Strawberry']]
+				[{groupField: 'fruit'}, {
+					fruit: ['Apple', 'Strawberry'],
+					Count: ['9', '9']
+				}],
+				[{agg: 'Count'}, {
+					fruit: ['Apple', 'Kiwi'],
+					Count: ['9', '248']
+				}],
 			]
 		}, {
 			groupBy: ['fruit', 'country'],
@@ -134,8 +145,14 @@ describe('Sort', function() {
 				{ rowVal: ['Strawberry', 'England'],    count: 3  }
 			],
 			tests: [
-				['fruit', ['Apple', 'China'], ['Strawberry', 'Mexico']],
-				['country', ['Banana', 'Canada'], ['Pineapple', 'United States']]
+				[{groupField: 'fruit'}, {
+					fruit: ['Apple', 'Strawberry'],
+					country: ['China', 'Mexico']
+				}],
+				[{groupField: 'country'}, {
+					fruit: ['Banana', 'Pineapple'],
+					country: ['Canada', 'United States']
+				}],
 			]
 		}],
 		pivot: {}
@@ -158,7 +175,7 @@ describe('Sort', function() {
 					const [field, min, max, desc, opts] = si;
 
 					it(`${field}, ${desc}`, async function () {
-						await grid.sortBy(field, `${field}, Ascending`);
+						await grid.sortByField(field, 'asc');
 						await grid.waitForIdle();
 						if (opts != null && opts.delta != null) {
 							assert.approximately(+(await grid.getCell(field, 0)), +min, opts.delta);
@@ -169,7 +186,7 @@ describe('Sort', function() {
 							assert.equal(await grid.getCell(field, -1), max);
 						}
 
-						await grid.sortBy(field, `${field}, Descending`);
+						await grid.sortByField(field, 'desc');
 						await grid.waitForIdle();
 
 						if (opts != null && opts.delta != null) {
@@ -187,7 +204,7 @@ describe('Sort', function() {
 	});
 
 	describe('group output', function () {
-		_.each(sortInfo.group, async (si) => {
+		_.each(sortInfo.group, (si) => {
 			describe(`grouping by ${JSON.stringify(si.groupBy)}`, function () {
 				before(async function () {
 					await driver.get('http://localhost:3000/grid/basic/random1000.html');
@@ -207,19 +224,37 @@ describe('Sort', function() {
 					await driver.executeScript('window.localStorage.clear()');
 				});
 
-				_.each(si.tests, async (t) => {
-					const [field, rowValMin, rowValMax] = t;
+				_.each(si.tests, (t) => {
+					const [spec, results] = t;
 
-					_.each(['Ascending', 'Descending'], (dir) => {
-						describe(`${field} ${dir}`, function () {
+					_.each(['asc', 'desc'], (dir) => {
+						describe(`${JSON.stringify(spec)} ${dir}`, function () {
 							before(async function () {
-								await grid.sortBy(field, `${field}, ${dir}`);
+								if (spec.groupField != null) {
+									await grid.sortByField(spec.groupField, dir);
+								}
+								else if (spec.agg != null) {
+									await grid.sortByAgg(spec.agg, dir);
+								}
 								await grid.waitForIdle();
 							});
 
 							it('has correct min/max', async function () {
-								assert.deepEqual(await grid.getRowVal(0), dir === 'Ascending' ? rowValMin : rowValMax, 'sort asc -> check min');
-								assert.deepEqual(await grid.getRowVal(-2), dir === 'Ascending' ? rowValMax : rowValMin, 'sort asc -> check max'); // -2 because of the total row
+								await asyncEach(_.keys(results), async (col) => {
+									const [min, max] = results[col];
+									const gfi = si.groupBy.indexOf(col);
+									if (gfi >= 0) {
+										// we're checking one of the things we grouped by
+										assert.deepEqual(await grid.getRowValElt(0, gfi), dir === 'asc' ? min : max, 'sort asc -> check min');
+										assert.deepEqual(await grid.getRowValElt(-2, gfi), dir === 'asc' ? max : min, 'sort asc -> check max');
+										//                                        ^ -2 because of the total row
+									}
+									else {
+										// we're checking an aggregate function result
+										assert.equal(await grid.getAggResult_byNum(0, null, col), dir === 'asc' ? min : max, 'sort asc -> check min');
+										assert.equal(await grid.getAggResult_byNum(-1, null, col), dir === 'asc' ? max : min, 'sort asc -> check max');
+									}
+								});
 							});
 
 							// TODO This way of doing things is much simpler, but each spot check takes a long time,

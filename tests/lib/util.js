@@ -89,6 +89,49 @@ async function asyncEach(data, callback) {
 	});
 }
 
+async function asyncFirst(data, pred) {
+	if (!_.isArray(data)) {
+		throw new Error('Call Error: `data` must be an array');
+	}
+	if (!(pred instanceof Function)) {
+		throw new Error('Call Error: `pred` must be a function');
+	}
+
+	let i = 0;
+	const recur = async (resolve, reject) => {
+		if (i == data.length) {
+			return resolve(null);
+		}
+
+		const d = data[i] instanceof Promise ? await data[i] : data[i];
+		const p = pred(d, i);
+		if (typeof p.then === 'function') {
+			// pred returned a promise, we need to resolve it
+			return p.then((b) => {
+				if (b) {
+					return resolve({
+						idx: i,
+						val: d
+					});
+				}
+				else {
+					i += 1;
+					return recur(resolve, reject);
+				}
+			}).catch((error) => {
+				reject(error);
+			});
+		}
+		else {
+			i += 1;
+			return recur(resolve, reject);
+		}
+	};
+	return new Promise((resolve, reject) => {
+		recur(resolve, reject);
+	});
+}
+
 /**
  * Filters out items from an array.
  *
@@ -327,6 +370,7 @@ module.exports = {
 	rgbToHex,
 	asyncMap,
 	asyncEach,
+	asyncFirst,
 	asyncFilter,
 	selectByText,
 	selectByValue,

@@ -6,7 +6,7 @@ const _ = require('lodash');
 const Promise = require("bluebird");
 const {By, Key} = require('selenium-webdriver');
 const until = require('selenium-webdriver/lib/until');
-const {asyncMap, asyncEach, asyncFilter, blur, selectByText, selectByValue, hasClass, getClass, sleep} = require('./util.js');
+const {asyncFirst, asyncMap, asyncEach, asyncFilter, blur, selectByText, selectByValue, hasClass, getClass, sleep} = require('./util.js');
 
 const {Type: LoggingType} = require('selenium-webdriver/lib/logging');
 
@@ -161,6 +161,10 @@ class GridUi {
 	get autoLimitWarning() {
 		return this.driver.findElement(By.css('.headingInfo .auto_limit_warning'))
 	}
+
+	get aggregateControl() {
+		return this.driver.findElement(By.css('div.wcdv_aggregate_control'))
+	}
 }
 
 // Grid {{{1
@@ -277,10 +281,34 @@ class Grid {
 
 	// Sorting {{{2
 
+	// Sorting works by (1) using a specific method to click the appropriate UI element to show the
+	// sort menu, then (2) using this generic method to select an item from whatever sort menu is
+	// currently shown.
+
 	/**
-	 * Sort by a column.
+	 * Select an item from the active sort menu.
 	 *
-	 * @param {string} column
+	 * @param {string} item Whatever item in the menu to click.
+	 */
+
+	async clickActiveSortMenu(item) {
+		const sortMenus = await asyncFilter(await this.driver.findElements(By.className('context-menu-root')), (elt) => elt.isDisplayed());
+		const sortItems = await sortMenus[0].findElements(By.className('context-menu-item'));
+		const validSortItems = await asyncFilter(sortItems, async (elt) => await elt.getText() !== '');
+		// data:[Promise<WebElement>], predicate:(WebElement)->Promise<bool>
+		const correctItem = await asyncFilter(validSortItems, async (elt) => await elt.getText() === item);
+
+		if (correctItem.length !== 1) {
+			throw new Error(`Invalid item "${item}", found: ${JSON.stringify(await asyncMap(validSortItems, (elt) => elt.getText()))}`);
+		}
+
+		return correctItem[0].click();
+	}
+
+	/**
+	 * Sort by a field.
+	 *
+	 * @param {string} field
 	 * Name of the column to sort by.
 	 *
 	 * @param {string} ordering
@@ -288,23 +316,20 @@ class Grid {
 	 * Ascending` because that's the menu item you'd click.
 	 */
 
-	async sortBy(column, ordering) {
-		const start = new Date();
-		const header = await this.driver.findElement(By.xpath(`//span[@data-wcdv-field="${column}"]/../div`)).click();
-		const sortMenus = await asyncFilter(await this.driver.findElements(By.className('context-menu-root')), (elt) => elt.isDisplayed());
-		const sortItems = await sortMenus[0].findElements(By.className('context-menu-item'));
-		const validSortItems = await asyncFilter(sortItems, async (elt) => await elt.getText() !== '');
-		// data:[Promise<WebElement>], predicate:(WebElement)->Promise<bool>
-		const orderingOptions = await asyncFilter(validSortItems, async (elt) => await elt.getText() === ordering);
-		const end = new Date();
+	async sortByField(field, dir) {
+		await this.driver.findElement(By.xpath(`//span[@data-wcdv-field="${field}"]/../div`)).click();
+		return this.clickActiveSortMenu(`${field}, ${dir === 'asc' ? 'Ascending' : 'Descending'}`);
+	}
 
-		//console.log(`Took ${end.valueOf() - start.valueOf()}ms to find sort menu item.`);
+	/**
+	 * Sort by aggregate result.
+	 *
+	 * @param {string} agg Name of the aggregate to sort by.
+	 */
 
-		if (orderingOptions.length !== 1) {
-			throw new Error(`Invalid ordering "${ordering}", found: ${JSON.stringify(await asyncMap(validSortItems, (elt) => elt.getText()))}`);
-		}
-
-		return await orderingOptions[0].click();
+	async sortByAgg(agg, dir) {
+		await this.driver.findElement(By.xpath(`//span[contains(@class, 'wcdv_heading_title') and text() = "${agg}"]/../div`)).click();
+		return this.clickActiveSortMenu(`${agg}, ${dir === 'asc' ? 'Ascending' : 'Descending'}`);
 	}
 
 	// Group {{{2
@@ -1156,6 +1181,23 @@ class Grid {
 	// Data Checking - Aggregates {{{2
 
 	/**
+	 * Converts an aggregate name into the aggNum.
+	 *
+	 * @param {string} name Name of the aggregate function as displayed in the UI.
+	 */
+
+	async aggNameToNum(name) {
+		const aggregates = await this.ui.aggregateControl.findElements(By.css('ul > li'));
+		const matching = await asyncFirst(aggregates, async (elt) => {
+			return await elt.findElement(By.css('span.wcdv_field_name')).getText() === name;
+		});
+		if (matching == null) {
+			throw new Error(`No such aggregate found: ${name}`);
+		}
+		return matching.idx;
+	}
+
+	/**
 	 * Get the result of an aggregate function for the specified rowval (and colval, if pivotted).
 	 *
 	 * @param {string} rowVal The rowval we're looking for.
@@ -1202,21 +1244,34 @@ class Grid {
 	 *
 	 * @param {number} rowValIdx Index of the rowval we're looking for.
 	 * @param {number} [colValIdx] Index of the colval we're looking for.
-	 * @param {number} [aggNum=0] Index of the aggregate we're looking for.
+	 * @param {number} [agg] Index of the aggregate we're looking for.
 	 */
 
-	async getAggResult_byNum(rowValIdx, colValIdx, aggNum = 0) {
-		const table = await this.driver.findElement(By.css('div.wcdv_grid div.wcdv_grid_table > table'));
+	async getAggResult_byNum(rowValIdx, colValIdx, agg) {
+		const aggNum = agg == null ? 0
+			: _.isNumber(agg) ? agg
+			: await this.aggNameToNum(agg);
+
 		if (colValIdx != null) {
 			// TODO
 			throw new Error('not implemented');
 		}
 		else {
-			const tds = await table.findElement(By.css(`tbody > tr > td[data-wcdv-rvi="${rowValIdx}"]`));
-			if (tds.length === 0) {
+			const trs = await this.ui.table.findElements(By.css('tbody > tr[data-wcdv-rvi]'));
+			if (rowValIdx < 0) {
+				rowValIdx = trs.length - (rowValIdx * -1);
+			}
+			if (trs.length === 0) {
+				throw new Error('Unable to find any rowvals');
+			}
+			if (trs.length < rowValIdx) {
 				throw new Error(`No such rowval index: ${rowValIdx}`);
 			}
-			if (tds.length < aggNum + 1) {
+			const tds = await trs[rowValIdx].findElements(By.css('td'));
+			if (tds.length === 0) {
+				throw new Error('Unable to find any aggregate columns');
+			}
+			if (tds.length < aggNum) {
 				throw new Error(`No such aggnum: ${aggNum}`);
 			}
 			return tds[aggNum].getText();
