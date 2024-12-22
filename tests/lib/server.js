@@ -50,6 +50,41 @@ const autoLimit = (req, res, u) => {
 	});
 };
 
+const ssr = {
+	basic1: (req, res, u) => {
+		if (req.method !== 'POST') {
+			throw new Error('Must be a POST request');
+		}
+
+		let data = '';
+		req.on('data', (chunk) => {
+			data += chunk.toString(); // Collect the data chunks
+		});
+
+		req.on('end', () => {
+			const result = JSON.parse(data).map((p) => `<pre>${JSON.stringify(p)}</pre>`);
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify(result));
+		});
+	},
+	basic2: (req, res, u) => {
+		if (req.method !== 'POST') {
+			throw new Error('Must be a POST request');
+		}
+
+		let data = '';
+		req.on('data', (chunk) => {
+			data += chunk.toString(); // Collect the data chunks
+		});
+
+		req.on('end', () => {
+			const result = JSON.parse(data).map((p) => `<pre>${JSON.stringify(p)}</pre>`);
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify(result));
+		});
+	}
+};
+
 /**
  * Creates a handler for requests coming to the testing web server.
  *
@@ -65,6 +100,10 @@ const handler = (opts) => (req, res) => {
 			return reflectCgi(req, res, u);
 		case '/ds/autolimit':
 			return autoLimit(req, res, u);
+		case '/ssr/basic1':
+			return ssr.basic1(req, res, u);
+		case '/ssr/basic2':
+			return ssr.basic2(req, res, u);
 		default:
 			return serveHandler(req, res, opts);
 		}
