@@ -35,10 +35,10 @@ $(document).ready(function () {
 			},
 			columns: ['country', 'state', 'fruit', 'duration1', {
 				field: 'duration2',
-				format: '%02h:%02m:%02s'
+				format: '%[d:%d days ]%02h:%02m:%02s'
 			}, {
 				field: 'duration3',
-				format: '%h hours, %m minutes'
+				format: '%[d:%d days, ]%h hours, %m minutes'
 			}]
 		}
 	}, {

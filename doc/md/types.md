@@ -69,6 +69,8 @@ The following duration parts are supported for both parsing and formatting strin
 | `t`  | milliseconds |
 | `u`  | microseconds |
 
+Additionally, when formatting, you can use `%[<PART>:<TEXT>]` to include the text only when that part of the duration is greater than zero. For example, `%[d:%d days ]%h:%m` will only output the days if necessary, and always output the hours and minutes. This is mainly useful for the sum aggregate, which often requires the use of higher-magnitude parts than the individual values that contribute to it (i.e. many hours add up to days).
+
 The only supported internal representation of a duration is an object with fields for the years, days, hours, minutes, seconds, and milliseconds.
 
 There is currently no filter for durations.

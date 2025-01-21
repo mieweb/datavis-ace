@@ -1140,11 +1140,15 @@ types.universalCmp = function (a, b) {
 		for (var i = 0; i < fmt.length; i += 1) {
 			if (fmt[i] === '%') {
 				if (fmt[i+1] === '%') {
-					s += '%';
+					s += '%%';
+					i += 1;
+				}
+				else if (fmt[i+1] === '[') {
+					s += '%%[';
 					i += 1;
 				}
 				else {
-					var m = fmt.substr(i+1).match(/^0?(\d*)([ydhmsu])/);
+					var m = fmt.substr(i+1).match(/^0?(\d*)([ydhmstu])/);
 					if (m == null) {
 						// Unrecognized format sequence.
 						continue;
@@ -1170,7 +1174,10 @@ types.universalCmp = function (a, b) {
 			_.each(fields, function (f) {
 				args.push(val[f]);
 			});
-			return sprintf.sprintf.apply(null, args);
+			var r = sprintf.sprintf.apply(null, args);
+			return r.replaceAll(/%\[([ydhmstu]):(.+?)\]/g, function (m, f, t) {
+				return val[f] === 0 ? '' : t;
+			});
 		};
 	}
 
