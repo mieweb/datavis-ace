@@ -48,6 +48,12 @@ $(document).ready(function () {
 				tooltip: 'Delete',
 				callback: function (row) {
 					console.info('Performing "delete" operation on row: %O', row);
+				},
+				disableWhen: function (row) {
+					return row.rowData.country.value === 'United States';
+				},
+				hideWhen: function (row) {
+					return row.rowData.country.value === 'China';
 				}
 			}],
 			cell: {
@@ -58,12 +64,18 @@ $(document).ready(function () {
 						console.info('Performing "like" operation on row: %O', info.row);
 						info.cellElt.attr('data-liked', +!+info.cellElt.attr('data-liked'));
 						info.opBtn.css('color', !!+info.cellElt.attr('data-liked') ? 'red' : '')
+					},
+					disableWhen: function (value) {
+						return value.endsWith('ism');
 					}
 				}, {
 					icon: 'fa-book',
 					tooltip: 'Look Up',
 					callback: function (info) {
 						window.open('https://www.thefreedictionary.com/' + encodeURI(info.cell), '_blank');
+					},
+					hideWhen: function (value) {
+						return value.endsWith('ing');
 					}
 				}]
 			},

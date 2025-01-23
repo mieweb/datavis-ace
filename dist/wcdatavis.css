@@ -562,12 +562,30 @@ button.wcdv_operation.no_label > span.fa {
 	margin-right: 0;
 }
 
-td.wcdv_row_operations > button.wcdv_operation {
+/* ROW OPERATIONS */
+
+div.wcdv_grid_table td.wcdv_row_operations {
+	text-align: left;
+}
+
+
+div.wcdv_grid_table td.wcdv_row_operations > button.wcdv_operation {
 	margin-left: 0.25em;
 }
 
-td.wcdv_row_operations > button.wcdv_operation:first-child {
+div.wcdv_grid_table td.wcdv_row_operations > button.wcdv_operation:first-child {
 	margin-left: 0;
+}
+
+/* CELL OPERATIONS */
+
+button.wcdv_operation[data-operation-type="cell"]:disabled:hover {
+	color: #80808080;
+	cursor: default;
+}
+
+button.wcdv_operation[data-operation-type="cell"]:disabled > span.fa {
+	cursor: default;
 }
 
 /******************************************************************************/

@@ -2591,7 +2591,15 @@ export function setTableCell(cell, value, opts) {
 		operationDiv.style.float = 'right';
 
 		_.each(ops, function (op, index) {
-			operationDiv.appendChild(makeOperationButton('cell', op, index, {inCell: true}));
+			var opBtn = makeOperationButton('cell', op, index, {inCell: true});
+			if (op.disableWhen && op.disableWhen(value)) {
+				opBtn.disabled = true;
+			}
+			if (op.hideWhen && op.hideWhen(value)) {
+				opBtn.style.display = 'none';
+			}
+
+			operationDiv.appendChild(opBtn);
 		});
 
 		container = document.createElement('div');

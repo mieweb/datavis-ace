@@ -380,7 +380,14 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			td.classList.add('wcdv_row_operations');
 
 			_.each(self.defn.operations.row, function (op, index) {
-				td.appendChild(makeOperationButton('row', op, index));
+				var opBtn = makeOperationButton('row', op, index);
+				if (op.disableWhen && op.disableWhen(row)) {
+					opBtn.disabled = true;
+				}
+				if (op.hideWhen && op.hideWhen(row)) {
+					opBtn.style.display = 'none';
+				}
+				td.appendChild(opBtn);
 			});
 
 			tr.appendChild(td);

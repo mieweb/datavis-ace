@@ -7,11 +7,46 @@
 | Peter Potamus  | today     | Did you get that thing that I sent you? |
 | Harvey Birdman | yesterday | Re: F. Flinstone settlement             |
 
+## Operation Types
+
 Now let’s look at the three kinds of operations.
 
 - Multi-select operations can be performed on many rows at once. “Mark Read” would be an example of such an operations, because you can select several emails and mark them at once.
 - Row-based operations can be performed on a single row. “Reply” would be an example of such an operation, because it’s an activity performed based on the entity (viz. an email) represented by the row.
 - Cell-based operations can be performed on a single row and are located within the cell. “View Contact” would be an example of such an operation, located within the “Subject” column.
+
+## Operation Properties
+
+- `icon` — 
+- `tooltip` —
+- `callback` —
+- `disableWhen` — A predicate that indicates the operation button should be disabled. Not implemented for multi-select operations. For row operations, receives the row. For cell operations, receives the value.
+- `hideWhen` — A predicate that indicates the operation button should be completely hidden. Not implemented for multi-select operations. For row operations, receives the row. For cell operations, receives the value.
+
+### Callback Arguments
+
+The `callback` property is a function that receives different types of arguments depending on what type of operation it is.
+
+#### Multi-Select Operations
+
+- `rows` — List of all rows that were selected.
+- `opBtn` — The button element for the activated operation.
+
+#### Row Operations
+
+- `rowId`
+- `rowElt`
+- `row`
+- `opBtn` — The button element for the activated operation.
+
+#### Cell Operations
+
+- `rowId`
+- `rowElt`
+- `row`
+- `cellElt`
+- `cell`
+- `opBtn` — The button element for the activated operation.
 
 ## Configuring Operations
 
