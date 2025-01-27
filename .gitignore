@@ -11,6 +11,7 @@ trans.tsv
 doc/_build
 doc/.python-version
 doc/html
+dist/wcdatavis.css
 dist/wcdatavis.js
 dist/wcdatavis.min.js
 examples/wcdatavis.js

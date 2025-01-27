@@ -68,6 +68,7 @@
     "mermaid": "=10.8.0",
     "mocha": "=10.8.2",
     "rollup": "=4.9.6",
+    "rollup-plugin-postcss": "=4.0.2",
     "selenium-webdriver": "=4.26.0",
     "serve": "=14.2.4",
     "serve-handler": "=6.1.6",
