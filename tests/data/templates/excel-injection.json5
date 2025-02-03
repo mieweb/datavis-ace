@@ -1,0 +1,13 @@
+{
+  data: [
+    {foo: "1"},
+    {foo: "+2"},
+    {foo: "@tvenable"},
+    {foo: "=2+2"},
+    {foo: "=A2+4"},
+    {foo: "=10+20+cmd|' /C calc'!A0"}
+  ],
+  typeInfo: [
+    { field: 'foo', type: 'string' }
+  ]
+}

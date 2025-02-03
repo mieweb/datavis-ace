@@ -101,7 +101,8 @@ var Csv = makeSubclass('Csv', TableExport, function (opts) {
 	self.opts = opts || {};
 
 	_.defaults(self.opts, {
-		separator: ','
+		separator: ',',
+		excel: true
 	});
 
 	self.start();
@@ -206,7 +207,11 @@ Csv.prototype.toString = function () {
 			s += '\r\n';
 		}
 		s += '"' + row.rowData.map(function (s) {
-			return s.replace(quoteRegexp, '""');
+			s = s.replace(quoteRegexp, '""');
+			if (self.opts.excel && ['='/* , '+', '-', '@', '\t', '\r' */].indexOf(s[0]) >= 0) {
+				s = "'" + s;
+			}
+			return s;
 		}).join(sep) + '"';
 	}
 

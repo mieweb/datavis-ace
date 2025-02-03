@@ -1146,7 +1146,7 @@ GridTable.prototype.draw = function (root, opts, cont) {
 		else {
 			console.debug('[DataVis // %s // CSV] Creating new CSV buffer', self.toString());
 			self.csvLock.lock();
-			self.csv = new Csv();
+			self.csv = new Csv({ excel: true });
 		}
 	}
 	else {
