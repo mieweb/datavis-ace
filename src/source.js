@@ -54,6 +54,14 @@ var LocalSource = makeSubclass('LocalSource', Object, function (spec) {
 	}
 	*/
 
+	self._copyData();
+});
+
+// #_copyData {{{2
+
+LocalSource.prototype._copyData = function () {
+	var self = this;
+
 	self.cache = {
 		data: deepCopy(window[self.varName].data),
 		typeInfo: new OrdMap()
@@ -70,13 +78,14 @@ var LocalSource = makeSubclass('LocalSource', Object, function (spec) {
 			self.cache.typeInfo.set(field, fti);
 		});
 	}
-});
+};
 
 // #getData {{{2
 
 LocalSource.prototype.getData = function (params, cont) {
 	var self = this;
 
+	self._copyData();
 	return cont(true, self.cache.data);
 };
 
