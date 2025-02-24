@@ -34,6 +34,16 @@ import { PrefsBackend, PREFS_BACKEND_REGISTRY } from './src/prefs_backend.js';
 import { PrefsModule, PrefsModuleGrid, PREFS_MODULE_REGISTRY } from './src/prefs_module.js';
 import { trans } from './src/trans.js';
 
+// So we only import Svelte-Gantt when we're building an IIFE via Rollup.  This is mainly because
+// Meteor + Svelte 4 + Typescript isn't working, so it had to be removed from the main code.
+
+import GraphRendererSvelteGantt from './src/renderers/graph/svelte-gantt.js';
+import GRAPH_RENDERER_REGISTRY from './src/reg/graph_renderer.js';
+
+GRAPH_RENDERER_REGISTRY.set('svelte-gantt', GraphRendererSvelteGantt);
+
+// Set some global variables for <script> tag usage.
+
 window.MIE              = window.MIE || {};
 window.MIE.log          = Util.log;
 window.MIE.debug        = Util.debug;
