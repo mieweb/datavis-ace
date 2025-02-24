@@ -16,7 +16,7 @@
     "global-jquery.js",
     "src/*.js",
     "src/**/*.js",
-    "dist/wcdatavis.css"
+    "wcdatavis.css"
   ],
   "main": "index.js",
   "browser": "datavis.js",
