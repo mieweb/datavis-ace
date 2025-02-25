@@ -7,6 +7,7 @@ import {
 	fontAwesome,
 	getProp,
 } from './misc.js';
+import flags from '../flags.js';
 
 /**
  * The jQuery plugin namespace.
@@ -117,79 +118,114 @@ jQuery.fn.extend({
 	//   off = fontawesome(obj.off.icon), class = obj.off.classes
 	//   on = fontawesome(obj.on.icon), class = obj.on.classes
 
-	_makeIconCheckbox: function () {
-		var self = this
-			, args = Array.prototype.slice.call(arguments)
-			, opts = {};
+	_makeIconCheckbox: (function () {
+		var id = 0;
 
-		if (args.length === 1) {
-			if (typeof args[0] === 'string') {
+		return function () {
+			var self = this
+				, args = Array.prototype.slice.call(arguments)
+				, opts = {};
+
+			if (args.length === 1) {
+				if (typeof args[0] === 'string') {
+					opts = {
+						on: {
+							icon: args[0],
+							classes: 'wcdv_icon_checkbox_on'
+						},
+						off: {
+							icon: args[0],
+							classes: 'wcdv_icon_checkbox_off'
+						}
+					};
+				}
+				else {
+					opts = args[0];
+				}
+			}
+			else if (args.length === 2) {
 				opts = {
 					on: {
-						icon: args[0],
-						classes: 'wcdv_icon_checkbox_on'
+						icon: args[0]
 					},
 					off: {
-						icon: args[0],
-						classes: 'wcdv_icon_checkbox_off'
+						icon: args[1]
 					}
 				};
 			}
-			else {
-				opts = args[0];
-			}
-		}
-		else if (args.length === 2) {
-			opts = {
-				on: {
-					icon: args[0]
-				},
-				off: {
-					icon: args[1]
+
+			// IDs are needed to find FontAwesome SVG icons.
+
+			opts.on.id = 'wcdv-icon-checkbox-' + (id++);
+			opts.off.id = 'wcdv-icon-checkbox-' + (id++);
+
+			var button = jQuery('<button>', {
+				'type': 'button',
+				'disabled': jQuery(self).prop('disabled'),
+				'title': self.attr('title')
+			})
+				.addClass('wcdv_icon_button wcdv_button_left')
+				.on('click', function () {
+					self._toggleCheck();
+					self.trigger('change');
+				})
+			;
+
+			var onIcon = fontAwesome(opts.on.icon, opts.on.classes)
+				.attr({id: opts.on.id})
+				.css('display', 'inline-block')
+				.hide()
+				.appendTo(button);
+			var offIcon = fontAwesome(opts.off.icon, opts.off.classes)
+				.attr({id: opts.off.id})
+				.css('display', 'inline-block')
+				.hide()
+				.appendTo(button);
+
+			var updateIcon = function () {
+				if (self._isChecked()) {
+					if (flags['FontAwesome Method'] === 'svg') {
+						jQuery(document.getElementById(opts.on.id)).show();
+						jQuery(document.getElementById(opts.off.id)).hide();
+					}
+					else {
+						onIcon.show();
+						offIcon.hide();
+					}
+					if (opts.on.tooltip != null) {
+						button.attr('title', opts.on.tooltip);
+					}
+				}
+				else {
+					if (flags['FontAwesome Method'] === 'svg') {
+						jQuery(document.getElementById(opts.on.id)).hide();
+						jQuery(document.getElementById(opts.off.id)).show();
+					}
+					else {
+						onIcon.hide();
+						offIcon.show();
+					}
+					if (opts.off.tooltip != null) {
+						button.attr('title', opts.off.tooltip);
+					}
 				}
 			};
-		}
 
-		var button = jQuery('<button>', {
-			'type': 'button',
-			'disabled': jQuery(self).prop('disabled'),
-			'title': self.attr('title')
-		})
-			.addClass('wcdv_icon_button wcdv_button_left')
-			.on('click', function () {
-				self._toggleCheck();
-				self.trigger('change');
-			})
-		;
-
-		var onIcon = fontAwesome(opts.on.icon, opts.on.classes).css('display', 'inline-block').hide().appendTo(button);
-		var offIcon = fontAwesome(opts.off.icon, opts.off.classes).css('display', 'inline-block').hide().appendTo(button);
-
-		var updateIcon = function () {
-			if (self._isChecked()) {
-				onIcon.show();
-				offIcon.hide();
-				if (opts.on.tooltip != null) {
-					button.attr('title', opts.on.tooltip);
-				}
+			if (flags['FontAwesome Method'] === 'svg') {
+				// Give FontAwesome a chance to replace the elements we made with SVG versions.
+				window.setTimeout(updateIcon);
 			}
 			else {
-				onIcon.hide();
-				offIcon.show();
-				if (opts.off.tooltip != null) {
-					button.attr('title', opts.off.tooltip);
-				}
+				updateIcon();
 			}
+			self.hide();
+			self.before(button);
+			self.on('change', updateIcon);
+			self._updateIcon = updateIcon;
+
+			return self;
 		};
-
-		updateIcon();
-		self.hide();
-		self.before(button);
-		self.on('change', updateIcon);
-		self._updateIcon = updateIcon;
-
-		return self;
-	},
+	})(),
 
 	/**
 	 * Adds debugging output for jQuery UI behavior events.
