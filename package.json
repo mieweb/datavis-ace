@@ -13,6 +13,7 @@
   "author": "Taylor Venable <tvenable@mieweb.com>",
   "files": [
     "index.js",
+    "meteor.js",
     "global-jquery.js",
     "src/*.js",
     "src/**/*.js",
