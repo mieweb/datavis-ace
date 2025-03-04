@@ -743,8 +743,9 @@ mixinEventHandling(GridControl, [
 GridControl.prototype.makeClearButton = function (target) {
 	var self = this;
 
-	return jQuery(fontAwesome('F05E'))
-		.addClass('wcdv_button wcdv_text-primary wcdv_control_clear_button')
+	return jQuery('<button>')
+		.addClass('wcdv_icon_button wcdv_text-primary wcdv_control_clear_button')
+		.append(fontAwesome('fa-ban'))
 		.hide()
 		.on('click', function () {
 			jQuery(this).hide();

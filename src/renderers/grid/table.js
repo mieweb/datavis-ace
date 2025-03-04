@@ -827,7 +827,12 @@ GridTable.prototype._addFilterToHeader = function (container, field, displayText
 		return;
 	}
 
-	jQuery(fontAwesome('fa-filter', 'wcdv_filter_icon', trans('GRID.TABLE.ADD_FILTER_HELP', field)))
+	jQuery('<button>', {
+		'title': trans('GRID.TABLE.ADD_FILTER_HELP', field)
+	})
+		.addClass('wcdv_icon_button')
+		.css({'color': '#FFF'})
+		.append(fontAwesome('fa-filter'))
 		.on('click', function () {
 			self.grid.filterControl.addField(field, displayText, {
 				openControls: true

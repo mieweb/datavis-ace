@@ -792,6 +792,7 @@ tr.wcdvgrid_more td {
 	background-color: #FFF;
     color: #737373;
 	font-weight: normal;
+	line-height: 16px;
 	text-align: left;
 }
 
@@ -905,7 +906,7 @@ tr.wcdvgrid_more td {
 .wcdv_heading_container .wcdv_heading_title{
 	flex-grow: 1;
 	margin-right: 25px;
-	line-height: 20px;
+	line-height: 18px;
 }
 
 .wcdv_heading_container div{
