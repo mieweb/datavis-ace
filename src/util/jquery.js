@@ -93,12 +93,30 @@ jQuery.fn.extend({
 		return this.css('display') === 'none' || this.css('visibility') !== 'visible';
 	},
 
+	/**
+	 * Ensures that an element ends with certain text.
+	 *
+	 * @function external:"jQuery.fn"#_addTrailing
+	 *
+	 * @param {string} chars
+	 * The text that will be added to the end of this element, if necessary.
+	 */
+
 	_addTrailing: function (chars) {
 		var t = this.text();
 		if (t.slice(chars.length * -1) !== chars){
 			this.text(t + chars);
 		}
 	},
+
+	/**
+	 * Ensures that an element does not end with certain text.
+	 *
+	 * @function external:"jQuery.fn"#_stripTrailing
+	 *
+	 * @param {string} chars
+	 * The text that will be removed from this element's text, if necessary.
+	 */
 
 	_stripTrailing: function (chars) {
 		var t = this.text();
@@ -107,15 +125,24 @@ jQuery.fn.extend({
 		}
 	},
 
-	// _makeIconCheckbox('foo') -->
-	//   off = fontawesome('foo'), class = 'wcdv_icon_checkbox_off'
-	//   on = fontawesome('foo'), class = 'wcdv_icon_checkbox_on'
-	// _makeIconCheckbox('foo', 'bar') -->
-	//   off = fontawesome('foo')
-	//   on = fontawesome('bar')
-	// _makeIconCheckbox(obj) -->
-	//   off = fontawesome(obj.off.icon), class = obj.off.classes
-	//   on = fontawesome(obj.on.icon), class = obj.on.classes
+	/**
+	 * Make a checkbox that is represented by an icon.  The icon can change based on whether the
+	 * checkbox is on/off (e.g. turning from a "check" icon to an "x" icon).  Or the icon can be
+	 * displayed with a different class (e.g. to change the background or color when on/off).
+	 *
+	 * @function external:"jQuery.fn"#_makeIconCheckbox
+	 *
+	 * @example
+	 * _makeIconCheckbox('foo') -->
+	 *   off = fontawesome('foo'), class = 'wcdv_icon_checkbox_off'
+	 *   on = fontawesome('foo'), class = 'wcdv_icon_checkbox_on'
+	 * _makeIconCheckbox('foo', 'bar') -->
+	 *   off = fontawesome('foo')
+	 *   on = fontawesome('bar')
+	 * _makeIconCheckbox(obj) -->
+	 *   off = fontawesome(obj.off.icon), class = obj.off.classes
+	 *   on = fontawesome(obj.on.icon), class = obj.on.classes
+	 */
 
 	_makeIconCheckbox: function () {
 		var self = this
@@ -480,9 +507,13 @@ jQuery.fn.extend({
 	 * Sets a delegated event handler for a click event that won't fire when the user clicks and
 	 * drags.
 	 *
-	 * @param {string} sel jQuery selector for the delegated event.
+	 * @function external:"jQuery.fn"#_onSingleClick
 	 *
-	 * @param {function} cb Function to call when the click happens.
+	 * @param {string} sel
+	 * jQuery selector for the delegated event.
+	 *
+	 * @param {function} cb
+	 * Function to call when the click happens.
 	 */
 
 	_onSingleClick: function (sel, cb) {
@@ -523,6 +554,8 @@ jQuery.fn.extend({
 
 	/**
 	 * A shortcut for accessing DataVis-specific attributes on elements.
+	 *
+	 * @function external:"jQuery.fn"#dvAttr
 	 *
 	 * @param {string|object} name
 	 * When a string, the partial name of the attribute.  When an object, sets the values of a bunch
