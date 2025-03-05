@@ -55,9 +55,144 @@ import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
  * @typedef View~Data
  *
  * @property {boolean} isPlain
+ * If true, then the data has not been grouped.
+ *
  * @property {boolean} isGroup
+ * If true, then the data has been grouped but not pivotted.
+ *
  * @property {boolean} isPivot
- * @property {Array.<View~Data_Row>} data
+ * If true, then the data has been grouped and pivotted.
+ *
+ * @property {(Array.<View~Data_Row> | Array.<View~Data_Group> | Array.<View~Data_Pivot>)} data
+ * Contains the data fully processed with the filter, group, pivot, aggregate, and sort
+ * configuration set in the view.  Depending on the operations performed, this property has
+ * different structures... see the specific type you need below.
+ *
+ * @property {Array.<View~Data_Row>} dataByRowId
+ * Contains all the row-oriented data from the source accessible by the unique row ID of any given
+ * data row.  Useful for operations on selections even when the output isn't strictly row-based
+ * (e.g. selecting stuff in the grouped tree view).
+ *
+ * @property {Array.<Array.<string>>} rowVals
+ * @property {Array.<Array.<string>>} colVals
+ *
+ * @property {Array.<string>} groupFields
+ * List of fields grouped by.  This is derived from the full `groupSpec` property.
+ *
+ * Alternatively: `self.data.groupSpec.fieldNames.map((fn) => fs.fieldName || fs)`
+ *
+ * @property {Array.<string>} pivotFields
+ * List of fields pivotted by.  This is derived from the full `pivotSpec` property.
+ *
+ * Alternatively: `self.data.pivotSpec.fieldNames.map((fn) => fs.fieldName || fs)`
+ *
+ * @property {View~GroupSpec} groupSpec
+ * The full spec provided for how to group the data, with erroneous elements (e.g. requests to group
+ * on fields that don't exist in the data) removed.
+ *
+ * @property {View~PivotSpec} pivotSpec
+ * The full spec provided for how to pivot the data, with erroneous elements (e.g. requests to pivot
+ * on fields that don't exist in the data) removed.
+ *
+ * @property {groupMetadata} groupMetadata
+ * Contains information about how grouping was done, useful for constructing trees of grouped data.
+ *
+ * @property {object} agg
+ *
+ * @property {object} agg.info
+ * Container of metadata about all aggregate functions that have been computed.
+ *
+ * @property {Array.<AggregateInfo>} group
+ * Metadata about aggregate functions which are evaluated over data from the same group.
+ *
+ * @property {Array.<AggregateInfo>} pivot
+ * Metadata about aggregate functions which are evaluated over data from the same pivot.
+ *
+ * @property {Array.<AggregateInfo>} cell
+ * Metadata about aggregate functions which are evaluated over data within the same group & pivot
+ * (the intersection of: rows that fall into the group set, and rows that fall into the pivot set).
+ *
+ * @property {Array.<AggregateInfo>} all
+ * Metadata about aggregate functions which are evaluated over all data.
+ *
+ * @property {object} agg.results
+ *
+ * @property {Array.<Array.<AggRes>>} agg.results.group
+ * Aggregate results computed for data in the same group.  The array indices represent:
+ *
+ *   - the aggregate function number
+ *   - the rowval index
+ *
+ * For example:
+ *
+ *   - grouping by State
+ *   - the rowValIndex of Georgia is 7
+ *   - and the only aggregate function is count
+ *   - there's 4200 rows with State = Georgia
+ *
+ * ```
+ * data.agg.results.group[0][7] = 4200
+ * ```
+ *
+ * @property {Array.<Array.<AggRes>>} agg.results.pivot
+ * Aggregate results computed for data in the same pivot.  The array indices represent:
+ *
+ *   - the aggregate function number
+ *   - the colval index
+ *
+ * For example:
+ *
+ *   - pivotting by Fruit
+ *   - the rowValIndex of Peach is 3
+ *   - and the only aggregate function is count
+ *   - there's 6000 rows with Fruit = Peach
+ *
+ * ```
+ * data.agg.results.pivot[0][3] = 6000
+ * ```
+ *
+ * @property {Array.<Array.<Array.<AggRes>>>} agg.results.cell
+ * Aggregate results computed for data in the same group & pivot (i.e. the intersection of the sets
+ * of row in the group, and the set of rows in the pivot).  The array indices represent:
+ *
+ *   - the aggregate function number
+ *   - the rowval index
+ *   - the colval index
+ *
+ * For example:
+ *
+ *   - grouping by State
+ *   - the rowValIndex of Georgia is 7
+ *   - pivotting by Fruit
+ *   - the rowValIndex of Peach is 3
+ *   - and the only aggregate function is count
+ *   - there's 3600 rows with State = Georgia and Fruit = Peach
+ *
+ * ```
+ * data.agg.results.cell[0][7][3] = 3600
+ * ```
+ *
+ * @property {Array.<AggRes>} agg.results.all
+ * Aggregate results computed for all data.  The array index represents:
+ *
+ *   - the aggregate function number
+ *
+ * For example:
+ *
+ *   - there's two aggregate functions for count & sum(Cost)
+ *   - there are 10000 rows total
+ *   - the total cost is $18,000
+ *
+ * ```
+ * data.agg.results.all[0] = 10000
+ * data.agg.results.all[1] = 18000
+ * ```
+ */
+
+/**
+ * @typedef {jQuery|Element|any} AggRes
+ * An aggregate result.  A `jQuery` or `Element` instance will be inserted directly, any other data
+ * type (probably a string or number) will be formatted appropriately.
  */
 
 // View~Data_Row {{{3
@@ -68,14 +203,51 @@ import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
  * @property {number} rowNum A unique row number, which is used to track rows when they are moved
  * within the GridTable instance, e.g. by reordering the rows manually, or by sorting.
  *
- * @property {Object.<string, View~Data_Field>} rowData Contains the data for the row; keys are
+ * @property {Object.<string, View~Data_Cell>} rowData Contains the data for the row; keys are
  * field names, and values are objects representing the value of that field within the row.
  */
 
-// View~Data_Field {{{3
+// View~Data_Group {{{3
 
 /**
- * @typedef View~Data_Field
+ * @typedef {Array.<View~Data_Row>} View~Data_Group
+ *
+ * Contains the rows that belong to a particular group.  Indexed by the so-called `rowValIndex`
+ * which corresponds to an elements of `data.rowVals` (see {@link View~Data}).
+ *
+ * @example
+ * view.getData((data) => {
+ *   let rvi = 42;
+ *   let rv = data.rowVals[rvi];
+ *   let rvd = data.data[rvi];
+ *   console.log(`Group #${rvi} = ${JSON.stringify(rv)}, containing rows: %O`, rvd);
+ * });
+ */
+
+// View~Data_Pivot {{{3
+
+/**
+ * @typedef {Array.<Array.<View~Data_Row>>} View~Data_Pivot
+ *
+ * Contains the rows that belong to the particular group/pivot combination.  Indexed first by the
+ * so-called `rowValIndex` and then by the `colValIndex` (which correspond to elements of
+ * `data.rowVals` and `data.colVals`, respectively — see {@link View~Data}).
+ *
+ * @example
+ * view.getData((data) => {
+ *   let rvi = 42;
+ *   let cvi = 3;
+ *   let rv = data.rowVals[rvi];
+ *   let cv = data.colVals[cvi];
+ *   let d = data.data[rvi][cvi];
+ *   console.log(`Group #${rvi}.${cvi} = ${JSON.stringify(rv)} / ${JSON.stringify(cv), containing rows: %O`, d);
+ * });
+ */
+
+// View~Data_Cell {{{3
+
+/**
+ * @typedef View~Data_Cell
  *
  * @property {any} orig The original representation of the data as it came from the data source.
  * This is mostly only useful when displaying the value, when no `render` function has been
@@ -85,20 +257,97 @@ import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
  * and filtering.  This corresponds to the type of the field, e.g. when the field has a type of
  * "date," this property contains a Moment instance.
  *
- * @property {View~Data_Field_Render} [render] If this property exists, it specifies a function
+ * @property {View~Data_Cell_Render} [render] If this property exists, it specifies a function
  * that is used to turn the internal representation into a printable value that will be placed into
  * the cell when the table is output.
  */
 
-// View~Data_Field_Render {{{3
+// View~Data_Cell_Render {{{3
 
 /**
  * A function called by the GridTable instance to produce a value that will be placed into a cell in
  * the table output.  An example usage would be to create a link based on the value of the cell.
  *
- * @callback View~Data_Field_Render
+ * @callback View~Data_Cell_Render
  *
  * @returns {Element|jQuery|string} What should be put into the cell in the table output.
+ */
+
+// Group Metadata {{{3
+
+/**
+ * @typedef {object} metadataNode
+ * Node within the tree used to store grouping metadata for detailed group output.  This structure
+ * drives the display and expand/collapse behavior of the UI.  The root is a fake metadataNode (does
+ * not correspond to anything actually in the data) with `id = 0` and all toplevel groups are
+ * children of the root.  Every path through the tree represents a rowVal.
+ *
+ * @property {number} id
+ * A unique identifier for this node.
+ *
+ * @property {number} numRows
+ * Number of descendant rows (either directly in this rowVal leaf, or in all children).
+ *
+ * @property {metadataNode} parent
+ * Parent node of this one.  Only in non-root nodes.
+ *
+ * @property {number} numChildren
+ * Number of direct child nodes.  Only in non-leaf nodes.
+ *
+ * @property {Object.<string,metadataNode>} children
+ * Children mapped by the natrep of their rowValElt.  Only in non-leaf nodes.
+ *
+ * @property {Array} rows
+ * All the rows in the rowVal this rowValElt completes.  Only in leaf nodes.
+ *
+ * @property {string} rowValElt
+ * The part of the current rowVal represented by the node at the current depth in the tree.
+ *
+ * ```
+ * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
+ * tree = <ORIGIN>
+ *       /        \
+ *      A1        A2 <- rowValElt = A2
+ *     /  \      /  \
+ *    B1  B2    B1  B2 <- rowValElt = B2
+ * ```
+ *
+ * @property {number} rowValIndex
+ * What rowVal this rowValElt completes. Only in leaf nodes.  Example:
+ *
+ * ```
+ * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
+ * tree = <ORIGIN>
+ *       /        \
+ *      A1        A2
+ *     /  \      /  \
+ *    B1  B2    B1  B2
+ *    0   1     2   3   <- rowValIndex
+ * ```
+ *
+ * @property {object} rowValCell
+ *
+ * @property {string} groupField
+ * Name of the field that we're grouping by at this level.
+ *
+ * @property {View~GroupSpecElt} groupSpec
+ * The full group spec for the grouping done at this level.
+ */
+
+/**
+ * @typedef {metadataNode} groupMetadata
+ *
+ * @property {object} lookup
+ *
+ * @property {Object.<number,metadataNode>} lookup.byId
+ * Used by grid table group details selection.
+ *
+ * @property {Object.<number,metadataNode>} lookup.byRowValIndex
+ * Used by grid table group details selection.
+ *
+ * @property {Object.<number,metadataNode>} lookup.byRowNum
+ * Used by grid table group details selection to find out what rowVal a selected row belongs to (and
+ * thus to determine status of checkboxes in grouping hierarchy).
  */
 
 // View~FilterSpec {{{3
@@ -2075,81 +2324,6 @@ View.prototype.clearGroup = function (opts) {
 };
 
 // #group {{{2
-
-/**
- * @typedef {metadataNode} groupMetadata
- *
- * @property {object} lookup
- *
- * @property {Object.<number,metadataNode>} lookup.byId
- * Used by grid table group details selection.
- *
- * @property {Object.<number,metadataNode>} lookup.byRowValIndex
- * Used by grid table group details selection.
- *
- * @property {Object.<number,metadataNode>} lookup.byRowNum
- * Used by grid table group details selection to find out what rowVal a selected row belongs to (and
- * thus to determine status of checkboxes in grouping hierarchy).
- */
-
-/**
- * @typedef {object} metadataNode
- * Node within the tree used to store grouping metadata for detailed group output.  This structure
- * drives the display and expand/collapse behavior of the UI.  The root is a fake metadataNode (does
- * not correspond to anything actually in the data) with `id = 0` and all toplevel groups are
- * children of the root.  Every path through the tree represents a rowVal.
- *
- * @property {number} id
- * A unique identifier for this node.
- *
- * @property {number} numRows
- * Number of descendant rows (either directly in this rowVal leaf, or in all children).
- *
- * @property {metadataNode} parent
- * Parent node of this one.  Only in non-root nodes.
- *
- * @property {number} numChildren
- * Number of direct child nodes.  Only in non-leaf nodes.
- *
- * @property {Object.<string,metadataNode>} children
- * Children mapped by the natrep of their rowValElt.  Only in non-leaf nodes.
- *
- * @property {Array} rows
- * All the rows in the rowVal this rowValElt completes.  Only in leaf nodes.
- *
- * @property {string} rowValElt
- * The part of the current rowVal represented by the node at the current depth in the tree.
- *
- * ```
- * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
- * tree = <ORIGIN>
- *       /        \
- *      A1        A2 <- rowValElt = A2
- *     /  \      /  \
- *    B1  B2    B1  B2 <- rowValElt = B2
- * ```
- *
- * @property {number} rowValIndex
- * What rowVal this rowValElt completes. Only in leaf nodes.  Example:
- *
- * ```
- * rowVals = [[A1,B1],[A1,B2],[A2,B1],[A2,B2]]
- * tree = <ORIGIN>
- *       /        \
- *      A1        A2
- *     /  \      /  \
- *    B1  B2    B1  B2
- *    0   1     2   3   <- rowValIndex
- * ```
- *
- * @property {object} rowValCell
- *
- * @property {string} groupField
- * Name of the field that we're grouping by at this level.
- *
- * @property {View~GroupSpecElt} groupSpec
- * The full group spec for the grouping done at this level.
- */
 
 /**
  * Perform grouping on the data.  This modifies the data in place; it's not asynchronous and there's
