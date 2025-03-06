@@ -126,7 +126,7 @@ GridControlField.prototype.draw = function () {
 	var label = self.displayText || (self.colConfig && self.colConfig.displayText) || self.field.field;
 
 	self.ui.removeButton = jQuery('<button>', {'type': 'button'})
-		.append(fontAwesome('F146'))
+		.append(fontAwesome('fa-minus-square'))
 		.attr('title', trans('GRID_CONTROL.FIELD.REMOVE'))
 		.addClass('wcdv_icon_button wcdv_remove wcdv_text-primary')
 		.on('click', function () {
@@ -457,7 +457,7 @@ AggregateControlField.prototype.draw = function () {
 			.on('click', function () {
 				self.ui.optionsDialog.dialog('open');
 			})
-			.append(fontAwesome('F044'))
+			.append(fontAwesome('fa-pencil-square-o'))
 			.appendTo(self.ui.root)
 		;
 		self._makeOptionsDialog(aggDefn);
@@ -527,34 +527,50 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			.appendTo(table);
 	});
 
-	jQuery('<div>')
-		.css({
-			'text-align': 'center',
-			'margin-top': '1ex'
+	jQuery('<hr>')
+		.appendTo(self.ui.optionsDiv);
+
+	var buttonBar = jQuery('<div>')
+		.addClass('wcdv_button_bar')
+		.appendTo(self.ui.optionsDiv);
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': trans('DIALOG.OK'),
+		'data-role': 'ok'
+	})
+		.append(fontAwesome('fa-check'))
+		.append(trans('DIALOG.OK'))
+		.on('click', function () {
+			self.aggFunOpts = opts;
+			self.control.updateView();
+			self.ui.optionsDialog.dialog('close');
 		})
-		.append(jQuery('<button>', {'type': 'button'})
-			.append(fontAwesome('F00C'))
-			.append('OK')
-			.on('click', function () {
-				self.aggFunOpts = opts;
-				self.control.updateView();
-				self.ui.optionsDialog.dialog('close');
-			}))
-		.append(jQuery('<button>', {'type': 'button'})
-			.css('margin-left', '1em')
-			.append(fontAwesome('F05E'))
-			.append('Cancel')
-			.on('click', function () {
-				self.ui.optionsDialog.dialog('close');
-			}))
-		.appendTo(self.ui.optionsDiv)
-	;
+		.appendTo(buttonBar);
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': trans('DIALOG.CANCEL'),
+		'data-role': 'cancel'
+	})
+		.append(fontAwesome('fa-ban'))
+		.append(trans('DIALOG.CANCEL'))
+		.on('click', function () {
+			self.ui.optionsDialog.dialog('close');
+		})
+		.appendTo(buttonBar);
 
 	self.ui.optionsDialog = self.ui.optionsDiv.dialog({
 		autoOpen: false,
 		modal: true,
 		title: trans('GRID_CONTROL.AGGREGATE.OPTIONS_DIALOG.TITLE', aggDefn.prototype.name),
-		minHeight: 0
+		minHeight: 0,
+		classes: {
+			"ui-dialog": "ui-corner-all wcdv_dialog",
+			"ui-dialog-titlebar": "ui-corner-all",
+		}
 	});
 };
 
@@ -743,8 +759,9 @@ mixinEventHandling(GridControl, [
 GridControl.prototype.makeClearButton = function (target) {
 	var self = this;
 
-	return jQuery(fontAwesome('F05E'))
-		.addClass('wcdv_button wcdv_text-primary wcdv_control_clear_button')
+	return jQuery('<button>')
+		.addClass('wcdv_icon_button wcdv_text-primary wcdv_control_clear_button')
+		.append(fontAwesome('fa-ban'))
 		.hide()
 		.on('click', function () {
 			jQuery(this).hide();
@@ -838,7 +855,7 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 		});
 
 	if (self.isHorizontal) {
-		li.append(fontAwesome('F178'));
+		li.append(fontAwesome('fa-long-arrow-right'));
 	}
 
 	li.append(cf.draw());

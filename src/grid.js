@@ -60,7 +60,6 @@ import {GridTableGroupDetail} from './renderers/grid/table/group_detail.js';
 import {GridTableGroupSummary} from './renderers/grid/table/group_summary.js';
 import {GridTablePivot} from './renderers/grid/table/pivot.js';
 
-
 // Server-Side Filter/Sort {{{1
 
 /*
@@ -1074,7 +1073,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 
 	if (typeof self.opts.helpText === 'string' && self.opts.helpText !== '') {
 		notHeader.append(' ');
-		fontAwesome('F059')
+		fontAwesome('fa-question-circle')
 			.tooltip({
 				classes: {
 					'ui-tooltip': 'ui-corner-all ui-widget-shadow wcdv_info_tooltip wcdv_border-primary'
@@ -1143,7 +1142,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 			evt.stopPropagation();
 			self.refresh();
 		})
-		.append(fontAwesome('f021'))
+		.append(fontAwesome('fa-refresh'))
 		.appendTo(self.ui.titlebar_controls)
 	;
 
@@ -1215,7 +1214,7 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 			evt.stopPropagation();
 			self.toggle();
 		})
-		.append(jQuery(fontAwesome('f078')))
+		.append(jQuery(fontAwesome('fa-chevron-down')))
 		.appendTo(self.ui.titlebar_controls)
 	;
 };
@@ -1365,7 +1364,7 @@ Grid.prototype.redraw = function (contOk, contFail) {
 			});
 			self.renderer.on('generateCsvProgress', function (progress) {
 				if (progress === 0) {
-					self.ui.exportBtn.children('span.fa').remove();
+					self.ui.exportBtn.children('span.fa, svg.svg-inline--fa').remove();
 					self.ui.exportBtn.append(fontAwesome('fa-spinner', 'fa-pulse'));
 				}
 			});
@@ -1698,13 +1697,13 @@ Grid.prototype._setSpinner = function (what) {
 
 	switch (what) {
 	case 'loading':
-		self.ui.spinner.html(fontAwesome('F021', 'fa-spin', trans('GRID.TITLEBAR.LOADING')));
+		self.ui.spinner.html(fontAwesome('fa-refresh', 'fa-spin', trans('GRID.TITLEBAR.LOADING')));
 		break;
 	case 'not-loaded':
-		self.ui.spinner.html(fontAwesome('F05E', null, trans('GRID.TITLEBAR.NOT_LOADED')));
+		self.ui.spinner.html(fontAwesome('fa-ban', null, trans('GRID.TITLEBAR.NOT_LOADED')));
 		break;
 	case 'working':
-		self.ui.spinner.html(fontAwesome('F1CE', 'fa-spin', trans('GRID.TITLEBAR.WORKING')));
+		self.ui.spinner.html(fontAwesome('fa-circle-o-notch', 'fa-spin', trans('GRID.TITLEBAR.WORKING')));
 		break;
 	}
 };
@@ -1903,13 +1902,13 @@ Grid.prototype._setExportStatus = function (status) {
 	case 'notReady':
 		self.csvReady = false;
 		self.ui.exportBtn.attr('title', trans('GRID.TITLEBAR.GENERATE_CSV'));
-		self.ui.exportBtn.children('span.fa').remove();
+		self.ui.exportBtn.children('span.fa, svg.svg-inline--fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-file-o'));
 		break;
 	case 'ready':
 		self.csvReady = true;
 		self.ui.exportBtn.attr('title', trans('GRID.TITLEBAR.DOWNLOAD_CSV'));
-		self.ui.exportBtn.children('span.fa').remove();
+		self.ui.exportBtn.children('span.fa, svg.svg-inline--fa').remove();
 		self.ui.exportBtn.append(fontAwesome('fa-download'));
 		break;
 	default:

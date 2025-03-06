@@ -680,7 +680,7 @@ class Grid {
 
 	async clearFilter() {
 		const control = await this.driver.findElement(By.css('div.wcdv_filter_control'));
-		return control.findElement(By.css('span.wcdv_control_clear_button')).click();
+		return control.findElement(By.css('.wcdv_control_clear_button')).click();
 	}
 
 	async setFilter(field, type, op, value) {
