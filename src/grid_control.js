@@ -527,34 +527,50 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 			.appendTo(table);
 	});
 
-	jQuery('<div>')
-		.css({
-			'text-align': 'center',
-			'margin-top': '1ex'
+	jQuery('<hr>')
+		.appendTo(self.ui.optionsDiv);
+
+	var buttonBar = jQuery('<div>')
+		.addClass('wcdv_button_bar')
+		.appendTo(self.ui.optionsDiv);
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': trans('DIALOG.OK'),
+		'data-role': 'ok'
+	})
+		.append(fontAwesome('fa-check'))
+		.append(trans('DIALOG.OK'))
+		.on('click', function () {
+			self.aggFunOpts = opts;
+			self.control.updateView();
+			self.ui.optionsDialog.dialog('close');
 		})
-		.append(jQuery('<button>', {'type': 'button'})
-			.append(fontAwesome('fa-check'))
-			.append('OK')
-			.on('click', function () {
-				self.aggFunOpts = opts;
-				self.control.updateView();
-				self.ui.optionsDialog.dialog('close');
-			}))
-		.append(jQuery('<button>', {'type': 'button'})
-			.css('margin-left', '1em')
-			.append(fontAwesome('fa-ban'))
-			.append('Cancel')
-			.on('click', function () {
-				self.ui.optionsDialog.dialog('close');
-			}))
-		.appendTo(self.ui.optionsDiv)
-	;
+		.appendTo(buttonBar);
+
+	jQuery('<button>', {
+		'type': 'button',
+		'class': '',
+		'title': trans('DIALOG.CANCEL'),
+		'data-role': 'cancel'
+	})
+		.append(fontAwesome('fa-ban'))
+		.append(trans('DIALOG.CANCEL'))
+		.on('click', function () {
+			self.ui.optionsDialog.dialog('close');
+		})
+		.appendTo(buttonBar);
 
 	self.ui.optionsDialog = self.ui.optionsDiv.dialog({
 		autoOpen: false,
 		modal: true,
 		title: trans('GRID_CONTROL.AGGREGATE.OPTIONS_DIALOG.TITLE', aggDefn.prototype.name),
-		minHeight: 0
+		minHeight: 0,
+		classes: {
+			"ui-dialog": "ui-corner-all wcdv_dialog",
+			"ui-dialog-titlebar": "ui-corner-all",
+		}
 	});
 };
 
