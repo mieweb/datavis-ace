@@ -63,7 +63,11 @@ var TableTool = {};
 	
 		return scrollbarWidth[targetClass];
 	};
-	
+
+	function int(num) {
+		return parseInt(num, 10);
+	}
+
 	// Portions Copyright (c) 2015, Facebook, Inc. All rights reserved.
 	function normalizeWheel(event) {
 		var sX = 0, sY = 0,       // spinX, spinY
@@ -123,7 +127,8 @@ var TableTool = {};
 				//if table height is zero, do not initialize TableTool on this table
 				el.height() <= 0 ||
 				//if table is nested inside an ancestor table, do not initialize TableTool on this table
-				el.parents('table').length !== 0
+				el.parents('table').length !== 0 ||
+				el.attr('data-ttmanaged') === '1'
 				) {
 				proceed = false;
 			}
@@ -288,12 +293,14 @@ var TableTool = {};
 	function fixedWrap(table, height) {
 		var fixed = {},
 			timer = null,
-			wheelEvent = false;
+			wheelEvent = false,
+			dvjq = (window.MIE && window.MIE.WC_DataVis && window.MIE.WC_DataVis.jQuery) || jq;
 
 		fixed.parent = jq('<div class="tabletool ttfixed"></div>');
 		fixed.table = jq(table);
 		//remove data attribute from original table
 		fixed.table.removeAttr('data-tttype');
+		fixed.table.attr('data-ttmanaged', '1');
 		fixed.table.wrap(fixed.parent);
 
 		//set tabletool var to $jquery object for future reference
@@ -302,8 +309,8 @@ var TableTool = {};
 
 		//declare wrapping div elements
 		fixed.tbody = fixed.table.parents('.outer');
-		fixed.tfoot = fixed.tbody.clone(true).addClass('tfoot').appendTo(fixed.parent);
-		fixed.thead = fixed.tbody.clone(true).addClass('thead atTop').appendTo(fixed.parent);
+		fixed.tfoot = dvjq(fixed.tbody).clone(true).addClass('tfoot').appendTo(fixed.parent);
+		fixed.thead = dvjq(fixed.tbody).clone(true).addClass('thead atTop').appendTo(fixed.parent);
 
 		fixed.tbody.addClass('tbody');
 		fixed.theadTable = fixed.thead.find('table').removeAttr('id data-ttheight');
@@ -331,7 +338,7 @@ var TableTool = {};
 			var fixedHeadHeight = fixed.theadTable.outerHeight(),
 				fixedFootHeight = fixed.orgFoot.height(),
 				resizeWidth = fixed.tbodyInner.width(),
-				fixedMaxHeight = parseInt(fixed.tbody.css('max-height')),
+				fixedMaxHeight = int(fixed.tbody.css('max-height')),
 				orgWidth = fixed.table.width();
 
 			if (fixed.tbody.height() < fixedMaxHeight) {
@@ -459,9 +466,11 @@ var TableTool = {};
 
 	function stickyWrap(table) {
 		var sticky = {},
-			timer = null;
+			timer = null,
+			dvjq = (window.MIE && window.MIE.WC_DataVis && window.MIE.WC_DataVis.jQuery) || jq;
 
 		sticky.windowResize = function () {
+			var preserveFooter = sticky.tfootTable.data('preserve-footer');
 
 			//If topElement or btmElement (associated with setLimits API call) are set, update on resize.
 			if (topElement > 0 || btmElement > 0) {
@@ -471,6 +480,12 @@ var TableTool = {};
 			//Hide header and footer on resize
 			sticky.thead.css('visibility', 'hidden');
 			sticky.tfoot.css('visibility', 'hidden');
+
+			if (preserveFooter) {
+				sticky.tfootTable.find('> tfoot > tr.tfoot-row-sized').removeClass('tfoot-row-sized overflow-resize').each(function(idx, tr) {
+					jq(tr).css('height', '');
+				});
+			}
 
 			clearTimeout(timer);
 			timer = setTimeout(function() {
@@ -486,7 +501,7 @@ var TableTool = {};
 					sticky.theadTable.css('min-width', orgWidth);
 
 					//if no footer, give footer height for scrollbar
-					if (parseInt(sticky.tfootTable.css('height')) === 0) {
+					if (int(sticky.tfootTable.css('height')) === 0) {
 						sticky.tfootTable.css('height', '1px');
 					}
 
@@ -513,6 +528,23 @@ var TableTool = {};
 					setColWidth(sticky.sortFoot, sticky.tfootColgroup);
 				}
 
+				if (preserveFooter) {
+					sticky.tfootTable.find('> tfoot > tr').each(function(idx, tr) {
+						var row = jq(tr),
+							newRowHeight = heightCalc(tr),
+							afterSized = null;
+
+						row.css('height', newRowHeight).addClass('tfoot-row-sized');
+						afterSized = row.find('td > *').outerHeight();
+
+						// If the result of sizing our footer rows and adding classes produces an overflow of row content,
+						// resize the rows again
+						if (afterSized > newRowHeight) {
+							row.css('height', afterSized).addClass('overflow-resize');
+						}
+					});
+				}
+
 				scrollTracker(true, sticky.tfootInner, sticky.tbody); // do not attach scroll evt listener
 
 				for (var i = 0; i < sticky.events.stickies_set.length; i++) {
@@ -535,6 +567,7 @@ var TableTool = {};
 			bodyScroll = (window.pageXOffset !== undefined) ? window.pageXOffset : (document.documentElement || document.body.parentNode || document.body).scrollLeft,
 			hstyle = sticky.thead[0].style,
 			fstyle = sticky.tfoot[0].style;
+
 
 			//Update the setStickies values on resize
 			topElement = topElement ? topElement : 0;
@@ -667,6 +700,7 @@ var TableTool = {};
 
 		//remove data attribute from original table
 		sticky.table.removeAttr('data-tttype');
+		sticky.table.attr('data-ttmanaged', '1');
 		sticky.table.wrap(sticky.parent);
 
 		//set parent var to $jquery object for future reference
@@ -675,8 +709,9 @@ var TableTool = {};
 
 		// //declare wrapping div elements
 		sticky.tbody = sticky.table.parents('.outer');
-		sticky.tfoot = sticky.tbody.clone(true).addClass('tfoot').attr('aria-hidden', 'true').appendTo(sticky.parent);
-		sticky.thead = sticky.tbody.clone(true).addClass('thead').attr('aria-hidden', 'true').appendTo(sticky.parent);
+		sticky.tfoot = dvjq(sticky.tbody).clone(true).addClass('tfoot').attr('aria-hidden', 'true').appendTo(sticky.parent);
+		sticky.table.removeAttr('data-preserve-footer');
+		sticky.thead = dvjq(sticky.tbody).clone(true).addClass('thead').attr('aria-hidden', 'true').appendTo(sticky.parent);
 
 		// give cloned header and footer unique IDs. Wait until after append complete
 		uniqueIDs(sticky.thead, sticky.tfoot);
@@ -738,23 +773,24 @@ var TableTool = {};
 
 	function sidescrollWrap(stickyTbl, len) {
 		var sidescroll = {},
-			parseLen = parseInt(len),
+			parseLen = int(len),
 			colInt = (!isNaN(len) && parseLen > 0) ? parseLen : 1,
 			colDivideEle = null,
-			resizeDly = null;
+			resizeDly = null,
+			dvjq = (window.MIE && window.MIE.WC_DataVis && window.MIE.WC_DataVis.jQuery) || jQuery;
 
 		sidescroll.parent = stickyTbl.parent.addClass('ttsidescroll').append('<div class="scrollbodywrap sideouter"></div>');
-		sidescroll.bodyTbl = stickyTbl.table.removeAttr('data-tttype');
+		sidescroll.bodyTbl = stickyTbl.table.removeAttr('data-tttype').attr('data-ttmanaged', '1');
 		sidescroll.bodyWrap = sidescroll.parent.children('.scrollbodywrap').append(stickyTbl.tbody, stickyTbl.thead, stickyTbl.tfoot);
 		sidescroll.sidePar = sidescroll.bodyTbl.parents('.ttsidescroll');
-		sidescroll.headerTbl = sidescroll.bodyTbl.clone(true).wrap('<div class="scrollheadwrap sideouter"></div>');
+		sidescroll.headerTbl = dvjq(sidescroll.bodyTbl).clone(true).wrap('<div class="scrollheadwrap sideouter"></div>');
 		sidescroll.sticky = stickyTbl;
 
 		// give cloned header unique IDs. Wait until after wrap complete
 		uniqueIDs(sidescroll.headerTbl);
 		sidescroll.headerWrap = sidescroll.headerTbl.parent().prependTo(sidescroll.sidePar);
-		sidescroll.headerClone = sidescroll.headerTbl.clone(true).addClass('side-header-clone');
-		sidescroll.footerClone = sidescroll.headerTbl.clone(true).addClass('side-footer-clone');
+		sidescroll.headerClone = dvjq(sidescroll.headerTbl).clone(true).addClass('side-header-clone');
+		sidescroll.footerClone = dvjq(sidescroll.headerTbl).clone(true).addClass('side-footer-clone');
 
 		sidescroll.headerWrap.append(sidescroll.headerClone);
 		sidescroll.headerClone.find('tbody, tfoot').remove();
@@ -784,6 +820,11 @@ var TableTool = {};
 		sidescroll.headerClone.find('thead tr > *:nth-child(' + (colInt + 1) + ')').addClass('divide-header');
 		sidescroll.footerClone.find('tfoot tr > *:nth-child(' + (colInt + 1) + ')').addClass('divide-footer');
 
+		if (colDivideEle.length === 0) {
+			// If there are no rows in the table, try to just use the header instead.
+			colDivideEle = sidescroll.headerTbl.find('thead > tr:first-child > *:nth-child(' + (colInt + 1) + ')');
+		}
+
 		if (
 			sidescroll.cloneSide.theadRows.length > 1 &&
 			sidescroll.cloneSide.thead.filter(function(idx, cs) {
@@ -801,6 +842,9 @@ var TableTool = {};
 		};
 
 		sidescroll.sizeSidescroll = function() {
+			if (colDivideEle.length === 0) {
+				return;
+			}
 			var divideLine = colDivideEle.position().left,
 				parWidth = widthCalc(sidescroll.sidePar);
 
@@ -908,6 +952,9 @@ var TableTool = {};
 		});
 
 		sidescroll.evtCBs.thead_untouched_tfoot.push(function() {
+			if (topElement > 0) {
+				sidescroll.headerClone.css('top', topElement);
+			}
 			sidescroll.headerClone.css('bottom', '');
 		});
 
@@ -928,7 +975,7 @@ var TableTool = {};
 				sidescroll.sticky.parent.addClass('thead-stuck hide-init');
 			}
 
-			if (parseInt(widthCalc(theads[0])) !== parseInt(jq(theads[1]).position().left)) {
+			if (int(widthCalc(theads[0])) !== int(jq(theads[1]).position().left)) {
 				sidescroll.headerClone.removeClass('theads-colspans');
 			}
 
@@ -1008,7 +1055,7 @@ var TableTool = {};
 			var t = 0;
 
 			jq(e).each(function(e, n){
-				t += parseInt(jq(n).attr('colspan')) || 1;
+				t += int(jq(n).attr('colspan')) || 1;
 			});
 
 			return t;
@@ -1064,8 +1111,8 @@ var TableTool = {};
 
 				if (curRow[colIdx]) {
 					var th = jq(curRow[colIdx]),
-						colspanValVar = parseInt(th.attr('colspan')) || 1,
-						rowspanValVar = parseInt(th.attr('rowspan')) || 1,
+						colspanValVar = int(th.attr('colspan')) || 1,
+						rowspanValVar = int(th.attr('rowspan')) || 1,
 						rowspanObj = {
 							'colCount' : colspanCount,
 							'rowspanVal' : rowspanValVar,
@@ -1262,7 +1309,7 @@ var TableTool = {};
 
 	TableTool.changeHeight = function (ttID, height) {
 		//If an id is passed as first parameter, store it or it's ancestor's data-ttid;
-		var newHeight = parseInt(height),
+		var newHeight = int(height),
 			tableID = jq(ttID).data('ttid') || jq(ttID).parents('.tabletool[data-ttID]').data('ttid');
 
 		for (var i=0;i<allFixed.length;i++) {
