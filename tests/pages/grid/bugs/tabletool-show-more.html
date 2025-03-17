@@ -19,7 +19,7 @@ $(document).ready(function () {
 			type: 'temporary'
 		}
 	});
-	prefs.addPerspective(null, 'Test', {
+	prefs.addPerspective(null, 'Pinned', {
 	  "grid": {
 	    "colConfig": {
 	      "_keys": [
@@ -50,6 +50,7 @@ $(document).ready(function () {
 	    }
 	  }
 	});
+	prefs.addPerspective(null, 'Normal', {});
 
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',

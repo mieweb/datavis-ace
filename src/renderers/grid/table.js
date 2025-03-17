@@ -321,7 +321,7 @@ GridTable.prototype._validateLimit = function () {
 	var self = this;
 
 	if (self.features.limit) {
-		if (self.defn.table.limit.threshold === undefined) {
+		if (getProp(self.defn, 'table', 'limit', 'threshold') == null) {
 			debug.warn('GRID TABLE - PLAIN // DRAW', 'Disabling limit feature because no limit threshold was provided');
 			self.features.limit = false;
 		}
