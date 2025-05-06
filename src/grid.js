@@ -1283,6 +1283,7 @@ Grid.prototype.redraw = function (contOk, contFail) {
 		var renderer = self.findRenderer(self.ui.root.get(0).getBoundingClientRect().width, mode);
 
 		self.rendererName = typeof renderer.fn === 'function' ? renderer.fn() : renderer.name;
+		self.rendererId = renderer.id;
 
 		var rendererCtor = GridRenderer.registry.get(self.rendererName);
 		var rendererCtorOpts = deepCopy(renderer.opts);
@@ -2234,8 +2235,7 @@ Grid.prototype.makeResponsive = function () {
 		timer = setTimeout(function () {
 			timer = null;
 			var renderer = self.findRenderer(elts[0].contentRect.width, self.mode);
-			var rendererName = typeof renderer.fn === 'function' ? renderer.fn() : renderer.name;
-			if (rendererName !== self.rendererName) {
+			if (renderer.id !== self.rendererId) {
 				self.debug('Resize', 'Resized to ' + elts[0].contentRect.width + '; using renderer: %O', renderer);
 				self.redraw();
 			}
@@ -2272,30 +2272,36 @@ Grid.prototype.makeResponsive = function () {
  * Specification of the renderer to add.
  */
 
-Grid.prototype.addRenderer = function (minWidth, renderer) {
-	var self = this
-		, i;
+Grid.prototype.addRenderer = (function () {
+	var id = 1;
 
-	for (i = 0; i < self.widthBreaks.length; i += 1) {
-		if (minWidth < self.widthBreaks[i].minWidth) {
-			// Insert at the appropriate place in the list.
+	return function (minWidth, renderer) {
+		var self = this
+			, i;
 
-			self.widthBreaks.splice(i, 0, {
-				minWidth: minWidth,
-				renderer: renderer
-			});
+		renderer.id = 'CUSTOM.' + id++;
 
-			return;
+		for (i = 0; i < self.widthBreaks.length; i += 1) {
+			if (minWidth < self.widthBreaks[i].minWidth) {
+				// Insert at the appropriate place in the list.
+
+				self.widthBreaks.splice(i, 0, {
+					minWidth: minWidth,
+					renderer: renderer
+				});
+
+				return;
+			}
 		}
-	}
 
-	// New entry has the largest minWidth in the list, put it at the end.
+		// New entry has the largest minWidth in the list, put it at the end.
 
-	self.widthBreaks.splice(-1, 0, {
-		minWidth: minWidth,
-		renderer: renderer
-	});
-};
+		self.widthBreaks.splice(-1, 0, {
+			minWidth: minWidth,
+			renderer: renderer
+		});
+	};
+})();
 
 // #clearRenderers {{{2
 
