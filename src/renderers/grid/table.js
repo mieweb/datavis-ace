@@ -944,7 +944,7 @@ GridTable.prototype._addFocusHandler = function (tbl, data) {
 		}
 
 		self._updateFocus(tbl);
-	});
+	}, ['shift']);
 
 	tbl._onSingleClick('th[data-wcdv-cvi]', function () {
 		var cvi = jQuery(this).attr('data-wcdv-cvi');
@@ -965,7 +965,7 @@ GridTable.prototype._addFocusHandler = function (tbl, data) {
 		}
 
 		self._updateFocus(tbl);
-	});
+	}, ['shift']);
 };
 
 // #addSortHandler {{{2

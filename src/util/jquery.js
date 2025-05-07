@@ -550,9 +550,12 @@ jQuery.fn.extend({
 	 *
 	 * @param {function} cb
 	 * Function to call when the click happens.
+	 *
+	 * @param {string[]} mod
+	 * A list of modifiers that must be present when the click is started. The modifiers are:
 	 */
 
-	_onSingleClick: function (sel, cb) {
+	_onSingleClick: function (sel, cb, mod) {
 		var elt = this;
 		var maxDist = 4;
 		var evtInfo = {
@@ -561,6 +564,29 @@ jQuery.fn.extend({
 			y0: 0
 		};
 		elt.on('mousedown', sel, function (evt) {
+			if (mod != null) {
+				if (
+					(mod.indexOf('shift') >= 0 && !evt.shiftKey) ||
+					(mod.indexOf('ctrl') >= 0 && !evt.ctrlKey) ||
+					(mod.indexOf('alt') >= 0 && !evt.altKey)
+				) {
+					// User failed to hold a required mod key.
+					return;
+				}
+				if (
+					(evt.shiftKey && mod.indexOf('shift') < 0) ||
+					(evt.ctrlKey && mod.indexOf('ctrl') < 0) ||
+					(evt.altKey && mod.indexOf('alt') < 0)
+				) {
+					// User held a mod key they weren't supposed to.
+					return;
+				}
+			}
+			if (evt.shiftKey) {
+				// Normally, holding shift selects text. Prevent that from happening.
+				// FIXME: This loses any already existing selection. But restoring that is hard.
+				document.getSelection().empty();
+			}
 			evtInfo.state = 'down';
 			evtInfo.x0 = evt.clientX;
 			evtInfo.y0 = evt.clientY;
@@ -572,11 +598,16 @@ jQuery.fn.extend({
 		});
 		elt.on('mouseup', sel, function (evt) {
 			var moveDist = 0;
-			if (evtInfo.state === 'drag') {
-				moveDist = Math.sqrt(Math.pow(evt.clientX - evtInfo.x0, 2) + Math.pow(evt.clientY - evtInfo.y0, 2));
-			}
-			if (evtInfo.state === 'down' || moveDist < maxDist) {
+			switch (evtInfo.state) {
+			case 'down':
 				cb.call(this);
+				break;
+			case 'drag':
+				moveDist = Math.sqrt(Math.pow(evt.clientX - evtInfo.x0, 2) + Math.pow(evt.clientY - evtInfo.y0, 2));
+				if (moveDist < maxDist) {
+					cb.call(this);
+				}
+				break;
 			}
 			evtInfo.state = 'up';
 		});
