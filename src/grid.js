@@ -448,6 +448,8 @@ var Grid = makeSubclass('Grid', Object, function (defn, opts, cb) {
 
 	self._isIdle = false;
 
+	self.mode = 'plain';
+
 	self.generateCsv = false;
 	self.csvReady = false;
 	self.exportLock = new Lock('Export');
@@ -2268,6 +2270,9 @@ Grid.prototype.makeResponsive = function () {
  * @param {number} minWidth
  * The minimum width at which this renderer will work.
  *
+ * @param {string[]} modes
+ * List of modes for which this renderer will work.
+ *
  * @param {RendererSpec} renderer
  * Specification of the renderer to add.
  */
@@ -2275,7 +2280,7 @@ Grid.prototype.makeResponsive = function () {
 Grid.prototype.addRenderer = (function () {
 	var id = 1;
 
-	return function (minWidth, renderer) {
+	return function (minWidth, modes, renderer) {
 		var self = this
 			, i;
 
@@ -2287,6 +2292,7 @@ Grid.prototype.addRenderer = (function () {
 
 				self.widthBreaks.splice(i, 0, {
 					minWidth: minWidth,
+					modes: modes,
 					renderer: renderer
 				});
 
@@ -2298,6 +2304,7 @@ Grid.prototype.addRenderer = (function () {
 
 		self.widthBreaks.splice(-1, 0, {
 			minWidth: minWidth,
+			modes: modes,
 			renderer: renderer
 		});
 	};
@@ -2326,13 +2333,13 @@ Grid.prototype.resetRenderers = function () {
 
 	self.widthBreaks = [{
 		minWidth: 1024,
-		mode: ['plain'],
+		modes: ['plain'],
 		renderer: {
 			name: 'table_plain'
 		}
 	}, {
 		minWidth: 1024,
-		mode: ['group'],
+		modes: ['group'],
 		renderer: {
 			fn: function () {
 				switch (self.defn.table.groupMode) {
@@ -2345,7 +2352,7 @@ Grid.prototype.resetRenderers = function () {
 		}
 	}, {
 		minWidth: 1024,
-		mode: ['pivot'],
+		modes: ['pivot'],
 		renderer: {
 			name: 'table_pivot'
 		}
@@ -2384,7 +2391,7 @@ Grid.prototype.findRenderer = function (width, mode) {
 
 	for (i = self.widthBreaks.length - 1; i >= 0; i -= 1) {
 		b = self.widthBreaks[i];
-		if (b.minWidth <= width && (b.mode == null || b.mode.indexOf(mode) >= 0)) {
+		if (b.minWidth <= width && (b.modes == null || b.modes.indexOf(mode) >= 0)) {
 			return b.renderer;
 		}
 	}
@@ -2394,7 +2401,7 @@ Grid.prototype.findRenderer = function (width, mode) {
 
 	for (i = 0; i < self.widthBreaks.length; i += 1) {
 		b = self.widthBreaks[i];
-		if (b.mode == null || b.mode.indexOf(mode) >= 0) {
+		if (b.modes == null || b.modes.indexOf(mode) >= 0) {
 			return b.renderer;
 		}
 	}
