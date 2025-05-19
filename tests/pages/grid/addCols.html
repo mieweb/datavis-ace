@@ -2,22 +2,12 @@
 <html>
 	<head>
 		<meta charset="utf-8"/>
-		<script src="../jquery.min.js"></script>
-		<script src="../jquery-ui.min.js"></script>
-		<script src="../jquery.blockUI.js"></script>
-		<script src="../jquery.contextMenu.min.js"></script>
-		<script src="../jquery.sumoselect.min.js"></script>
-		<script src="../flatpickr.min.js"></script>
 		<script src="../wcdatavis.js"></script>
 		<link rel="stylesheet" href="../font-awesome.css"/>
-		<link rel="stylesheet" href="../jquery-ui.min.css"/>
-		<link rel="stylesheet" href="../jquery.contextMenu.min.css"/>
-		<link rel="stylesheet" href="../sumoselect.min.css"/>
-		<link rel="stylesheet" href="../flatpickr.min.css"/>
 		<link rel="stylesheet" href="../base.css"/>
 		<link rel="stylesheet" href="../wcdatavis.css"/>
 		<script>
-$(document).ready(function () {
+document.addEventListener('DOMContentLoaded', function () {
 	MIE.DEBUGGING = true;
 
 	function randElt(l) {
@@ -26,11 +16,12 @@ $(document).ready(function () {
 
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
-		url: '../random100.json'
+		url: '../basic.json'
 	});
-	var view = new MIE.WC_DataVis.View(source, 'TEST:GRID:DEFAULT');
-	new MIE.WC_DataVis.Grid('grid', view, {
+	var computedView = new MIE.WC_DataVis.ComputedView(source);
+	new MIE.WC_DataVis.Grid({
 		id: 'grid',
+		computedView: computedView,
 		table: {
 			features: {
 				limit: false,
@@ -41,9 +32,10 @@ $(document).ready(function () {
 					name: 'Kaiju Link',
 					value: function () {
 						var kaiju = randElt(['Godzilla', 'Mothra', 'Ghidorah', 'Anguirius', 'Rodan', 'Gigan']);
-						return jQuery('<a>', {
-							href: 'https://wikizilla.org/wiki/' + kaiju
-						}).text(kaiju);
+						var elt = document.createElement('a');
+						elt.setAttribute('href', 'https://wikizilla.org/wiki/' + kaiju);
+						elt.innerText = kaiju;
+						return elt;
 					}
 				}, {
 					name: 'Shouting Fruit',
@@ -57,9 +49,10 @@ $(document).ready(function () {
 					name: 'Kaiju Link',
 					value: function () {
 						var kaiju = randElt(['Godzilla', 'Mothra', 'Ghidorah', 'Anguirius', 'Rodan', 'Gigan']);
-						return jQuery('<a>', {
-							href: 'https://wikizilla.org/wiki/' + kaiju
-						}).text(kaiju);
+						var elt = document.createElement('a');
+						elt.setAttribute('href', 'https://wikizilla.org/wiki/' + kaiju);
+						elt.innerText = kaiju;
+						return elt;
 					}
 				}]
 			},
@@ -68,9 +61,10 @@ $(document).ready(function () {
 					name: 'Kaiju Link',
 					value: function () {
 						var kaiju = randElt(['Godzilla', 'Mothra', 'Ghidorah', 'Anguirius', 'Rodan', 'Gigan']);
-						return jQuery('<a>', {
-							href: 'https://wikizilla.org/wiki/' + kaiju
-						}).text(kaiju);
+						var elt = document.createElement('a');
+						elt.setAttribute('href', 'https://wikizilla.org/wiki/' + kaiju);
+						elt.innerText = kaiju;
+						return elt;
 					}
 				}]
 			}
