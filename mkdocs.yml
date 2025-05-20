@@ -31,6 +31,7 @@ nav:
   - Grid:
       - Overview: grid/index.md
       - Renderers:
+          - Responsive: grid/renderers/responsive.md
           - Table: grid/renderers/table.md
           - Handlebars: grid/renderers/handlebars.md
       - Operations: grid/operations.md
