@@ -47,8 +47,13 @@ export default {
 		typescript({
 			sourceMap: true
 		}),
-		babel({
-			babelHelpers: 'bundled'
-		})
+    babel({
+      extensions: ['.js', '.mjs', '.svelte', '.ts', '.tsx'],
+      babelHelpers: 'bundled',
+      presets: [
+        [ "@babel/preset-env", {"targets": {"ie": "11"}} ],
+        "@babel/preset-typescript"
+      ]
+    })
 	]
 };
