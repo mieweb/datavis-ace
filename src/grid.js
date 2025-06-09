@@ -2095,19 +2095,6 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		self.prefs.save();
 	}
 
-	var anyPinned = false;
-	self.colConfig.each(function (fcc, field) {
-		if (fcc.isPinned) {
-			anyPinned = true;
-		}
-	});
-	if (anyPinned && self.defn.table.limit != null) {
-		delete self.defn.table.limit;
-		if (self.renderer && self.renderer.features.limit) {
-			self.renderer.features.limit = false;
-		}
-	}
-
 	if (opts.sendEvent) {
 		self.fire('colConfigUpdate', {
 			notTo: opts.dontSendEventTo
