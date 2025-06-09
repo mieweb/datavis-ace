@@ -334,6 +334,7 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 	var self = this;
 	var useLimit = self.features.limit;
 	var limitConfig = getPropDef({}, self.defn, 'table', 'limit');
+	var usingTableTool = self.features.floatingHeader && getProp(self.defn, 'table', 'floatingHeader', 'method') === 'tabletool';
 
 	if (self.features.limit && limitConfig && data.data.length > limitConfig.threshold) {
 		console.debug('[DataVis // %s // Draw] Limiting output to first ' + limitConfig.threshold + ' rows', self.toString());
@@ -461,13 +462,23 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		self.ui.tr[row.rowNum] = jQuery(tr);
 		self.ui.tbody.append(tr);
+
+		// When using TableTool with a pinned column, the pinned column is a clone on the left hand
+		// side. TableTool does not monitor the original tbody to see if new elements are added, so we
+		// need to add new data to the pinned column clone as well.
+
+		if (usingTableTool) {
+			self.ui.tbody.parents('div.ttsticky').find('table > tbody').append(tr);
+		}
 	};
 
 	var renderShowMore = function (rowNum) {
 		var tr;
+		var showMoreId = gensym();
 
 		tr = document.createElement('tr');
 		tr.classList.add('wcdvgrid_more');
+		tr.setAttribute('data-show-more-id', showMoreId);
 
 		var colSpan = columns.length
 			+ (self.features.rowSelect ? 1 : 0)
@@ -476,7 +487,11 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 			+ (self.features.rowReorder ? 1 : 0);
 
 		var showMore = function () {
-			tr.parentNode.removeChild(tr); // Eliminate the "more" row.
+			// When using pinned columns, TableTool will make a clone of the "show more rows" <TR> which
+			// we otherwise have no knowledge of. So we must track it using a data attribute instead, so
+			// we can remove both the original and the clone.
+
+			jQuery('tr[data-show-more-id="' + showMoreId + '"]').remove();
 			render(rowNum + 1, limitConfig.chunkSize, nextChunk);
 		};
 
@@ -510,6 +525,14 @@ GridTablePlain.prototype.drawBody = function (data, typeInfo, columns, cont, opt
 
 		tr.appendChild(td.get(0));
 		self.ui.tbody.append(tr);
+
+		// When using TableTool with a pinned column, the pinned column is a clone on the left hand
+		// side. TableTool does not monitor the original tbody to see if new elements are added, so we
+		// need to add new data to the pinned column clone as well.
+
+		if (usingTableTool) {
+			self.ui.tbody.parents('div.ttsticky').find('table > tbody').append(tr);
+		}
 	};
 
 	var render = function (startIndex, howMany, nextChunk) {
