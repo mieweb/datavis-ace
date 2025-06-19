@@ -1294,7 +1294,7 @@ Grid.prototype.redraw = function (contOk, contFail) {
 		var mode = data.isPlain ? 'plain' : data.isGroup ? 'group' : data.isPivot ? 'pivot' : null;
 		var renderer = self.findRenderer(self.ui.root.get(0).getBoundingClientRect().width, mode);
 
-		self.rendererName = typeof renderer.fn === 'function' ? renderer.fn() : renderer.name;
+		self.rendererName = renderer.name;
 		self.rendererId = renderer.id;
 
 		var rendererCtor = GridRenderer.registry.get(self.rendererName);
@@ -2332,7 +2332,8 @@ Grid.prototype.resetRenderers = function () {
 		minWidth: 1024,
 		modes: ['plain'],
 		renderer: {
-			name: 'table_plain'
+			name: 'table_plain',
+			opts: getPropDef({}, self.defn, 'table', 'whenPlain')
 		}
 	}, {
 		minWidth: 1024,
@@ -2341,9 +2342,15 @@ Grid.prototype.resetRenderers = function () {
 			fn: function () {
 				switch (self.defn.table.groupMode) {
 				case 'summary':
-					return 'table_group_summary';
+					return {
+						name: 'table_group_summary',
+						opts: getPropDef({}, self.defn, 'table', 'whenGroup')
+					};
 				case 'detail':
-					return 'table_group_detail';
+					return {
+						name: 'table_group_detail',
+						opts: getPropDef({}, self.defn, 'table', 'whenGroup')
+					}
 				}
 			}
 		}
@@ -2351,7 +2358,8 @@ Grid.prototype.resetRenderers = function () {
 		minWidth: 1024,
 		modes: ['pivot'],
 		renderer: {
-			name: 'table_pivot'
+			name: 'table_pivot',
+			opts: getPropDef({}, self.defn, 'table', 'whenPivot')
 		}
 	}];
 };
@@ -2379,6 +2387,22 @@ Grid.prototype.findRenderer = function (width, mode) {
 	var self = this,
 		i, b;
 
+	var processRenderer = function (r) {
+		var x = deepCopy(r);
+		delete x.fn;
+
+		// If the `fn` property exists, call it to get properties that can override (or supplement)
+		// those in the "main" object.  This is how you can set the group renderer depending on whether
+		// the grid is in summary or details mode.
+
+		if (typeof r.fn === 'function') {
+			var spec = r.fn();
+			x = deepDefaults(spec, x);
+		}
+
+		return x;
+	}
+
 	if (self.widthBreaks == null || self.widthBreaks.length === 0) {
 		return null;
 	}
@@ -2389,7 +2413,7 @@ Grid.prototype.findRenderer = function (width, mode) {
 	for (i = self.widthBreaks.length - 1; i >= 0; i -= 1) {
 		b = self.widthBreaks[i];
 		if (b.minWidth <= width && (b.modes == null || b.modes.indexOf(mode) >= 0)) {
-			return b.renderer;
+			return processRenderer(b.renderer);
 		}
 	}
 
@@ -2399,7 +2423,7 @@ Grid.prototype.findRenderer = function (width, mode) {
 	for (i = 0; i < self.widthBreaks.length; i += 1) {
 		b = self.widthBreaks[i];
 		if (b.modes == null || b.modes.indexOf(mode) >= 0) {
-			return b.renderer;
+			return processRenderer(b.renderer);
 		}
 	}
 };
