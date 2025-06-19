@@ -1077,6 +1077,8 @@ class Grid {
 
 	// Data Checking - Group {{{2
 
+	// #getRowVal {{{3
+
 	/**
 	 * Get rowval cells from a group summary table, given the row number.
 	 *
@@ -1124,6 +1126,54 @@ class Grid {
 			}
 		});
 	}
+
+	// #getGroupDetailsHeader {{{3
+
+	/**
+	 * Get the header for a grouping in details mode.
+	 *
+	 * @param {string[]} path
+	 * A series of row val elts to expand. The header of the last one is returned. For example:
+	 * `["United States", "Fruit"]` returns the TH element for the header "Fruit" under "United
+	 * States."
+	 *
+	 * @returns {WebElement}
+	 * The TH of the header for the last thing expanded.
+	 *
+	 * @example
+	 * const th = grid.getGroupDetailsHeader(["United States", "Fruit"]);
+	 * assert.equal(await th.getText(), "Fruit(3 rows)");
+	 */
+
+	async getGroupDetailsHeader(path) {
+		let groupId = 0
+			, tr = this.ui.table;
+
+		for (let i = 0; i < path.length; i += 1) {
+			tr = await tr.findElements(By.xpath(`//tr[@data-wcdv-in-group="${groupId}"][contains(., "${path[i]}")]`));
+
+			if (tr.length === 0) {
+				throw new Error(`Unable to locate header: ${path.slice(0, i - 1).join(' / ')}`);
+			}
+
+			tr = tr[0];
+
+			if (i < path.length - 1) {
+				groupId = await tr.getAttribute('data-wcdv-toggles-group');
+
+				// Expand the header if it's not already.
+
+				if (await tr.getAttribute('data-wcdv-expanded') === '0') {
+					await tr.findElement(By.css('th.wcdv_group_col_spacer >button.wcdv_expand_button')).click();
+					await this.waitForIdle();
+				}
+			}
+		}
+
+		return await tr.findElement(By.css('th.wcdv_group_value'));
+	}
+
+	// #getRowValElt {{{3
 
 	/**
 	 * Get a rowval cell from a group summary table, given the row and column numbers.
