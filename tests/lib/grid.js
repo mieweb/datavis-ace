@@ -1074,6 +1074,27 @@ class Grid {
 		});
 	}
 
+	// #getPlainFooter {{{3
+
+	async getPlainFooter(column) {
+		if (typeof column !== 'string') {
+			throw new Error('Call Error: `column` must be a string');
+		}
+
+		const ths = await this.ui.table.findElements(By.css('thead > tr > th'));
+		const th = await asyncFilter(ths, async (elt) => await elt.getText() === column, {reportPosition: true});
+		if (th.length === 0) {
+			throw new Error(`No such column: ${column}`);
+		}
+		const tds = await this.ui.table.findElements(By.css('tfoot > tr > td'));
+		if (tds.length === 0) {
+			throw new Error('Unable to locate footer TD elements');
+		}
+		if (th[0].pos >= tds.length) {
+			throw new Error(`Found "${column}" header at position ${th[0].pos} but there are only ${tds.length} footer cells`);
+		}
+		return await tds[th[0].pos].getText();
+	}
 
 	// Data Checking - Group {{{2
 
