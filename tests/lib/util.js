@@ -312,6 +312,29 @@ async function blur(driver) {
 	return driver.executeScript('!!document.activeElement ? document.activeElement.blur() : 0');
 }
 
+async function hover(driver, elt) {
+	return driver.actions().move({origin: elt}).perform();
+}
+
+async function unhover(driver) {
+	const body = await driver.findElement(By.css('body'));
+	await driver.actions().move({origin: body}).perform();
+}
+
+async function check(elt) {
+	if (!(await elt.getAttribute('checked'))) {
+		return elt.click();
+	}
+}
+
+async function uncheck(elt) {
+	// const label = await elt.findElements(By.xpath('parent::label'));
+	// console.log('html:', label.length === 1 ? await label[0].getAttribute('outerHTML') : await elt.getAttribute('outerHTML'));
+	if (await elt.getAttribute('checked')) {
+		return elt.click();
+	}
+}
+
 async function hasClass(elt, cls) {
 	return (await elt.getAttribute('class')).split(' ').indexOf(cls) >= 0;
 }
@@ -377,6 +400,10 @@ module.exports = {
 	radioByValue,
 	checkboxByValue,
 	blur,
+	hover,
+	unhover,
+	check,
+	uncheck,
 	hasClass,
 	getClass,
 	sleep,
