@@ -594,8 +594,13 @@ class Grid {
 
 	async addAggregate(funName, field) {
 		const control = await this.driver.findElement(By.css('div.wcdv_aggregate_control'));
-		const dropdown = await control.findElement(By.css('div > div > select'));
-		await selectByValue(dropdown, funName);
+		const newAggDropdown = await control.findElement(By.css('select.wcdv_control_addField'));
+		await selectByValue(newAggDropdown, funName);
+
+		if (field != null) {
+			const fieldDropdown = await control.findElement(By.css('ul.wcdv_control_vertical > li:last-of-type select'))
+			await selectByValue(fieldDropdown, field);
+		}
 	}
 
 	async setAggregate(funName, field) {
