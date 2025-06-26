@@ -1,6 +1,5 @@
 // Imports {{{1
 
-import _ from 'underscore';
 import BigNumber from 'bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
@@ -27,6 +26,7 @@ import {
 	I,
 	interleaveWith,
 	isElement,
+	isEqual,
 	log,
 	logAsync,
 	makeSetters,
@@ -919,13 +919,13 @@ View.prototype.getRowCount = function () {
 		return self.data.data.length;
 	}
 	else if (self.data.isGroup) {
-		return _.reduce(self.data.data, function (prev1, groupedData, rowValNum) {
+		return self.data.data.reduce(function (prev1, groupedData, rowValNum) {
 			return prev1 + groupedData.length;
 		}, 0);
 	}
 	else if (self.data.isPivot) {
-		return _.reduce(self.data.data, function (prev1, groupedData, rowValNum) {
-			return prev1 + _.reduce(groupedData, function (prev2, pivottedData, colValNum) {
+		return self.data.data.reduce(function (prev1, groupedData, rowValNum) {
+			return prev1 + groupedData.reduce(function (prev2, pivottedData, colValNum) {
 				return prev2 + pivottedData.length;
 			}, 0);
 		}, 0);
@@ -977,7 +977,7 @@ View.prototype._setSort = function (spec, opts) {
 
 	self.debug('SET SORT', 'spec = %O', spec);
 
-	isDifferent = !_.isEqual(self.sortSpec, spec);
+	isDifferent = !isEqual(self.sortSpec, spec);
 
 	self.sortSpec = spec;
 
@@ -1215,7 +1215,7 @@ View.prototype.sort = function (cont) {
 							});
 							if (depth > 0) {
 								// FIXME Assumes that node.children.length > 0.
-								node.rowValIndex = node.children[_.keys(node.children)[0]].rowValIndex;
+								node.rowValIndex = node.children[Object.keys(node.children)[0]].rowValIndex;
 							}
 						}
 					};
@@ -1527,7 +1527,7 @@ View.prototype.sort = function (cont) {
 				if (spec.rowVal) {
 					spec.rowValIndex = -1;
 					for (rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
-						if (_.isEqual(self.data.rowVals[rvi], spec.rowVal)) {
+						if (isEqual(self.data.rowVals[rvi], spec.rowVal)) {
 							spec.rowValIndex = rvi;
 							break;
 						}
@@ -1599,7 +1599,7 @@ View.prototype.sort = function (cont) {
 				if (spec.colVal) {
 					spec.colValIndex = -1;
 					for (cvi = 0; cvi < self.data.colVals.length; cvi += 1) {
-						if (_.isEqual(self.data.colVals[cvi], spec.colVal)) {
+						if (isEqual(self.data.colVals[cvi], spec.colVal)) {
 							spec.colValIndex = cvi;
 							break;
 						}
@@ -1821,7 +1821,7 @@ View.prototype._setFilter = function (spec, progress, opts) {
 
 	self.debug('SET FILTER', 'spec = %O ; options = %O', spec, opts);
 
-	isDifferent = !_.isEqual(self.filterSpec, spec);
+	isDifferent = !isEqual(self.filterSpec, spec);
 
 	if (self.filterSpec != null && spec == null) {
 		self.wasPreviouslyFiltered = true;
@@ -2024,7 +2024,7 @@ View.prototype.filter = function (cont) {
 			return pred['$lt'](operand) || pred['$eq'](operand);
 		};
 
-		if (_.isArray(fltr)) {
+		if (Array.isArray(fltr)) {
 			fltr = { '$in': fltr };
 		}
 		else if (!_.isObject(fltr)) {
@@ -2040,8 +2040,8 @@ View.prototype.filter = function (cont) {
 			//self.debug('FILTER', 'field = ' + field + ' ; Datum = ' + datum + ' ; Operator = ' + operator + ' ; Operand = ' + operand);
 
 			if (pred[operator] !== undefined) {
-				if (_.isArray(operand)) {
-					if (_.every(operand, pred[operator]) === false) {
+				if (Array.isArray(operand)) {
+					if (operand.every(pred[operator]) === false) {
 						return false;
 					}
 				}
@@ -2052,21 +2052,21 @@ View.prototype.filter = function (cont) {
 			else {
 				switch (operator) {
 				case '$in':
-					if (!_.isArray(operand)) {
+					if (!Array.isArray(operand)) {
 						throw new Error('Invalid filter spec, operator "$in" for column "' + field + '" requires array value');
 					}
 
-					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) < 0) {
+					if (operand.map(function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) < 0) {
 						return false;
 					}
 					break;
 
 				case '$nin':
-					if (!_.isArray(operand)) {
+					if (!Array.isArray(operand)) {
 						throw new Error('Invalid filter spec, operator "$nin" for column "' + field + '" requires array value');
 					}
 
-					if (_.map(operand, function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) >= 0) {
+					if (operand.map(function (elt) { return elt.toString().toLowerCase(); }).indexOf(datum.toString().toLowerCase()) >= 0) {
 						return false;
 					}
 					break;
@@ -2108,7 +2108,7 @@ View.prototype.filter = function (cont) {
 	}
 	else {
 		self.timing.start(timingEvt);
-		self.data = _.filter(self.data, passesAllFilters);
+		self.data = self.data.filter(passesAllFilters);
 		self.timing.stop(timingEvt);
 	}
 	*/
@@ -2220,7 +2220,7 @@ View.prototype._setGroup = function (spec, opts, cont) {
 	}
 
 	if (spec != null) {
-		if (!_.isArray(spec.fieldNames)) {
+		if (!Array.isArray(spec.fieldNames)) {
 			log.warn('VIEW (' + self.name + ') // SET GROUP', '`spec.fieldNames` is not an array');
 			spec.fieldNames = [];
 		}
@@ -2246,7 +2246,7 @@ View.prototype._setGroup = function (spec, opts, cont) {
 
 		// Remove any fields that don't exist in the data (according to typeInfo).
 
-		spec.fieldNames = _.filter(spec.fieldNames, function (field) {
+		spec.fieldNames = _.*.filter(spec.fieldNames, function (field) {
 			if (self.typeInfo.get(field) == null) {
 				log.error('Ignoring group on field "' + field + '" because it doesn\'t exist in the data');
 				return false;
@@ -2262,7 +2262,7 @@ View.prototype._setGroup = function (spec, opts, cont) {
 	}
 	*/
 
-	isDifferent = !_.isEqual(self.groupSpec, spec);
+	isDifferent = !isEqual(self.groupSpec, spec);
 
 	self.groupSpec = spec;
 
@@ -2434,7 +2434,7 @@ View.prototype.group = function () {
 				// Cache the natRep in the cell for improved performance in buildData().
 				setProp(natRep, cell, 'natRep', 'group', groupFieldIndex);
 			}
-			if (_.findIndex(rowVals, function (x) {
+			if (_.*.findIndex(rowVals, function (x) {
 				return arrayEqual(rowVal, x);
 			}) === -1) {
 				rowVals.push(rowVal);
@@ -2458,7 +2458,7 @@ View.prototype.group = function () {
 					rowVal[groupFieldIndex] = natRep;
 				}
 
-				if (_.findIndex(rowVals, function (x) {
+				if (_.*.findIndex(rowVals, function (x) {
 					return arrayEqual(rowVal, x);
 				}) === -1) {
 					rowVals.push(rowVal);
@@ -2555,7 +2555,7 @@ View.prototype.group = function () {
 				}
 			}
 			else {
-				node.numChildren = _.keys(node.children).length;
+				node.numChildren = Object.keys(node.children).length;
 				node.rows = [];
 				_.each(node.children, function (child) {
 					child.parent = node;
@@ -2565,7 +2565,7 @@ View.prototype.group = function () {
 				});
 				if (depth > 0) {
 					// FIXME Assumes that node.children.length > 0.
-					node.rowValIndex = node.children[_.keys(node.children)[0]].rowValIndex;
+					node.rowValIndex = node.children[Object.keys(node.children)[0]].rowValIndex;
 					node.rowValElt = rowVals[node.rowValIndex][depth - 1];
 				}
 			}
@@ -2620,7 +2620,7 @@ View.prototype.group = function () {
 
 	self.data.isPlain = false;
 	self.data.isGroup = true;
-	self.data.groupFields = _.pluck(finalGroupSpec, 'field');
+	self.data.groupFields = finalGroupSpec.map(function(spec) { return spec.field; });
 	self.data.groupSpec = finalGroupSpec;
 	self.data.rowVals = rowVals;
 	self.data.data = newData.data;
@@ -2678,7 +2678,7 @@ View.prototype._setPivot = function (spec, opts) {
 	}
 
 	if (spec != null) {
-		if (!_.isArray(spec.fieldNames)) {
+		if (!Array.isArray(spec.fieldNames)) {
 			log.warn('VIEW (' + self.name + ') // SET PIVOT', '`spec.fieldNames` is not an array');
 			spec.fieldNames = [];
 		}
@@ -2704,7 +2704,7 @@ View.prototype._setPivot = function (spec, opts) {
 
 		// Remove any fields that don't exist in the data (according to typeInfo).
 
-		spec.fieldNames = _.filter(spec.fieldNames, function (field) {
+		spec.fieldNames = _.*.filter(spec.fieldNames, function (field) {
 			if (self.typeInfo.get(field) == null) {
 				log.error('Ignoring pivot on field "' + field + '" because it doesn\'t exist in the data');
 				return false;
@@ -2720,7 +2720,7 @@ View.prototype._setPivot = function (spec, opts) {
 	}
 	*/
 
-	isDifferent = !_.isEqual(self.pivotSpec, spec);
+	isDifferent = !isEqual(self.pivotSpec, spec);
 
 	self.pivotSpec = spec;
 
@@ -2867,7 +2867,7 @@ View.prototype.pivot_orig = function () {
 
 		(function RECUR(tree, level, path) {
 			if (level === self.pivotSpec.fieldNames.length) {
-				_.each(_.keys(tree).sort(), function (value) {
+				_.each(Object.keys(tree).sort(), function (value) {
 					colVals.push(path.concat([value]));
 				});
 			}
@@ -2889,7 +2889,7 @@ View.prototype.pivot_orig = function () {
 			_.each(colVals, function (colVal) {
 				var tmp = [];
 				_.each(groupedRows, function (row) {
-					if (_.every(colVal, function (colValElt, colValNum) {
+					if (colVal.every(function (colValElt, colValNum) {
 						var pivotField = pivotFields[colValNum];
 						var value = row.rowData[pivotField].value;
 						var natRep = getNatRep(value);
@@ -3017,7 +3017,7 @@ View.prototype.pivot = function () {
 					setProp(natRep, row.rowData[pivotSpecElt.field], 'natRep', 'pivot', pivotFieldIndex);
 					colVal[pivotFieldIndex] = natRep;
 				}
-				if (_.findIndex(colVals, function (x) {
+				if (_.*.findIndex(colVals, function (x) {
 					return arrayEqual(colVal, x);
 				}) === -1) {
 					colVals.push(colVal);
@@ -3042,7 +3042,7 @@ View.prototype.pivot = function () {
 					colVal[pivotFieldIndex] = natRep;
 				}
 
-				if (_.findIndex(colVals, function (x) {
+				if (_.*.findIndex(colVals, function (x) {
 					return arrayEqual(colVal, x);
 				}) === -1) {
 					colVals.push(colVal);
@@ -3068,7 +3068,7 @@ View.prototype.pivot = function () {
 			_.each(colVals, function (colVal) {
 				var tmp = [];
 				_.each(groupedRows, function (row) {
-					if (_.every(colVal, function (colValElt, colValIndex) {
+					if (colVal.every(function (colValElt, colValIndex) {
 						var pivotSpecElt = finalPivotSpec[colValIndex];
 						return colValElt === row.rowData[pivotSpecElt.field].natRep.pivot[colValIndex];
 					})) {
@@ -3117,7 +3117,7 @@ View.prototype.pivot = function () {
 	self.data.isPlain = false;
 	self.data.isGroup = false;
 	self.data.isPivot = true;
-	self.data.pivotFields = _.pluck(finalPivotSpec, 'field');
+	self.data.pivotFields = finalPivotSpec.map(function(spec) { return spec.field; });
 	self.data.pivotSpec = finalPivotSpec;
 	self.data.colVals = colVals;
 	self.data.data = newData;
@@ -3180,7 +3180,7 @@ View.prototype._setAggregate = function (spec, opts) {
 	}
 	*/
 
-	isDifferent = !_.isEqual(self.aggregateSpec, spec);
+	isDifferent = !isEqual(self.aggregateSpec, spec);
 
 	if (spec == null) {
 		self.aggregateSpec = null;
@@ -3199,7 +3199,7 @@ View.prototype._setAggregate = function (spec, opts) {
 		// Remove any fields that don't exist in the data (according to typeInfo).
 
 		_.each(spec, function (aggSpec, aggType) {
-			aggSpec = _.filter(aggSpec, function(agg) {
+			aggSpec = _.*.filter(aggSpec, function(agg) {
 				var a = AGGREGATE_REGISTRY.get(agg.fun);
 				if (a == null) {
 					log.error('Ignoring aggregate "' + agg.fun + '" because no such aggregate function exists');
@@ -3286,7 +3286,7 @@ View.prototype.aggregate = function (cont) {
 
 	_.each(['group', 'pivot', 'cell', 'all'], function (what) {
 		self.debug('AGGREGATE', 'Computing %s aggregate functions: %s',
-			what, _.pluck(getProp(self, 'aggregateSpec', what), 'fun').join(', '));
+			what, getProp(self, 'aggregateSpec', what).map(function(spec) { return spec.fun; }).join(', '));
 	});
 
 	// Data structures for storing aggregate function results.
@@ -3323,7 +3323,7 @@ View.prototype.aggregate = function (cont) {
 		});
 
 		// Strip out any aggregates which resulted in errors earlier.
-		info[what] = _.without(info[what], null);
+		info[what] = _.*.filter(function(item) { return item !== info[what], null);
 	});
 
 	_.each(self.data.rowVals, function (rowVal, rowValIdx) {
@@ -3331,7 +3331,7 @@ View.prototype.aggregate = function (cont) {
 			if (groupResults[aggNum] === undefined) {
 				groupResults[aggNum] = [];
 			}
-			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data[rowValIdx]));
+			var aggResult = aggInfo.instance.calculate(self.data.data[rowValIdx].flat());
 			groupResults[aggNum][rowValIdx] = aggResult;
 			if (aggInfo.debug) {
 				self.debug('AGGREGATE', 'Group aggregate [%d] (%s) : Group [%s] = %s',
@@ -3370,7 +3370,7 @@ View.prototype.aggregate = function (cont) {
 			pivotResults[aggNum] = [];
 
 			_.each(self.data.colVals, function (colVal, colValIdx) {
-				var aggResult = aggInfo.instance.calculate(_.flatten(_.pluck(self.data.data, colValIdx)));
+				var aggResult = aggInfo.instance.calculate(self.data.data.map(function(item) { return item[colValIdx]; }).flat());
 				pivotResults[aggNum][colValIdx] = aggResult;
 				if (aggInfo.debug) {
 					self.debug('AGGREGATE', 'Pivot aggregate [%d] (%s) : Col Val [%s] = %s',
@@ -3385,7 +3385,7 @@ View.prototype.aggregate = function (cont) {
 
 	if (info.all && (self.data.isGroup || self.data.isPivot)) {
 		_.each(info.all, function (aggInfo, aggNum) {
-			var aggResult = aggInfo.instance.calculate(_.flatten(self.data.data));
+			var aggResult = aggInfo.instance.calculate(self.data.data.flat());
 			allResults[aggNum] = aggResult;
 			if (aggInfo.debug) {
 				self.debug('AGGREGATE', 'All aggregate [%d] (%s) = %s',
