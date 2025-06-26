@@ -1,4 +1,3 @@
-import _ from 'underscore';
 import sprintf from 'sprintf-js';
 import numeral from 'numeral';
 import BigNumber from 'bignumber.js';
@@ -23,6 +22,13 @@ import {
 } from './util/misc.js';
 import OrdMap from './util/ordmap.js';
 import types from './types.js';
+
+// Native ES6+ utility functions {{{1
+
+function isObject(value) {
+	const type = typeof value;
+	return value != null && (type === 'object' || type === 'function') && !Array.isArray(value);
+}
 
 // Utility Functions {{{1
 /* ===============================================================================================
@@ -104,11 +110,11 @@ function makeAggregate(userdata, aggregate) {
 
 function invokeAggregate(data, aggregate, init) {
 	var i, i0, len, acc;
-	if (!_.isArray(data)) {
+	if (!Array.isArray(data)) {
 		throw 'Cannot invoke aggregate over non-array';
 	}
 	len = data.length;
-	if (!_.isUndefined(init)) {
+	if (init !== undefined) {
 		acc = init;
 		i0 = 0;
 	}
@@ -121,7 +127,7 @@ function invokeAggregate(data, aggregate, init) {
 			acc = aggregate(acc, data[i].rowData, data, i);
 		}
 		catch (e) {
-			if (_.isString(e)) {
+			if (typeof(e)) {
 				throw e + ' // data index = ' + i;
 			}
 			else {
@@ -143,20 +149,20 @@ function checkAggregate(defn, agg, source) {
 		throw defn.error(new Error('must be an object'));
 	}
 	// INPUT VALIDATION: [fun]
-	if (_.isUndefined(agg.fun)) {
+	if (agg.fun === undefined) {
 		throw defn.error(new Error('must be present'));
 	}
-	if (!_.isString(agg.fun)) {
+	if (!typeof(agg.fun)) {
 		throw defn.error(new Error('must be a string'));
 	}
 	if (!AGGREGATE_REGISTRY.get(agg.fun)) {
 		throw defn.error(new Error('must be a valid builtin aggregate function'));
 	}
 	// INPUT VALIDATION: [displayText]
-	if (_.isUndefined(agg.displayText)) {
+	if (agg.displayText === undefined) {
 		agg.displayText = agg.fun;
 	}
-	if (!_.isString(agg.displayText)) {
+	if (!typeof(agg.displayText)) {
 		throw defn.error(new Error('must be a string'));
 	}
 }
@@ -361,7 +367,7 @@ Aggregate.prototype.checkOpts = function () {
 			log.error('Aggregate ' + self.name + ': Missing `opts.fields`');
 			return false;
 		}
-		else if (!_.isArray(self.opts.fields)) {
+		else if (!Array.isArray(self.opts.fields)) {
 			log.error('Aggregate ' + self.name + ': `opts.fields` must be an array');
 			return false;
 		}
@@ -374,7 +380,7 @@ Aggregate.prototype.checkOpts = function () {
 			log.error('Aggregate ' + self.name + ': Missing `opts.typeInfo`');
 			return false;
 		}
-		else if (!_.isArray(self.opts.typeInfo)) {
+		else if (!Array.isArray(self.opts.typeInfo)) {
 			log.error('Aggregate ' + self.name + ': `opts.typeInfo` must be an array');
 			return false;
 		}
@@ -399,7 +405,7 @@ Aggregate.prototype.checkOpts = function () {
 Aggregate.prototype.checkData = function (data) {
 	var self = this;
 
-	if (!_.isArray(data)) {
+	if (!Array.isArray(data)) {
 		log.error('Aggregate ' + self.name + ': `data` must be an array');
 		return false;
 	}
@@ -410,10 +416,10 @@ Aggregate.prototype.checkData = function (data) {
 // #getRealValue {{{2
 
 Aggregate.prototype.getRealValue = function (cell) {
-	if (_.isString(cell)) {
+	if (typeof(cell)) {
 		return cell;
 	}
-	else if (_.isNumber(cell)) {
+	else if (typeof cell === 'number') {
 		return cell;
 	}
 	else if (_.isObject(cell)) {
@@ -464,7 +470,7 @@ Aggregate.prototype.getNumber = function (x) {
 
 		return x.value();
 	}
-	else if (_.isString(x)) {
+	else if (typeof(x)) {
 		// We can also handle when it's a number represented as a string.  We'll try to convert it
 		// either to an integer or a float.
 
@@ -504,7 +510,7 @@ Aggregate.prototype.getFullName = function () {
 	if (self.opts.name != null) {
 		return self.opts.name;
 	}
-	else if (self.fieldCount > 0 && _.isArray(self.opts.fields) && self.opts.fields.length > 0) {
+	else if (self.fieldCount > 0 && Array.isArray(self.opts.fields) && self.opts.fields.length > 0) {
 		return trans('AGGREGATE.HEADER_DISPLAY', self.name, (
 			_.map(self.opts.fields, function (field, fieldIdx) {
 				var fcc = getPropDef({}, self.opts, 'colConfig', fieldIdx);
@@ -1308,7 +1314,7 @@ var AggregateInfo = makeSubclass('AggregateInfo', Object, function (aggType, spe
 	if (typeof spec.fun !== 'string') {
 		throw new Error('Call Error: `spec.fun` must be a string');
 	}
-	if (spec.fields != null && !_.isArray(spec.fields)) {
+	if (spec.fields != null && !Array.isArray(spec.fields)) {
 		throw new Error('Call Error: `spec.fields` must be null or an array')
 	}
 
