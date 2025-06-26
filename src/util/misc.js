@@ -2,7 +2,6 @@ import jQuery from 'jquery';
 import BigNumber from 'bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
-import _ from 'underscore';
 import sprintf from 'sprintf-js';
 import JSONFormatter from 'json-formatter-js';
 
@@ -15,6 +14,38 @@ import types from '../types.js';
 /**
  * @namespace util
  */
+
+// Native ES6+ replacements for underscore methods {{{1
+
+/**
+ * Check if a value is an object (but not an array or null)
+ * Replaces _.isObject with underscore's exact semantics
+ */
+function isObject(value) {
+	const type = typeof value;
+	return value != null && (type === 'object' || type === 'function') && !Array.isArray(value);
+}
+
+/**
+ * Iterate over an object or array, calling a function for each item
+ * Replaces _.each with support for both arrays and objects
+ */
+function each(obj, fn, context) {
+	if (obj == null) return obj;
+	
+	if (Array.isArray(obj)) {
+		for (let i = 0; i < obj.length; i++) {
+			fn.call(context, obj[i], i, obj);
+		}
+	} else {
+		const keys = Object.keys(obj);
+		for (let i = 0; i < keys.length; i++) {
+			const key = keys[i];
+			fn.call(context, obj[key], key, obj);
+		}
+	}
+	return obj;
+}
 
 // Functional {{{1
 
