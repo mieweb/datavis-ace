@@ -687,7 +687,7 @@ ComputedView.prototype.sort = function (cont) {
 				if (origCellAgg != null) {
 					for (ai = 0; ai < origCellAgg.length; ai += 1) {
 						self.data.agg.results.cell[ai] = [];
-						_.each(sorted, function (s, newIndex) {
+						sorted.forEach(function (s, newIndex) {
 							self.data.agg.results.cell[ai][newIndex] = origCellAgg[ai][s.oldIndex];
 						});
 					}
@@ -698,7 +698,7 @@ ComputedView.prototype.sort = function (cont) {
 				if (origGroupAgg != null) {
 					for (ai = 0; ai < origGroupAgg.length; ai += 1) {
 						self.data.agg.results.group[ai] = [];
-						_.each(sorted, function (s, newIndex) {
+						sorted.forEach(function (s, newIndex) {
 							self.data.agg.results.group[ai][newIndex] = origGroupAgg[ai][s.oldIndex];
 						});
 					}
@@ -722,7 +722,7 @@ ComputedView.prototype.sort = function (cont) {
 
 				// Reorder data and colvals.
 
-				_.each(sorted, function (s, newIndex) {
+				sorted.forEach(function (s, newIndex) {
 					self.data.colVals[newIndex] = origColVals[s.oldIndex];
 					if (origColVals != null) {
 						for (var rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
@@ -741,7 +741,7 @@ ComputedView.prototype.sort = function (cont) {
 						self.data.agg.results.cell[ai] = new Array(self.data.rowVals.length);
 						for (rvi = 0; rvi < self.data.rowVals.length; rvi += 1) {
 							self.data.agg.results.cell[ai][rvi] = new Array(self.data.colVals.length);
-							_.each(sorted, function (s, newIndex) {
+							sorted.forEach(function (s, newIndex) {
 								self.data.agg.results.cell[ai][rvi][newIndex] = origCellAgg[ai][rvi][s.oldIndex];
 							});
 						}
@@ -753,7 +753,7 @@ ComputedView.prototype.sort = function (cont) {
 				if (origPivotAgg != null) {
 					for (ai = 0; ai < origPivotAgg.length; ai += 1) {
 						self.data.agg.results.pivot[ai] = new Array(self.data.colVals.length);
-						_.each(sorted, function (s, newIndex) {
+						sorted.forEach(function (s, newIndex) {
 							self.data.agg.results.pivot[ai][newIndex] = origPivotAgg[ai][s.oldIndex];
 						});
 					}
@@ -1921,7 +1921,7 @@ ComputedView.prototype.group = function () {
 	// Go through every group field and make sure it exists in the source.  If it doesn't, we use an
 	// event to notify the user interface about it so a warning can be shown.
 
-	_.each(self.groupSpec.fieldNames, function (fieldObj) {
+	self.groupSpec.fieldNames.forEach(function (fieldObj) {
 		var fti = self.typeInfo.get(fieldObj.field);
 		if (fti == null) {
 			log.error('Group field does not exist in the source: ' + fieldObj.field);
@@ -2139,7 +2139,8 @@ ComputedView.prototype.group = function () {
 				// Update the parent node in each child, continue the post-order traversal in each, and then
 				// after the metadata is fully constructed in each child, build this node's metadata.
 
-				_.each(node.children, function (child) {
+				Object.keys(node.children).forEach(function (key) {
+					var child = node.children[key];
 					child.parent = node;
 					postorder(child, depth + 1);
 					node.numRows += child.numRows;
@@ -2421,7 +2422,7 @@ ComputedView.prototype.pivot_orig = function () {
 
 	// Go through every pivot field and make sure it exists in the source.
 
-	_.each(self.pivotSpec.fieldNames, function (field, fieldIdx) {
+	self.pivotSpec.fieldNames.forEach(function (field, fieldIdx) {
 		if (!self.typeInfo.isSet(field)) {
 			log.error('Pivot field does not exist in the source: ' + field);
 			self.fire('invalidPivotField', null, field);
@@ -2441,12 +2442,12 @@ ComputedView.prototype.pivot_orig = function () {
 	var buildColValsTree = function (pivotFields) {
 		var colValsTree = {};
 
-		_.each(self.data.data, function (groupedRows) {
+		self.data.data.forEach(function (groupedRows) {
 			(function RECUR(fieldNames, data, tree) {
 				var field = car(fieldNames)
 					, tmp = {};
 
-				_.each(data, function (row) {
+				data.forEach(function (row) {
 					var value = row.rowData[field].orig || row.rowData[field].value;
 
 					if (tree[value] === undefined) {
@@ -2461,7 +2462,8 @@ ComputedView.prototype.pivot_orig = function () {
 				});
 
 				if (fieldNames.length > 1) {
-					_.each(tmp, function (pivottedRows, value) {
+					Object.keys(tmp).forEach(function (value) {
+						var pivottedRows = tmp[value];
 						RECUR(cdr(fieldNames), pivottedRows, tree[value]);
 					});
 				}
@@ -2494,11 +2496,11 @@ ComputedView.prototype.pivot_orig = function () {
 	var buildData = function (data) {
 		var result = [];
 
-		_.each(data, function (groupedRows, groupNum) {
+		data.forEach(function (groupedRows, groupNum) {
 			var newData = [];
-			_.each(colVals, function (colVal) {
+			colVals.forEach(function (colVal) {
 				var tmp = [];
-				_.each(groupedRows, function (row) {
+				groupedRows.forEach(function (row) {
 					if (colVal.every(function (colValElt, colValNum) {
 						var pivotField = pivotFields[colValNum];
 						var fti = self.typeInfo.get(pivotField);
@@ -2570,7 +2572,7 @@ ComputedView.prototype.pivot = function () {
 	// Go through every group field and make sure it exists in the source.  If it doesn't, we use an
 	// event to notify the user interface about it so a warning can be shown.
 
-	_.each(self.pivotSpec.fieldNames, function (fieldObj) {
+	self.pivotSpec.fieldNames.forEach(function (fieldObj) {
 		var fti = self.typeInfo.get(fieldObj.field);
 		if (fti == null) {
 			log.error('Pivot field does not exist in the source: ' + fieldObj.field);
