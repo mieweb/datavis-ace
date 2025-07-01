@@ -25,7 +25,7 @@ import {MirageView} from '../../mirage_view.js';
 var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;
@@ -124,7 +124,7 @@ PlainToolbar.prototype.update = function () {
 var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;
@@ -259,7 +259,7 @@ GroupToolbar.prototype.update = function () {
 var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;
@@ -355,7 +355,7 @@ PivotToolbar.prototype.update = function () {
 var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;
@@ -707,7 +707,7 @@ var PrefsToolbar = makeSubclass('PrefsToolbar', ToolbarSection, function (grid) 
 var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;
@@ -749,7 +749,7 @@ var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (
 var ComputedViewToolbar = makeSubclass('ComputedViewToolbar', ToolbarSection, function (grid) {
 	var self = this;
 
-	self.super.ctor.apply(self, []);
+	self.super['ToolbarSection'].ctor.apply(self, []);
 	self.ui.root.addClass('wcdv_toolbar_section');
 
 	self.grid = grid;

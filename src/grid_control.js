@@ -234,7 +234,7 @@ var FunGridControlField = makeSubclass('FunGridControlField', GridControlField);
 FunGridControlField.prototype.draw = function () {
 	var self = this;
 
-	self.super.draw();
+	self.super['GridControlField'].draw();
 
 	// Let's find out what group functions there are that work on the type of the field that we
 	// represent, e.g. if we are a date, find out what group functions work on dates.
@@ -349,7 +349,7 @@ var FilterControlField = makeSubclass('FilterControlField', GridControlField);
 FilterControlField.prototype.draw = function () {
 	var self = this;
 
-	self.super.draw();
+	self.super['GridControlField'].draw();
 	self.ui.filterContainer = jQuery('<div>')
 		.addClass('wcdv_filter_control_filter_container')
 		.appendTo(self.ui.root);
@@ -378,7 +378,7 @@ FilterControlField.prototype.draw = function () {
 var AggregateControlField = makeSubclass('AggregateControlField', GridControlField, function () {
 	var self = this;
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridControlField'].ctor.apply(self, arguments);
 	self.fieldDropdowns = [];
 	self.shouldGraph = false;
 });
@@ -388,7 +388,7 @@ var AggregateControlField = makeSubclass('AggregateControlField', GridControlFie
 AggregateControlField.prototype.draw = function () {
 	var self = this;
 
-	self.super.draw();
+	self.super['GridControlField'].draw();
 
 	self._addErrorIndicator(self.ui.root, 'wcdv_aggregate_control_error');
 
@@ -583,7 +583,7 @@ AggregateControlField.prototype.destroy = function () {
 		self.ui.optionsDiv.remove();
 	}
 
-	self.super.destroy();
+	self.super['GridControlField'].destroy();
 };
 
 // #getInfo {{{2
@@ -1139,7 +1139,7 @@ GridControl.prototype.updateView = function () {
 var GroupControl = makeSubclass('GroupControl', GridControl, function () {
 	var self = this;
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridControl'].ctor.apply(self, arguments);
 
 	self.view.on(ComputedView.events.invalidGroupField, function (field) {
 		_.each(self.controlFieldsByField[field], function (cf) {
@@ -1276,7 +1276,7 @@ GroupControl.prototype.addField = function (field, displayText, opts) {
 	var updateView = opts.updateView;
 	opts.updateView = false;
 
-	self.super.addField(field, displayText, opts, null, function (ok, cf) {
+	self.super['GridControl'].addField(field, displayText, opts, null, function (ok, cf) {
 		if (!ok) {
 			return;
 		}
@@ -1311,7 +1311,7 @@ GroupControl.prototype.addField = function (field, displayText, opts) {
 var PivotControl = makeSubclass('PivotControl', GridControl, function () {
 	var self = this;
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridControl'].ctor.apply(self, arguments);
 
 	self.view.on(ComputedView.events.invalidPivotField, function (field) {
 		_.each(self.controlFieldsByField[field], function (cf) {
@@ -1455,7 +1455,7 @@ PivotControl.prototype.addField = function (field, displayText, opts) {
 	var updateView = opts.updateView;
 	opts.updateView = false;
 
-	self.super.addField(field, displayText, opts, null, function (ok, cf) {
+	self.super['GridControl'].addField(field, displayText, opts, null, function (ok, cf) {
 		if (!ok) {
 			return;
 		}
@@ -1486,7 +1486,7 @@ PivotControl.prototype.addField = function (field, displayText, opts) {
 var AggregateControl = makeSubclass('AggregateControl', GridControl, function () {
 	var self = this;
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridControl'].ctor.apply(self, arguments);
 
 	self.view.on(ComputedView.events.invalidAggregate, function (aggNum, errMsg) {
 		self.controlFields[aggNum].showError(errMsg);
@@ -1770,7 +1770,7 @@ AggregateControl.prototype.toString = function () {
 var FilterControl = makeSubclass('FilterControl', GridControl, function () {
 	var self = this;
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridControl'].ctor.apply(self, arguments);
 	self.gfs = new GridFilterSet(self.view, null, null, null, {
 		dontSendEventTo: self
 	});
@@ -1851,7 +1851,7 @@ FilterControl.prototype.draw = function (parent) {
 FilterControl.prototype.addField = function (field, displayText, opts) {
 	var self = this;
 
-	self.super.addField(field, displayText || getProp(self.colConfig.get(field), 'displayText'), opts);
+	self.super['GridControl'].addField(field, displayText || getProp(self.colConfig.get(field), 'displayText'), opts);
 };
 
 // #removeField {{{2
@@ -1860,7 +1860,7 @@ FilterControl.prototype.removeField = function (cf) {
 	var self = this;
 
 	self.gfs.removeField(cf.field.field);
-	self.super.removeField(cf);
+	self.super['GridControl'].removeField(cf);
 };
 
 // #clear {{{2
@@ -1869,7 +1869,7 @@ FilterControl.prototype.clear = function (opts) {
 	var self = this;
 
 	self.gfs.reset(opts);
-	self.super.clear(opts);
+	self.super['GridControl'].clear(opts);
 };
 
 // #updateView {{{2
