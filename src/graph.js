@@ -1,5 +1,3 @@
-import _ from 'underscore';
-
 import jQuery from 'jquery';
 
 import {
@@ -7,6 +5,7 @@ import {
 	deepCopy,
 	deepDefaults,
 	determineColumns,
+	each,
 	fontAwesome,
 	gensym,
 	getProp,
@@ -15,6 +14,7 @@ import {
 	makeToggleCheckbox,
 	presentDownload,
 	setProp,
+	sortBy,
 	toInt,
 } from './util/misc.js';
 import OrdMap from './util/ordmap.js';
@@ -527,18 +527,18 @@ Graph.prototype._updateAggDropdown = function () {
 		self.ui.aggDropdown.children().remove();
 
 		if (data.isGroup) {
-			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
+			each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
 				addOption(ai);
 			});
 		}
 		else if (data.isPivot) {
-			_.each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
+			each(getPropDef([], data, 'agg', 'info', 'group'), function (ai) {
 				addOption(ai, ' by ' + data.groupFields.join(', '));
 			});
-			_.each(getPropDef([], data, 'agg', 'info', 'pivot'), function (ai) {
+			each(getPropDef([], data, 'agg', 'info', 'pivot'), function (ai) {
 				addOption(ai, ' by ' + data.pivotFields.join(', '));
 			});
-			_.each(getPropDef([], data, 'agg', 'info', 'cell'), function (ai) {
+			each(getPropDef([], data, 'agg', 'info', 'cell'), function (ai) {
 				addOption(ai);
 			});
 		}
@@ -548,7 +548,7 @@ Graph.prototype._updateAggDropdown = function () {
 		// happens that this is also alphabetical order, so we just sort by the aggType first before
 		// sorting by the aggNum so the dropdown will be in the right order.
 
-		_.each(_.sortBy(_.sortBy(options, 'type'), 'num'), function (opt) {
+		each(sortBy(sortBy(options, 'type'), 'num'), function (opt) {
 			var option = jQuery('<option>', {
 				'value': opt.name,
 				'data-wcdv-agg-type': opt.type,

@@ -128,8 +128,75 @@ function each(obj, fn, context) {
 	return obj;
 }
 
+/**
+ * Returns a copy of the array without the specified values
+ * Replaces _.without
+ */
+function without(array, ...values) {
+	if (!Array.isArray(array)) return array;
+	return array.filter(item => !values.includes(item));
+}
+
+/**
+ * Filters out values from an array based on a predicate
+ * Replaces _.reject
+ */
+function reject(array, predicate) {
+	if (!Array.isArray(array)) return array;
+	return array.filter((item, index) => !predicate(item, index));
+}
+
+/**
+ * Maps an array to new values
+ * Replaces _.map
+ */
+function map(collection, iteratee) {
+	if (Array.isArray(collection)) {
+		return collection.map(iteratee);
+	}
+	// For objects, map over values
+	if (collection && typeof collection === 'object') {
+		const result = [];
+		Object.keys(collection).forEach(key => {
+			result.push(iteratee(collection[key], key));
+		});
+		return result;
+	}
+	return [];
+}
+
+/**
+ * Sorts array by a property or iteratee function
+ * Replaces _.sortBy
+ */
+function sortBy(collection, iteratee) {
+	if (!Array.isArray(collection)) return collection;
+	
+	if (typeof iteratee === 'string') {
+		return collection.slice().sort((a, b) => {
+			const aVal = a[iteratee];
+			const bVal = b[iteratee];
+			if (aVal < bVal) return -1;
+			if (aVal > bVal) return 1;
+			return 0;
+		});
+	}
+	
+	if (typeof iteratee === 'function') {
+		return collection.slice().sort((a, b) => {
+			const aVal = iteratee(a);
+			const bVal = iteratee(b);
+			if (aVal < bVal) return -1;
+			if (aVal > bVal) return 1;
+			return 0;
+		});
+	}
+	
+	return collection.slice().sort();
+}
+
 // Export native ES6+ utility functions
-export { isObject, isEqual, each, defaults, mapObject, bind };
+export { isObject, isEqual, each, defaults, mapObject, bind, without, reject, map, sortBy };
 
 // Functional {{{1
 
@@ -3717,7 +3784,7 @@ export function gridIsBlocked(defn) {
 
 export function withGridBlock(defn, fn, info) {
 	if (typeof fn !== 'function') {
-		throw Error('Call Error: `fn` must be a function');
+		throw new Error('Call Error: `fn` must be a function');
 	}
 
 	blockGrid(defn, function () {
