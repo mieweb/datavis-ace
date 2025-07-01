@@ -244,6 +244,17 @@ function makeJsonOrderBy(o) {
  * @property {object} [table.whenPivot]
  * When the data has been pivotted, this is passed as the `opts` parameter to the GridRenderer
  * constructor.
+ *
+ * @property {object} [table.activeRow]
+ * Configure the active row feature.
+ *
+ * @property {boolean} [table.activeRow.slider=true]
+ * If true, automatically deploy the slider when the active row is set.
+ *
+ * @property {function} [table.activeRow.callback]
+ * If set, a callback to invoke when the active row is changed.  If the active row is set, the
+ * callback receives: (1) the active row ID, (2) the active row TR element.  If the active row is
+ * cleared, the callback receives: (1) null.
  */
 
 /**
@@ -344,6 +355,11 @@ function makeJsonOrderBy(o) {
  * @property {boolean} [incremental=false] If true, render rows in the table incrementally, which
  * prevents UI freezes while doing so.  However, the overall time required to finish rendering the
  * table goes way up.
+ *
+ * @property {boolean} [activeRow=false]
+ * If true, then clicking a row in plain output makes the row "active." An active row is highlighted
+ * and causes other configurable behavior to occur. By default, the slider appears on the right side
+ * of the page to show information about the active row.
  */
 
 /**
@@ -964,7 +980,8 @@ Grid.prototype._validateFeatures = function () {
 		'block',
 		'progress',
 		'incremental',
-		'operations'
+		'operations',
+		'activeRow'
 	];
 
 	// When the user has specified the `footer` option, enable the footer feature (if it hasn't
@@ -1792,7 +1809,8 @@ Grid.prototype._normalize = function (defn) {
 				limit: true,
 				floatingHeader: true,
 				block: false,
-				progress: false
+				progress: false,
+				activeRow: false
 			},
 			limit: {
 				appendBodyLast: false,
@@ -1807,6 +1825,9 @@ Grid.prototype._normalize = function (defn) {
 				method: 'setTimeout',
 				delay: 10,
 				chunkSize: 100
+			},
+			activeRow: {
+				slider: true
 			}
 		}
 	});

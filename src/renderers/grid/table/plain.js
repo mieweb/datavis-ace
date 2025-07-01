@@ -38,6 +38,7 @@ import {GROUP_FUNCTION_REGISTRY} from '../../../group_fun.js';
 
 import handlebarsUtil from '../../../util/handlebars.js';
 import GridTable from '../table.js';
+import Slider from '../../../ui/slider.js';
 
 // GridTablePlain {{{1
 // Constructor {{{2
@@ -92,6 +93,106 @@ var GridTablePlain = makeSubclass('GridTablePlain', GridTable, function (grid, d
 GridTablePlain.prototype.canRender = function (what) {
 	return ['plain'].indexOf(what) >= 0;
 };
+
+GridTablePlain.prototype.draw = function (root, opts, cont) {
+	var self = this;
+
+	GridTable.prototype.draw.call(self, root, opts, function () {
+		if (self.features.activeRow) {
+			if (getProp(self.defn, 'table', 'activeRow', 'slider')) {
+				self.ui.slider = new Slider();
+				self.ui.slider.on('hide', function () {
+					self.clearActiveRow();
+				});
+				self.ui.slider.draw(jQuery(document.body));
+			}
+
+			self.ui.tbody.on('click', 'td', function (evt) {
+				var avoidElts = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+
+				if (avoidElts.indexOf(evt.target.tagName) >= 0) {
+					return; // These elements don't count for setting the active row.
+				}
+
+				self.setActiveRow(jQuery(this).closest('tr'));
+			});
+		}
+
+		return typeof cont === 'function' ? cont() : null;
+	});
+};
+
+// #setActiveRow {{{2
+
+GridTablePlain.prototype.setActiveRow = function (which) {
+	var self = this
+		, rowId
+		, tr;
+
+	if (!self.features.activeRow) {
+		console.warn('[DataVis // %s // Set Active Row] Active row feature is disabled', self.toString());
+		return;
+	}
+
+	if (typeof which === 'number') {
+		rowId = which;
+		tr = self.ui.tbody.find('tr[data-row-num=' + which + ']');
+	}
+	else if (which instanceof jQuery) {
+		tr = which;
+		rowId = tr.attr('data-row-num');
+	}
+
+	self.ui.tbody.find('tr.wcdv-active-row').removeClass('wcdv-active-row');
+	tr.addClass('wcdv-active-row');
+
+	if (getProp(self.defn, 'table', 'activeRow', 'callback')) {
+		self.defn.table.activeRow.callback(rowId, tr);
+	}
+
+	if (getProp(self.defn, 'table', 'activeRow', 'slider')) {
+		var rowData = self.view.data.dataByRowId[rowId];
+		var dataHtml = jQuery('<dl>');
+		self.colConfig.each(function (v, k) {
+			jQuery('<dt>').text(v.displayText || v.field).appendTo(dataHtml);
+			var dd = jQuery('<dd>').appendTo(dataHtml);
+			var cr = rowData[k].cachedRender || rowData[k].value || rowData[k].orig;
+			if (cr instanceof Element || cr instanceof jQuery) {
+				dd.append(cr);
+			}
+			else if (v.allowHtml) {
+				dd.html(cr);
+			}
+			else {
+				dd.text(cr);
+			}
+		});
+		self.ui.slider.setHeader('Row Info');
+		self.ui.slider.setBody(dataHtml);
+		self.ui.slider.show();
+	}
+};
+
+// #clearActiveRow {{{2
+
+GridTablePlain.prototype.clearActiveRow = function () {
+	var self = this;
+
+	if (!self.features.activeRow) {
+		console.warn('[DataVis // %s // Clear Active Row] Active row feature is disabled', self.toString());
+		return;
+	}
+
+	if (getProp(self.defn, 'table', 'activeRow', 'slider')) {
+		self.ui.slider.hide();
+	}
+
+	if (getProp(self.defn, 'table', 'activeRow', 'callback')) {
+		self.defn.table.activeRow.callback(null);
+	}
+
+	self.ui.tbody.find('tr.wcdv-active-row').removeClass('wcdv-active-row');
+}
 
 // #drawHeader {{{2
 
@@ -1154,6 +1255,15 @@ GridTablePlain.prototype._addRowSelectHandler = function () {
 			self.unselect(+(jQuery(this).attr('data-row-num')));
 		}
 	});
+};
+
+GridTablePlain.prototype.clear = function () {
+	var self = this;
+
+	if (self.ui != null && self.ui.slider != null) {
+		self.ui.slider.destroy();
+	}
+	self.super.clear();
 };
 
 // Registry {{{1
