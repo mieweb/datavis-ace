@@ -16,6 +16,7 @@ import {
 	getProp,
 	getPropDef,
 	isElement,
+	isElementInViewport,
 	isVisible,
 	log,
 	makeOperationButton,
@@ -116,6 +117,40 @@ GridTablePlain.prototype.draw = function (root, opts, cont) {
 
 				self.setActiveRow(jQuery(this).closest('tr'));
 			});
+
+			jQuery(document).on('keydown', function (evt) {
+				var avoidElts = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+
+				if (avoidElts.indexOf(evt.target.tagName) >= 0) {
+					return; // These elements don't count for setting the active row.
+				}
+
+				switch(evt.key.toLowerCase()) {
+				case 'j':
+						if (self.activeRow) {
+							var activeRowId = self.activeRow.rowId + 1;
+							if (activeRowId >= self.view.data.dataByRowId.length) {
+								activeRowId = 0;
+							}
+							evt.preventDefault();
+							self.setActiveRow(activeRowId);
+						}
+						break;
+				case 'k':
+					if (self.activeRow) {
+						var activeRowId = self.activeRow.rowId - 1;
+						if (activeRowId < 0) {
+							activeRowId = self.view.data.dataByRowId.length - 1;
+						}
+						evt.preventDefault();
+						self.setActiveRow(activeRowId);
+					}
+					break;
+				case 'escape':
+					self.clearActiveRow();
+					break;
+				}
+			});
 		}
 
 		return typeof cont === 'function' ? cont() : null;
@@ -140,11 +175,21 @@ GridTablePlain.prototype.setActiveRow = function (which) {
 	}
 	else if (which instanceof jQuery) {
 		tr = which;
-		rowId = tr.attr('data-row-num');
+		rowId = +tr.attr('data-row-num');
 	}
+
+	self.activeRow = {
+		rowId: rowId,
+		tr: tr
+	};
 
 	self.ui.tbody.find('tr.wcdv-active-row').removeClass('wcdv-active-row');
 	tr.addClass('wcdv-active-row');
+	if (!isElementInViewport(self.opts.fixedHeight ? self.root : window, tr)) {
+		tr.get(0).scrollIntoView({
+			block: 'nearest'
+		});
+	}
 
 	if (getProp(self.defn, 'table', 'activeRow', 'callback')) {
 		self.defn.table.activeRow.callback(rowId, tr);
@@ -192,6 +237,8 @@ GridTablePlain.prototype.clearActiveRow = function () {
 	}
 
 	self.ui.tbody.find('tr.wcdv-active-row').removeClass('wcdv-active-row');
+
+	self.activeRow = null;
 }
 
 // #drawHeader {{{2
@@ -1263,7 +1310,7 @@ GridTablePlain.prototype.clear = function () {
 	if (self.ui != null && self.ui.slider != null) {
 		self.ui.slider.destroy();
 	}
-	self.super.clear();
+	self.super['GridTable'].clear();
 };
 
 // Registry {{{1
