@@ -1642,7 +1642,7 @@ export function walkObj(o, f, opts) {
  * });
  *
  * HouseFinch.prototype.printInfo = function () {
- *   self.super.printInfo();
+ *   self.super['Animal'].printInfo();
  *   console.log('He says: Tweet tweet!');
  * };
  *

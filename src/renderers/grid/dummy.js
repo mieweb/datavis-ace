@@ -45,7 +45,7 @@ var GridRendererDummy = makeSubclass('GridRendererDummy', GridRenderer, function
 		msg: 'DUMMY'
 	});
 
-	self.super.ctor.apply(self, arguments);
+	self.super['GridRenderer'].ctor.apply(self, arguments);
 });
 
 // #canRender {{{2
@@ -60,7 +60,7 @@ GridRendererDummy.prototype.draw = function (root, opts, cont) {
 	var self = this
 		, args = Array.prototype.slice.call(arguments);
 
-	return self.super.draw(root, opts, function (ok, data, typeInfo, andThen) {
+	return self.super['GridRenderer'].draw(root, opts, function (ok, data, typeInfo, andThen) {
 		if (!ok) {
 			return cont();
 		}
