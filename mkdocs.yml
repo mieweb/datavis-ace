@@ -35,6 +35,7 @@ nav:
           - Table: grid/renderers/table.md
           - Handlebars: grid/renderers/handlebars.md
       - Operations: grid/operations.md
+      - Active Row: grid/active-row.md
   - Graph:
       - Overview: graph/index.md
       - Gantt Charts: graph/gantt.md
