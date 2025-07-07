@@ -10,13 +10,14 @@
 document.addEventListener('DOMContentLoaded', function () {
 	MIE.DEBUGGING = true;
 
+	const $ = MIE.WC_DataVis.jQuery;
 	var source = new MIE.WC_DataVis.Source({
 		type: 'http',
 		url: '../../random100.json'
 	});
 	var computedView = new MIE.WC_DataVis.ComputedView(source);
 	new MIE.WC_DataVis.Grid({
-		id: 'test-grid-active-row-callback',
+		id: 'test-grid-active-row-slider-callback',
 		computedView: computedView,
 		table: {
 			features: {
@@ -25,9 +26,26 @@ document.addEventListener('DOMContentLoaded', function () {
 				activeRow: true,
 			},
 			activeRow: {
-				slider: false,
-				callback: function (info) {
-					alert('Active row set to: ' + info.rowId);
+				callback: function ({rowId, rowData, slider, tableRenderer}) {
+					slider.setHeader(`Row [${rowId}]`);
+					var output = {};
+					['date1', 'country', 'fruit', 'currency1'].forEach((k) => {
+						output[k] = rowData[k].cachedRender || rowData[k].value || rowData[k].orig
+					});
+					slider.setBody(
+						$('<div>')
+						.append($(`<p>On ${output.date1}, me and Jimmy went to ${output.country} and bought ${output.currency1} worth of ${output.fruit}.</p>`))
+						.append(
+							$(`<div style="text-align: right">`)
+							.append($(`<button type="button">Next Row</button>`).on('click', () => {
+								tableRenderer.activeRowNext();
+							}))
+							.append(' ')
+							.append($(`<button type="button">Close</button>`).on('click', () => {
+								slider.hide();
+							}))
+						)
+					);
 				}
 			},
 			columns: [
@@ -56,6 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		</script>
 	</head>
 	<body>
-		<div id="test-grid-active-row-callback"></div>
+		<div id="test-grid-active-row-slider-callback"></div>
 	</body>
 </html>
