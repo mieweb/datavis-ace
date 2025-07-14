@@ -52,6 +52,10 @@ mixinEventHandling(Slider, ['show', 'hide']);
 Slider.prototype.draw = function (root) {
 	var self = this;
 
+	if (!(root instanceof jQuery)) {
+		throw new Error('Call Error: `root` must be an instance of jQuery');
+	}
+
 	self.ui.root = jQuery('<div>', {
 		'class': 'wcdv-slider'
 	});
