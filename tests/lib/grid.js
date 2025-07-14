@@ -30,6 +30,10 @@ class GridUi {
 		this.id = id;
 	}
 
+	get grid() {
+		return this.driver.findElement(By.id(this.id));
+	}
+
 	/**
 	 * Locate the button to delete the current perspective.
 	 *
@@ -159,11 +163,19 @@ class GridUi {
 	 */
 
 	get autoLimitWarning() {
-		return this.driver.findElement(By.css('.auto_limit_warning'))
+		return this.driver.findElement(By.css('.auto_limit_warning'));
 	}
 
 	get aggregateControl() {
-		return this.driver.findElement(By.css('div.wcdv_aggregate_control'))
+		return this.driver.findElement(By.css('div.wcdv_aggregate_control'));
+	}
+
+	/**
+	 * Locate the active row slider.
+	 */
+
+	get slider() {
+		return this.grid.findElement(By.css('div.wcdv-slider'));
 	}
 }
 
