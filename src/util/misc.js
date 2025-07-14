@@ -2391,6 +2391,33 @@ export function onVisibilityChange(parent, elt, callback) {
 	}
 }
 
+// addFocusHandler {{{2
+
+export function addFocusHandler(elt, id, cb) {
+	jQuery(document).on('click.focus-' + id, function (evt) {
+		if (jQuery(evt.target).closest(document).length === 0) {
+			// Clicked element no longer on the page; ignore!  This could happen when another click
+			// handler on the element (e.g. a button) caused it to be removed (e.g. the clicked button
+			// closed a dialog).  In this case, there's nothing for us to do.
+			return;
+		}
+		if (jQuery(evt.target).closest(elt).length === 1) {
+			elt.addClass('wcdv-focus');
+			cb(true);
+		}
+		else {
+			elt.removeClass('wcdv-focus');
+			cb(false);
+		}
+	});
+}
+
+// removeFocusHandler {{{2
+
+export function removeFocusHandler(id) {
+	jQuery(document).off('click.focus-' + id);
+}
+
 // fontAwesome {{{2
 
 export function fontAwesome(icon, cls, title) {
