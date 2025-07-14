@@ -30,11 +30,11 @@ import types from '../types.js';
  * @inner
  */
 
-export var gensym = (function () {
+export var gensym = (function (prefix) {
 	var gensymSeed = 0;
 	return function () {
 		gensymSeed += 1;
-		return 'gensym-' + gensymSeed;
+		return '' + (prefix != null ? prefix : 'gensym-') + gensymSeed;
 	};
 })();
 
