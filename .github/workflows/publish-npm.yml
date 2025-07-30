@@ -26,6 +26,13 @@ jobs:
           registry-url: 'https://npm.pkg.github.com/'
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Replace GITHUB_TOKEN in .npmrc
+        run: |
+          sed -i "s/GITHUB_TOKEN/$GITHUB_TOKEN/" .npmrc
+          cat .npmrc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install dependencies
         run: npm install
 

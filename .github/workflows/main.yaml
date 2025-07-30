@@ -16,6 +16,13 @@ jobs:
         lfs: true
         submodules: recursive
         ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Replace GITHUB_TOKEN in .npmrc
+      run: |
+        sed -i "s/GITHUB_TOKEN/$GITHUB_TOKEN/" .npmrc
+        cat .npmrc
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
     - name: Set up Node.js
       uses: actions/setup-node@v4
