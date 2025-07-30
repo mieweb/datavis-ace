@@ -10,11 +10,12 @@ jobs:
 
     steps:
     # Checkout the code and install node deps
-    - name: Checkout code
+    - name: Checkout DataVis Repository
       uses: actions/checkout@v4
-      with: 
-        token: ${{ secrets.GITHUB_TOKEN }}
-        submodules: true
+      with:
+        lfs: true
+        submodules: recursive
+        ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
       
     - name: Set up Node.js
       uses: actions/setup-node@v4

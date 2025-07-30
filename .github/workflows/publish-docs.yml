@@ -10,8 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out repository
+    - name: Checkout DataVis Repository
       uses: actions/checkout@v4
+      with:
+        lfs: true
+        submodules: recursive
+        ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Build docs in container
       uses: ./.github/actions/container
