@@ -375,10 +375,7 @@ function setupServer() {
 	let s;
 
 	before(async function () {
-		s = await vite.createServer({
-			root: 'tests/pages',
-			configFile: './vite.config.js'
-		});
+		s = await vite.createServer();
 		await s.listen(3000);
 	});
 
