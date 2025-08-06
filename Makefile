@@ -160,10 +160,10 @@ clean:	doc-clean dist-clean
 
 # Translations {{{1
 
-src/lang/en-US.js:	en-US.tsv trans.tsv
+src/lang/en-US.js:	bin/make-lang-packs.awk en-US.tsv trans.tsv
 	rm -rf trans-missing
 	mkdir -p trans-missing
-	-gawk -f ./bin/make-lang-packs.awk $^
+	-gawk -f ./bin/make-lang-packs.awk en-US.tsv trans.tsv
 
 trans.tsv:
 	touch $@

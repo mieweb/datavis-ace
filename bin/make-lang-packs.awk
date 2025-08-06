@@ -60,10 +60,16 @@ END {
         print("};") > jsFile
         if (length(missing[lang]) > 0) {
             missingFile = "./trans-missing/" lang ".tsv"
+            missingJson = "./trans-missing/" lang ".json"
             print("Label\tEnglish\tNotes") > missingFile
             for (label in missing[lang]) {
                 print(label "\t" english[label] "\t" notes[label]) > missingFile
             }
+            print("{") > missingJson
+            for (label in missing[lang]) {
+                print(  "\"" label "\": \"" english[label] "\"," (notes[label] ? " // " notes[label] : "")) > missingJson
+            }
+            print("}") > missingJson
         }
     }
 }
