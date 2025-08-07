@@ -47,6 +47,7 @@ nav:
   - Development:
       - Getting Started: development/index.md
       - Best Practices: development/standards.md
+      - Supporting Localization: development/localization.md
       - Generating Data: development/json_gen.md
       - Testing: development/testing.md
       - Documentation: development/docs.md
