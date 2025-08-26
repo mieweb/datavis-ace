@@ -865,8 +865,12 @@ PrefsBackendMeteor.prototype.loadAll = function (cont) {
   if (typeof cont !== 'function') {
     throw new Error('Call Error: `cont` must be a function');
   }
-  self._call('datavis.prefs.loadAll', { prefsId: self.id }, function (perspectives) {
-    cont(perspectives || {});
+  self._call('datavis.prefs.loadAll', { prefsId: self.id }, function (perspectives, err) {
+    if (err) {
+      cont({});
+    } else {
+      cont(perspectives || {});
+    }
   });
 };
 
@@ -905,8 +909,12 @@ PrefsBackendMeteor.prototype.getPerspectives = function (cont) {
 PrefsBackendMeteor.prototype.getCurrent = function (cont) { 
   var self = this;
   if (typeof cont !== 'function') { throw new Error('Call Error: `cont` must be a function'); }
-  self._call('datavis.prefs.getCurrent', { prefsId: self.id }, function (result) {
-    cont(result && result.current ? result.current : null);
+  self._call('datavis.prefs.getCurrent', { prefsId: self.id }, function (result, err) {
+    if (err) {
+      cont(null);
+    } else {
+      cont(result && result.current ? result.current : null);
+    }
   });
 };
 
@@ -915,8 +923,8 @@ PrefsBackendMeteor.prototype.setCurrent = function (id, cont) {
   if (typeof id !== 'string') { throw new Error('Call Error: `id` must be a string'); }
   if (cont != null && typeof cont !== 'function') { throw new Error('Call Error: `cont` must be null or a function'); }
   cont = cont || I;
-  self._call('datavis.prefs.setCurrent', { prefsId: self.id, currentId: id }, function (result) {
-    cont(!!(result && result.ok));
+  self._call('datavis.prefs.setCurrent', { prefsId: self.id, currentId: id }, function (result, err) {
+    cont(!err && !!(result && result.ok));
   });
 };
 
@@ -926,8 +934,8 @@ PrefsBackendMeteor.prototype.rename = function (oldName, newName, cont) {
   if (typeof newName !== 'string') { throw new Error('Call Error: `newName` must be a string'); }
   if (cont != null && typeof cont !== 'function') { throw new Error('Call Error: `cont` must be null or a function'); }
   cont = cont || I;
-  self._call('datavis.prefs.rename', { prefsId: self.id, oldId: oldName, newName: newName }, function (result) {
-    cont(!!(result && result.ok));
+  self._call('datavis.prefs.rename', { prefsId: self.id, oldId: oldName, newName: newName }, function (result, err) {
+    cont(!err && !!(result && result.ok));
   });
 };
 
@@ -936,8 +944,8 @@ PrefsBackendMeteor.prototype.deletePerspective = function (id, cont) {
   if (typeof id !== 'string') { throw new Error('Call Error: `id` must be a string'); }
   if (cont != null && typeof cont !== 'function') { throw new Error('Call Error: `cont` must be null or a function'); }
   cont = cont || I;
-  self._call('datavis.prefs.delete', { prefsId: self.id, perspectiveId: id }, function (result) {
-    cont(!!(result && result.ok));
+  self._call('datavis.prefs.delete', { prefsId: self.id, perspectiveId: id }, function (result, err) {
+    cont(!err && !!(result && result.ok));
   });
 };
 
@@ -945,8 +953,8 @@ PrefsBackendMeteor.prototype.reset = function (cont) {
   var self = this;
   if (cont != null && typeof cont !== 'function') { throw new Error('Call Error: `cont` must be null or a function'); }
   cont = cont || I;
-  self._call('datavis.prefs.reset', { prefsId: self.id }, function (result) {
-    cont(!!(result && result.ok));
+  self._call('datavis.prefs.reset', { prefsId: self.id }, function (result, err) {
+    cont(!err && !!(result && result.ok));
   });
 };
 
