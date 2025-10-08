@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Pivot-velden',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Aggregatie selecteren',
   'GRID_CONTROL.SELECT_FIELD': 'Veld selecteren',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Alle groepen uitvouwen',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Detail',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Samenvatting',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Groepen vastzetten',
