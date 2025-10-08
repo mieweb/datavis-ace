@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Trường xoay',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Chọn tổng hợp',
   'GRID_CONTROL.SELECT_FIELD': 'Chọn trường',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Mở rộng tất cả các nhóm',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Chi tiết',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Tóm tắt',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Ghim Nhóm',

@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'ฟิลด์ Pivot',
   'GRID_CONTROL.SELECT_AGGREGATE': 'เลือกการรวม',
   'GRID_CONTROL.SELECT_FIELD': 'เลือกฟิลด์',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'ขยายทุกกลุ่ม',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'รายละเอียด',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'สรุป',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'ปักหมุดกลุ่ม',
