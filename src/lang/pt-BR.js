@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Campos de Pivô',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Selecionar Agregado',
   'GRID_CONTROL.SELECT_FIELD': 'Selecionar Campo',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Expandir todos os grupos',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Detalhe',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Resumo',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Fixar Grupos',

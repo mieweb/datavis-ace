@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Pivot Bidang',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Pilih Agregat',
   'GRID_CONTROL.SELECT_FIELD': 'Pilih Bidang',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Perluas Semua Grup',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Rinci',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Ringkasan',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Sematkan Grup',

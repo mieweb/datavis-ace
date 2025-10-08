@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Campos de pivote',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Seleccionar agregado',
   'GRID_CONTROL.SELECT_FIELD': 'Seleccionar campo',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Expandir todos los grupos',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Detalle',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Resumen',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Fijar Grupos',

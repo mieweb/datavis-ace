@@ -142,6 +142,7 @@ export default {
   'GRID_CONTROL.PIVOT.TITLE': 'Поля сводной таблицы',
   'GRID_CONTROL.SELECT_AGGREGATE': 'Выбрать агрегат',
   'GRID_CONTROL.SELECT_FIELD': 'Выбрать поле',
+  'GRID_TOOLBAR.GROUP.EXPAND_ALL': 'Развернуть все группы',
   'GRID_TOOLBAR.GROUP.MODE.DETAIL': 'Детально',
   'GRID_TOOLBAR.GROUP.MODE.SUMMARY': 'Сводка',
   'GRID_TOOLBAR.GROUP.PIN_GROUPS': 'Закрепить группы',
