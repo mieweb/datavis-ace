@@ -123,9 +123,9 @@ publish:	doc-publish tests-publish
 .PHONY:	serve
 serve:
 ifdef PORT
-	/usr/bin/env PORT=$(PORT) npm run vite
+	/usr/bin/env PORT=$(PORT) npm run dev
 else
-	npm run vite
+	npm run dev
 endif
 
 tests:	$(DIST_FILES)
