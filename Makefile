@@ -14,7 +14,7 @@ datavis:	$(DIST_FILES)
 
 .PHONY:	npm-setup
 npm-setup:
-	@if [[ -f .nvmrc ]] ; then \
+	@if [ -f .nvmrc ] ; then \
 		printf '\033[34;1mPlease run `nvm use` to ensure the right version of Node is used.\033[0m\n' ; \
 	fi
 	npm install
@@ -31,7 +31,7 @@ ifeq ($(DOCKER_ENV), 1)
 	echo "Running inside Docker"
 	pip install --break-system-packages -r requirements.txt
 else
-	@if [[ -z "$(PYTHON_VER)" ]] ; then \
+	@if [ -z "$(PYTHON_VER)" ] ; then \
 		printf '\033[31;1mUnable to find Python versions installed via pyenv.\033[0m\n' ; \
 		exit 1 ; \
 	fi
