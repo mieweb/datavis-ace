@@ -20,10 +20,26 @@ jobs:
           node-version: '24'
           cache: 'npm'
       
+      - name: Install pyenv
+        run: |
+          curl https://pyenv.run | bash
+          echo "$HOME/.pyenv/bin" >> $GITHUB_PATH
+          echo "$HOME/.pyenv/shims" >> $GITHUB_PATH
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      
+      - name: Install Chrome and ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
+          sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/local/bin/chromedriver
+          chromium-browser --version
+          chromedriver --version
+          echo "CHROME_BIN=/usr/bin/chromium-browser" >> $GITHUB_ENV
+          echo "CHROMEDRIVER_PATH=/usr/local/bin/chromedriver" >> $GITHUB_ENV
       
       - name: Install dependencies
         run: make setup
@@ -31,13 +47,38 @@ jobs:
       - name: Build DataVis
         run: make datavis
       
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -ac -screen 0 1280x1024x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+      
       - name: Run Selenium tests
         run: ./bin/run-tests.sh
+        continue-on-error: true
+        id: selenium_tests
+      
+      - name: Capture Chrome logs
+        if: always()
+        run: |
+          echo "=== Chrome version ==="
+          chromium-browser --version
+          echo "=== ChromeDriver version ==="
+          chromedriver --version
+          echo "=== Display ==="
+          echo $DISPLAY
+          echo "=== Process list ==="
+          ps aux | grep -E '(chrome|chromedriver)' || true
       
       - name: Upload test results
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: tests/selenium/*.log
+          path: |
+            tests/selenium/*.log
+            tests/selenium/**/*.png
           if-no-files-found: ignore
+      
+      - name: Fail if tests failed
+        if: steps.selenium_tests.outcome == 'failure'
+        run: exit 1

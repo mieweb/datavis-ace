@@ -31,16 +31,18 @@ ifeq ($(DOCKER_ENV), 1)
 	echo "Running inside Docker"
 	pip install --break-system-packages -r requirements.txt
 else
-	@if [ -z "$(PYTHON_VER)" ] ; then \
-		printf '\033[31;1mUnable to find Python versions installed via pyenv.\033[0m\n' ; \
-		exit 1 ; \
-	fi
 	@if pyenv versions --bare | grep '^datavis$$' ; then \
 		printf '\033[34;1mRemoving existing "datavis" virtualenv first.\033[0m\n' ; \
 		pyenv virtualenv-delete -f datavis ; \
 	fi
-	@printf '\033[32;1mCreating new "datavis" virtualenv based on Python $(PYTHON_VER).\033[0m\n'
-	pyenv virtualenv "$(PYTHON_VER)" datavis
+	@if [ -z "$(PYTHON_VER)" ] ; then \
+		printf '\033[31;1mUnable to find Python versions installed via pyenv.\033[0m\n' ; \
+		printf '\033[31;1mUsing your system Python version as a base. Good luck.\033[0m\n' ; \
+		pyenv virtualenv system datavis ; \
+	else \
+		printf '\033[32;1mCreating new "datavis" virtualenv based on Python $(PYTHON_VER).\033[0m\n' ; \
+		pyenv virtualenv "$(PYTHON_VER)" datavis ; \
+	fi
 	pyenv local datavis
 	pip install -r requirements.txt
 endif
