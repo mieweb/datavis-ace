@@ -999,7 +999,7 @@ Source.prototype.getTypeInfo = function (cont) {
 		if (self.userTypeInfo != null) {
 			_.each(self.userTypeInfo, function (userFti, field) {
 				if (!typeInfo.isSet(field)) {
-					self.logWarn(self.makeLogTag() + ' Overriding type information on field "' + field + '" which is not present in the source.');
+					self.logWarning(self.makeLogTag() + ' Overriding type information on field "' + field + '" which is not present in the source.');
 					typeInfo.set(field, {});
 				}
 

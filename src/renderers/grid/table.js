@@ -2186,6 +2186,7 @@ GridTable.prototype.isSelected = function (what) {
 // #_updateSelectionGui {{{2
 
 GridTable.prototype._updateSelectionGui = function () {
+	var self = this;
 	self.logError(self.makeLogTag() + ' GridTable#_updateSelectionGui(): Must be implemented by subclass');
 };
 
