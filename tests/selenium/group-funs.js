@@ -51,20 +51,29 @@ describe('Group Functions', function () {
 		},
 		month: {
 			counts: {
-				'Apr': 9,
 				'Jan': 13,
+				'Feb': 5,
+				'Mar': 9,
+				'Apr': 9,
+				'May': 14,
+				'Jun': 7,
+				'Jul': 8,
+				'Aug': 8,
 				'Sep': 5,
+				'Oct': 4,
+				'Nov': 9,
+				'Dec': 9
 			}
 		},
 		day_of_week: {
 			counts: {
-				'Mon': 13,
+				'Mon': 12,
 				'Tue': 13,
-				'Wed': 10,
-				'Thu': 15,
-				'Fri': 20,
-				'Sat': 14,
-				'Sun': 15,
+				'Wed': 11,
+				'Thu': 14,
+				'Fri': 21,
+				'Sat': 13,
+				'Sun': 16,
 			}
 		},
 	};

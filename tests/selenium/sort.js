@@ -80,9 +80,9 @@ describe('Sort', function() {
 				['time6', '12:02:00 AM', '11:54:00 PM', 'time (string → moment)'],
 			],
 			'datetime': [
-				['datetime1', 'November 30, 1901 12:24 AM', 'January 10, 2094 10:31 PM', 'datetime'],
-				['datetime2', 'November 30, 1901 12:24 AM', 'January 10, 2094 10:31 PM', 'datetime'],
-				['datetime3', 'November 30, 1901 12:24 AM', 'January 10, 2094 10:31 PM', 'datetime'],
+				['datetime1', 'November 30, 1901 12:24 AM', 'January 10, 2094 9:31 PM', 'datetime'],
+				['datetime2', 'November 30, 1901 12:24 AM', 'January 10, 2094 9:31 PM', 'datetime'],
+				['datetime3', 'November 30, 1901 12:24 AM', 'January 10, 2094 9:31 PM', 'datetime'],
 				['datetime16', 'January 1, 2010 10:39 AM', 'December 23, 2010 4:42 PM', 'datetime'],
 				['datetime17', 'January 1, 2010 10:39 AM', 'December 23, 2010 4:42 PM', 'datetime'],
 				['datetime18', 'January 1, 2010 10:39 AM', 'December 23, 2010 4:42 PM', 'datetime'],
