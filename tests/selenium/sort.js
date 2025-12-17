@@ -2,20 +2,17 @@ const Promise = require('bluebird');
 const assert = require('chai').assert;
 const _ = require('lodash');
 const Grid = require('../lib/grid.js');
-const {asyncEach, setupServer, sleep} = require('../lib/util.js');
+const {asyncEach, setupServer, sleep, createDriver} = require('../lib/util.js');
 
 const {Builder, Browser, By, Key, until} = require('selenium-webdriver');
-const {Preferences: LoggingPrefs, Type: LoggingType, Level: LoggingLevel} = require('selenium-webdriver/lib/logging');
 
 describe('Sort', function() {
 	setupServer();
-	const logging = new LoggingPrefs();
-	logging.setLevel(LoggingType.BROWSER, LoggingLevel.ALL);
 	let driver;
 	let grid;
 
 	before(async function () {
-		driver = new Builder().forBrowser('chrome').setLoggingPrefs(logging).build();
+		driver = await createDriver();
 	});
 
 	after(async function () {
