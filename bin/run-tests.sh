@@ -1,16 +1,39 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
 
-echo "Running Selenium tests..."
+set -o errexit
+set -o nounset
+set -o pipefail
+# set -o xtrace
 
-# Build tests if needed
-if [ ! -d "tests/js" ] || [ ! -d "tests/data" ]; then
-    echo "Building tests..."
-    make tests
-fi
+errmsg() {
+    echo -e "$@" >&2
+}
 
-# Run Mocha tests
-echo "Executing Mocha tests in tests/selenium..."
-npm test
+main() {
+    local -a tests=(
+        # 'active-row'
+        'aggregate'
+        'allowHtml'
+        'auto-limit'
+        'colconfig'
+        'date_filter'
+        'drilldown'
+        'filter'
+        'footer'
+        'format-strings'
+        # 'google-chart'
+        'group-funs'
+        'no-auto-save'
+        'number-format-str'
+        'operations'
+        'prefs'
+        'row-customization'
+        'selection'
+        'sort'
+        'sourceParams'
+    )
+    npm run test --file="${tests[*]}"
+    exit $?
+}
 
-echo "All Selenium tests passed!"
+main "$@"

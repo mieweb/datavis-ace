@@ -50,16 +50,13 @@ jobs:
       - name: Generate test data
         run: make tests
 
-      - name: Dump a basic test data
-        run: grep '"datetime1"' < tests/pages/random100.json
-
       - name: Start display
         run: |
           Xvfb :99 -ac -screen 0 1280x1024x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Run tests
-        run: make test
+        run: ./bin/run-tests.sh
         continue-on-error: true
         id: selenium_tests
 
