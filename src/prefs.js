@@ -1228,6 +1228,10 @@ Prefs.prototype.clonePerspective = function (qry, name, configMutator, ok, fail,
 		sendEvent: true
 	});
 
+	if (fail == null || typeof fail !== 'function') {
+		fail = I;
+	}
+
 	// Lookup the perspective to clone.
 
 	if (qry == null) {
