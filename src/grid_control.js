@@ -42,6 +42,8 @@ import {GroupFunWin} from './group_fun_win.js';
  * the source data.
  */
 
+var GRID_CONTROL_FIELD_POOL = {};
+
 // GridControlField {{{1
 
 // Constructor {{{2
@@ -838,6 +840,7 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 
 	self.controlFields.push(cf);
 	self.controlFieldsById[cf.id] = cf;
+	GRID_CONTROL_FIELD_POOL[cf.id] = cf;
 
 	if (self.controlFieldsByField[fieldName] == null) {
 		self.controlFieldsByField[fieldName] = [];
@@ -908,8 +911,10 @@ GridControl.prototype.removeField = function (cf) {
 	// Remove it from the internal data structures.
 
 	self.controlFields = _.without(self.controlFields, cf);
-	self.controlFieldsById[cf.id] = undefined;
 	self.controlFieldsByField[fieldName] = _.without(self.controlFieldsByField[fieldName], cf);
+
+	delete self.controlFieldsById[cf.id];
+	delete GRID_CONTROL_FIELD_POOL[cf.id];
 
 	// Re-enable the option in the dropdown, if necessary.
 
@@ -1184,8 +1189,7 @@ GroupControl.prototype.draw = function (parent) {
 				});
 			}
 		}
-	})
-		._addEventDebugging('drop', 'GROUP');
+	});
 
 	self.ui.root = jQuery('<div>').appendTo(parent);
 	self.ui.title = jQuery('<div>')
@@ -1258,8 +1262,15 @@ GroupControl.prototype.sortableSync = function () {
 
 	self.controlFields = [];
 	_.each(controlFieldIds, function (id) {
-		self.controlFields.push(self.controlFieldsById[id]);
+		self.controlFields.push(GRID_CONTROL_FIELD_POOL[id]);
 	});
+
+	if (self.controlFields.length > 0) {
+		self.ui.clearBtn.show();
+	}
+	else {
+		self.ui.clearBtn.hide();
+	}
 
 	return self.updateView();
 };
@@ -1356,8 +1367,7 @@ PivotControl.prototype.draw = function (parent) {
 				});
 			}
 		}
-	})
-		._addEventDebugging('drop', 'PIVOT');
+	});
 
 	self.ui.root = jQuery('<div>').appendTo(parent);
 	self.ui.title = jQuery('<div>')
@@ -1437,7 +1447,7 @@ PivotControl.prototype.sortableSync = function () {
 
 	self.controlFields = [];
 	_.each(controlFieldIds, function (id) {
-		self.controlFields.push(self.controlFieldsById[id]);
+		self.controlFields.push(GRID_CONTROL_FIELD_POOL[id]);
 	});
 
 	return self.updateView();
@@ -1811,8 +1821,7 @@ FilterControl.prototype.draw = function (parent) {
 
 			self.addField(field, getProp(self.colConfig.get(field), 'displayText'));
 		}
-	})
-		._addEventDebugging('drop', 'FILTER');
+	});
 
 	self.ui.root = jQuery('<div>').appendTo(parent);
 	self.ui.title = jQuery('<div>')
