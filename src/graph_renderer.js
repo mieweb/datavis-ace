@@ -74,8 +74,8 @@ GraphRenderer.prototype.addRedrawHandlers = function () {
 	self.logDebug(self.makeLogTag('addRedrawHandlers') + ' Adding redraw handlers');
 
 	self.view.on('workEnd', function () {
-		self.logDebug(self.makeLogTag('addRedrawHandlers // View.dataUpdated') + ' Redrawing graph because the view has finished doing work');
-		self.draw();
+		self.logDebug(self.makeLogTag('handler:View(workEnd)') + ' Redrawing graph because the view has finished doing work');
+		self.draw(self.graph.devConfig, self.graph.userConfig);
 	}, { who: self });
 };
 
