@@ -18,14 +18,19 @@ import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
 
 // GraphRenderer {{{1
 
-var GraphRenderer = makeSubclass('GraphRenderer', Object, function (graph, elt, view, opts) {
-	var self = this;
+var GraphRenderer = (function () {
+	var instanceId = 0;
 
-	self.graph = graph;
-	self.elt = elt;
-	self.view = view;
-	self.opts = opts;
-});
+	return makeSubclass('GraphRenderer', Object, function (graph, elt, view, opts) {
+		var self = this;
+
+		self.graph = graph;
+		self.elt = elt;
+		self.view = view;
+		self.opts = opts;
+		self._instanceId = instanceId++;
+	});
+})();
 
 mixinEventHandling(GraphRenderer, [
 'draw'
@@ -37,7 +42,7 @@ mixinLogging(GraphRenderer);
 GraphRenderer.prototype.toString = function () {
 	var self = this;
 
-	return '#<GraphRenderer "' + self.graph.id + '">';
+	return '<GraphRenderer #' + self._instanceId + ' id="' + self.graph.id + '">';
 };
 
 // #_validateConfig {{{2
@@ -68,11 +73,19 @@ GraphRenderer.prototype.addRedrawHandlers = function () {
 
 	self.logDebug(self.makeLogTag('addRedrawHandlers') + ' Adding redraw handlers');
 
-	self.view.off('workEnd', self);
 	self.view.on('workEnd', function () {
 		self.logDebug(self.makeLogTag('addRedrawHandlers // View.dataUpdated') + ' Redrawing graph because the view has finished doing work');
 		self.draw();
 	}, { who: self });
+};
+
+// #destroy {{{2
+
+GraphRenderer.prototype.destroy = function () {
+	var self = this;
+
+	self.view.off('workEnd', self);
+	self.elt.children().remove();
 };
 
 // Exports {{{1
