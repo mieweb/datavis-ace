@@ -47,6 +47,21 @@ const autoLimit = (req, res, u) => {
   });
 };
 
+const delayed = (req, res, u) => {
+  var filePath = 'tests/data/random100.json';
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err != null) {
+      res.statusCode = 500;
+      res.end();
+      return;
+    }
+    setTimeout(() => {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(data);
+    }, 5000);
+  });
+};
+
 const testScaffold = () => ({
   name: 'test-scaffold',
   configureServer(server) {
@@ -58,6 +73,8 @@ const testScaffold = () => ({
           return reflectCgi(req, res, u);
         case '/ds/autolimit':
           return autoLimit(req, res, u);
+        case '/source/delayed':
+          return delayed(req, res, u);
         default:
           let p = path.normalize(server.config.root + '/' + u.pathname);
           if (!fs.existsSync(p)) {

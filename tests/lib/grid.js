@@ -34,6 +34,10 @@ class GridUi {
 		return this.driver.findElement(By.id(this.id));
 	}
 
+	get sourceCancelBtn() {
+		return this.driver.findElement(By.css('div.wcdv_grid_titlebar > span.headingInfo > button[title="Cancel"]'));
+	}
+
 	/**
 	 * Locate the button to delete the current perspective.
 	 *
@@ -128,6 +132,10 @@ class GridUi {
 
 	get refreshBtn() {
 		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Refresh"]'));
+	}
+
+	get showHideGridBtn() {
+		return this.driver.findElement(By.css('div.wcdv_titlebar_controls > button[title="Show/Hide Grid"]'));
 	}
 
 	/**

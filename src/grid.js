@@ -1141,7 +1141,10 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 		.append(')')
 		.appendTo(notHeader);
 
-	self.ui.cancelFetchBtn = jQuery('<button>', {'type': 'button'})
+	self.ui.cancelFetchBtn = jQuery('<button>', {
+		'type': 'button',
+		'title': trans('GRID.TITLEBAR.CANCEL')
+	})
 		.css({'margin-left': '0.5em'})
 		.text(trans('GRID.TITLEBAR.CANCEL'))
 		.on('click', function (evt) {

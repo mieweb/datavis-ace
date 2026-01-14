@@ -15,6 +15,7 @@ main() {
         'aggregate'
         'allowHtml'
         'auto-limit'
+        'cancel'
         'colconfig'
         'date_filter'
         'drilldown'
