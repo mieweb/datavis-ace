@@ -265,6 +265,18 @@ class Grid {
 		}, opts.timeout);
 	}
 
+	// #getNumRecords {{{2
+
+	async getNumRecords() {
+		let countSpan = await this.driver.findElement(By.css('div.wcdv_grid_titlebar > span.headingInfo > span:nth-of-type(2)'));
+		let countText = await countSpan.getText();
+		let m = (await countSpan.getText()).match(/(\d+) records/);
+		if (m == null) {
+			throw new Error('Unable to locate "# records" text');
+		}
+		return m[1];
+	}
+
 	// #refresh {{{2
 
 	/**

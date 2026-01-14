@@ -24,6 +24,7 @@ main() {
         'format-strings'
         # 'google-chart'
         'group-funs'
+        'multi-grid'
         'no-auto-save'
         'number-format-str'
         'operations'
