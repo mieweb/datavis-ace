@@ -155,6 +155,18 @@ Use GNU Make for all build operations:
 - **New features**: Create new minor branch off latest stable (e.g., `v3.3` from `v3.2`)
 - **Always run** `make teardown && make setup` when switching branches
 
+## Testing
+
+Testing is done using Mocha to run tests, Selenium to communicate with the browser, and Chai for assertions.
+
+Test pages are located in the `tests/pages` directory. They are split up by whether they primarily test grid features or graph features.
+
+The tests themselves are located in the `tests/selenium` directory.
+
+Tests should use support code located in the `tests/lib` directory wherever possible to avoid duplication. The main points of interest are the Grid class and utility functions.
+
+Tests should be written using modern JavaScript syntax and features.
+
 ## Quick Reference
 
 ### 🪶 All Changes should be considered for Pull Request Philosophy
@@ -166,6 +178,9 @@ Use GNU Make for all build operations:
 * **Direct requests only**: Large refactors or architectural shifts should only occur when explicitly requested.
 
 ### Code Quality Checklist
+
+For DataVis code itself, located in the `src/` directory, ensure the following before submitting a PR:
+
 - [ ] **DRY**: No code duplication - extracted reusable functions?
 - [ ] **KISS**: Simplest solution that works?
 - [ ] **Minimal Changes**: Smallest viable change made for PR?
