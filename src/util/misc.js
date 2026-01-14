@@ -1705,7 +1705,7 @@ export var makeSubclass = function (name, parent, ctor, ptype) {
 		// the current instance as `this`.
 
 		if (parent !== Object) {
-			console.log('[DataVis // Obj // Super] Creating %s#super[\'%s\']', childInst.constructor.name, parent.name);
+			// console.log('[DataVis // Obj // Super] Creating %s#super[\'%s\']', childInst.constructor.name, parent.name);
 			if (childInst.super == null) {
 				childInst.super = {};
 			}
@@ -1755,7 +1755,7 @@ export var makeSuper = function (childInst, parentCls) {
 		, method;
 	for (method in parentCls.prototype) {
 		if (typeof parentCls.prototype[method] === 'function') {
-			console.log('[DataVis // Obj // Super] Binding %s#super[\'%s\'].%s to %s#%s', childInst.constructor.name, parentCls.name, method, parentCls.name, method);
+			// console.log('[DataVis // Obj // Super] Binding %s#super[\'%s\'].%s to %s#%s', childInst.constructor.name, parentCls.name, method, parentCls.name, method);
 			superObj[method] = _.bind(parentCls.prototype[method], childInst);
 		}
 	}
