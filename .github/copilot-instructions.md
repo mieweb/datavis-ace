@@ -167,6 +167,22 @@ Tests should use support code located in the `tests/lib` directory wherever poss
 
 Tests should be written using modern JavaScript syntax and features.
 
+## Committing
+
+If you must make a commit, follow these guidelines:
+
+- The first line should briefly describe the change, and be prefixed with a keyword that describes the type of change:
+  - `Feature:` indicates a new feature
+  - `Improve:` indicates a substantial improvement to an existing feature
+  - `Fix:` indicates a bug fix (put the ticket number at the end in square brackets, like `[#1234]`)
+  - `Doc:` indicates a documentation change
+  - `Test:` indicates a new or changed test
+  - `Dev:` indicates a change for internal developers, such as a library improvement or build process change
+  - `Release:` indicates a release commit (DON'T MAKE THESE COMMITS)
+- Stick to single-line messages whenever possible.
+- The first line should be a complete sentence with correct capitalization and punctuation.
+- Don't use emojis.
+
 ## Quick Reference
 
 ### 🪶 All Changes should be considered for Pull Request Philosophy
