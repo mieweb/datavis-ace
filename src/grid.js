@@ -2237,12 +2237,12 @@ Grid.prototype.setRowMode = function (mode) {
 	var self = this;
 
 	if (['wrapped', 'clipped'].indexOf(mode) < 0) {
-		log.warn('Invalid row mode: ' + mode + '. Using "wrapped" as default.');
+		self.logWarn(self.makeLogTag('setRowMode') + ' Invalid row mode "' + mode + '". Using "wrapped" as default.');
 		mode = 'wrapped';
 	}
 
 	self.defn.table.rowMode = mode;
-	self.debug('ROW_MODE', 'Setting row mode to: %s', mode);
+	self.logDebug(self.makeLogTag('setRowMode') + ' Setting row mode to: %s', mode);
 
 	// Update the CSS class on the grid table container
 	if (self.ui && self.ui.grid) {
