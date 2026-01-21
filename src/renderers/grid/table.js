@@ -657,6 +657,14 @@ GridTable.prototype._addColumnReorderHandler = function (headingTh, field, colIn
 	dragHandle.css('cursor', 'grab');
 	headingTh.addClass('wcdv_reorderable_column');
 
+	// Create the drop indicator line if it doesn't exist yet
+	if (!self.ui.columnDropIndicator) {
+		self.ui.columnDropIndicator = jQuery('<div>', {
+			'class': 'wcdv_column_drop_indicator'
+		});
+		self.root.append(self.ui.columnDropIndicator);
+	}
+
 	// Make the heading draggable using jQuery UI to be compatible with droppable group/pivot controls
 	dragHandle.draggable({
 		classes: {
@@ -678,6 +686,7 @@ GridTable.prototype._addColumnReorderHandler = function (headingTh, field, colIn
 		stop: function (event, ui) {
 			headingTh.removeClass('wcdv_column_dragging');
 			jQuery('.wcdv_column_drop_target').removeClass('wcdv_column_drop_target');
+			self.ui.columnDropIndicator.hide();
 			delete self._dragSourceField;
 			delete self._dragSourceIndex;
 		}
@@ -690,13 +699,34 @@ GridTable.prototype._addColumnReorderHandler = function (headingTh, field, colIn
 		over: function (event, ui) {
 			if (self._dragSourceField && self._dragSourceField !== field) {
 				headingTh.addClass('wcdv_column_drop_target');
+				// Calculate the position for the drop indicator
+				var thOffset = headingTh.offset();
+				var rootOffset = self.root.offset();
+				var tableHeight = self.ui.tbl.outerHeight();
+				var thWidth = headingTh.outerWidth();
+
+				// Imagine columns: A B C. When dragging field "A" from over "C" to over "B", the events
+				// fire in the order of columns, so moving backwards fires B's <over> before C's <out>,
+				// meaning the indicator is moved and immediately hidden. This slight delay ensures the
+				// indicator is always hidden by "C" before being moved and shown by "B".
+
+				window.setTimeout(function () {
+					// Position the indicator at the right edge of the target column
+					self.ui.columnDropIndicator.css({
+						left: (thOffset.left - rootOffset.left + thWidth) + 8 + 'px',
+						top: thOffset.top + 'px',
+						height: tableHeight + 'px'
+					}).show();
+				});
 			}
 		},
 		out: function (event, ui) {
 			headingTh.removeClass('wcdv_column_drop_target');
+			self.ui.columnDropIndicator.hide();
 		},
 		drop: function (event, ui) {
 			headingTh.removeClass('wcdv_column_drop_target');
+			self.ui.columnDropIndicator.hide();
 
 			var sourceField = self._dragSourceField;
 			var sourceIndex = self._dragSourceIndex;
@@ -1617,26 +1647,27 @@ GridTable.prototype.draw = function (root, opts, cont) {
 			thMap: {},
 			tr: {},
 			progress: jQuery('<div>'),
-			contextMenus: jQuery('<div>')
+		contextMenus: jQuery('<div>'),
+		columnDropIndicator: null
+	};
+
+	self._addDrillDownHandler(self.ui.tbl, data);
+	self._addFocusHandler(self.ui.tbl, data);
+
+	if (self.features.block) {
+		var blockConfig = {
+			overlayCSS: {
+				opacity: 0.9,
+				backgroundColor: '#FFF'
+			}
 		};
 
-		self._addDrillDownHandler(self.ui.tbl, data);
-		self._addFocusHandler(self.ui.tbl, data);
-
-		if (self.features.block) {
-			var blockConfig = {
-				overlayCSS: {
-					opacity: 0.9,
-					backgroundColor: '#FFF'
-				}
-			};
-
-			if (self.features.progress && getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
-				blockConfig.message = jQuery('<div>')
-					.append(jQuery('<h1>').text('Working...'))
-					.append(self.ui.progress);
-			}
+		if (self.features.progress && getProp(self.defn, 'table', 'progress', 'method') === 'jQueryUI') {
+			blockConfig.message = jQuery('<div>')
+				.append(jQuery('<h1>').text('Working...'))
+				.append(self.ui.progress);
 		}
+	}
 
 		self.ui.contextMenus.appendTo(document.body);
 

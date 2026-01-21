@@ -822,6 +822,15 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 	box-shadow: inset 0 0 0 2px #0095D6;
 }
 
+.wcdv_column_drop_indicator {
+    position: absolute;
+    width: 3px;
+    border-left: 3px dashed #4CAF50;
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+}
+
 /******************************************************************************/
 /* ROW MODE (CLIPPED vs WRAPPED)                                              */
 /******************************************************************************/
