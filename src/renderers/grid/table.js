@@ -2018,6 +2018,10 @@ GridTable.prototype.setSelection = function (what) {
 	var self = this;
 	var data = self.data.data;
 
+	if (!self.features.rowSelect) {
+		return;
+	}
+
 	if (self.data.isGroup) {
 		data = _.flatten(data);
 	}
