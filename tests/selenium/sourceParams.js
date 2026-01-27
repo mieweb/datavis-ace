@@ -188,7 +188,7 @@ describe('Source Parameters', function () {
 		}
 	};
 
-	describe('using the whole form', function () {
+	describe('using the whole form (with CGI)', function () {
 		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-cgi.html');
 		afters();
 		it('shows initial values of all form elements', async function () {
@@ -209,14 +209,47 @@ describe('Source Parameters', function () {
 		commonTests({toggleCheckbox: false});
 	});
 
-	describe('using form (with CGI, send empty)', function () {
+	describe('using the whole form (with CGI, send empty)', function () {
 		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-cgi.html?send-empty');
 		afters();
 		commonTests({sendEmpty: true, toggleCheckbox: false});
 	});
 
-	describe('using form (with CGI, empty value)', function () {
+	describe('using the whole form (with CGI, empty value)', function () {
 		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-cgi.html?empty-value=[empty-value]');
+		afters();
+		commonTests({emptyValue: '[empty-value]', toggleCheckbox: false});
+	});
+
+	describe('using the whole form (with JSON WHERE)', function () {
+		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-json-where.html');
+		afters();
+		it('shows initial values of all form elements', async function () {
+			let actual = await grid.getPlainData_asArrays();
+			let expected = [
+				['checkbox', 'pepperoni,mushrooms'],
+				['hidden', 'hidden'],
+				['select', 'garlic-parm'],
+				['text', 'test'],
+				['textarea', 'hello frendo'],
+			];
+			assert.deepEqual(actual, expected);
+		});
+
+		// Forms don't use the toggle checkbox, this submission method is meant to work like a regular
+		// HTML form where no value will be sent.
+
+		commonTests({toggleCheckbox: false});
+	});
+
+	describe('using the whole form (with JSON WHERE, send empty)', function () {
+		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-json-where.html?send-empty');
+		afters();
+		commonTests({sendEmpty: true, toggleCheckbox: false});
+	});
+
+	describe('using the whole form (with JSON WHERE, empty value)', function () {
+		befores('http://localhost:3000/tests/pages/grid/sourceParams/form-json-where.html?empty-value=[empty-value]');
 		afters();
 		commonTests({emptyValue: '[empty-value]', toggleCheckbox: false});
 	});
