@@ -57,7 +57,7 @@ At the bare minimum, you need to create three objects:
 
 ## Direct Browser Usage
 
-```html
+``` html
 <!DOCTYPE html>
 <html>
 	<head>
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 ### Package File
 
-```javascript
+``` javascript
 {
   "name": "datavis-example",
   "version": "1.0.0",
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 ### Rollup Config
 
-```javascript
+``` javascript
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import babel from '@rollup/plugin-babel';
@@ -140,7 +140,7 @@ export default {
 
 ### JavaScript File
 
-```javascript
+``` javascript
 import {
   Source,
   ComputedView,
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 ### HTML File
 
-```html
+``` html
 <!DOCTYPE html>
 <html>
 	<head>

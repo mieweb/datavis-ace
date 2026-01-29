@@ -40,7 +40,7 @@ As of DataVis v3.3 you no longer need to compile every time you want to test cha
 
 ??? example "An example page using Vite"
 
-	```html
+	``` html
 	<!DOCTYPE html>
 	<html>
 	  <head>
