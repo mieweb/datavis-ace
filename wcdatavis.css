@@ -761,7 +761,7 @@ tr.wcdv_grid_filterrow th.wcdv_grid_filtercol {
 }
 
 .wcdv_nowrap {
-	white-space: nowrap;
+	white-space: nowrap !important;
 }
 
 /******************************************************************************/
