@@ -38,5 +38,6 @@ export {
   Prefs,
   Perspective,
   Grid,
-  Graph
+  Graph,
+  jQuery
 };
