@@ -1225,9 +1225,10 @@ var TableTool = {};
 		}
 	};
 
-	// Document Ready/Load
-	jq(document).ready(init);
-	jq(window).load(setupDetection);
+	jq(document).ready(function () {
+		init();
+		setupDetection();
+	});
 
 	//define API
 	TableTool.init = init;
