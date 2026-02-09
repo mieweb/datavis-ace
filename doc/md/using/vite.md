@@ -2,6 +2,10 @@
 
 This example shows how to pull in DataVis via NPM dependency, using it from your own JavaScript code with Vite for a development environment or production build.
 
+!!! warning
+
+    Using Vite disables any Svelte components. Our Svelte gantt chart component requires an old version of Svelte, which is incompatible with the Svelte plugin for Vite.
+
 Here is what you’ll need in your `package.json` file.
 
 ```javascript
