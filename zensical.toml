@@ -10,6 +10,11 @@ extra_css = ["style.css"]
 nav = [
   { "Introduction" = "index.md" },
   { "Getting Started" = "getting_started.md" },
+  { "Using It" = [
+    { "Static JS + HTML" = "using/static.md" },
+    { "Building with Rollup" = "using/rollup.md" },
+    { "Using Vite" = "using/vite.md" }
+  ]},
   { "Architectural Overview" = "overview.md" },
   { "Sources" = [
     { "Source Basics" = "source/index.md" },
