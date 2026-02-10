@@ -72,7 +72,7 @@ features = [
   "content.code.copy"
 ]
 
-[project.markdown_extensions.extra]
+[project.markdown_extensions.def_list]
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.pymdownx.highlight]
 [project.markdown_extensions.smarty]
