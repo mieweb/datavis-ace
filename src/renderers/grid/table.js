@@ -591,32 +591,21 @@ GridTable.prototype._addColumnResizeHandle = function (headingTh, field, colInde
 
 		targetWidth -= 9;
 
-		// Now actually resize the column
 		headingTh.css('width', targetWidth + 'px');
 		headingTh.css('min-width', targetWidth + 'px');
 
-		// Also update all cells in this column
-		// var thIndex = headingTh.index();
-		// self.ui.tbody.find('tr').each(function () {
-		// 	var td = jQuery(this).children().eq(thIndex);
-		// 	td.css('width', targetWidth + 'px');
-		// 	td.css('min-width', targetWidth + 'px');
-		// });
-
-		// Save the new width to colConfig
 		var fcc = self.colConfig.get(field);
 		if (fcc != null) {
 			fcc.width = targetWidth;
 		}
 
-		// Fire columnResize event
 		self.fire('columnResize', { field: field, width: targetWidth });
 
-		// Notify the grid about the colConfig update
 		if (self.grid && typeof self.grid.setColConfig === 'function') {
 			self.grid.setColConfig(self.colConfig, {
 				from: 'ui',
-				savePrefs: true
+				savePrefs: true,
+				dontSendEventTo: [self]
 			});
 		}
 	};
@@ -1837,6 +1826,14 @@ GridTable.prototype.draw = function (root, opts, cont) {
 					else if ((data.isGroup || data.isPivot) && getProp(self.defn, 'table', 'whenGroup', 'pinRowvals')) {
 						self.ui.tbl.attr('data-tttype', 'sidescroll');
 						self.ui.tbl.attr('data-ttsidecells', data.groupFields.length);
+					}
+					if (window.TableTool != null) {
+						self.on('columnResize', function () {
+							// Without this, resizing the columns updates the width in the body of the table but
+							// leaves the headers in their original size.
+
+							window.TableTool.update();
+						});
 					}
 					break;
 				case 'css':
