@@ -2514,6 +2514,11 @@ GridTable.prototype.autoResizeColumns = function () {
 		return;
 	}
 	self.autoResizeColsLock.lock();
+	if (getProp(self.features, 'floatingHeader') &&
+			getProp(self.defn, 'table', 'floatingHeader', 'method') === 'tabletool' &&
+			window.TableTool != null) {
+		window.TableTool.disable();
+	}
 	self.logDebug(self.makeLogTag('Auto Resize Cols') + ' Fitting column widths...');
 
 	// Cache the header cells to avoid repeated DOM queries
@@ -2573,6 +2578,11 @@ GridTable.prototype.autoResizeColumns = function () {
 	}
 
 	window.setTimeout(function () {
+		if (getProp(self.features, 'floatingHeader') &&
+				getProp(self.defn, 'table', 'floatingHeader', 'method') === 'tabletool' &&
+				window.TableTool != null) {
+			window.TableTool.enable();
+		}
 		self.autoResizeColsLock.unlock();
 	});
 };

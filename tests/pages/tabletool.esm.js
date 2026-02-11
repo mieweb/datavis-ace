@@ -1253,10 +1253,12 @@ var TableTool = {};
 		//loop through all sticky tables, apply "disabled" class to outermost layer.
 		for (var ast=0; ast<allStickies.length; ast++) {
 			var stickyTable = allStickies[ast];
+			var stickyType = stickyTable.table.attr('data-ttsidecells') ? 'sidescroll' : 'sticky';
 
 			stickyTable.table
-				.clone()
-				.attr('data-ttdisabled', 'stickydisabled')
+				// .clone(true)
+				.attr('data-ttdisabled', stickyType + 'disabled')
+				.css('margin-left', 'inherit')
 				.insertBefore(stickyTable.parent);
 
 			stickyTable.parent.remove();
@@ -1295,7 +1297,8 @@ var TableTool = {};
 
 			tt
 				.attr('data-tttype', tt.data('ttdisabled').replace('disabled', ''))
-				.removeAttr('data-ttdisabled');
+				.removeAttr('data-ttdisabled')
+				.removeAttr('data-ttmanaged');
 		});
 
 		TableTool.update();
