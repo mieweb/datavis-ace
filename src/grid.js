@@ -2032,7 +2032,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	var self = this;
 	var updated = false;
 
-	if (['defn', 'prefs', 'typeInfo', 'ui', 'reset'].indexOf(opts.from) < 0) {
+	if (['defn', 'prefs', 'typeInfo', 'ui', 'reset', 'autoResizeCols'].indexOf(opts.from) < 0) {
 		throw new Error('Call Error: `opts.from` must be one of: [defn, prefs, typeInfo, ui, reset]');
 	}
 
@@ -2147,6 +2147,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 		break;
 	case 'reset':
 	case 'ui':
+	case 'autoResizeCols':
 		setCurrent();
 		break;
 	case 'typeInfo':
@@ -2196,7 +2197,7 @@ Grid.prototype.setColConfig = function (colConfig, opts) {
 	if (opts.sendEvent) {
 		self.fire('colConfigUpdate', {
 			notTo: opts.dontSendEventTo
-		}, self.colConfig, self.initColConfig);
+		}, self.colConfig, self.initColConfig, ['autoResizeCols'].indexOf(opts.from) >= 0 ? false : true);
 	}
 
 	if (opts.redraw) {
