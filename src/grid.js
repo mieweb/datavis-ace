@@ -1320,6 +1320,11 @@ Grid.prototype._addTitleWidgets = function (titlebar, doingServerFilter, id) {
 Grid.prototype.clear = function () {
 	var self = this;
 
+	if (self.resizeObserver != null) {
+		self.resizeObserver.disconnect();
+		self.resizeObserver = null;
+	}
+
 	self.ui.root.children().remove();
 };
 // #redraw {{{2

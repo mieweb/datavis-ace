@@ -2214,6 +2214,11 @@ GridTable.prototype.clear = function () {
 
 	self.view.off('*', self, {silent: true});
 
+	if (self.resizeObserver != null) {
+		self.resizeObserver.disconnect();
+		self.resizeObserver = null;
+	}
+
 	if (self.opts.footer != null && self.opts.stealGridFooter) {
 		self.grid.ui.content.get(0).appendChild(self.opts.footer.get(0));
 	}
@@ -2600,8 +2605,16 @@ GridTable.prototype.makeResponsive = function () {
 		return;
 	}
 
+	var timer;
+
 	self.resizeObserver = new ResizeObserver(function () {
-		self.autoResizeColumns();
+		if (timer != null) {
+			clearTimeout(timer);
+		}
+		timer = setTimeout(function () {
+			timer = null;
+			self.autoResizeColumns();
+		}, 100);
 	});
 
 	self.resizeObserver.observe(self.ui.tbl.get(0));
