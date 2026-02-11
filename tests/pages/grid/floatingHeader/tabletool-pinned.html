@@ -3,14 +3,14 @@
 	<head>
 		<meta charset="utf-8"/>
 		<script type="module" src="/index.js"></script>
-		<script type="module" src="../tabletool.esm.js"></script>
-		<link rel="stylesheet" href="../font-awesome.css"/>
-		<link rel="stylesheet" href="../base.css"/>
-		<link rel="stylesheet" href="../wcdatavis.css"/>
-		<link rel="stylesheet" href="../tabletool.css"/>
+		<script type="module" src="../../tabletool.esm.js"></script>
+		<link rel="stylesheet" href="../../font-awesome.css"/>
+		<link rel="stylesheet" href="../../base.css"/>
+		<link rel="stylesheet" href="../../wcdatavis.css"/>
+		<link rel="stylesheet" href="../../tabletool.css"/>
 		<script type="module">
 import { Source, ComputedView, Grid } from '/index.js';
-import TableTool from '../tabletool.esm.js';
+import TableTool from '../../tabletool.esm.js';
 
 window.TableTool = TableTool;
 document.addEventListener('DOMContentLoaded', function () {
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	var source = new Source({
 		type: 'http',
-		url: '../random100.json'
+		url: '../../random100.json'
 	});
 	var view = new ComputedView(source);
 	new Grid({
@@ -29,17 +29,21 @@ document.addEventListener('DOMContentLoaded', function () {
 			features: {
 				limit: false,
 				rowSelect: true,
-			}
+			},
+			columns: [{
+				field: 'rowId',
+				isPinned: true
+			}, 'country', 'state', 'fruit', 'link', 'int1', 'float1', 'currency1', 'date1', 'datetime1']
 		},
 		source: source,
 	}, {
-		title: 'Test // Grid // TableTool // Fixed Height Container',
+		title: 'Test // Grid // TableTool // Pinned',
 		showControls: true
 	});
 });
 		</script>
 	</head>
 	<body>
-		<div id="grid" style="height: 400px"></div>
+		<div id="grid"></div>
 	</body>
 </html>
