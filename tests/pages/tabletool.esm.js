@@ -871,10 +871,33 @@ var TableTool = {};
 
 					// account for scrollbar when setting sidescroll clone footer height
 					sizeTo(sidescroll.cloneSide.tfoot, sidescroll.stickyTfootRefs, true);
+
+					// Constrain headerTbl's column widths to match the body table layout.
+					// Use table-layout:fixed with a cloned colgroup from the sticky header
+					// (not sizeTo) because col widths in fixed-layout are border-box, while
+					// sizeTo sets content-box CSS width that inflates cells by their padding.
+					sidescroll.headerTbl.css({
+						'table-layout': 'fixed',
+						'width': widthCalc(sidescroll.bodyTbl)
+					});
+					var stickyColgroup = sidescroll.sticky.theadTable.find('colgroup');
+					if (stickyColgroup[0]) {
+						var headerColgroup = sidescroll.headerTbl.find('> colgroup');
+						if (headerColgroup[0]) {
+							headerColgroup.replaceWith(stickyColgroup.clone());
+						} else {
+							sidescroll.headerTbl.prepend(stickyColgroup.clone());
+						}
+					}
 				}
 			} else { // header column wrapper is >= 50% of parent ttsidescroll wrapper
 				resetSideTbl();
 			}
+
+			// DataVis column resize sets position:relative on all tables. Clear it
+			// from the floating header/footer clones so CSS can control their
+			// position (fixed when sticky, absolute when touching tfoot, etc.).
+			add([sidescroll.headerClone, sidescroll.footerClone]).css('position', '');
 		};
 
 		sidescroll.resize = function() {
