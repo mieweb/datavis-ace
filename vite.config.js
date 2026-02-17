@@ -149,6 +149,15 @@ export default defineConfig({
     testScaffold()
   ],
   appType: 'mpa',
+  build: {
+    lib: {
+      entry: 'index.js',
+      formats: ['es', 'iife'],
+      name: 'MIE.WC_DataVis',
+      fileName: 'vite/wcdatavis',
+      cssFileName: 'vite/wcdatavis'
+    }
+  },
   server: {
     port: process.env['PORT']
   }
