@@ -353,10 +353,10 @@ function makeJsonOrderBy(o) {
  * prevents UI freezes while doing so.  However, the overall time required to finish rendering the
  * table goes way up.
  *
- * @property {boolean} [columnResize=true] If true, allow the user to resize columns by dragging
+ * @property {boolean} [columnResize=false] If true, allow the user to resize columns by dragging
  * the column border. Column widths are persisted to the column configuration.
  *
- * @property {boolean} [columnReorder=true] If true, allow the user to reorder columns by dragging
+ * @property {boolean} [columnReorder=false] If true, allow the user to reorder columns by dragging
  * column headers to new positions. Column order is persisted to the column configuration.
  *
  * @property {boolean} [activeRow=false]
@@ -1872,8 +1872,8 @@ Grid.prototype._normalize = function (defn) {
 				floatingHeader: true,
 				block: false,
 				progress: false,
-				columnResize: true,
-				columnReorder: true,
+				columnResize: false,
+				columnReorder: false,
 				activeRow: false
 			},
 			limit: {
