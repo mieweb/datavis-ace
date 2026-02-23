@@ -401,6 +401,12 @@ GridTablePlain.prototype.drawHeader = function (columns, data, typeInfo, opts) {
 			.css(headingThCss)
 			.append(headingThContainer);
 
+		var fti = typeInfo.get(field);
+
+		if (fti != null && fti.type != null) {
+			headingTh.attr('data-wcdv-field-type', fti.type);
+		}
+
 		// In the plain grid table output, the only way to sort is vertically by field.
 
 		self._addSortingToHeader(data, 'vertical', {field: field}, headingThControls.get(0));
