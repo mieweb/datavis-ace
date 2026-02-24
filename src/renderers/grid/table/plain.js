@@ -104,6 +104,37 @@ GridTablePlain.prototype.draw = function (root, opts, cont) {
 	var self = this;
 
 	GridTable.prototype.draw.call(self, root, opts, function () {
+		if (self.features.activeRow || self.features.omnifilter) {
+			self._hasFocus = false;
+			addFocusHandler(root, self._focusEventId, function (isFocused) {
+				self._hasFocus = isFocused;
+			});
+		}
+
+		if (self.features.omnifilter) {
+			jQuery(document).on('keydown.omnifilter-' + self._focusEventId, function (evt) {
+				var avoidElts = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+
+				if (avoidElts.indexOf(evt.target.tagName) >= 0) {
+					return; // These elements don't count for turning on the omnifilter.
+				}
+
+				if (!self._hasFocus) {
+					return;
+				}
+
+				if (evt.key === 'f') {
+					evt.preventDefault();
+					evt.stopPropagation();
+					if (!self.grid.ui.omnifilter.is(':visible')) {
+						self.grid.ui.omnifilterToggle.addClass('wcdv_omnifilter_active');
+						self.grid.ui.omnifilter.show();
+					}
+					self.grid.ui.omnifilterInput.focus();
+				}
+			});
+		}
+
 		if (self.features.activeRow) {
 			if (getProp(self.defn, 'table', 'activeRow', 'slider')) {
 				self.ui.slider = new Slider();
@@ -121,11 +152,6 @@ GridTablePlain.prototype.draw = function (root, opts, cont) {
 				}
 
 				self.setActiveRow(jQuery(this).closest('tr'));
-			});
-
-			self._hasFocus = false;
-			addFocusHandler(root, self._focusEventId, function (isFocused) {
-				self._hasFocus = isFocused;
 			});
 
 			jQuery(document).on('keydown.active-row-' + self._focusEventId, function (evt) {
@@ -1369,6 +1395,7 @@ GridTablePlain.prototype.clear = function () {
 	}
 
 	jQuery(document).off('keydown.active-row-' + self._focusEventId);
+	jQuery(document).off('keydown.omnifilter-' + self._focusEventId);
 	removeFocusHandler(self._focusEventId);
 
 	self.super['GridTable'].clear();
