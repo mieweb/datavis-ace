@@ -97,6 +97,7 @@ export default {
   'GRID.OMNIFILTER.ARIA_LABEL': 'Filter all rows by text',
   'GRID.OMNIFILTER.CLEAR': 'Clear filter',
   'GRID.OMNIFILTER.PLACEHOLDER': 'Type to filter rows...',
+  'GRID.OMNIFILTER.TOGGLE': 'Toggle search filter',
   'GRID.PERSPECTIVE_WIN.TEMP_PERSPECTIVE_WARNING': 'This perspective is temporary; the configuration below does not reflect the current state of any bound prefs modules.',
   'GRID.PERSPECTIVE_WIN.TITLE': 'Perspective',
   'GRID.TABLE.ADD_FILTER_HELP': 'Click to add a filter for "%s"',
