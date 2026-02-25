@@ -950,6 +950,7 @@ GridTablePlain.prototype._paginationApply = function () {
 	var page = self._paginationPage;
 	var startIdx = page * perPage;
 	var endIdx = startIdx + perPage;
+	var usingTableTool = self.features.floatingHeader && getProp(self.defn, 'table', 'floatingHeader', 'method') === 'tabletool' && window.TableTool != null;
 
 	self.ui.tbody.children('tr[data-row-num]').each(function (idx) {
 		if (idx >= startIdx && idx < endIdx) {
@@ -959,6 +960,10 @@ GridTablePlain.prototype._paginationApply = function () {
 			this.style.display = 'none';
 		}
 	});
+
+	if (usingTableTool) {
+		window.TableTool.update();
+	}
 };
 
 // #_paginationGoToPage {{{2
