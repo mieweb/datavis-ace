@@ -36,6 +36,7 @@
     "uglify": "uglifyjs -c -o dist/wcdatavis.min.js dist/wcdatavis.js"
   },
   "dependencies": {
+    "@mieweb/ui": "github:mieweb/ui#0.1.1",
     "bignumber.js": "=9.3.1",
     "block-ui": "=2.70.1",
     "chart.js": "=4.5.1",

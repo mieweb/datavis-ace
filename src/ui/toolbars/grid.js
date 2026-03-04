@@ -12,6 +12,7 @@ import {
 	makeToggleCheckbox,
 	mixinLogging,
 } from '../../util/misc.js';
+import {makeReactButton, updateReactButton} from '../../util/react_bridge.jsx';
 
 import {ToolbarSection} from '../toolbar.js';
 import {PrefsBackendTemporary} from '../../prefs_backend.js';
@@ -49,25 +50,26 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 	// re-enabled if we switch grid tables and come back - as "limit" feature will be reset to its
 	// default value).
 
-	jQuery('<button>', {'type': 'button'})
-		.on('click', function (evt) {
+	makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.SHOW_ALL_ROWS'),
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.renderer.updateFeatures({
 				'block': true,
 				'progress': true,
 				'limit': false
 			});
-		})
-		.text(trans('GRID_TOOLBAR.PLAIN.SHOW_ALL_ROWS'))
-		.appendTo(grid.ui.limit_div)
-	;
+		}
+	}).appendTo(grid.ui.limit_div);
 
-	self.ui.columnConfig = jQuery('<button>', {
-		'type': 'button',
-		'title': trans('GRID_TOOLBAR.PLAIN.COLUMNS')
-	})
-		.append(fontAwesome('fa-columns'))
-		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))
-		.on('click', function (evt) {
+	self.ui.columnConfig = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.COLUMNS'),
+		icon: 'fa-columns',
+		title: trans('GRID_TOOLBAR.PLAIN.COLUMNS'),
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.colConfigWin.show(grid.ui.controls, function (colConfig, opts) {
 				if (opts.clearRenderCache) {
 					grid.clearRenderCache(opts.clearRenderCache);
@@ -76,20 +78,18 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 					from: 'ui'
 				});
 			});
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 
-	self.ui.TemplatesEditor = jQuery('<button>', {
-		'type': 'button'
-	})
-		.append(fontAwesome('fa-pencil'))
-		.append(trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'))
-		.on('click', function (evt) {
+	self.ui.TemplatesEditor = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'),
+		icon: 'fa-pencil',
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.TemplatesEditor.show();
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 
 	// Row Mode toggle (Clipped vs Wrapped)
 	self.ui.rowMode = makeRadioButtons(
@@ -107,13 +107,13 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 		, self.ui.root
 	);
 
-	self.ui.autoResizeColumns = jQuery('<button>', {
-		'type': 'button',
-		'title': trans('GRID_TOOLBAR.PLAIN.AUTO_RESIZE_COLUMNS')
-	})
-		.append(fontAwesome('fa-arrows-h'))
-		.append(trans('GRID_TOOLBAR.PLAIN.AUTO_RESIZE_COLUMNS'))
-		.on('click', function (evt) {
+	self.ui.autoResizeColumns = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.AUTO_RESIZE_COLUMNS'),
+		icon: 'fa-arrows-h',
+		title: trans('GRID_TOOLBAR.PLAIN.AUTO_RESIZE_COLUMNS'),
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			var colConfig = grid.colConfig.clone();
 			colConfig.each(function (fcc) {
 				delete fcc.width;
@@ -122,9 +122,8 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 			if (grid.renderer.autoResizeColumns != null) {
 				grid.renderer.autoResizeColumns();
 			}
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 });
 
 // #update {{{2
@@ -176,13 +175,13 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 		case 'summary':
 			self.ui.showTotalRow.prop('disabled', false);
 			self.ui.pinRowVals.prop('disabled', false);
-			self.ui.columnConfig.prop('disabled', true);
+			updateReactButton(self.ui.columnConfig, {disabled: true});
 			self.ui.showExpandedGroups.prop('disabled', true);
 			break;
 		case 'detail':
 			self.ui.showTotalRow.prop('disabled', true);
 			self.ui.pinRowVals.prop('disabled', true);
-			self.ui.columnConfig.prop('disabled', false);
+			updateReactButton(self.ui.columnConfig, {disabled: false});
 			self.ui.showExpandedGroups.prop('disabled', false);
 			break;
 		}
@@ -253,31 +252,29 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 
 	//make a toggle for expanded groups
 
-	self.ui.columnConfig = jQuery('<button>', {
-		'type': 'button'
-	})
-		.append(fontAwesome('fa-columns'))
-		.append(trans('GRID_TOOLBAR.PLAIN.COLUMNS'))
-		.on('click', function (evt) {
+	self.ui.columnConfig = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.COLUMNS'),
+		icon: 'fa-columns',
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.colConfigWin.show(grid.ui.controls, function (colConfig) {
 				grid.setColConfig(colConfig, {
 					from: 'ui'
 				});
 			});
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 
-	self.ui.TemplatesEditor = jQuery('<button>', {
-		'type': 'button'
-	})
-		.append(fontAwesome('fa-pencil'))
-		.append(trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'))
-		.on('click', function (evt) {
+	self.ui.TemplatesEditor = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'),
+		icon: 'fa-pencil',
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.TemplatesEditor.show();
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 
 	enableDisable(grid.defn.table.groupMode);
 });
@@ -370,16 +367,15 @@ var PivotToolbar = makeSubclass('PivotToolbar', ToolbarSection, function (grid) 
 		}
 	);
 
-	self.ui.TemplatesEditor = jQuery('<button>', {
-		'type': 'button'
-	})
-		.append(fontAwesome('fa-pencil'))
-		.append(trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'))
-		.on('click', function (evt) {
+	self.ui.TemplatesEditor = makeReactButton({
+		text: trans('GRID_TOOLBAR.PLAIN.TEMPLATES_EDITOR'),
+		icon: 'fa-pencil',
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function (evt) {
 			grid.TemplatesEditor.show();
-		})
-		.appendTo(self.ui.root)
-	;
+		}
+	}).appendTo(self.ui.root);
 });
 
 // #update {{{2
@@ -769,10 +765,13 @@ var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (
 		.appendTo(self.ui.root)
 	;
 
-	var configBtn = jQuery('<button>', {'type': 'button', 'title': trans('GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS')})
-		.append(fontAwesome('fa-table'))
-		.append(trans('GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS'))
-		.on('click', function () {
+	var configBtn = makeReactButton({
+		text: trans('GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS'),
+		icon: 'fa-table',
+		title: trans('GRID_TOOLBAR.RENDERER.DISPLAY_OPTIONS'),
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function () {
 			var gridTableOptsWin = new GridTableOptsWin(grid.renderer);
 			gridTableOptsWin.show(function (newOpts) {
 				if (grid.renderer.canRender('plain')) {
@@ -786,12 +785,11 @@ var RendererToolbar = makeSubclass('RendererToolbar', ToolbarSection, function (
 				}
 				grid.redraw();
 			});
-		})
-		.appendTo(div)
-	;
+		}
+	}).appendTo(div);
 
 	grid.on('renderEnd', function () {
-		configBtn.prop('disabled', grid.renderer.canRender('plain'));
+		updateReactButton(configBtn, {disabled: grid.renderer.canRender('plain')});
 	});
 });
 
@@ -816,24 +814,18 @@ var ComputedViewToolbar = makeSubclass('ComputedViewToolbar', ToolbarSection, fu
 	// This button creates a MirageView from the current view, and switches my grid's view to the new
 	// MirageView.  If an error occurs, it should abort and leave things the way they are.
 
-	self.ui.storeMirageBtn = jQuery('<button>', {'type': 'button', 'title': trans('GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA')})
-		.append(fontAwesome('fa-save'))
-		.append(trans('GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA'))
-		.on('click', function () {
+	self.ui.storeMirageBtn = makeReactButton({
+		text: trans('GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA'),
+		icon: 'fa-save',
+		title: trans('GRID_TOOLBAR.MIRAGE.STORE_DISPLAYED_DATA'),
+		variant: 'secondary',
+		size: 'sm',
+		onClick: function () {
 			var perspectiveName = prompt(trans('GRID_TOOLBAR.PREFS.NEW_PERSPECTIVE.PROMPT'), grid.prefs.currentPerspective.name);
 			if (perspectiveName != null) {
 				grid.mirageView.initFromView(grid.view.prefs, grid.view, grid.view.source, function () {
-					// XXX Clone the new perspective, redraw the grid, then switch to the mirage and save it?
-					// Or make the mirage first and lie to it about the perspective name, then clone it?
 					grid.mirageView.setPerspectiveName(perspectiveName);
 					grid.mirageView.save(function () {
-						// FIXME Needs to be a better way of doing this.  Either reuse the existing mirageView
-						// or provide an API to switch the target of a prefs module.
-						// grid.prefs.modules.mirageView.target = grid.mirageView;
-
-						// Cloning the current perspective will cause it to be added and switched to, which
-						// causes the grid to change to the mirage view we just made, and redraw.
-
 						grid.prefs.clonePerspective(null, perspectiveName, function (config) {
 							config.mirageView = deepCopy(config.computedView);
 							config.isMirage = true;
@@ -852,9 +844,8 @@ var ComputedViewToolbar = makeSubclass('ComputedViewToolbar', ToolbarSection, fu
 					self.logError(self.makeLogTag() + ' Failed to initialize mirage view: ' + msg);
 				});
 			}
-		})
-		.appendTo(div)
-	;
+		}
+	}).appendTo(div);
 
 	// }}}2
 
