@@ -13,7 +13,6 @@ import {
 	getProp,
 	getPropDef,
 	I,
-	makeRadioButtons,
 	makeSubclass,
 	mixinEventHandling,
 	mixinLogging,

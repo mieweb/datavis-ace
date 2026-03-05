@@ -8,7 +8,6 @@ import {
 	deepCopy,
 	fontAwesome,
 	getProp,
-	makeRadioButtons,
 	makeSubclass,
 	mixinLogging,
 	setProp,
@@ -17,6 +16,7 @@ import {
 import {
 	makeReactButton, updateReactButton,
 	makeReactCheckbox, updateReactCheckbox,
+	makeReactRadioButtons, updateReactRadioButtons,
 } from '../../util/react_bridge.jsx';
 
 import {ToolbarSection} from '../toolbar.js';
@@ -98,20 +98,20 @@ var PlainToolbar = makeSubclass('PlainToolbar', ToolbarSection, function (grid) 
 	}).appendTo(self.ui.root);
 
 	// Row Mode toggle (Clipped vs Wrapped)
-	self.ui.rowMode = makeRadioButtons(
-		grid.defn
-		, ['table', 'rowMode']
-		, 'wrapped'
-		, null
-		, 'rowMode'
-		, [{label: trans('GRID_TOOLBAR.PLAIN.ROW_MODE.WRAPPED'), value: 'wrapped'}
-			, {label: trans('GRID_TOOLBAR.PLAIN.ROW_MODE.CLIPPED'), value: 'clipped'}]
-		, trans('GRID_TOOLBAR.PLAIN.ROW_MODE')
-		, function (selected) {
+	setPropDef('wrapped', grid.defn, ['table', 'rowMode']);
+	self.ui.rowMode = makeReactRadioButtons({
+		name: 'rowMode',
+		value: getProp(grid.defn, ['table', 'rowMode']),
+		size: 'sm',
+		values: [
+			{label: trans('GRID_TOOLBAR.PLAIN.ROW_MODE.WRAPPED'), value: 'wrapped'},
+			{label: trans('GRID_TOOLBAR.PLAIN.ROW_MODE.CLIPPED'), value: 'clipped'}
+		],
+		onValueChange: function (selected) {
+			setProp(selected, grid.defn, ['table', 'rowMode']);
 			grid.setRowMode(selected);
 		}
-		, self.ui.root
-	);
+	}).appendTo(self.ui.root);
 
 	self.ui.autoResizeColumns = makeReactButton({
 		text: trans('GRID_TOOLBAR.PLAIN.AUTO_RESIZE_COLUMNS'),
@@ -195,21 +195,21 @@ var GroupToolbar = makeSubclass('GroupToolbar', ToolbarSection, function (grid) 
 
 	// Create radio buttons to switch between summary and detail group grid tables.
 
-	self.ui.groupMode = makeRadioButtons(
-		grid.defn
-		, ['table', 'groupMode']
-		, 'detail'
-		, null
-		, 'groupOutput'
-		, [{label: trans('GRID_TOOLBAR.GROUP.MODE.SUMMARY'), value: 'summary'}
-			, {label: trans('GRID_TOOLBAR.GROUP.MODE.DETAIL'), value: 'detail'}]
-		, null
-		, function (selected) {
+	setPropDef('detail', grid.defn, ['table', 'groupMode']);
+	self.ui.groupMode = makeReactRadioButtons({
+		name: 'groupOutput',
+		value: getProp(grid.defn, ['table', 'groupMode']),
+		size: 'sm',
+		values: [
+			{label: trans('GRID_TOOLBAR.GROUP.MODE.SUMMARY'), value: 'summary'},
+			{label: trans('GRID_TOOLBAR.GROUP.MODE.DETAIL'), value: 'detail'}
+		],
+		onValueChange: function (selected) {
+			setProp(selected, grid.defn, ['table', 'groupMode']);
 			enableDisable(selected);
 			grid.redraw();
 		}
-		, self.ui.root
-	);
+	}).appendTo(self.ui.root);
 
 	setPropDef(true, grid.defn, ['table', 'whenGroup', 'showTotalRow']);
 	self.ui.showTotalRow = makeReactCheckbox({

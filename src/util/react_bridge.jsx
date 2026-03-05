@@ -9,6 +9,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from '@mieweb/ui/components/Button';
 import { Checkbox } from '@mieweb/ui/components/Checkbox';
+import { RadioGroup, Radio } from '@mieweb/ui/components/Radio';
 import '@mieweb/ui/styles.css';
 import jQuery from 'jquery';
 
@@ -224,7 +225,131 @@ function updateReactCheckbox($el, newOpts) {
 	renderCheckbox(reactRoot, opts, checked);
 }
 
+/**
+ * Creates a @mieweb/ui RadioGroup rendered into a jQuery-wrapped container
+ * element.
+ *
+ * The returned jQuery element can be appended to a toolbar the same way as
+ * any jQuery element.  Call `updateReactRadioButtons` to change props later
+ * (e.g. disabled state).
+ *
+ * @param {object} opts
+ * @param {string}   [opts.name]        Name attribute for the radio group.
+ * @param {string}   [opts.value]       Currently selected value.
+ * @param {string}   [opts.label]       Group label text.
+ * @param {boolean}  [opts.disabled]    Whether all radios are disabled.
+ * @param {string}   [opts.size]        Radio size: 'sm', 'md', 'lg'.
+ *                                      Defaults to 'sm'.
+ * @param {string}   [opts.orientation]  'horizontal' or 'vertical'.
+ *                                      Defaults to 'horizontal'.
+ * @param {Array}    opts.values        Array of {label, value} objects.
+ * @param {function} [opts.onValueChange] Called with the newly selected value.
+ * @returns {jQuery} jQuery-wrapped container element.
+ */
+function makeReactRadioButtons(opts) {
+	var container = document.createElement('span');
+	container.style.display = 'inline-block';
+	container.style.verticalAlign = 'middle';
+
+	var reactRoot = createRoot(container);
+
+	var currentValue = opts.value != null ? opts.value : '';
+
+	function renderRadio(root, currentOpts, selectedValue) {
+		var children = (currentOpts.values || []).map(function (v) {
+			return React.createElement(Radio, {
+				key: v.value,
+				value: v.value,
+				label: v.label
+			});
+		});
+
+		root.render(
+			React.createElement(RadioGroup, {
+				name: currentOpts.name || undefined,
+				value: selectedValue,
+				label: currentOpts.label || undefined,
+				disabled: currentOpts.disabled || false,
+				size: currentOpts.size || 'sm',
+				orientation: currentOpts.orientation || 'horizontal',
+				onValueChange: function (newValue) {
+					var $el = jQuery(container);
+					$el.data('_reactRadioValue', newValue);
+					renderRadio(root, $el.data('_reactOpts'), newValue);
+					if (typeof currentOpts.onValueChange === 'function') {
+						currentOpts.onValueChange(newValue);
+					}
+				}
+			}, children)
+		);
+	}
+
+	renderRadio(reactRoot, opts, currentValue);
+
+	var $el = jQuery(container);
+	$el.data('_reactRoot', reactRoot);
+	$el.data('_reactOpts', opts);
+	$el.data('_reactRadioValue', currentValue);
+
+	return $el;
+}
+
+/**
+ * Re-renders a React radio group previously created by
+ * `makeReactRadioButtons` with updated props.  Does not change the selected
+ * value unless `newOpts.value` is explicitly provided.
+ *
+ * @param {jQuery}  $el      The jQuery element returned by
+ *                            `makeReactRadioButtons`.
+ * @param {object}  newOpts  Partial set of options to merge.
+ */
+function updateReactRadioButtons($el, newOpts) {
+	var reactRoot = $el.data('_reactRoot');
+	if (reactRoot == null) {
+		return;
+	}
+
+	var opts = jQuery.extend({}, $el.data('_reactOpts'), newOpts);
+	$el.data('_reactOpts', opts);
+
+	var selectedValue = newOpts.value != null ? newOpts.value : $el.data('_reactRadioValue');
+	$el.data('_reactRadioValue', selectedValue);
+
+	var container = $el[0];
+
+	function renderRadio(root, currentOpts, val) {
+		var children = (currentOpts.values || []).map(function (v) {
+			return React.createElement(Radio, {
+				key: v.value,
+				value: v.value,
+				label: v.label
+			});
+		});
+
+		root.render(
+			React.createElement(RadioGroup, {
+				name: currentOpts.name || undefined,
+				value: val,
+				label: currentOpts.label || undefined,
+				disabled: currentOpts.disabled || false,
+				size: currentOpts.size || 'sm',
+				orientation: currentOpts.orientation || 'horizontal',
+				onValueChange: function (newValue) {
+					$el.data('_reactRadioValue', newValue);
+					renderRadio(root, $el.data('_reactOpts'), newValue);
+					if (typeof currentOpts.onValueChange === 'function') {
+						currentOpts.onValueChange(newValue);
+					}
+				}
+			}, children)
+		);
+	}
+
+	renderRadio(reactRoot, opts, selectedValue);
+}
+
 export {
 	makeReactButton, updateReactButton, unmountReactButton,
-	makeReactCheckbox, updateReactCheckbox
+	makeReactCheckbox, updateReactCheckbox,
+	makeReactRadioButtons, updateReactRadioButtons
 };
