@@ -16,6 +16,10 @@ import {
 	mixinLogging,
 	objFromArray,
 } from './util/misc.js';
+import {
+	makeReactButton,
+	makeReactIconToggle,
+} from './util/react_bridge.jsx';
 
 import './util/jquery.js';
 import {AGGREGATE_REGISTRY} from './aggregates.js';
@@ -129,14 +133,16 @@ GridControlField.prototype.draw = function () {
 	var self = this;
 	var label = self.displayText || (self.colConfig && self.colConfig.displayText) || self.field.field;
 
-	self.ui.removeButton = jQuery('<button>', {'type': 'button'})
-		.append(fontAwesome('fa-minus-square'))
-		.attr('title', trans('GRID_CONTROL.FIELD.REMOVE'))
-		.addClass('wcdv_icon_button wcdv_remove wcdv_text-primary')
-		.on('click', function () {
+	self.ui.removeButton = makeReactButton({
+		icon: 'fa-minus-square',
+		title: trans('GRID_CONTROL.FIELD.REMOVE'),
+		variant: 'ghost',
+		size: 'icon',
+		className: 'wcdv_icon_button wcdv_remove wcdv_text-primary',
+		onClick: function () {
 			self.control.removeField(self);
-		})
-	;
+		}
+	});
 
 	self.ui.fieldLabel = jQuery('<span>', {
 		'class': 'wcdv_field_name',
@@ -256,18 +262,17 @@ FunGridControlField.prototype.draw = function () {
 
 		self.ui.groupFunWin = new GroupFunWin(trans('GRID.GROUP_FUN.DIALOG.TITLE', self.field.field), applicableGroupFuns);
 
-		self.ui.groupFunWinBtn = jQuery('<button>', {
-			'type': 'button',
-			'data-wcdv-role': 'set-group-fun',
-			title: trans('GRID_CONTROL.FIELD.SHOW_FUNCTIONS')
-		})
-			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
-			.on('click', function () {
+		self.ui.groupFunWinBtn = makeReactButton({
+			icon: 'fa-bolt',
+			title: trans('GRID_CONTROL.FIELD.SHOW_FUNCTIONS'),
+			variant: 'ghost',
+			size: 'icon',
+			className: 'wcdv_icon_button wcdv_button_left wcdv_text-primary',
+			attrs: { 'data-wcdv-role': 'set-group-fun' },
+			onClick: function () {
 				self.showFunWin();
-			})
-			.append(fontAwesome('fa-bolt'))
-			.appendTo(self.ui.root)
-		;
+			}
+		}).appendTo(self.ui.root);
 
 		if (self.field.fun != null) {
 			var gf = GROUP_FUNCTION_REGISTRY.get(self.field.fun);
@@ -453,17 +458,16 @@ AggregateControlField.prototype.draw = function () {
 	});
 
 	if (aggDefn.prototype.options != null) {
-		jQuery('<button>', {
-			'type': 'button',
-			title: trans('GRID_CONTROL.AGGREGATE.EDIT_OPTIONS')
-		})
-			.addClass('wcdv_icon_button wcdv_button_left wcdv_text-primary')
-			.on('click', function () {
+		makeReactButton({
+			icon: 'fa-pencil-square-o',
+			title: trans('GRID_CONTROL.AGGREGATE.EDIT_OPTIONS'),
+			variant: 'ghost',
+			size: 'icon',
+			className: 'wcdv_icon_button wcdv_button_left wcdv_text-primary',
+			onClick: function () {
 				self.ui.optionsDialog.dialog('open');
-			})
-			.append(fontAwesome('fa-pencil-square-o'))
-			.appendTo(self.ui.root)
-		;
+			}
+		}).appendTo(self.ui.root);
 		self._makeOptionsDialog(aggDefn);
 	}
 
@@ -483,16 +487,15 @@ AggregateControlField.prototype.draw = function () {
 	// 	;
 	// }
 
-	self.ui.isHiddenCheckbox = jQuery('<input>', {
-		'type': 'checkbox'
-	})
-		.prop('checked', getProp(self.opts, 'isHidden'))
-		.on('change', function () {
+	self.ui.isHiddenCheckbox = makeReactIconToggle({
+		onIcon: 'fa-eye-slash wcdv_text-primary',
+		offIcon: 'fa-eye wcdv_text-primary',
+		checked: getProp(self.opts, 'isHidden'),
+		onChange: function () {
 			self.control.updateView();
-		})
-		.appendTo(self.ui.root)
-		._makeIconCheckbox('fa-eye-slash wcdv_text-primary', 'fa-eye wcdv_text-primary')
-	;
+		}
+	});
+	self.ui.isHiddenCheckbox.appendTo(self.ui.root);
 
 	return self.ui.root;
 };
@@ -537,33 +540,31 @@ AggregateControlField.prototype._makeOptionsDialog = function (aggDefn) {
 		.addClass('wcdv_button_bar')
 		.appendTo(self.ui.optionsDiv);
 
-	jQuery('<button>', {
-		'type': 'button',
-		'class': '',
-		'title': trans('DIALOG.OK'),
-		'data-role': 'ok'
-	})
-		.append(fontAwesome('fa-check'))
-		.append(trans('DIALOG.OK'))
-		.on('click', function () {
+	makeReactButton({
+		icon: 'fa-check',
+		text: trans('DIALOG.OK'),
+		title: trans('DIALOG.OK'),
+		variant: 'secondary',
+		size: 'sm',
+		attrs: { 'data-role': 'ok' },
+		onClick: function () {
 			self.aggFunOpts = opts;
 			self.control.updateView();
 			self.ui.optionsDialog.dialog('close');
-		})
-		.appendTo(buttonBar);
+		}
+	}).appendTo(buttonBar);
 
-	jQuery('<button>', {
-		'type': 'button',
-		'class': '',
-		'title': trans('DIALOG.CANCEL'),
-		'data-role': 'cancel'
-	})
-		.append(fontAwesome('fa-ban'))
-		.append(trans('DIALOG.CANCEL'))
-		.on('click', function () {
+	makeReactButton({
+		icon: 'fa-ban',
+		text: trans('DIALOG.CANCEL'),
+		title: trans('DIALOG.CANCEL'),
+		variant: 'secondary',
+		size: 'sm',
+		attrs: { 'data-role': 'cancel' },
+		onClick: function () {
 			self.ui.optionsDialog.dialog('close');
-		})
-		.appendTo(buttonBar);
+		}
+	}).appendTo(buttonBar);
 
 	self.ui.optionsDialog = self.ui.optionsDiv.dialog({
 		autoOpen: false,
@@ -764,15 +765,16 @@ mixinEventHandling(GridControl, [
 GridControl.prototype.makeClearButton = function (target) {
 	var self = this;
 
-	return jQuery('<button>')
-		.addClass('wcdv_icon_button wcdv_text-primary wcdv_control_clear_button')
-		.append(fontAwesome('fa-ban'))
-		.hide()
-		.on('click', function () {
-			jQuery(this).hide();
+	return makeReactButton({
+		icon: 'fa-ban',
+		variant: 'ghost',
+		size: 'icon',
+		className: 'wcdv_icon_button wcdv_text-primary wcdv_control_clear_button',
+		onClick: function () {
+			self.ui.clearBtn.hide();
 			self.clear();
-		})
-		.appendTo(target);
+		}
+	}).hide().appendTo(target);
 };
 
 // #addField {{{2

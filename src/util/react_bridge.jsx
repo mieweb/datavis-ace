@@ -46,6 +46,9 @@ function FAIcon(props) {
  *                                  Defaults to 'sm'.
  * @param {boolean}  [opts.disabled] Whether the button is disabled.
  * @param {function} [opts.onClick] Click event handler.
+ * @param {string}   [opts.className] Additional CSS classes for the button.
+ * @param {object}   [opts.attrs]   Extra HTML attributes to spread onto the
+ *                                  button element (e.g. data-* attributes).
  * @returns {jQuery} jQuery-wrapped container element.
  */
 function makeReactButton(opts) {
@@ -59,15 +62,18 @@ function makeReactButton(opts) {
 		? React.createElement(FAIcon, { icon: opts.icon })
 		: null;
 
+	var buttonProps = jQuery.extend({
+		variant: opts.variant || 'secondary',
+		size: opts.size || 'sm',
+		title: opts.title || undefined,
+		onClick: opts.onClick || undefined,
+		leftIcon: iconElement,
+		disabled: opts.disabled || false,
+		className: opts.className || undefined
+	}, opts.attrs || {});
+
 	reactRoot.render(
-		React.createElement(Button, {
-			variant: opts.variant || 'secondary',
-			size: opts.size || 'sm',
-			title: opts.title || undefined,
-			onClick: opts.onClick || undefined,
-			leftIcon: iconElement,
-			disabled: opts.disabled || false
-		}, opts.text)
+		React.createElement(Button, buttonProps, opts.text)
 	);
 
 	var $el = jQuery(container);
@@ -98,15 +104,18 @@ function updateReactButton($el, newOpts) {
 		? React.createElement(FAIcon, { icon: opts.icon })
 		: null;
 
+	var buttonProps = jQuery.extend({
+		variant: opts.variant || 'secondary',
+		size: opts.size || 'sm',
+		title: opts.title || undefined,
+		onClick: opts.onClick || undefined,
+		leftIcon: iconElement,
+		disabled: opts.disabled || false,
+		className: opts.className || undefined
+	}, opts.attrs || {});
+
 	reactRoot.render(
-		React.createElement(Button, {
-			variant: opts.variant || 'secondary',
-			size: opts.size || 'sm',
-			title: opts.title || undefined,
-			onClick: opts.onClick || undefined,
-			leftIcon: iconElement,
-			disabled: opts.disabled || false
-		}, opts.text)
+		React.createElement(Button, buttonProps, opts.text)
 	);
 }
 
@@ -348,8 +357,127 @@ function updateReactRadioButtons($el, newOpts) {
 	renderRadio(reactRoot, opts, selectedValue);
 }
 
+/**
+ * Creates a toggle button rendered as a @mieweb/ui Button that switches
+ * between two Font Awesome icons based on its checked state.  Designed as a
+ * React replacement for the jQuery `_makeIconCheckbox` pattern.
+ *
+ * The returned jQuery element exposes `_isChecked()` for backward
+ * compatibility with code that reads the toggle state.
+ *
+ * @param {object} opts
+ * @param {string}   opts.onIcon     FA icon class shown when checked.
+ * @param {string}   opts.offIcon    FA icon class shown when unchecked.
+ * @param {boolean}  [opts.checked]  Initial checked state.  Defaults to false.
+ * @param {boolean}  [opts.disabled] Whether the toggle is disabled.
+ * @param {string}   [opts.title]    Tooltip text.
+ * @param {string}   [opts.variant]  Button variant.  Defaults to 'ghost'.
+ * @param {string}   [opts.size]     Button size.  Defaults to 'icon'.
+ * @param {string}   [opts.className] Additional CSS classes for the button.
+ * @param {object}   [opts.attrs]    Extra HTML attributes.
+ * @param {function} [opts.onChange]  Called with (isChecked) after toggle.
+ * @returns {jQuery} jQuery-wrapped container element.
+ */
+function makeReactIconToggle(opts) {
+	var container = document.createElement('span');
+	container.style.display = 'inline-block';
+	container.style.verticalAlign = 'middle';
+
+	var reactRoot = createRoot(container);
+	var checked = opts.checked != null ? opts.checked : false;
+
+	function renderToggle(root, currentOpts, currentChecked) {
+		var iconClass = currentChecked ? currentOpts.onIcon : currentOpts.offIcon;
+		var iconElement = React.createElement(FAIcon, { icon: iconClass });
+
+		var buttonProps = jQuery.extend({
+			variant: currentOpts.variant || 'ghost',
+			size: currentOpts.size || 'icon',
+			title: currentOpts.title || undefined,
+			disabled: currentOpts.disabled || false,
+			className: currentOpts.className || undefined,
+			leftIcon: iconElement,
+			'aria-pressed': currentChecked,
+			onClick: function () {
+				var newChecked = !currentChecked;
+				var $el = jQuery(container);
+				$el.data('_reactToggleChecked', newChecked);
+				renderToggle(root, $el.data('_reactOpts'), newChecked);
+				if (typeof currentOpts.onChange === 'function') {
+					currentOpts.onChange(newChecked);
+				}
+			}
+		}, currentOpts.attrs || {});
+
+		root.render(React.createElement(Button, buttonProps));
+	}
+
+	renderToggle(reactRoot, opts, checked);
+
+	var $el = jQuery(container);
+	$el.data('_reactRoot', reactRoot);
+	$el.data('_reactOpts', opts);
+	$el.data('_reactToggleChecked', checked);
+
+	// Backward-compatible API so callers can read the toggle state.
+	$el._isChecked = function () {
+		return $el.data('_reactToggleChecked');
+	};
+
+	return $el;
+}
+
+/**
+ * Re-renders a React icon toggle previously created by
+ * `makeReactIconToggle` with updated props.
+ *
+ * @param {jQuery}  $el      The jQuery element returned by
+ *                            `makeReactIconToggle`.
+ * @param {object}  newOpts  Partial set of options to merge.
+ */
+function updateReactIconToggle($el, newOpts) {
+	var reactRoot = $el.data('_reactRoot');
+	if (reactRoot == null) {
+		return;
+	}
+
+	var opts = jQuery.extend({}, $el.data('_reactOpts'), newOpts);
+	$el.data('_reactOpts', opts);
+
+	var checked = newOpts.checked != null ? newOpts.checked : $el.data('_reactToggleChecked');
+	$el.data('_reactToggleChecked', checked);
+
+	function renderToggle(root, currentOpts, currentChecked) {
+		var iconClass = currentChecked ? currentOpts.onIcon : currentOpts.offIcon;
+		var iconElement = React.createElement(FAIcon, { icon: iconClass });
+
+		var buttonProps = jQuery.extend({
+			variant: currentOpts.variant || 'ghost',
+			size: currentOpts.size || 'icon',
+			title: currentOpts.title || undefined,
+			disabled: currentOpts.disabled || false,
+			className: currentOpts.className || undefined,
+			leftIcon: iconElement,
+			'aria-pressed': currentChecked,
+			onClick: function () {
+				var newChecked = !currentChecked;
+				$el.data('_reactToggleChecked', newChecked);
+				renderToggle(root, $el.data('_reactOpts'), newChecked);
+				if (typeof currentOpts.onChange === 'function') {
+					currentOpts.onChange(newChecked);
+				}
+			}
+		}, currentOpts.attrs || {});
+
+		root.render(React.createElement(Button, buttonProps));
+	}
+
+	renderToggle(reactRoot, opts, checked);
+}
+
 export {
 	makeReactButton, updateReactButton, unmountReactButton,
 	makeReactCheckbox, updateReactCheckbox,
-	makeReactRadioButtons, updateReactRadioButtons
+	makeReactRadioButtons, updateReactRadioButtons,
+	makeReactIconToggle, updateReactIconToggle
 };
