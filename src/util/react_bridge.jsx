@@ -7,8 +7,10 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import { Button } from '@mieweb/ui/components/Button';
 import { Checkbox } from '@mieweb/ui/components/Checkbox';
+import { DropdownItem, DropdownSeparator } from '@mieweb/ui/components/Dropdown';
 import { RadioGroup, Radio } from '@mieweb/ui/components/Radio';
 import { Select } from '@mieweb/ui/components/Select';
 import '@mieweb/ui/styles.css';
@@ -660,10 +662,309 @@ function updateReactSelect($el, newOpts) {
 	}
 }
 
+/**
+ * Creates a @mieweb/ui Dropdown rendered into a jQuery-wrapped container
+ * element, used as a popup sort menu for grid column headers.
+ *
+ * The trigger is a Font Awesome sort icon (stacked ascending / descending
+ * arrows).  The dropdown body contains DropdownItems for each sort option
+ * and a DropdownSeparator between groups.
+ *
+ * Call `setSortDirection` on the returned jQuery element to update the
+ * visual sort indicator.  Call `unmountReactSortDropdown` when cleaning up.
+ *
+ * @param {object} opts
+ * @param {Array}    opts.items            Menu items.  Each entry is either
+ *                                         the string '----' (separator) or an
+ *                                         object with {name, icon, callback}.
+ *                                         `icon` is an FA class like
+ *                                         'fa-sort-amount-asc'.
+ * @param {string}   opts.orientation      'horizontal' or 'vertical'.
+ * @param {string}   opts.fontMethod       'font' or 'svg' (flags value).
+ * @param {string}   opts.sortIconClass    Unique CSS class for this sort icon.
+ * @param {string}   opts.orientationClass CSS class shared by all icons in
+ *                                         this orientation (e.g.
+ *                                         'wcdv_sort_icon_horizontal').
+ * @param {string}   [opts.initialDir]     Initial sort direction: null, 'asc',
+ *                                         or 'desc'.
+ * @returns {jQuery} jQuery-wrapped container element.
+ */
+/**
+ * Portal-based dropdown that renders its menu at document.body level so it is
+ * never clipped by overflow:hidden/auto ancestors (e.g. the scrollable table).
+ *
+ * API mirrors a tiny subset of @mieweb/ui Dropdown — just enough for the sort
+ * icon use-case — but positions via `position:fixed` inside a React portal.
+ */
+function PortalDropdown(props) {
+	var trigger  = props.trigger;
+	var children = props.children;
+	var placement = props.placement || 'bottom-start';
+	var width    = props.width || 'auto';
+
+	var _openState = React.useState(false);
+	var isOpen  = _openState[0];
+	var setOpen = _openState[1];
+
+	// Start offscreen so useLayoutEffect can measure before paint
+	var _posState = React.useState({ top: -9999, left: -9999 });
+	var pos    = _posState[0];
+	var setPos = _posState[1];
+
+	var triggerRef = React.useRef(null);
+	var menuRef    = React.useRef(null);
+
+	// Close on outside click or Escape
+	React.useEffect(function () {
+		if (!isOpen) return;
+
+		function onDown(e) {
+			if (triggerRef.current && triggerRef.current.contains(e.target)) return;
+			if (menuRef.current && menuRef.current.contains(e.target)) return;
+			setOpen(false);
+		}
+		function onKey(e) {
+			if (e.key === 'Escape') setOpen(false);
+		}
+
+		document.addEventListener('mousedown', onDown, true);
+		document.addEventListener('keydown', onKey, true);
+		return function () {
+			document.removeEventListener('mousedown', onDown, true);
+			document.removeEventListener('keydown', onKey, true);
+		};
+	}, [isOpen]);
+
+	// Position the menu using actual measured dimensions (runs before paint)
+	React.useLayoutEffect(function () {
+		if (!isOpen || !menuRef.current || !triggerRef.current) return;
+
+		var triggerRect = triggerRef.current.getBoundingClientRect();
+		var menuRect    = menuRef.current.getBoundingClientRect();
+		var menuH = menuRect.height;
+		var menuW = menuRect.width;
+
+		var top  = triggerRect.bottom + 4;
+		var left = placement === 'bottom-end'
+			? triggerRect.right - menuW
+			: triggerRect.left;
+
+		// Flip above if menu would overflow below viewport
+		if (top + menuH > window.innerHeight) {
+			top = triggerRect.top - menuH - 4;
+		}
+
+		// Clamp so menu stays within viewport
+		if (left + menuW > window.innerWidth) {
+			left = window.innerWidth - menuW - 8;
+		}
+		if (left < 0) left = 8;
+		if (top  < 0) top  = 8;
+
+		setPos({ top: top, left: left });
+	}, [isOpen, placement]);
+
+	var menuId = React.useId();
+
+	function handleToggle() {
+		if (!isOpen) {
+			// Reset position offscreen so useLayoutEffect can remeasure
+			setPos({ top: -9999, left: -9999 });
+		}
+		setOpen(function (v) { return !v; });
+	}
+
+	var triggerElement = React.cloneElement(trigger, {
+		onClick: handleToggle,
+		'aria-haspopup': 'menu',
+		'aria-expanded': isOpen,
+		'aria-controls': isOpen ? menuId : undefined
+	});
+
+	var widthStyle = typeof width === 'number'
+		? { width: width + 'px' }
+		: {};
+
+	var menu = isOpen
+		? createPortal(
+			React.createElement(
+				'div',
+				{
+					ref: menuRef,
+					id: menuId,
+					role: 'menu',
+					style: Object.assign({
+						position: 'fixed',
+						zIndex: 99999,
+						top: pos.top + 'px',
+						left: pos.left + 'px',
+						minWidth: '12rem',
+						borderRadius: '0.75rem',
+						border: '1px solid #e5e5e5',
+						backgroundColor: '#fff',
+						boxShadow: '0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1)'
+					}, widthStyle)
+				},
+				children
+			),
+			document.body
+		)
+		: null;
+
+	return React.createElement(
+		'div',
+		{ ref: triggerRef, style: { display: 'inline-flex', position: 'relative' } },
+		triggerElement,
+		menu
+	);
+}
+
+function makeReactSortDropdown(opts) {
+	var container = document.createElement('span');
+	container.style.display = 'inline-block';
+	container.style.verticalAlign = 'middle';
+	container.classList.add('wcdv_sort_dropdown');
+	container.classList.add(opts.sortIconClass);
+	container.classList.add(opts.orientationClass);
+
+	var reactRoot = createRoot(container);
+
+	var state = {
+		dir: opts.initialDir || null
+	};
+
+	function buildSortArrows(dir) {
+		var ascClasses = 'fa fa-sort-asc';
+		var descClasses = 'fa fa-sort-desc';
+
+		if (opts.fontMethod === 'font') {
+			ascClasses += ' fa-stack-1x';
+			descClasses += ' fa-stack-1x';
+		}
+
+		if (dir != null) {
+			// The FA icon "fa-sort-desc" points downward, "fa-sort-asc" points
+			// upward.  When sorting ASC the downward arrow is the "active" one
+			// (indicating the direction of increasing values) and vice-versa.
+			if (dir.toUpperCase() === 'ASC') {
+				descClasses += ' wcdv_sort_arrow_active';
+				ascClasses += ' wcdv_sort_arrow_inactive';
+			}
+			else {
+				ascClasses += ' wcdv_sort_arrow_active';
+				descClasses += ' wcdv_sort_arrow_inactive';
+			}
+		}
+
+		return [
+			React.createElement('span', { className: ascClasses, key: 'asc' }),
+			React.createElement('span', { className: descClasses, key: 'desc' })
+		];
+	}
+
+	function renderDropdown() {
+		// -- trigger --------------------------------------------------------
+		var triggerClasses = 'wcdv_sort_icon ' + opts.orientationClass;
+
+		if (opts.fontMethod === 'font') {
+			triggerClasses += ' fa fa-stack';
+		}
+		else {
+			triggerClasses += ' fa-layers';
+		}
+
+		if (opts.orientation === 'horizontal') {
+			triggerClasses += ' fa-rotate-270';
+		}
+
+		var trigger = React.createElement(
+			'span',
+			{ className: triggerClasses, style: { cursor: 'pointer' } },
+			buildSortArrows(state.dir)
+		);
+
+		// -- items ----------------------------------------------------------
+		var children = [];
+		var items = opts.items || [];
+
+		for (var i = 0; i < items.length; i++) {
+			var item = items[i];
+			if (item === '----') {
+				children.push(
+					React.createElement(DropdownSeparator, { key: 'sep-' + i })
+				);
+			}
+			else {
+				children.push(
+					React.createElement(
+						DropdownItem,
+						{
+							key: 'item-' + i,
+							icon: item.icon
+								? React.createElement('i', {
+									className: 'fa ' + item.icon,
+									'aria-hidden': 'true'
+								})
+								: undefined,
+							onClick: item.callback
+						},
+						item.name
+					)
+				);
+			}
+		}
+
+		reactRoot.render(
+			React.createElement(
+				PortalDropdown,
+				{ trigger: trigger, placement: 'bottom-start', width: 'auto' },
+				children
+			)
+		);
+	}
+
+	renderDropdown();
+
+	var $el = jQuery(container);
+	$el.data('_reactRoot', reactRoot);
+	$el.data('_reactSortState', state);
+	$el.data('_reactSortRender', renderDropdown);
+
+	/**
+	 * Update the visual sort direction indicator.
+	 *
+	 * @param {string|null} dir  'asc', 'desc', or null to clear.
+	 */
+	$el.setSortDirection = function (dir) {
+		state.dir = dir;
+		renderDropdown();
+		return $el;
+	};
+
+	return $el;
+}
+
+/**
+ * Unmounts a React sort dropdown previously created by
+ * `makeReactSortDropdown`, cleaning up the React root.
+ *
+ * @param {jQuery} $el  The jQuery element returned by `makeReactSortDropdown`.
+ */
+function unmountReactSortDropdown($el) {
+	var reactRoot = $el.data('_reactRoot');
+	if (reactRoot != null) {
+		reactRoot.unmount();
+		$el.removeData('_reactRoot');
+		$el.removeData('_reactSortState');
+		$el.removeData('_reactSortRender');
+	}
+}
+
 export {
 	makeReactButton, updateReactButton, unmountReactButton,
 	makeReactCheckbox, updateReactCheckbox,
 	makeReactRadioButtons, updateReactRadioButtons,
 	makeReactIconToggle, updateReactIconToggle,
-	makeReactSelect, updateReactSelect
+	makeReactSelect, updateReactSelect,
+	makeReactSortDropdown, unmountReactSortDropdown
 };

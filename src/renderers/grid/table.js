@@ -38,6 +38,7 @@ import {GROUP_FUNCTION_REGISTRY} from '../../group_fun.js';
 import handlebarsUtil from '../../util/handlebars.js';
 
 import {TableExport, Csv} from '../../util/csv.js';
+import {makeReactSortDropdown, unmountReactSortDropdown} from '../../util/react_bridge.jsx';
 import flags from '../../flags.js';
 
 // GridTable {{{1
@@ -198,6 +199,7 @@ var GridTable = makeSubclass('GridTable', GridRenderer, function () {
 	self.selection = [];
 	self.needsRedraw = false;
 	self.contextMenuSelectors = [];
+	self.sortDropdowns = [];
 	self.csvLock = new Lock('GridTable/csv');
 	self.autoResizeColsLock = new Lock('GridTable/autoResizeCols');
 	self.focus = {
@@ -897,12 +899,32 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 			throw new Error('Call Error: `aggNum` must be a number');
 		}
 
-		jQuery('span.' + sortIcon_orientationClass + '.fa-stack').each(function (i, elt) {
-			replaceSortIndicator(elt);
+		// Clear all sort indicators in this orientation, then highlight the
+		// current one.  This provides immediate visual feedback before the
+		// async view update triggers a full table redraw.
+
+		jQuery('.wcdv_sort_dropdown.' + sortIcon_orientationClass).each(function (i, elt) {
+			var $dd = jQuery(elt);
+			if (typeof $dd.setSortDirection === 'function') {
+				$dd.setSortDirection(null);
+			}
+			var th = elt.closest('th');
+			if (th) {
+				th.classList.remove('wcdv_sort_column_active');
+				th.classList.remove('wcdv_bg-primary');
+			}
 		});
 
-		jQuery('span.' + sortIcon_class).each(function (i, elt) {
-			replaceSortIndicator(elt, dir);
+		jQuery('.wcdv_sort_dropdown.' + sortIcon_class).each(function (i, elt) {
+			var $dd = jQuery(elt);
+			if (typeof $dd.setSortDirection === 'function') {
+				$dd.setSortDirection(dir);
+			}
+			var th = elt.closest('th');
+			if (th) {
+				th.classList.add('wcdv_sort_column_active');
+				th.classList.add('wcdv_bg-primary');
+			}
 		});
 
 		spec.aggNum = aggNum;
@@ -913,69 +935,10 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 		self.view.setSort(sortSpec, self.makeProgress('Sort'));
 	};
 
-	var ascArrow, descArrow, sortIcon_class, sortIcon_span;
+	// -- Build menu items ------------------------------------------------
 
-	if (flags['FontAwesome Method'] === 'font') {
-		// Set the sort direction in the arrow icon.  The way we do this is by building a single
-		// FontAwesome "stack" from the up and down carets.  Then we can style the one we want.
-
-		ascArrow = document.createElement('span');
-		ascArrow.classList.add('fa');
-		ascArrow.classList.add('fa-sort-asc');
-		ascArrow.classList.add('fa-stack-1x');
-
-		descArrow = document.createElement('span');
-		descArrow.classList.add('fa');
-		descArrow.classList.add('fa-sort-desc');
-		descArrow.classList.add('fa-stack-1x');
-
-		sortIcon_class = gensym();
-
-		sortIcon_span = fontAwesome('fa-stack', orientation === 'horizontal' ? 'fa-rotate-270' : null).get(0);
-		sortIcon_span.classList.add(sortIcon_class);
-		sortIcon_span.classList.add(sortIcon_orientationClass);
-		sortIcon_span.classList.add('wcdv_sort_icon');
-		sortIcon_span.appendChild(ascArrow);
-		sortIcon_span.appendChild(descArrow);
-	}
-	else if (flags['FontAwesome Method'] === 'svg') {
-		ascArrow = document.createElement('span');
-		ascArrow.classList.add('fa');
-		ascArrow.classList.add('fa-sort-asc');
-
-		descArrow = document.createElement('span');
-		descArrow.classList.add('fa');
-		descArrow.classList.add('fa-sort-desc');
-
-		sortIcon_class = gensym();
-
-		sortIcon_span = document.createElement('span');
-		sortIcon_span.classList.add('fa-layers');
-		if (orientation === 'horizontal') {
-			sortIcon_span.classList.add('fa-rotate-270');
-		}
-		sortIcon_span.classList.add(sortIcon_class);
-		sortIcon_span.classList.add(sortIcon_orientationClass);
-		sortIcon_span.classList.add('wcdv_sort_icon');
-		sortIcon_span.appendChild(ascArrow);
-		sortIcon_span.appendChild(descArrow);
-	}
-
-	var sortIcon_menu_items = {};
-
-	var makeIcon = function (icon) {
-		return flags['FontAwesome Method'] === 'font' ? icon :
-			function (a, b, c, item) {
-				var id = item._icon ? item._icon.id : gensym();
-				if (item._icon) {
-					// Remove the existing icon because contextmenu won't do it for you! The actual span
-					// shouldn't be attached to the page anymore but we'll get rid of it just in case.
-					jQuery(item._icon).remove();
-					jQuery(document.getElementById(id)).remove();
-				}
-				return fontAwesome(icon).attr({id: id}).get(0);
-			};
-	};
+	var sortIcon_class = gensym();
+	var sortIcon_menu_items = [];
 
 	if (spec.field != null || spec.groupFieldIndex != null || spec.pivotFieldIndex != null) {
 
@@ -994,25 +957,25 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 			: 'Unknown'
 		;
 
-		sortIcon_menu_items[gensym()] = {
+		sortIcon_menu_items.push({
 			name: trans('GRID.TABLE.SORT_MENU.ASCENDING', name),
-			icon: makeIcon('fa-sort-amount-asc'),
+			icon: 'fa-sort-amount-asc',
 			callback: function () {
 				window.setTimeout(function () {
 					setSort('asc');
 				});
 			}
-		};
-		sortIcon_menu_items[gensym()] = {
+		});
+		sortIcon_menu_items.push({
 			name: trans('GRID.TABLE.SORT_MENU.DESCENDING', name),
-			icon: makeIcon('fa-sort-amount-desc'),
+			icon: 'fa-sort-amount-desc',
 			callback: function () {
 				window.setTimeout(function () {
 					setSort('desc');
 				});
 			}
-		};
-		sortIcon_menu_items[gensym()] = '----';
+		});
+		sortIcon_menu_items.push('----');
 	}
 	else {
 
@@ -1023,65 +986,54 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 				return;
 			}
 
-			//var aggType = aggInfo.instance.getType();
-			sortIcon_menu_items[gensym()] = {
+			sortIcon_menu_items.push({
 				name: trans('GRID.TABLE.SORT_MENU.ASCENDING', aggInfo.instance.getFullName()),
-				icon: makeIcon('fa-sort-amount-asc'),
+				icon: 'fa-sort-amount-asc',
 				callback: function () {
 					window.setTimeout(function () {
 						setSort('asc', aggNum);
 					});
 				}
-			};
-			sortIcon_menu_items[gensym()] = {
+			});
+			sortIcon_menu_items.push({
 				name: trans('GRID.TABLE.SORT_MENU.DESCENDING', aggInfo.instance.getFullName()),
-				icon: makeIcon('fa-sort-amount-desc'),
+				icon: 'fa-sort-amount-desc',
 				callback: function () {
 					window.setTimeout(function () {
 						setSort('desc', aggNum);
 					});
 				}
-			};
-			sortIcon_menu_items[gensym()] = '----';
+			});
+			sortIcon_menu_items.push('----');
 		});
 	}
 
 	// Include an option to reset the sort.  This is just as much to fluff up the all-too-common
 	// two-entry menu as anything else.
 
-	sortIcon_menu_items.reset = {
+	sortIcon_menu_items.push({
 		name: trans('GRID.TABLE.SORT_MENU.RESET_SORT'),
-		icon: makeIcon('fa-ban'),
+		icon: 'fa-ban',
 		callback: function () {
 			window.setTimeout(function () {
 				self.view.clearSort();
 			});
 		}
-	};
-
-	// Create the context menu.
-	//
-	// TODO The plugin allow the reuse of the menu among multiple targets.  See if we can use that
-	// within the grid.
-	//
-	// TODO Does spawning a bunch of these (i.e. every time the table is redrawn) use a bunch of
-	// memory?  Is there a way to destroy the menu to reclaim it?
-
-	var sortIcon_menu = jQuery.contextMenu({
-		selector: '.' + sortIcon_class,
-		appendTo: self.ui.contextMenus,
-		trigger: 'left',
-		callback: function (itemKey, opt) {
-			// This should never be called, it's only for items that don't specify their own callback,
-			// which they all should be doing.
-			console.log(itemKey);
-		},
-		items: sortIcon_menu_items
 	});
 
-	self.contextMenuSelectors.push('.' + sortIcon_class);
+	// -- Create the Dropdown sort menu -----------------------------------
 
-	container.appendChild(sortIcon_span);
+	var $sortDropdown = makeReactSortDropdown({
+		items: sortIcon_menu_items,
+		orientation: orientation,
+		fontMethod: flags['FontAwesome Method'],
+		sortIconClass: sortIcon_class,
+		orientationClass: sortIcon_orientationClass
+	});
+
+	self.sortDropdowns.push($sortDropdown);
+
+	container.appendChild($sortDropdown[0]);
 
 	// Now check the existing sort specification in the view to see if any of the sort icons that we
 	// just created should be lit up.
@@ -1113,7 +1065,12 @@ GridTable.prototype._addSortingToHeader = function (data, orientation, spec, con
 			self.toString(), orientation, spec_copy, sortSpec_copy[orientation], currentDir);
 
 		if (_.isEqual(sortSpec_copy[orientation], spec_copy)) {
-			replaceSortIndicator(sortIcon_span, currentDir);
+			$sortDropdown.setSortDirection(currentDir);
+			var th = container.closest('th');
+			if (th) {
+				th.classList.add('wcdv_sort_column_active');
+				th.classList.add('wcdv_bg-primary');
+			}
 		}
 	}
 };
@@ -2194,6 +2151,14 @@ GridTable.prototype.clear = function () {
 	});
 
 	self.contextMenuSelectors = [];
+
+	// Unmount React sort dropdown components.
+
+	_.each(self.sortDropdowns, function ($dd) {
+		unmountReactSortDropdown($dd);
+	});
+
+	self.sortDropdowns = [];
 
 	if (self.features.limit && self.defn.table.limit.method === 'more') {
 		jQuery(self.scrollEventElement).off(self.scrollEvents);
