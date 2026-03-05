@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client';
 import { Button } from '@mieweb/ui/components/Button';
 import { Checkbox } from '@mieweb/ui/components/Checkbox';
 import { RadioGroup, Radio } from '@mieweb/ui/components/Radio';
+import { Select } from '@mieweb/ui/components/Select';
 import '@mieweb/ui/styles.css';
 import jQuery from 'jquery';
 
@@ -475,9 +476,194 @@ function updateReactIconToggle($el, newOpts) {
 	renderToggle(reactRoot, opts, checked);
 }
 
+/**
+ * Creates a @mieweb/ui Select rendered into a jQuery-wrapped container element.
+ *
+ * The returned jQuery element mimics enough of the native `<select>` jQuery API
+ * so that existing GridControl code can interact with it:
+ *
+ *   - `.val()`          — get or set the current value
+ *   - `.selectedText()` — get the display text of the currently selected option
+ *   - `.setOptions(opts)` — replace all options
+ *   - `.setDisabledValues(vals)` — disable options by value
+ *
+ * @param {object} opts
+ * @param {string}   [opts.placeholder]  Placeholder text.
+ * @param {string}   [opts.label]        Accessible label for the select.
+ * @param {boolean}  [opts.hideLabel]    Visually hide the label (still available
+ *                                       to screen readers).  Defaults to true.
+ * @param {string}   [opts.size]         Size: 'sm', 'md', 'lg'.  Defaults to 'sm'.
+ * @param {boolean}  [opts.disabled]     Whether the select is disabled.
+ * @param {string}   [opts.className]    Additional CSS class names.
+ * @param {Array<{value:string, label:string}>} [opts.options]
+ *                                       Initial set of options.
+ * @param {function} [opts.onChange]      Called with (value, label) when the user
+ *                                       selects an option.
+ * @returns {jQuery} jQuery-wrapped container element with helper methods.
+ */
+function makeReactSelect(opts) {
+	var container = document.createElement('span');
+	container.style.display = 'inline-block';
+	container.style.verticalAlign = 'middle';
+
+	var reactRoot = createRoot(container);
+
+	var state = {
+		value: opts.value || '',
+		options: opts.options || [],
+		disabledValues: {}
+	};
+
+	function renderSelect() {
+		var selectOptions = state.options.map(function (o) {
+			return {
+				value: o.value,
+				label: o.label,
+				disabled: !!state.disabledValues[o.value]
+			};
+		});
+
+		reactRoot.render(
+			React.createElement(Select, {
+				options: selectOptions,
+				value: state.value,
+				onValueChange: function (newValue) {
+					state.value = newValue;
+					renderSelect();
+					if (typeof opts.onChange === 'function') {
+						var selectedOpt = state.options.filter(function (o) {
+							return o.value === newValue;
+						})[0];
+						opts.onChange(newValue, selectedOpt ? selectedOpt.label : newValue);
+					}
+				},
+				placeholder: opts.placeholder || '',
+				label: opts.label || opts.placeholder || '',
+				hideLabel: opts.hideLabel != null ? opts.hideLabel : true,
+				size: opts.size || 'sm',
+				disabled: opts.disabled || false,
+				className: opts.className || undefined
+			})
+		);
+	}
+
+	renderSelect();
+
+	var $el = jQuery(container);
+	$el.data('_reactRoot', reactRoot);
+	$el.data('_reactSelectState', state);
+	$el.data('_reactSelectRender', renderSelect);
+	$el.data('_reactSelectOpts', opts);
+
+	/**
+	 * Get or set the current value, jQuery `.val()` style.
+	 * When setting, re-renders the component.
+	 *
+	 * @param {string} [newVal]  If provided, sets the value.
+	 * @returns {string|jQuery}  Current value (getter) or $el (setter).
+	 */
+	$el.val = function (newVal) {
+		if (arguments.length === 0) {
+			return state.value;
+		}
+		state.value = newVal;
+		renderSelect();
+		return $el;
+	};
+
+	/**
+	 * Get the display label of the currently selected option.
+	 *
+	 * @returns {string}
+	 */
+	$el.selectedText = function () {
+		var match = state.options.filter(function (o) {
+			return o.value === state.value;
+		})[0];
+		return match ? match.label : '';
+	};
+
+	/**
+	 * Replace all options and re-render.
+	 *
+	 * @param {Array<{value:string, label:string}>} newOptions
+	 */
+	$el.setOptions = function (newOptions) {
+		state.options = newOptions || [];
+		renderSelect();
+		return $el;
+	};
+
+	/**
+	 * Mark specific option values as disabled and re-render.
+	 *
+	 * @param {Object.<string, boolean>} disabledMap  Keys are values,
+	 *   truthy = disabled.
+	 */
+	$el.setDisabledValues = function (disabledMap) {
+		state.disabledValues = disabledMap || {};
+		renderSelect();
+		return $el;
+	};
+
+	/**
+	 * Convenience: disable one option by value.
+	 */
+	$el.disableOption = function (value) {
+		state.disabledValues[value] = true;
+		renderSelect();
+		return $el;
+	};
+
+	/**
+	 * Convenience: enable one option by value.
+	 */
+	$el.enableOption = function (value) {
+		delete state.disabledValues[value];
+		renderSelect();
+		return $el;
+	};
+
+	/**
+	 * Get the current options array.
+	 *
+	 * @returns {Array<{value:string, label:string}>}
+	 */
+	$el.getOptions = function () {
+		return state.options;
+	};
+
+	return $el;
+}
+
+/**
+ * Re-renders a React select previously created by `makeReactSelect` with
+ * updated props.
+ *
+ * @param {jQuery}  $el      The jQuery element returned by `makeReactSelect`.
+ * @param {object}  newOpts  Partial set of options to merge with the originals.
+ */
+function updateReactSelect($el, newOpts) {
+	var opts = jQuery.extend({}, $el.data('_reactSelectOpts'), newOpts);
+	$el.data('_reactSelectOpts', opts);
+
+	var state = $el.data('_reactSelectState');
+	if (newOpts.options) {
+		state.options = newOpts.options;
+	}
+	if (newOpts.value != null) {
+		state.value = newOpts.value;
+	}
+	var renderSelect = $el.data('_reactSelectRender');
+	if (typeof renderSelect === 'function') {
+		renderSelect();
+	}
+}
+
 export {
 	makeReactButton, updateReactButton, unmountReactButton,
 	makeReactCheckbox, updateReactCheckbox,
 	makeReactRadioButtons, updateReactRadioButtons,
-	makeReactIconToggle, updateReactIconToggle
+	makeReactIconToggle, updateReactIconToggle,
+	makeReactSelect, updateReactSelect
 };

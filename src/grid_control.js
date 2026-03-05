@@ -19,6 +19,7 @@ import {
 import {
 	makeReactButton,
 	makeReactIconToggle,
+	makeReactSelect,
 } from './util/react_bridge.jsx';
 
 import './util/jquery.js';
@@ -407,55 +408,45 @@ AggregateControlField.prototype.draw = function () {
 		'class': 'wcdv_aggregate_control_fieldlist'
 	}).appendTo(self.ui.root);
 
+	// Build the list of available field options from column config.
+
+	var fieldOptions = [];
+	_.each(determineColumns(self.control.colConfig, null, self.control.typeInfo), function (fieldName) {
+		var text = getProp(self.control.colConfig.get(fieldName), 'displayText') || fieldName;
+		fieldOptions.push({ value: fieldName, label: text });
+	});
+
 	for (var i = 0; i < aggDefn.prototype.fieldCount; i += 1) {
 		var li = jQuery('<li>').addClass('wcdv_aggregate_field').appendTo(fieldList);
 		if (getProp(aggDefn.prototype, 'fieldInfo', i, 'transLabel')) {
-			var label = jQuery('<label>').text(trans(aggDefn.prototype.fieldInfo[i].transLabel) + ':').appendTo(li);
+			jQuery('<label>').text(trans(aggDefn.prototype.fieldInfo[i].transLabel) + ':').appendTo(li);
 		}
-		var select = jQuery('<select>')
-			.on('change', function (evt) {
-				select.children('option[data-wcdv-bad-field]').filter(function (eltIndex, elt) {
-					return jQuery(elt).attr('value') !== select.val();
-				}).remove();
+
+		// When the field in the configuration isn't in the dropdown (i.e. it's not in colConfig) then
+		// we need to make an entry for it.  This happens when the aggregate spec from prefs refers to
+		// a field that no longer exists in the data.
+
+		var dropdownOptions = fieldOptions.slice();
+		var initialValue = getProp(self.opts, 'fields', i) || '';
+		if (initialValue) {
+			var found = _.some(dropdownOptions, function (o) { return o.value === initialValue; });
+			if (!found) {
+				// FIXME: i18n
+				dropdownOptions.push({ value: initialValue, label: initialValue + ' \u2014 Invalid' });
+			}
+		}
+
+		var select = makeReactSelect({
+			options: dropdownOptions,
+			value: initialValue,
+			placeholder: trans('GRID_CONTROL.SELECT_FIELD'),
+			onChange: function (value) {
 				self.control.updateView();
-			})
-			.appendTo(li);
+			}
+		});
+		select.appendTo(li);
 		self.fieldDropdowns.push(select);
 	}
-
-	_.each(determineColumns(self.control.colConfig, null, self.control.typeInfo), function (fieldName) {
-		var text = getProp(self.control.colConfig.get(fieldName), 'displayText') || fieldName;
-		_.each(self.fieldDropdowns, function (dropdown, i) {
-			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(dropdown);
-		});
-	});
-
-	// For each field dropdown, set its value to whatever we received.  This has the effect of making
-	// the user interface match the internal aggregate configuration.
-
-	_.each(self.fieldDropdowns, function (dropdown, i) {
-		if (getProp(self.opts, 'fields', i)) {
-			var matchingOption = dropdown.children('option').filter(function (eltIndex, elt) {
-				return jQuery(elt).attr('value') === self.opts.fields[i];
-			});
-
-			// When the field in the configuration isn't in the dropdown (i.e. it's not in colConfig) then
-			// we need to make an entry for it.  This happens when the aggregate spec from prefs refers to
-			// a field that no longer exists in the data.
-
-			if (matchingOption.length === 0) {
-				jQuery('<option>', {
-					'value': self.opts.fields[i],
-					'data-wcdv-bad-field': 'yup'
-				})
-					// FIXME: i18n
-					.text(self.opts.fields[i] + ' — Invalid')
-					.appendTo(dropdown);
-			}
-
-			dropdown.val(self.opts.fields[i]);
-		}
-	});
 
 	if (aggDefn.prototype.options != null) {
 		makeReactButton({
@@ -874,9 +865,7 @@ GridControl.prototype.addField = function (field, displayText, opts, controlFiel
 	li.appendTo(self.ui.fields); // Add it to the DOM.
 
 	if (self.disableUsedItems) {
-		self.ui.dropdown.find('option').filter(function () {
-			return jQuery(this).val() === fieldName;
-		}).prop('disabled', true);
+		self.ui.dropdown.disableOption(fieldName);
 	}
 
 	self.ui.dropdown.val('');
@@ -931,9 +920,7 @@ GridControl.prototype.removeField = function (cf) {
 	self.fields.splice(self.fields.indexOf(fieldName), 1);
 
 	if (self.disableUsedItems) {
-		self.ui.dropdown.find('option').filter(function () {
-			return jQuery(this).val() === fieldName;
-		}).prop('disabled', false);
+		self.ui.dropdown.enableOption(fieldName);
 	}
 
 	// Hide the "clear" button if there's nothing to clear.
@@ -974,9 +961,7 @@ GridControl.prototype.clear = function (opts) {
 	self.controlFieldsById = {};
 	self.controlFieldsByField = {};
 	self.ui.fields.children().remove();
-	self.ui.dropdown.find('option:disabled').filter(function () {
-		return jQuery(this).val() !== '';
-	}).prop('disabled', false);
+	self.ui.dropdown.setDisabledValues({});
 	self.ui.clearBtn.hide();
 
 	if (opts.updateView) {
@@ -1015,14 +1000,8 @@ GridControl.prototype.addViewConfigChangeHandler = function (event, sync) {
 	var self = this;
 
 	var clearDropdown = function () {
-		self.ui.dropdown.children().remove();
-		jQuery('<option>', {
-			'value': '',
-			'disabled': true,
-			'selected': true
-		})
-			.text(trans('GRID_CONTROL.SELECT_FIELD'))
-			.appendTo(self.ui.dropdown);
+		self.ui.dropdown.setOptions([]);
+		self.ui.dropdown.val('');
 	};
 
 	// There are two main things that we sync:
@@ -1040,10 +1019,12 @@ GridControl.prototype.addViewConfigChangeHandler = function (event, sync) {
 		self.logDebug(self.makeLogTag() + ' Synchronizing column configuration with grid', self.grid.toString(), self.controlType.toUpperCase());
 		self.colConfig = colConfig;
 		if (self.showColumns) {
-			clearDropdown();
+			var newOptions = [];
 			colConfig.each(function (fcc) {
-				jQuery('<option>', { 'value': fcc.field }).text(fcc.displayText || fcc.field).appendTo(self.ui.dropdown);
+				newOptions.push({ value: fcc.field, label: fcc.displayText || fcc.field });
 			});
+			self.ui.dropdown.setOptions(newOptions);
+			self.ui.dropdown.val('');
 		}
 	};
 
@@ -1215,12 +1196,16 @@ GroupControl.prototype.draw = function (parent) {
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
-	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text(), {
-			autoShowFunWin: true
-		});
+	self.ui.dropdown = makeReactSelect({
+		placeholder: trans('GRID_CONTROL.SELECT_FIELD'),
+		className: 'wcdv_control_addField',
+		onChange: function (value, label) {
+			self.addField(value, label, {
+				autoShowFunWin: true
+			});
+		}
 	});
+	self.ui.dropdown.appendTo(dropdownContainer);
 
 	self.addViewConfigChangeHandler('groupSet', function () {
 		var spec = self.view.getGroup();
@@ -1429,12 +1414,16 @@ PivotControl.prototype.draw = function (parent) {
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
-	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text(), {
-			autoShowFunWin: true
-		});
+	self.ui.dropdown = makeReactSelect({
+		placeholder: trans('GRID_CONTROL.SELECT_FIELD'),
+		className: 'wcdv_control_addField',
+		onChange: function (value, label) {
+			self.addField(value, label, {
+				autoShowFunWin: true
+			});
+		}
 	});
+	self.ui.dropdown.appendTo(dropdownContainer);
 
 	self.addViewConfigChangeHandler('pivotSet', function (spec) {
 		spec = self.view.getPivot();
@@ -1616,18 +1605,19 @@ AggregateControl.prototype.draw = function (parent) {
 		'class': self.isHorizontal ? 'wcdv_control_horizontal' : 'wcdv_control_vertical'
 	}).appendTo(self.ui.root);
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
-	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
-	});
-
-	jQuery('<option>', { 'value': '', 'disabled': true, 'selected': true })
-		.text(trans('GRID_CONTROL.SELECT_AGGREGATE'))
-		.appendTo(self.ui.dropdown);
-
+	var aggOptions = [];
 	AGGREGATE_REGISTRY.each(function (aggFunDefn, aggFunShortName) {
-		jQuery('<option>', { 'value': aggFunShortName }).text(aggFunDefn.prototype.getTransName()).appendTo(self.ui.dropdown);
+		aggOptions.push({ value: aggFunShortName, label: aggFunDefn.prototype.getTransName() });
 	});
+	self.ui.dropdown = makeReactSelect({
+		placeholder: trans('GRID_CONTROL.SELECT_AGGREGATE'),
+		className: 'wcdv_control_addField',
+		options: aggOptions,
+		onChange: function (value, label) {
+			self.addField(value, label);
+		}
+	});
+	self.ui.dropdown.appendTo(dropdownContainer);
 	/*
 	self.ui.fun = jQuery('<div>').css({'margin-top': '7px'}).appendTo(self.ui.root);
 	jQuery('<label>').text('Function:').appendTo(self.ui.fun);
@@ -1796,7 +1786,11 @@ AggregateControl.prototype.addFieldDropdowns = function (agg) {
 		var x = {};
 		x.div = jQuery('<div>').css({'margin-top': '4px'}).appendTo(self.ui.root);
 		x.label = jQuery('<label>').text(trans('GRID_CONTROL.FIELD') + ':').appendTo(x.div);
-		x.dropdown = jQuery('<select>').on('change', function () { self.triggerAggChange(); }).appendTo(x.div);
+		x.dropdown = makeReactSelect({
+			placeholder: trans('GRID_CONTROL.SELECT_FIELD'),
+			onChange: function () { self.triggerAggChange(); }
+		});
+		x.dropdown.appendTo(x.div);
 		self.ui.fields.push(x);
 	}
 
@@ -1813,20 +1807,18 @@ AggregateControl.prototype.addFieldDropdowns = function (agg) {
 AggregateControl.prototype.updateFieldDropdowns = function () {
 	var self = this;
 
-	// Clear out the fields that are already in the dropdown (in case anything was removed, and to
-	// prevent duplicates from being added).
+	// Build the list of field options from column config.
 
-	_.each(self.ui.fields, function (f) {
-		f.dropdown.children().remove();
-	});
-
-	// Add <OPTION> elements for all the fields.
-
+	var fieldOptions = [];
 	_.each(determineColumns(self.colConfig, null, self.typeInfo), function (fieldName) {
 		var text = getProp(self.colConfig.get(fieldName), 'displayText') || fieldName;
-		_.each(self.ui.fields, function (f) {
-			jQuery('<option>', { 'value': fieldName }).text(text).appendTo(f.dropdown);
-		});
+		fieldOptions.push({ value: fieldName, label: text });
+	});
+
+	// Replace options in each field dropdown.
+
+	_.each(self.ui.fields, function (f) {
+		f.dropdown.setOptions(fieldOptions);
 	});
 };
 
@@ -1917,10 +1909,14 @@ FilterControl.prototype.draw = function (parent) {
 	}).appendTo(self.ui.root);
 
 	var dropdownContainer = jQuery('<div>').appendTo(self.ui.root);
-	self.ui.dropdown = jQuery('<select>', { 'class': 'wcdv_control_addField' }).appendTo(dropdownContainer);
-	self.ui.dropdown.on('change', function () {
-		self.addField(self.ui.dropdown.val(), self.ui.dropdown.find('option:selected').text());
+	self.ui.dropdown = makeReactSelect({
+		placeholder: trans('GRID_CONTROL.SELECT_FIELD'),
+		className: 'wcdv_control_addField',
+		onChange: function (value, label) {
+			self.addField(value, label);
+		}
 	});
+	self.ui.dropdown.appendTo(dropdownContainer);
 
 	self.addViewConfigChangeHandler('filterSet', function () {
 		var spec = self.view.getFilter();
