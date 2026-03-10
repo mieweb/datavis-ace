@@ -17,6 +17,7 @@
     "meteor.js",
     "src/*.js",
     "src/**/*.js",
+    "src/**/*.jsx",
     "datavis.js",
     "wcdatavis.css",
     "dist/wcdatavis.min.js",
