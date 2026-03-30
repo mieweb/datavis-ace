@@ -25,9 +25,6 @@ import Lock from './util/lock.js';
 
 import { trans } from './trans.js';
 
-import { Grid } from './grid.js';
-import { Graph } from './graph.js';
-
 import { Perspective } from './perspective.js';
 import { PREFS_BACKEND_REGISTRY } from './prefs_backend.js';
 import { PREFS_MODULE_REGISTRY } from './prefs_module.js';

@@ -1,7 +1,4 @@
 import _ from 'underscore';
-import jQuery from 'jquery';
-import JSONFormatter from 'json-formatter-js';
-
 import deepCopy from './deepCopy.js';
 
 // OrdMap {{{1
@@ -297,30 +294,6 @@ OrdMap.prototype.toString = function () {
 
 OrdMap.prototype.asMap = function () {
 	return this._map;
-};
-
-// #asHtmlDefnList {{{2
-
-OrdMap.prototype.asHtmlDefnList = function () {
-	var dl = jQuery('<dl>');
-	this.each(function (v, k) {
-		var dt = jQuery('<dt>').text(k);
-		var dd = jQuery('<dd>');
-		if (v instanceof jQuery || v instanceof Element) {
-			dd.append(v);
-		}
-		else if (_.isObject(v)) {
-			dd.append(new JSONFormatter(v, 0).render());
-		}
-		else {
-			dd.text(v);
-		}
-		jQuery('<div>')
-			.append(dt)
-			.append(dd)
-			.appendTo(dl);
-	});
-	return dl;
 };
 
 // #serialize / #toJSON {{{2
