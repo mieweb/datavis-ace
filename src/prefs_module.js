@@ -18,8 +18,8 @@ import {
 	walkObj,
 } from './util/misc.js';
 
-import OrdMap from './util/ordmap.js';
-import Lock from './util/lock.js';
+import { OrdMap } from './util/ordmap.js';
+import { Lock } from './util/lock.js';
 
 import { ComputedView } from './computed_view.js';
 import { MirageView } from './mirage_view.js';

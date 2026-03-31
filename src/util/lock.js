@@ -8,7 +8,7 @@ import _ from 'underscore';
  * @class
  */
 
-export var Lock = function (name, opts) {
+function Lock(name, opts) {
 	var self = this;
 
 	opts = opts || {};
@@ -16,7 +16,11 @@ export var Lock = function (name, opts) {
 	self._name = name || '#' + (Lock._id++);
 	self._lockCount = opts.start || 0;
 	self._onUnlock = [];
-};
+}
+
+Object.defineProperty(Lock, 'name', {value: 'Lock'});
+Lock.prototype = Object.create(Object.prototype);
+Lock.prototype.constructor = Lock;
 
 Lock._id = 1;
 
@@ -159,4 +163,6 @@ Lock.prototype.clear = function () {
 	self.completelyUnlock();
 };
 
-export default Lock;
+export {
+	Lock
+};

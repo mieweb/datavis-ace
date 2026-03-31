@@ -19,11 +19,8 @@ import {
 	walkObj,
 } from './util/misc.js';
 
-import OrdMap from './util/ordmap.js';
-import Lock from './util/lock.js';
-
-import { PREFS_BACKEND_REGISTRY } from './prefs_backend.js';
-import { PREFS_MODULE_REGISTRY } from './prefs_module.js';
+import { OrdMap } from './util/ordmap.js';
+import { Lock } from './util/lock.js';
 
 /**
  * @file

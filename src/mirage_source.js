@@ -16,7 +16,7 @@ import {AggregateInfo} from './aggregates.js';
 import {View} from './view.js';
 import {Source} from './source.js';
 import {Prefs} from './prefs.js';
-import OrdMap from './util/ordmap';
+import { OrdMap } from './util/ordmap';
 
 // MirageSource {{{1
 

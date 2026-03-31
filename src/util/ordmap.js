@@ -1,5 +1,5 @@
 import _ from 'underscore';
-import deepCopy from './deepCopy.js';
+import { deepCopy } from './deepCopy.js';
 
 // OrdMap {{{1
 
@@ -433,4 +433,6 @@ OrdMap.prototype._changeKeyIndex = function (oldIndex, newIndex) {
 
 // Exports {{{1
 
-export default OrdMap;
+export {
+	OrdMap
+};

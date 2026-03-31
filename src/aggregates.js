@@ -21,7 +21,7 @@ import {
 	toFloat,
 	toInt,
 } from './util/misc.js';
-import OrdMap from './util/ordmap.js';
+import { OrdMap } from './util/ordmap.js';
 import types from './types.js';
 
 // Utility Functions {{{1

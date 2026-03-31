@@ -13,7 +13,7 @@ import jQuery from 'jquery';
  * A clean copy of the argument.
  */
 
-export default function (x0) {
+function deepCopy(x0) {
 	var depth = 0;
 	var depthLimit = 99;
 	var path = [];
@@ -59,4 +59,8 @@ export default function (x0) {
 	}
 
 	return recursive(x0, 0);
+}
+
+export {
+	deepCopy
 };

@@ -20,8 +20,8 @@ import {
 	walkObj,
 } from './util/misc.js';
 
-import OrdMap from './util/ordmap.js';
-import Lock from './util/lock.js';
+import { OrdMap } from './util/ordmap.js';
+import { Lock } from './util/lock.js';
 
 import { trans } from './trans.js';
 

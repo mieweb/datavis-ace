@@ -10,7 +10,7 @@ import moment from 'moment';
 
 import JSONFormatter from 'json-formatter-js';
 
-import OrdMap from './util/ordmap.js';
+import { OrdMap } from './util/ordmap.js';
 import EXPERIMENTAL_FEATURES from './flags.js';
 
 var types = {};

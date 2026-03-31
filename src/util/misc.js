@@ -4,11 +4,10 @@ import numeral from 'numeral';
 import moment from 'moment';
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
-import JSONFormatter from 'json-formatter-js';
 
-import deepCopy from './deepCopy.js';
-import OrdMap from './ordmap.js';
-import Lock from './lock.js';
+import { deepCopy } from './deepCopy.js';
+import { OrdMap } from './ordmap.js';
+import { Lock } from './lock.js';
 import EXPERIMENTAL_FEATURES from '../flags.js';
 
 import types from '../types.js';

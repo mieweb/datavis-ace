@@ -37,8 +37,8 @@ import {
 	setProp,
 	Timing,
 } from './util/misc.js';
-import OrdMap from './util/ordmap.js';
-import Lock from './util/lock.js';
+import { OrdMap } from './util/ordmap.js';
+import { Lock } from './util/lock.js';
 import {Source} from './source.js';
 import {Prefs} from './prefs.js';
 import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
