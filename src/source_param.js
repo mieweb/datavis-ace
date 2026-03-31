@@ -503,7 +503,7 @@ Filter.prototype.addJsonParam = function (obj) {
 			finalVal = arrayCopy(operand);
 			_.each(finalVal, function (elt, i) {
 				if (_.isArray(elt) && elt.length === 0) {
-					finalVal[i] = finalVal;
+					finalVal[i] = val;
 				}
 			});
 		}

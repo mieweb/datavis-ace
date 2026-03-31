@@ -22,9 +22,6 @@ import {
 import OrdMap from './util/ordmap.js';
 import Lock from './util/lock.js';
 
-import { Grid } from './grid.js';
-import { Graph } from './graph.js';
-
 import { PREFS_BACKEND_REGISTRY } from './prefs_backend.js';
 import { PREFS_MODULE_REGISTRY } from './prefs_module.js';
 

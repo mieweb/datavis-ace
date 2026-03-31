@@ -23,8 +23,6 @@ import OrdMap from './util/ordmap.js';
 import Lock from './util/lock.js';
 
 import { ComputedView } from './computed_view.js';
-import { Grid } from './grid.js';
-import { Graph } from './graph.js';
 import { Perspective } from './perspective.js';
 
 // PrefsBackend {{{1
