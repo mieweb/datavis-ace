@@ -44,7 +44,7 @@ import {Prefs} from './prefs.js';
 import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
 import {View} from './view.js';
 import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
-import types from './types.js';
+import {types} from './types.js';
 
 // ComputedView {{{1
 // Constructor {{{2

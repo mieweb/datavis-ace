@@ -10,7 +10,7 @@ import { OrdMap } from './ordmap.js';
 import { Lock } from './lock.js';
 import EXPERIMENTAL_FEATURES from '../flags.js';
 
-import types from '../types.js';
+import {types} from '../types.js';
 
 /**
  * @namespace util

@@ -1361,4 +1361,6 @@ types.universalCmp = function (a, b) {
 
 // Exports {{{1
 
-export default types;
+export {
+	types
+};

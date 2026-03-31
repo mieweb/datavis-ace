@@ -22,7 +22,7 @@ import {
 	toInt,
 } from './util/misc.js';
 import { OrdMap } from './util/ordmap.js';
-import types from './types.js';
+import { types } from './types.js';
 
 // Utility Functions {{{1
 /* ===============================================================================================

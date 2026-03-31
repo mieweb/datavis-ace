@@ -21,7 +21,7 @@ import {
 
 import { OrdMap } from './util/ordmap.js';
 import { Lock } from './util/lock.js';
-import types from './types.js';
+import {types} from './types.js';
 
 // SourceError {{{1
 
