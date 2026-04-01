@@ -3,8 +3,6 @@
 import _ from 'underscore';
 import Papa from 'papaparse';
 
-import jQuery from 'jquery';
-
 import {
 	deepCopy,
 	deepDefaults,
@@ -145,67 +143,66 @@ HttpSource.prototype.parseData = function (data) {
 	//debug.info('DATA SOURCE // HTTP // PARSER', 'Data = ' + ((data instanceof XMLDocument) ? '%o' : '%O'), data);
 
 	if (data instanceof Document) {
-		var root = jQuery(data).children('root');
-		if (!root.is('root')) {
+		var roots = data.getElementsByTagName('root');
+		if (roots.length === 0) {
 			throw new SourceError('HTTP Data Source / XML Parser / Missing (root) element');
 		}
+		var root = roots[0];
 
-		data = root.children('data');
-		if (data.length === 0) {
+		var dataElts = _.filter(root.children, function (el) { return el.tagName === 'data'; });
+		if (dataElts.length === 0) {
 			throw new SourceError('HTTP Data Source / XML Parser / Missing (root > data) element');
 		}
-		else if (data.length > 1) {
+		else if (dataElts.length > 1) {
 			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > data) elements');
 		}
 
-		data.children('item').each(function (_itemIndex, item) {
-			item = jQuery(item);
+		var items = _.filter(dataElts[0].children, function (el) { return el.tagName === 'item'; });
+		_.each(items, function (item) {
 			var row = {};
-			item.children().each(function (_fieldIndex, field) {
-				field = jQuery(field);
-				row[field.prop('tagName')] = field.text();
+			_.each(item.children, function (field) {
+				row[field.tagName] = field.textContent;
 			});
 			result.data.push(row);
 		});
 
-		var typeInfo = root.children('typeInfo');
-		if (typeInfo.length === 0) {
+		var typeInfoElts = _.filter(root.children, function (el) { return el.tagName === 'typeInfo'; });
+		if (typeInfoElts.length === 0) {
 			throw new SourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo) element');
 		}
-		else if (typeInfo.length > 1) {
+		else if (typeInfoElts.length > 1) {
 			throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo) elements');
 		}
 
-		typeInfo.children().each(function (_fieldIndex, field) {
-			field = jQuery(field);
-			var fieldName = field.prop('tagName');
+		_.each(typeInfoElts[0].children, function (field) {
+			var fieldName = field.tagName;
 			result.typeInfo.set(fieldName, {});
-			if (field.children().length === 0) {
-				result.typeInfo.get(fieldName).type = field.text();
+			if (field.children.length === 0) {
+				result.typeInfo.get(fieldName).type = field.textContent;
 			}
 			else {
-				var type = field.children('type');
-				if (type.length === 0) {
+				var typeElts = _.filter(field.children, function (el) { return el.tagName === 'type'; });
+				if (typeElts.length === 0) {
 					throw new SourceError('HTTP Data Source / XML Parser / Missing (root > typeInfo > ' + fieldName + ' > type) element');
 				}
-				else if (type.length > 1) {
+				else if (typeElts.length > 1) {
 					throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > type) elements');
 				}
-				else if (type.children().length > 0) {
+				else if (typeElts[0].children.length > 0) {
 					throw new SourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > type) element cannot have children');
 				}
 
-				result.typeInfo.get(fieldName).type = type.text();
+				result.typeInfo.get(fieldName).type = typeElts[0].textContent;
 
-				var format = field.children('format');
-				if (format.length > 1) {
+				var formatElts = _.filter(field.children, function (el) { return el.tagName === 'format'; });
+				if (formatElts.length > 1) {
 					throw new SourceError('HTTP Data Source / XML Parser / Too many (root > typeInfo > ' + fieldName + ' > format) elements');
 				}
-				else if (format.length === 1) {
-					if (format.children().length > 0) {
+				else if (formatElts.length === 1) {
+					if (formatElts[0].children.length > 0) {
 						throw new SourceError('HTTP Data Source / XML Parser / (root > typeInfo > ' + fieldName + ' > format) element cannot have children');
 					}
-					result.typeInfo.get(fieldName).format = format.text();
+					result.typeInfo.get(fieldName).format = formatElts[0].textContent;
 				}
 			}
 		});
@@ -273,6 +270,128 @@ HttpSource.prototype.unlimit = function () {
 	self.autoLimit.enabled = false;
 };
 
+// #getData_fetch {{{2
+
+HttpSource.prototype.getData_fetch = function (url, body, cont) {
+	var self = this;
+	var al = logAsync('HttpSource#getData');
+	var controller = new AbortController();
+	self.xhr = { abort: function () { controller.abort(); } };
+
+	var fetchOpts = {
+		method: self.method,
+		signal: controller.signal
+	};
+
+	if (self.method !== 'GET' && body) {
+		fetchOpts.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+		fetchOpts.body = body;
+	}
+
+	fetch(url, fetchOpts).then(function (response) {
+		if (!response.ok) {
+			al.finish();
+			self.logError(self.makeLogTag() + ' HTTP Data Source / AJAX Error / ' + response.statusText);
+			return cont(false);
+		}
+		var contentType = response.headers.get('Content-Type') || '';
+		if (self.dataType === 'xml' || contentType.indexOf('xml') >= 0) {
+			return response.text().then(function (text) {
+				var parser = new DOMParser();
+				return parser.parseFromString(text, 'text/xml');
+			});
+		}
+		else if (self.dataType === 'json' || contentType.indexOf('json') >= 0) {
+			return response.json();
+		}
+		else {
+			return response.text();
+		}
+	}).then(function (data) {
+		if (data === false) {
+			return; // error already handled above
+		}
+		al.finish();
+		self.cache = self.parseData(data);
+		return cont(true, self.cache.data);
+	})['catch'](function (err) {
+		al.finish();
+		if (err && err.name === 'AbortError') {
+			return;
+		}
+		self.logError(self.makeLogTag() + ' HTTP Data Source / AJAX Error / ' + (err && err.message || 'Network error'));
+		return cont(false);
+	});
+
+	return self.xhr;
+};
+
+// #getData_xhr {{{2
+
+HttpSource.prototype.getData_xhr = function (url, body, cont) {
+	var self = this;
+	var al = logAsync('HttpSource#getData');
+
+	var xhr = new XMLHttpRequest();
+	self.xhr = xhr;
+
+	xhr.open(self.method, url, true);
+
+	if (self.method !== 'GET' && body) {
+		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+	}
+
+	if (self.dataType === 'xml') {
+		xhr.responseType = 'document';
+		xhr.overrideMimeType('text/xml');
+	}
+	else if (self.dataType === 'json') {
+		xhr.setRequestHeader('Accept', 'application/json');
+	}
+	else if (self.dataType === 'text') {
+		xhr.responseType = 'text';
+	}
+
+	xhr.onload = function () {
+		al.finish();
+		if (xhr.status >= 200 && xhr.status < 300) {
+			var data;
+			var contentType = xhr.getResponseHeader('Content-Type') || '';
+			if (self.dataType === 'xml' || contentType.indexOf('xml') >= 0) {
+				data = xhr.responseXML;
+			}
+			else if (self.dataType === 'json' || contentType.indexOf('json') >= 0) {
+				try {
+					data = JSON.parse(xhr.responseText);
+				}
+				catch (e) {
+					self.logError(self.makeLogTag() + ' HTTP Data Source / JSON Parse Error / ' + e.message);
+					return cont(false);
+				}
+			}
+			else {
+				data = xhr.responseText;
+			}
+			self.cache = self.parseData(data);
+			return cont(true, self.cache.data);
+		}
+		else {
+			self.logError(self.makeLogTag() + ' HTTP Data Source / AJAX Error / ' + xhr.statusText);
+			return cont(false);
+		}
+	};
+
+	xhr.onerror = function () {
+		al.finish();
+		self.logError(self.makeLogTag() + ' HTTP Data Source / AJAX Error / Network error');
+		return cont(false);
+	};
+
+	xhr.send(body);
+
+	return xhr;
+};
+
 // #getData {{{2
 
 HttpSource.prototype.getData = function (params, cont) {
@@ -289,25 +408,35 @@ HttpSource.prototype.getData = function (params, cont) {
 		params[self.autoLimit.cgiParam] = self.autoLimit.maxRecords;
 	}
 
-	var al = logAsync('HttpSource#getData');
-	self.xhr = jQuery.ajax(self.url, {
-		method: self.method,
-		data: params,
-		traditional: true,
-		dataType: self.dataType,
-		error: function (jqXHR, textStatus, errorThrown) {
-			al.finish();
-			self.logError(self.makeLogTag() + ' HTTP Data Source / AJAX Error / ' + errorThrown);
-			return cont(false);
-		},
-		success: function (data, textStatus, jqXHR) {
-			al.finish();
-			self.cache = self.parseData(data);
-			return cont(true, self.cache.data);
+	// Build query string from params, with traditional serialization (arrays repeat the key).
+	var queryParts = [];
+	_.each(params, function (val, key) {
+		if (_.isArray(val)) {
+			_.each(val, function (v) {
+				queryParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(v));
+			});
+		}
+		else if (val != null) {
+			queryParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
 		}
 	});
+	var queryString = queryParts.join('&');
 
-	return self.xhr;
+	var url = self.url;
+	var body = null;
+
+	if (self.method === 'GET' && queryString) {
+		url += (url.indexOf('?') >= 0 ? '&' : '?') + queryString;
+	}
+	else if (self.method !== 'GET') {
+		body = queryString;
+	}
+
+	// Use the fetch API when available; fall back to XMLHttpRequest for IE.
+
+	return typeof fetch === 'function' && typeof AbortController === 'function'
+		? self.getData_fetch(url, body, cont)
+		: self.getData_xhr(url, body, cont);
 };
 
 // #getTypeInfo {{{2
@@ -367,28 +496,32 @@ mixinLogging(FileSource);
 FileSource.prototype.setToolbar = function (toolbar) {
 	var self = this;
 
-	var input = jQuery('<input>', { 'type': 'file', 'name': 'file', 'accept': '.csv' })
-		.on('change', function () {
-			Papa.parse(this.files.item(0), {
-				header: true,
-				skipEmptyLines: true,
-				complete: function (results, file) {
-					self.logInfo(results);
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.name = 'file';
+	input.accept = '.csv';
+	input.addEventListener('change', function () {
+		Papa.parse(this.files.item(0), {
+			header: true,
+			skipEmptyLines: true,
+			complete: function (results, file) {
+				self.logInfo(results);
 
-					self.cache.data = results.data;
-					self.cache.typeInfo = new OrdMap();
+				self.cache.data = results.data;
+				self.cache.typeInfo = new OrdMap();
 
-					_.each(results.meta.fields, function (field) {
-						self.cache.typeInfo.set(field, {
-							'type': 'string'
-						});
+				_.each(results.meta.fields, function (field) {
+					self.cache.typeInfo.set(field, {
+						'type': 'string'
 					});
+				});
 
-					self.source.clearCachedData();
-				}
-			});
-		})
-		.appendTo(toolbar);
+				self.source.clearCachedData();
+			}
+		});
+	});
+	var toolbarEl = toolbar.nodeType ? toolbar : toolbar[0];
+	toolbarEl.appendChild(input);
 };
 
 // #setFile {{{2
@@ -462,14 +595,17 @@ TableSource.prototype.getData = function (params, cont) {
 	}
 
 	var getText = function (selector) {
-		return jQuery(selector).map(function (i, x) {
-			return jQuery(x).text();
-		});
+		var elts = document.querySelectorAll(selector);
+		var result = [];
+		for (var i = 0; i < elts.length; i += 1) {
+			result.push(elts[i].textContent);
+		}
+		return result;
 	};
 
 	var tableSelector = self.spec.tableSelector || ''
-		, columnSelector = self.spec.columnSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:eq(0) tr th a font'
-		, dataSelector = self.spec.dataSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:eq(1) tr td font'
+		, columnSelector = self.spec.columnSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:first-child tr th a font'
+		, dataSelector = self.spec.dataSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:nth-child(2) tr td font'
 		, columns = getText(columnSelector)
 		, data = getText(dataSelector)
 		, row
@@ -503,12 +639,15 @@ TableSource.prototype.getTypeInfo = function (cont) {
 	}
 
 	var getText = function (selector) {
-		return jQuery(selector).map(function (i, x) {
-			return jQuery(x).text();
-		});
+		var elts = document.querySelectorAll(selector);
+		var result = [];
+		for (var i = 0; i < elts.length; i += 1) {
+			result.push(elts[i].textContent);
+		}
+		return result;
 	};
 
-	var columnSelector = self.spec.columnSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:eq(0) tr th a font'
+	var columnSelector = self.spec.columnSelector || 'div[id="lv_' + self.source.table.id + '_span"] table tbody:first-child tr th a font'
 		, columns = getText(columnSelector)
 		, newTypeInfo = new OrdMap();
 
@@ -1374,7 +1513,7 @@ Source.prototype.refresh = function () {
 /**
  * Create a parameters object from the ParamInput instances currently bound to this data source.
  * This is an internal method used when the user calls getData().  For system reports, it helps
- * build the object used by jQuery to set the CGI parameters for the HTTP GET request.
+ * build the object used to set the CGI parameters for the HTTP GET request.
  *
  * @method
  *
