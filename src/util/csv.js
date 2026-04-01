@@ -17,7 +17,6 @@ import {
 	isVisible,
 	makeOperationButton,
 	makeSubclass,
-	mergeSort2,
 	mixinEventHandling,
 	objFromArray,
 	onVisibilityChange,
