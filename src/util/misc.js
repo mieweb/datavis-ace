@@ -509,6 +509,14 @@ export function asyncEach(args, fun, done) {
 	return g();
 }
 
+function isPlainObject(x) {
+    if (Object.prototype.toString.call(x) !== '[object Object]') {
+        return false;
+    }
+    var proto = Object.getPrototypeOf(x);
+    return proto === null || proto === Object.prototype;
+}
+
 /**
  * Create a shallow copy of an object.
  *
@@ -529,7 +537,7 @@ export var shallowCopy = function (x) {
 
 	var result;
 
-	if (jQuery.isArray(x)) {
+	if (Array.isArray(x)) {
 		result = [];
 
 		for (var i = 0; i < x.length; i += 1) {
@@ -538,7 +546,7 @@ export var shallowCopy = function (x) {
 
 		return result;
 	}
-	else if (jQuery.isPlainObject(x)) {
+	else if (isPlainObject(x)) {
 		result = {};
 
 		for (var k in x) {
@@ -1683,10 +1691,6 @@ export function setTableCell(cell, value, opts) {
 	var fti = (opts.typeInfo instanceof OrdMap && opts.typeInfo.get(opts.field)) || opts.typeInfo || {};
 	var ops = opts.operations || [];
 
-	if (cell instanceof jQuery) {
-		cell = cell.get(0);
-	}
-
 	if (!(cell instanceof HTMLTableCellElement)) {
 		throw new Error('Call Error: `cell` must be a HTMLTableCellElement instance');
 	}
@@ -1780,8 +1784,8 @@ export function setTableCell(cell, value, opts) {
 /**
  * Set the value of an element.
  *
- * @param {jQuery|Element} container
- * @param {Element|jQuery|string|number} value
+ * @param {Element} container
+ * @param {Element|string|number} value
  * @param {object} opts
  * @param {string} opts.field
  * @param {OrdMap} opts.colConfig
@@ -1794,19 +1798,12 @@ export function setElement(container, value, opts) {
 	var fcc = (opts.colConfig instanceof OrdMap && opts.colConfig.get(opts.field)) || opts.colConfig || {};
 	var fti = (opts.typeInfo instanceof OrdMap && opts.typeInfo.get(opts.field)) || opts.typeInfo || {};
 
-	if (container instanceof jQuery) {
-		container = container.get(0);
-	}
-
 	if (!(container instanceof Element)) {
 		throw new Error('Call Error: `container` must be an Element instance');
 	}
 
 	if (value instanceof Element) {
 		container.appendChild(value);
-	}
-	else if (value instanceof jQuery) {
-		container.appendChild(value.get(0));
 	}
 	else if (fcc.allowHtml && fti.type === 'string') {
 		container.innerHTML = value;
@@ -2207,20 +2204,22 @@ export var format = (function () {
 				}
 				// No need to make an element if nothing was formatted.
 				if (foundFmtStr) {
-					return jQuery('<div>').html(fmtResult);
+					var div = document.createElement('div');
+					div.innerHtml = fmtResult;
+					return div;
 				}
 			}
 		}
 
-		// If there's a rendering function, pass the (possibly formatted) value through it to get the new
-		// value to display.  If the rendering function returns an Element (possibly built via jQuery),
-		// mark the result as unsafe to cache, because an Element can't be on the page more than once, so
-		// we need to have the rendering function make it every time, in the event that the same cell is
-		// displayed more than once in the grid.
+		// If there's a rendering function, pass the (possibly formatted) value through it to get the
+		// new value to display.  If the rendering function returns an Element, mark the result as
+		// unsafe to cache, because an Element can't be on the page more than once, so we need to have
+		// the rendering function make it every time, in the event that the same cell is displayed more
+		// than once in the grid.
 
 		if (typeof cell.render === 'function') {
 			result = cell.render(result);
-			if (opts.saferCaching && (result instanceof jQuery || result instanceof Element)) {
+			if (opts.saferCaching && result instanceof Element) {
 				isSafeToCache = false;
 			}
 		}

@@ -17,13 +17,11 @@ import {
 	eachUntilObj,
 	gensym,
 	getComparisonFn,
-	getElement,
 	getNatRep,
 	getProp,
 	getPropDef,
 	I,
 	interleaveWith,
-	isElement,
 	logAsync,
 	makeSubclass,
 	mergeSort4,
@@ -2954,7 +2952,7 @@ ComputedView.prototype.aggregate = function (cont) {
 					aggNum,
 					info.group[aggNum].instance.name + (info.group[aggNum].name ? ' -> ' + info.group[aggNum].name : ''),
 					rowVal.join(', '),
-					isElement(aggResult) ? getElement(aggResult).innerText : JSON.stringify(aggResult));
+					aggResult instanceof Element ? aggResult.innerText : JSON.stringify(aggResult));
 			}
 		});
 
@@ -2974,7 +2972,7 @@ ComputedView.prototype.aggregate = function (cont) {
 							info.cell[aggNum].instance.name + (info.cell[aggNum].name ? ' -> ' + info.cell[aggNum].name : ''),
 							rowVal.join(', '),
 							colVal.join(', '),
-							isElement(aggResult) ? getElement(aggResult).innerText : JSON.stringify(aggResult));
+							aggResult instanceof Element ? aggResult.innerText : JSON.stringify(aggResult));
 					}
 				});
 			});
@@ -2993,7 +2991,7 @@ ComputedView.prototype.aggregate = function (cont) {
 						aggNum,
 						info.pivot[aggNum].instance.name + (info.pivot[aggNum].name ? ' -> ' + info.pivot[aggNum].name : ''),
 						colVal.join(', '),
-						isElement(aggResult) ? getElement(aggResult).innerText : JSON.stringify(aggResult));
+						aggResult instanceof Element ? aggResult.innerText : JSON.stringify(aggResult));
 				}
 			});
 		});

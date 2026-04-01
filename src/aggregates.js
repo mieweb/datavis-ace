@@ -11,8 +11,6 @@ import {
 	getNatRep,
 	getProp,
 	getPropDef,
-	getElement,
-	isElement,
 	isFloat,
 	isInt,
 	makeSubclass,
@@ -667,7 +665,7 @@ ValuesAggregate.prototype.calculateStep = function (acc, next) {
 	var self = this;
 	var formatted = self.getFormattedValue(next[self.opts.fields[0]]);
 
-	if (isElement(formatted)) {
+	if (formatted instanceof Element) {
 		acc.resultIsElement = true;
 	}
 
@@ -692,8 +690,8 @@ ValuesAggregate.prototype.calculateDone = function (acc) {
 			// FIXME: Subsequent calls to #calculate() from a different instance of ValuesAggregate can
 			// change the elements of acc and therefore wrapper.  I cannot figure out why, so cloning the
 			// element will have to do for now.
-			if (isElement(elt)) {
-				wrapper.appendChild(getElement(elt).cloneNode(true));
+			if (elt instanceof Element) {
+				wrapper.appendChild(elt.cloneNode(true));
 			}
 			else {
 				wrapper.appendChild(document.createTextNode(elt));
@@ -741,7 +739,7 @@ ValuesWithCountsAggregate.prototype.calculateStep = function (acc, next) {
 			formatted: formatted,
 			count: 1
 		});
-		if (isElement(formatted)) {
+		if (formatted instanceof Element) {
 			acc.resultIsElement = true;
 		}
 	}
@@ -760,8 +758,8 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 			if (i > 0) {
 				div.appendChild(document.createTextNode(self.opts.separator || ', '));
 			}
-			if (isElement(v.formatted)) {
-				div.appendChild(getElement(v.formatted).cloneNode(true));
+			if (v.formatted instanceof Element) {
+				div.appendChild(v.formatted.cloneNode(true));
 			}
 			else {
 				div.appendChild(document.createTextNode(v.formatted));
@@ -799,8 +797,8 @@ DistinctValuesAggregate.prototype.calculateDone = function (acc) {
 			if (i > 0) {
 				div.appendChild(document.createTextNode(self.opts.separator || ', '));
 			}
-			if (isElement(v.formatted)) {
-				div.appendChild(getElement(v.formatted).cloneNode(true));
+			if (v.formatted instanceof Element) {
+				div.appendChild(v.formatted.cloneNode(true));
 			}
 			else {
 				div.appendChild(document.createTextNode(v.formatted));
