@@ -1,37 +1,10 @@
 // Imports {{{1
 
 import _ from 'underscore';
-import sprintf from 'sprintf-js';
 
-import { trans } from '../trans.js';
 import {
-	deepCopy,
-	determineColumns,
-	fontAwesome,
-	format,
-	gensym,
-	getElement,
-	getProp,
-	getPropDef,
-	isElement,
-	isVisible,
-	makeOperationButton,
 	makeSubclass,
-	mixinEventHandling,
-	objFromArray,
-	onVisibilityChange,
-	setPropDef,
-	setTableCell,
-	setElement,
 } from '../util/misc.js';
-
-import {AggregateInfo} from '../aggregates.js';
-import {GridFilterSet} from '../grid_filter.js';
-import {GridRenderer} from '../grid_renderer.js';
-import {ComputedView} from '../computed_view.js';
-import {GROUP_FUNCTION_REGISTRY} from '../group_fun.js';
-
-import handlebarsUtil from '../util/handlebars.js';
 
 // TableExport {{{1
 

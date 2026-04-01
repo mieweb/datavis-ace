@@ -5,8 +5,6 @@ import {
 	arrayEqual,
 	copyProps,
 	deepDefaults,
-	getProp,
-	I,
 	interleaveWith,
 	makeSubclass,
 	mixinLogging,

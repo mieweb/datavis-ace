@@ -1,45 +1,16 @@
 // Imports {{{1
 
 import _ from 'underscore';
-import BigNumber from 'bignumber.js';
-import numeral from 'numeral';
 import moment from 'moment';
 
 import { trans } from './trans.js';
 import {
-	arrayCompare,
-	arrayEqual,
-	car,
-	cdr,
 	copyProps,
-	deepCopy,
 	deepDefaults,
-	delegate,
-	eachUntilObj,
-	gensym,
-	getComparisonFn,
-	getElement,
-	getNatRep,
 	getProp,
-	getPropDef,
-	I,
-	interleaveWith,
-	isElement,
-	logAsync,
 	makeSubclass,
-	mergeSort4,
-	mixinEventHandling,
-	mixinLogging,
-	objFromArray,
-	pigeonHoleSort,
-	setProp,
-	Timing,
 } from './util/misc.js';
 import { OrdMap } from './util/ordmap.js';
-import { Lock } from './util/lock.js';
-import {Source} from './source.js';
-import {Prefs} from './prefs.js';
-import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
 
 // GroupFunction {{{1
 

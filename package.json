@@ -2,7 +2,13 @@
   "name": "@mieweb/datavis-ace",
   "version": "4.0.0",
   "description": "DataVis ACE (Acquisition + Computation Engine)",
-  "keywords": ["data", "filter", "group", "pivot", "aggregation"],
+  "keywords": [
+    "data",
+    "filter",
+    "group",
+    "pivot",
+    "aggregation"
+  ],
   "license": "PROPRIETARY",
   "author": "Taylor Venable <tvenable@mieweb.com>",
   "files": [
@@ -45,6 +51,8 @@
     "bluebird": "=3.7.2",
     "chai": "=6.2.2",
     "eslint": "=9.39.2",
+    "eslint-plugin-import": "=2.32.0",
+    "eslint-plugin-unused-imports": "=4.4.1",
     "globals": "=17.0.0",
     "jsdoc": "=4.0.5",
     "json5": "=2.2.3",

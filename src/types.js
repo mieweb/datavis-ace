@@ -3,7 +3,7 @@ import 'core-js/es/string/replace-all';
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
 
-import BigNumber from 'bignumber.js';
+import {BigNumber} from 'bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
 

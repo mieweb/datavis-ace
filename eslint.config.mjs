@@ -1,9 +1,12 @@
 import globals from "globals";
 import js from "@eslint/js";
 import stylistic from '@stylistic/eslint-plugin';
+import importPlugin from 'eslint-plugin-import';
+import unusedImports from "eslint-plugin-unused-imports";
 
 export default [
   js.configs.recommended,
+  importPlugin.flatConfigs.recommended,
   {
     // "env": {
     //   "browser": true,
@@ -12,9 +15,10 @@ export default [
     //   "es6": true
     // },
     plugins: {
-      '@stylistic': stylistic
+      '@stylistic': stylistic,
+      'unused-imports': unusedImports
     },
-		files: ["src/**/*.js"],
+    files: ["src/**/*.js"],
     languageOptions: {
       sourceType: "module",
       globals: {
@@ -23,6 +27,7 @@ export default [
     },
     rules: {
       'no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
       '@stylistic/semi': ['error', 'always']
     }
   },

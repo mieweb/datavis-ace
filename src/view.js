@@ -1,7 +1,6 @@
 // Imports {{{1
 
 import _ from 'underscore';
-import BigNumber from 'bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
 
@@ -10,7 +9,6 @@ import {
 	arrayEqual,
 	car,
 	cdr,
-	copyProps,
 	deepCopy,
 	deepDefaults,
 	delegate,

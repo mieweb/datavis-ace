@@ -2,25 +2,19 @@
 
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
-import numeral from 'numeral';
 
 import {
 	asyncEach,
 	deepCopy,
 	deepDefaults,
 	getProp,
-	getPropDef,
 	I,
 	makeSubclass,
 	mixinEventHandling,
 	mixinLogging,
 	mixinNameSetting,
-	setProp,
-	uuid,
-	walkObj,
 } from './util/misc.js';
 
-import { OrdMap } from './util/ordmap.js';
 import { Lock } from './util/lock.js';
 
 import { trans } from './trans.js';
