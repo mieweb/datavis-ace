@@ -141,7 +141,10 @@ MirageSource.prototype.toString = function () {
  */
 
 MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
-	var self = this;
+	var self = this
+		, aggNum
+		, rvi
+		, cvi;
 
 	if (data.isPlain) {
 		throw new Error('Cannot store mirage data for plain data.');
@@ -154,9 +157,9 @@ MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
 	// Cell Aggregates {{{3
 
 	if (data.isPivot) {
-		for (var aggNum = 0; aggNum < data.agg.info.cell.length; aggNum += 1) {
-			for (var rvi = 0; rvi < data.rowVals.length; rvi += 1) {
-				for (var cvi = 0; cvi < data.colVals.length; cvi += 1) {
+		for (aggNum = 0; aggNum < data.agg.info.cell.length; aggNum += 1) {
+			for (rvi = 0; rvi < data.rowVals.length; rvi += 1) {
+				for (cvi = 0; cvi < data.colVals.length; cvi += 1) {
 					if (data.data[rvi][cvi].length > 0) {
 						aggRes.push({
 							aggType: 'cell',
@@ -172,8 +175,8 @@ MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
 
 	// Group Aggregates {{{3
 
-	for (var aggNum = 0; aggNum < data.agg.info.group.length; aggNum += 1) {
-		for (var rvi = 0; rvi < data.rowVals.length; rvi += 1) {
+	for (aggNum = 0; aggNum < data.agg.info.group.length; aggNum += 1) {
+		for (rvi = 0; rvi < data.rowVals.length; rvi += 1) {
 			aggRes.push({
 				aggType: 'group',
 				aggNum: aggNum,
@@ -186,8 +189,8 @@ MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
 	// Pivot Aggregates {{{3
 
 	if (data.isPivot) {
-		for (var aggNum = 0; aggNum < data.agg.info.pivot.length; aggNum += 1) {
-			for (var cvi = 0; cvi < data.colVals.length; cvi += 1) {
+		for (aggNum = 0; aggNum < data.agg.info.pivot.length; aggNum += 1) {
+			for (cvi = 0; cvi < data.colVals.length; cvi += 1) {
 				aggRes.push({
 					aggType: 'pivot',
 					aggNum: aggNum,
@@ -200,7 +203,7 @@ MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
 
 	// All Aggregates {{{3
 
-	for (var aggNum = 0; aggNum < data.agg.info.all.length; aggNum += 1) {
+	for (aggNum = 0; aggNum < data.agg.info.all.length; aggNum += 1) {
 		aggRes.push({
 			aggType: 'all',
 			aggNum: aggNum,
@@ -236,7 +239,10 @@ MirageSource.prototype.save = function (data, typeInfo, ok, fail) {
  */
 
 MirageSource.prototype.load = function (ok, fail) {
-	var self = this;
+	var self = this
+		, aggNum
+		, rvi
+		, cvi;
 
 	// FIXME: This function is also responsible for converting the backend data format into the View's
 	// data format.  This functionality may/should move into the backend class since each backend will
@@ -369,12 +375,12 @@ MirageSource.prototype.load = function (ok, fail) {
 		// aggregate results with bottom values if they weren't already set to something.  We need to do
 		// this because the data stored on the backend is sparse, but we need it fully populated.
 
-		for (var rvi = 0; rvi < data.rowVals.length; rvi += 1) {
+		for (rvi = 0; rvi < data.rowVals.length; rvi += 1) {
 			data.data[rvi] = [];
-			for (var cvi = 0; cvi < data.colVals.length; cvi += 1) {
+			for (cvi = 0; cvi < data.colVals.length; cvi += 1) {
 				data.data[rvi][cvi] = [];
 
-				for (var aggNum = 0; aggNum < metadata.aggregateSpec.cell.length; aggNum += 1) {
+				for (aggNum = 0; aggNum < metadata.aggregateSpec.cell.length; aggNum += 1) {
 					if (data.agg.results.cell[aggNum][rvi][cvi] === undefined) {
 						data.agg.results.cell[aggNum][rvi][cvi] = data.agg.info.cell[aggNum].instance.bottomValue;
 					}
@@ -384,8 +390,8 @@ MirageSource.prototype.load = function (ok, fail) {
 
 		// Set bottom values for missing group aggregate results.
 
-		for (var rvi = 0; rvi < data.rowVals.length; rvi += 1) {
-			for (var aggNum = 0; aggNum < metadata.aggregateSpec.group.length; aggNum += 1) {
+		for (rvi = 0; rvi < data.rowVals.length; rvi += 1) {
+			for (aggNum = 0; aggNum < metadata.aggregateSpec.group.length; aggNum += 1) {
 				if (data.agg.results.group[aggNum][rvi] === undefined) {
 					data.agg.results.group[aggNum][rvi] = data.agg.info.group[aggNum].instance.bottomValue;
 				}
@@ -394,8 +400,8 @@ MirageSource.prototype.load = function (ok, fail) {
 
 		// Set bottom values for missing pivot aggregate results.
 
-		for (var cvi = 0; cvi < data.colVals.length; cvi += 1) {
-			for (var aggNum = 0; aggNum < metadata.aggregateSpec.pivot.length; aggNum += 1) {
+		for (cvi = 0; cvi < data.colVals.length; cvi += 1) {
+			for (aggNum = 0; aggNum < metadata.aggregateSpec.pivot.length; aggNum += 1) {
 				if (data.agg.results.pivot[aggNum][cvi] === undefined) {
 					data.agg.results.pivot[aggNum][cvi] = data.agg.info.pivot[aggNum].instance.bottomValue;
 				}
@@ -404,7 +410,7 @@ MirageSource.prototype.load = function (ok, fail) {
 
 		// Set bottom values for missing all aggregate results.
 
-		for (var aggNum = 0; aggNum < metadata.aggregateSpec.all.length; aggNum += 1) {
+		for (aggNum = 0; aggNum < metadata.aggregateSpec.all.length; aggNum += 1) {
 			if (data.agg.results.all[aggNum] === undefined) {
 				data.agg.results.all[aggNum] = data.agg.info.all[aggNum].instance.bottomValue;
 			}

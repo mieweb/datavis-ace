@@ -1567,6 +1567,7 @@ ComputedView.prototype.filter = function (cont) {
 						self.logError(self.makeLogTag() + ' Invalid "$every" operand "' + operand + '" for field "' + field + '"');
 						return false;
 					}
+					// eslint-disable-next-line no-unreachable
 					break;
 
 				case '$this':
@@ -1594,6 +1595,7 @@ ComputedView.prototype.filter = function (cont) {
 						self.logError(self.makeLogTag() + ' Invalid "$this" operand "' + operand + '" for field "' + field + '"');
 						return false;
 					}
+					// eslint-disable-next-line no-unreachable
 					break;
 
 				case '$last':
@@ -1621,6 +1623,7 @@ ComputedView.prototype.filter = function (cont) {
 						self.logError(self.makeLogTag() + ' Invalid "$last" operand "' + operand + '" for field "' + field + '"');
 						return false;
 					}
+					// eslint-disable-next-line no-unreachable
 					break;
 
 				default:

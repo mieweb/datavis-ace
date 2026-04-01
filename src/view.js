@@ -1967,8 +1967,7 @@ View.prototype.filter = function (cont) {
 		// When there's no such column, automatically fail.
 
 		if (datum === undefined) {
-			debug.warn('VIEW (' + self.name + ') // FILTER',
-				'Attempted to filter by non-existent column: ' + field);
+			self.logError(self.makeLogTag() + ' Attempted to filter by non-existent column: ' + field);
 			return false;
 		}
 
@@ -1991,11 +1990,7 @@ View.prototype.filter = function (cont) {
 		};
 
 		pred['$contains'] = function (operand) {
-			return ( isMoment && false )
-				|| ( isNumeral && false )
-				|| ( isString && datum.indexOf(operand.toString().toLowerCase()) >= 0 )
-				|| ( isNumber && false )
-			;
+			return isString && datum.indexOf(operand.toString().toLowerCase()) >= 0;
 		};
 
 		pred['$notcontains'] = function (operand) {

@@ -2168,66 +2168,6 @@ export function mixinNameSetting(cls) {
 	};
 }
 
-// Locking {{{1
-
-/**
- * @namespace util.locking
- */
-
-/**
- * Locks exist because we may have multiple asynchronous chunks of JavaScript running at the same
- * time which interfere with each other.
- *
- * A really good example is preferences: loading them into the jQWidgets grid fires the event
- * handlers associated with changing all the items in the prefs.  The preferences contain column
- * widths, so loading them causes all the column resize event handlers to fire.  So we have a lock
- * for preferences.  We engage it when load the preferences, then the event handlers find the lock
- * engaged, so they don't try to save the preferences.  When the preferences are done loading, we
- * disengage the lock, and event handlers are free to save prefs again.
- */
-
-/**
- * Engage the lock with the given name.
- */
-
-export function lock(defn, name) {
-	if (defn.locks === undefined) {
-		defn.locks = {};
-	}
-
-	if (defn.locks[name] === undefined) {
-		defn.locks[name] = 0;
-	}
-
-	defn.locks[name] += 1;
-	debug.info('LOCK', 'Locking ' + name + ' - ' + defn.locks[name]);
-}
-
-/**
- * Disengage the lock with the given name.
- */
-
-export function unlock(defn, name) {
-	if (defn.locks === undefined) {
-		defn.locks = {};
-	}
-
-	if (defn.locks[name] === undefined) {
-		defn.locks[name] = 1;
-	}
-
-	defn.locks[name] -= 1;
-	debug.info('LOCK', 'Unlocking ' + name + ' - ' + defn.locks[name]);
-}
-
-/**
- * Check to see if the lock with the given name is engaged or not.
- */
-
-export function isLocked(defn, name) {
-	return defn.locks && !!defn.locks[name];
-}
-
 // HTML {{{1
 
 /**
@@ -3230,20 +3170,22 @@ var timeFormatString = 'HH:mm:ss';
  */
 
 export function init(cont) {
-	switch (miecgictrl.dateformat) {
-	case 1:
-		dateFormatString = 'MM-dd-yyyy';
-		break;
-	case 2:
-		dateFormatString = 'dd-MM-yyyy';
-		break;
-	case 3:
-		dateFormatString = 'yyyy-MM-dd';
-		break;
-	default:
-		dateFormatString = 'yyyy-MM-dd';
+	if (window != null && window.miecgictrl != null) {
+		switch (window.miecgictrl.dateformat) {
+		case 1:
+			dateFormatString = 'MM-dd-yyyy';
+			break;
+		case 2:
+			dateFormatString = 'dd-MM-yyyy';
+			break;
+		case 3:
+			dateFormatString = 'yyyy-MM-dd';
+			break;
+		default:
+			dateFormatString = 'yyyy-MM-dd';
+		}
+		timeFormatString = window.miecgictrl.militaryTime ? 'HH:mm:ss' : 'hh:mm:ss tt';
 	}
-	timeFormatString = miecgictrl.militaryTime ? 'HH:mm:ss' : 'hh:mm:ss tt';
 	cont();
 }
 
