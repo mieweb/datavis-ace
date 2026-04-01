@@ -3,8 +3,6 @@ import sprintf from 'sprintf-js';
 import numeral from 'numeral';
 import BigNumber from 'bignumber.js';
 
-import jQuery from 'jquery';
-
 import { trans } from './trans.js';
 import {
 	deepDefaults,
@@ -13,6 +11,7 @@ import {
 	getNatRep,
 	getProp,
 	getPropDef,
+	getElement,
 	isElement,
 	isFloat,
 	isInt,
@@ -685,15 +684,20 @@ ValuesAggregate.prototype.calculateDone = function (acc) {
 		return acc.values.join(self.opts.separator || ', ');
 	}
 	else {
-		var wrapper = jQuery('<div>');
+		var wrapper = document.createElement('div');
 		_.each(acc.values, function (elt, i) {
 			if (i > 0) {
-				wrapper.append(self.opts.separator || ', ');
+				wrapper.appendChild(document.createTextNode(self.opts.separator || ', '));
 			}
 			// FIXME: Subsequent calls to #calculate() from a different instance of ValuesAggregate can
 			// change the elements of acc and therefore wrapper.  I cannot figure out why, so cloning the
 			// element will have to do for now.
-			wrapper.append(isElement(elt) ? jQuery(elt).clone() : elt);
+			if (isElement(elt)) {
+				wrapper.appendChild(getElement(elt).cloneNode(true));
+			}
+			else {
+				wrapper.appendChild(document.createTextNode(elt));
+			}
 		});
 		return wrapper;
 	}
@@ -751,13 +755,18 @@ ValuesWithCountsAggregate.prototype.calculateDone = function (acc) {
 	var self = this;
 
 	if (acc.resultIsElement) {
-		var div = jQuery('<div>');
+		var div = document.createElement('div');
 		acc.map.each(function (v, k, i) {
 			if (i > 0) {
-				div.append(self.opts.separator || ', ');
+				div.appendChild(document.createTextNode(self.opts.separator || ', '));
 			}
-			div.append(isElement(v.formatted) ? v.formatted.clone() : v.formatted);
-			div.append(' (' + v.count + ')');
+			if (isElement(v.formatted)) {
+				div.appendChild(getElement(v.formatted).cloneNode(true));
+			}
+			else {
+				div.appendChild(document.createTextNode(v.formatted));
+			}
+			div.appendChild(document.createTextNode(' (' + v.count + ')'));
 		});
 		return div;
 	}
@@ -785,12 +794,17 @@ DistinctValuesAggregate.prototype.calculateDone = function (acc) {
 	var self = this;
 
 	if (acc.resultIsElement) {
-		var div = jQuery('<div>');
+		var div = document.createElement('div');
 		acc.map.each(function (v, k, i) {
 			if (i > 0) {
-				div.append(self.opts.separator || ', ');
+				div.appendChild(document.createTextNode(self.opts.separator || ', '));
 			}
-			div.append(isElement(v.formatted) ? v.formatted.clone() : v.formatted);
+			if (isElement(v.formatted)) {
+				div.appendChild(getElement(v.formatted).cloneNode(true));
+			}
+			else {
+				div.appendChild(document.createTextNode(v.formatted));
+			}
 		});
 		return div;
 	}

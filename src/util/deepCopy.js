@@ -1,4 +1,10 @@
-import jQuery from 'jquery';
+function isPlainObject(x) {
+    if (Object.prototype.toString.call(x) !== '[object Object]') {
+        return false;
+    }
+    var proto = Object.getPrototypeOf(x);
+    return proto === null || proto === Object.prototype;
+}
 
 /**
  * Create a deep copy of an object.
@@ -29,7 +35,7 @@ function deepCopy(x0) {
 
 		var result;
 
-		if (jQuery.isArray(x)) {
+		if (Array.isArray(x)) {
 			result = [];
 
 			for (var i = 0; i < x.length; i += 1) {
@@ -40,7 +46,7 @@ function deepCopy(x0) {
 
 			return result;
 		}
-		else if (jQuery.isPlainObject(x)) {
+		else if (isPlainObject(x)) {
 			result = {};
 
 			for (var k in x) {

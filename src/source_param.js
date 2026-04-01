@@ -1,7 +1,5 @@
 import _ from 'underscore';
 
-import jQuery from 'jquery';
-
 import {
 	arrayCopy,
 	delegate,
@@ -159,18 +157,12 @@ mixinLogging(Filter);
 Filter.prototype.store = function (id) {
 	var self = this;
 
-	var findInput = jQuery;
-
-	if (id) {
-		findInput = function (s) {
-			return jQuery(document.getElementById(id)).find(s);
-		};
-	}
-	else if (self.type === 'form' && self.inputName != null) {
-		findInput = function (s) {
-			return jQuery(document.forms[self.inputName]).find(s);
-		};
-	}
+	var root = id ? document.getElementById(id)
+		: (self.type === 'form' && self.inputName != null) ? document.forms[self.inputName]
+		: document;
+	var findInput = function (s) {
+		return Array.prototype.slice.call(root.querySelectorAll(s));
+	};
 
 	if (self.type === undefined) {
 		self.value = typeof self.defaultValue === 'function'
@@ -181,10 +173,10 @@ Filter.prototype.store = function (id) {
 		switch (self.type) {
 		case 'hidden':
 		case 'text':
-			self.value = findInput('input[name="' + self.inputName + '"]').val();
+			self.value = (findInput('input[name="' + self.inputName + '"]')[0] || {}).value;
 			break;
 		case 'textarea':
-			self.value = findInput('textarea[name="' + self.inputName + '"]').val();
+			self.value = (findInput('textarea[name="' + self.inputName + '"]')[0] || {}).value;
 			break;
 		case 'date':
 			self.internalValue = {};
@@ -196,18 +188,18 @@ Filter.prototype.store = function (id) {
 			self.value = (x === '--' ? '' : x);
 			break;
 		case 'checkbox':
-			self.value = _.map(findInput('input[name="' + self.inputName + '"]:checkbox:checked'), function (x) {
-				return findInput(x).val();
+			self.value = _.map(findInput('input[type="checkbox"][name="' + self.inputName + '"]:checked'), function (x) {
+				return x.value;
 			});
 			break;
 		case 'toggle-checkbox':
-			self.value = findInput('input[name="' + self.inputName + '"]').prop('checked') ? 'on' : 'off';
+			self.value = (findInput('input[name="' + self.inputName + '"]')[0] || {}).checked ? 'on' : 'off';
 			break;
 		case 'radio':
-			self.value = findInput('input[name="' + self.inputName + '"]:radio:checked').val();
+			self.value = (findInput('input[type="radio"][name="' + self.inputName + '"]:checked')[0] || {}).value;
 			break;
 		case 'select':
-			self.value = findInput('select[name="' + self.inputName + '"]').val();
+			self.value = (findInput('select[name="' + self.inputName + '"]')[0] || {}).value;
 			break;
 		case 'autocomplete':
 			throw new Error();
@@ -215,42 +207,40 @@ Filter.prototype.store = function (id) {
 			self.value = [];
 			self.internalValue = [];
 			_.each(findInput('input[name="' + self.inputName + '"]'), function (elt, i) {
-				self.value[i] = jQuery(elt).val();
-				self.internalValue[i] = jQuery(elt).parent().text();
+				self.value[i] = elt.value;
+				self.internalValue[i] = elt.parentNode.textContent;
 			});
 			break;
 		case 'form':
 			var obj = {};
-			findInput('input').each(function (i, elt) {
-				var j = jQuery(elt)
-					, name = j.attr('name')
-					, type = j.attr('type');
+			_.each(findInput('input'), function (elt) {
+				var name = elt.getAttribute('name')
+					, type = elt.getAttribute('type');
 				if (name == null) {
 					return;
 				}
 				switch (type) {
 				case 'hidden':
 				case 'text':
-					obj[name] = j.val();
+					obj[name] = elt.value;
 					break;
 				case 'checkbox':
 				case 'radio':
-					if (j.prop('checked')) {
-						if (obj[j.attr('name')] == null) {
+					if (elt.checked) {
+						if (obj[name] == null) {
 							obj[name] = [];
 						}
-						obj[name].push(j.val());
+						obj[name].push(elt.value);
 					}
 					break;
 				}
 			});
-			findInput('select,textarea').each(function (i, elt) {
-				var j = jQuery(elt)
-					, name = j.attr('name');
+			_.each(findInput('select,textarea'), function (elt) {
+				var name = elt.getAttribute('name');
 				if (name == null) {
 					return;
 				}
-				obj[name] = j.val();
+				obj[name] = elt.value;
 			});
 			self.value = obj;
 			break;
@@ -300,11 +290,10 @@ Filter.prototype.load = function (id, opts) {
 	}
 
 	opts = opts || {};
-	var form = id ? document.getElementById(id) : null;
-
-	var findInput = form ? function (s) {
-		return jQuery(form).find(s);
-	} : jQuery;
+	var root = id ? document.getElementById(id) : document;
+	var findInput = function (s) {
+		return Array.prototype.slice.call(root.querySelectorAll(s));
+	};
 
 	_.defaults(opts, {
 		fade: false
@@ -314,105 +303,104 @@ Filter.prototype.load = function (id, opts) {
 		throw 'Cannot load filter with fading without specifying bgAccent[In|Out] properties';
 	}
 
-	var fade = {
-		backgroundColor: jQuery.Color(opts.bgAccentIn)
-	};
-
-	function unfade() {
-		jQuery(this).animate({
-			backgroundColor: jQuery.Color(opts.bgAccentOut)
+	function fadeElement(el) {
+		el.style.transition = 'background-color 0.5s';
+		el.style.backgroundColor = opts.bgAccentIn;
+		setTimeout(function () {
+			el.style.backgroundColor = opts.bgAccentOut;
+			setTimeout(function () {
+				el.style.transition = '';
+			}, 500);
 		}, 500);
-	}
-
-	function unfadeBdr() {
-		jQuery(this).animate({
-			borderColor: jQuery.Color(opts.bgAccentOut)
-		}, 500, function () {
-			jQuery(this).css('border', 'none');
-		});
 	}
 
 	switch (self.type) {
 	case 'hidden':
 		(function () {
-			var nodes = findInput('input[name="' + self.inputName + '"]');
-			nodes.val(self.value ? self.value : (self.defaultValue ? self.defaultValue : ''));
+			var val = self.value ? self.value : (self.defaultValue ? self.defaultValue : '');
+			_.each(findInput('input[name="' + self.inputName + '"]'), function (node) {
+				node.value = val;
+			});
 		})();
 		break;
 	case 'text':
 		(function () {
-			var nodes = findInput('input[name="' + self.inputName + '"]');
-			if (opts.fade && nodes.val() !== self.value) {
-				nodes.animate(fade, 500, unfade);
-			}
-			nodes.val(self.value ? self.value : (self.defaultValue ? self.defaultValue : ''));
+			var val = self.value ? self.value : (self.defaultValue ? self.defaultValue : '');
+			_.each(findInput('input[name="' + self.inputName + '"]'), function (node) {
+				if (opts.fade && node.value !== self.value) {
+					fadeElement(node);
+				}
+				node.value = val;
+			});
 		})();
 		break;
 	case 'date':
 		_.each(['YEAR', 'MONTH', 'DAY'], function (elt) {
-			var nodes = findInput('input[name="' + self.inputName + elt + '"]');
-			nodes.val(_.isObject(self.internalValue) && _.isString(self.internalValue[elt]) && self.internalValue[elt] !== '' ? self.internalValue[elt] : (self.defaultValue ? self.defaultValue : ''));
-			if (opts.fade) {
-				nodes.animate(fade, 500, unfade);
-			}
+			var val = _.isObject(self.internalValue) && _.isString(self.internalValue[elt]) && self.internalValue[elt] !== '' ? self.internalValue[elt] : (self.defaultValue ? self.defaultValue : '');
+			_.each(findInput('input[name="' + self.inputName + elt + '"]'), function (node) {
+				node.value = val;
+				if (opts.fade) {
+					fadeElement(node);
+				}
+			});
 		});
 		break;
 	case 'checkbox':
 		(function () {
-			var curNodes = findInput('input[name="' + self.inputName + '"]:checkbox:checked');
+			var curNodes = findInput('input[type="checkbox"][name="' + self.inputName + '"]:checked');
 			var curValues = {};
 			_.each(curNodes, function (node) {
-				curValues[jQuery(node).val()] = node;
+				curValues[node.value] = node;
+				node.checked = false;
 			});
-			curNodes.prop('checked', false);
 			_.each(self.value, function (x) {
-				var nodes = findInput('input[name="' + self.inputName + '"]:checkbox[value="' + x + '"]');
-				nodes.prop('checked', true);
+				_.each(findInput('input[type="checkbox"][name="' + self.inputName + '"][value="' + x + '"]'), function (node) {
+					node.checked = true;
+					if (opts.fade && node.parentNode && node.parentNode.tagName === 'LABEL') {
+						fadeElement(node.parentNode);
+					}
+				});
 				delete curValues[x];
-				if (opts.fade) {
-					nodes.parent('label').animate(fade, 500, unfade);
-				}
 			});
 			if (opts.fade) {
 				_.each(curValues, function (node) {
-					var label = jQuery(node).parent('label');
-					// _.each(['Top', 'Bottom', 'Left', 'Right'], function (side) {
-					//	 label.css('border' + side + 'Width', '2px');
-					//	 label.css('border' + side + 'Style', 'dashed');
-					//	 label.css('border' + side + 'Color', '#000000');
-					// });
-					label.animate(fade, 500, unfade);
+					if (node.parentNode && node.parentNode.tagName === 'LABEL') {
+						fadeElement(node.parentNode);
+					}
 				});
 			}
 		})();
 		break;
 	case 'toggle-checkbox':
 		(function () {
-			var node = findInput('input[name="' + self.inputName + '"]');
-			var curValue = node.prop('checked') ? 'on' : 'off';
-			node.prop('checked', self.value === 'on');
-			if (opts.fade && curValue !== self.value) {
-				node.parent('label').animate(fade, 500, unfade);
-			}
+			_.each(findInput('input[name="' + self.inputName + '"]'), function (node) {
+				var curValue = node.checked ? 'on' : 'off';
+				node.checked = self.value === 'on';
+				if (opts.fade && curValue !== self.value && node.parentNode && node.parentNode.tagName === 'LABEL') {
+					fadeElement(node.parentNode);
+				}
+			});
 		})();
 		break;
 	case 'radio':
 		(function () {
-			var nodes = findInput('input[name="' + self.inputName + '"]:radio[value="' + self.value + '"]');
-			nodes.prop('checked', true);
-			if (opts.fade) {
-				nodes.parent('label').animate(fade, 500, unfade);
-			}
+			_.each(findInput('input[type="radio"][name="' + self.inputName + '"][value="' + self.value + '"]'), function (node) {
+				node.checked = true;
+				if (opts.fade && node.parentNode && node.parentNode.tagName === 'LABEL') {
+					fadeElement(node.parentNode);
+				}
+			});
 		})();
 		break;
 	case 'select':
 		(function () {
-			var nodes = findInput('select[name="' + self.inputName + '"]');
-			var oldVal = nodes.val();
-			nodes.val(self.value);
-			if (opts.fade && oldVal !== self.value) {
-				nodes.parent().animate(fade, 500, unfade);
-			}
+			_.each(findInput('select[name="' + self.inputName + '"]'), function (node) {
+				var oldVal = node.value;
+				node.value = self.value;
+				if (opts.fade && oldVal !== self.value && node.parentNode) {
+					fadeElement(node.parentNode);
+				}
+			});
 		})();
 		break;
 	case 'autocomplete':
@@ -424,40 +412,21 @@ Filter.prototype.load = function (id, opts) {
 			}
 			// window[self.inputName + '_ac'].multiClear(); // Doesn't work!
 			window[self.inputName + '_ac'].storedvalues = [];
-			jQuery(document.getElementById(self.inputName + '_ac_div')).children().remove();
+			var acDiv = document.getElementById(self.inputName + '_ac_div');
+			while (acDiv.firstChild) {
+				acDiv.removeChild(acDiv.firstChild);
+			}
 			_.each(self.value, function (v, i) {
 				window[self.inputName + '_ac'].multiAddValue(v, self.internalValue[i]);
 			});
 			if (opts.fade) {
-				jQuery(document.getElementById(self.inputName + '_ac_div')).animate(fade, 500, unfade);
+				fadeElement(acDiv);
 			}
 		})();
 		break;
 	default:
 		throw 'Invalid parameter specification: unknown input type "' + self.type + '"';
 	}
-};
-
-// #buildInput {{{2
-
-/**
- * Constructs a hidden input within the specified form which can be used to submit the filter's
- * value to the server.
- *
- * @param {Element|jQuery} form
- * DOM node (optionally wrapped by jQuery) of the form element in which to place the input.
- */
-
-Filter.prototype.buildInput = function (form) {
-	var self = this;
-	var val = _.isArray(this.value) ? this.value : [this.value];
-	_.each(val, function (v) {
-		jQuery('<input>').attr({
-			type: 'hidden',
-			name: self.paramName,
-			value: v
-		}).appendTo(form);
-	});
 };
 
 // #addJsonParam {{{2
@@ -515,18 +484,15 @@ Filter.prototype.addJsonParam = function (obj) {
 	};
 
 	if (self.type === 'form') {
-		var findInput = jQuery;
-
 		// Sending all items from a form to a source using the JSON method is tricky. The values, as
 		// they would normally be sent to a source using CGI, are already stored as a object in
 		// `self.value` but we need more information to build our JSON object, which we'll pull from
 		// the input elements if possible. First, we try to narrow our search to a specific form.
 
-		if (self.inputName != null) {
-			findInput = function (s) {
-				return jQuery(document.forms[self.inputName]).find(s);
-			};
-		}
+		var formRoot = self.inputName != null ? document.forms[self.inputName] : document;
+		var findInput = function (s) {
+			return Array.prototype.slice.call(formRoot.querySelectorAll(s));
+		};
 
 		// Next we go through all the values we would send if it were the CGI method. The first input
 		// element that matches the name if where we look for configuration (i.e. constraint name,
@@ -544,11 +510,10 @@ Filter.prototype.addJsonParam = function (obj) {
 		//
 		// Obviously the specific usefulness of some of these will depend on the backend.
 
-		var allInputs = findInput('input,select,textarea');
 		_.each(self.value, function (v, k) {
-			var elt = findInput('input,select,textarea').filter(function (i, e) {
+			var elt = _.find(findInput('input,select,textarea'), function (e) {
 				return e.getAttribute('name') === k;
-			}).get(0);
+			});
 			if (elt != null) {
 				var name = elt.getAttribute('wcdv-json-name') || getProp(self, 'json', 'name');
 				var column = elt.getAttribute('wcdv-json-column') || k;
@@ -755,26 +720,6 @@ FilterSet.prototype.store = function (id) {
 	_.each(this.filters, function (fltr) {
 		fltr.store(id);
 	});
-};
-
-// #buildForm {{{2
-
-/**
- * Builds an invisible form containing the parameters for this filter set. The form can then be
- * submitted in order to send the parameters to the server.  This is useful in cases where you want
- * to make a request but you don't want to use AJAX (for example, to open the result of a POST in a
- * new window).
- */
-
-FilterSet.prototype.buildForm = function () {
-	var form = jQuery('<form>').attr({
-		action: 'webchart.cgi',
-		method: 'POST'
-	});
-	_.each(this.filters, function (e) {
-		e.buildInput(form);
-	});
-	return form;
 };
 
 // #toParams {{{2

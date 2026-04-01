@@ -5,8 +5,6 @@ import BigNumber from 'bignumber.js';
 import numeral from 'numeral';
 import moment from 'moment';
 
-import jQuery from 'jquery';
-
 import {
 	arrayCompare,
 	arrayEqual,
@@ -3245,9 +3243,8 @@ ComputedView.prototype.reset = function (opts) {
 		savePrefs: true
 	});
 
-	var clearOpts = jQuery.extend({}, opts, {
-		updateData: false
-	});
+	var clearOpts = deepCopy(opts);
+	clearOpts.updateData = false;
 
 	self.logDebug(self.makeLogTag() + ' RESET!');
 
