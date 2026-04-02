@@ -26,27 +26,7 @@ globalThis.window.setTimeout = globalThis.setTimeout;
 globalThis.window.clearTimeout = globalThis.clearTimeout;
 globalThis.window.setInterval = globalThis.setInterval;
 globalThis.window.clearInterval = globalThis.clearInterval;
-
-// By default, suppress library logging so test output stays clean.
-//
-// Set DATAVIS_DEBUG=1 to restore all library output:
-//   DATAVIS_DEBUG=1 npm run test:unit
-var noop = function () {};
-if (process.env.DATAVIS_DEBUG) {
-	globalThis.window.console = globalThis.console;
-}
-else {
-	var silentConsole = {
-		log: noop,
-		debug: noop,
-		info: noop,
-		warn: noop,
-		error: noop,
-		dir: noop,
-		trace: noop
-	};
-	globalThis.window.console = silentConsole;
-}
+globalThis.window.console = globalThis.console;
 
 if (globalThis.Element == null) {
 	globalThis.Element = function () {};

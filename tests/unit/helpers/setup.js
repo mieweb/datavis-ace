@@ -47,11 +47,18 @@ export function loadFruitData() {
 		null,
 		{ name: 'FruitTestSource', deferDecoding: false }
 	);
+	if (process.env.DATAVIS_LOGGING != '1') {
+		source.disableLogging();
+	}
+
 
 	var view = new ComputedView(source, {
 		name: 'FruitTestView',
 		saveViewConfig: false
 	});
+	if (process.env.DATAVIS_LOGGING != '1') {
+		view.disableLogging();
+	}
 
 	return getDataAsync(view).then(function () {
 		return { source: source, view: view };

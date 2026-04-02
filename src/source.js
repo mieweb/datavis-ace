@@ -901,6 +901,21 @@ mixinEventHandling(Source, [
 mixinLogging(Source);
 mixinNameSetting(Source);
 
+Source.prototype._enableLogging = Source.prototype.enableLogging;
+Source.prototype._disableLogging = Source.prototype.disableLogging;
+Source.prototype.enableLogging = function () {
+	var args = Array.prototype.slice.call(arguments);
+	this._enableLogging.apply(this, args);
+	this.locks.getData.enableLogging.apply(this.locks.getData, args);
+	this.locks.refresh.enableLogging.apply(this.locks.refresh, args);
+};
+Source.prototype.disableLogging = function () {
+	var args = Array.prototype.slice.call(arguments);
+	this._disableLogging.apply(this, args);
+	this.locks.getData.disableLogging.apply(this.locks.getData, args);
+	this.locks.refresh.disableLogging.apply(this.locks.refresh, args);
+};
+
 // Event JSDoc {{{2
 
 /**

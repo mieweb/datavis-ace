@@ -163,6 +163,21 @@ delegate(ComputedView, 'source', ['getUniqueVals', 'decodeAll', 'setToolbar']);
 mixinLogging(ComputedView);
 mixinNameSetting(ComputedView);
 
+ComputedView.prototype._enableLogging = ComputedView.prototype.enableLogging;
+ComputedView.prototype._disableLogging = ComputedView.prototype.disableLogging;
+ComputedView.prototype.enableLogging = function () {
+	var args = Array.prototype.slice.call(arguments);
+	this._enableLogging.apply(this, args);
+	this.lock.enableLogging.apply(this.lock, args);
+	this.timing.enableLogging.apply(this.timing, args);
+};
+ComputedView.prototype.disableLogging = function () {
+	var args = Array.prototype.slice.call(arguments);
+	this._disableLogging.apply(this, args);
+	this.lock.disableLogging.apply(this.lock, args);
+	this.timing.disableLogging.apply(this.timing, args);
+};
+
 // Event JSDoc {{{3
 
 /**
