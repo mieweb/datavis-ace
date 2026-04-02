@@ -1222,8 +1222,12 @@ export var mixinEventHandling = (function () {
 				if (opts.who != null) {
 					msg += ' from ' + opts.who;
 				}
-				console.debug('[DataVis // %s // On] %s',
-					getTag(self), msg);
+				if (typeof self.logDebug === 'function') {
+					self.logDebug(self.makeLogTag('On') + ' ' + msg);
+				}
+				else {
+					console.debug('[DataVis // %s // On] %s', getTag(self), msg);
+				}
 			});
 
 			return self;
@@ -1269,8 +1273,14 @@ export var mixinEventHandling = (function () {
 			});
 
 			if (!opts.silent) {
-				console.debug('[DataVis // %s // Off] Removed %s handlers from %s on "%s" event',
-					getTag(self), self.eventHandlers[evt].length - newHandlers.length, who, evt);
+				if (typeof self.logDebug === 'function') {
+					self.logDebug(self.makeLogTag('Off') + ' Removed %s handlers from %s on "%s" event',
+						self.eventHandlers[evt].length - newHandlers.length, who, evt);
+				}
+				else {
+					console.debug('[DataVis // %s // Off] Removed %s handlers from %s on "%s" event',
+						getTag(self), self.eventHandlers[evt].length - newHandlers.length, who, evt);
+				}
 			}
 
 			self.eventHandlers[evt] = newHandlers;
@@ -1336,8 +1346,14 @@ export var mixinEventHandling = (function () {
 			// spamming millions of messages, which slows down the console).
 
 			if (!opts.silent) {
-				console.debug('[DataVis // %s // Fire] Triggering %d handlers for "%s" event on %s: %O',
-					getTag(self), handlers.length, evt, getName(self), args);
+				if (typeof self.logDebug === 'function') {
+					self.logDebug(self.makeLogTag('Fire') + ' Triggering %d handlers for "%s" event on %s: %O',
+						handlers.length, evt, getName(self), args);
+				}
+				else {
+					window.console.debug('[DataVis // %s // Fire] Triggering %d handlers for "%s" event on %s: %O',
+						getTag(self), handlers.length, evt, getName(self), args);
+				}
 			}
 
 			// Execute all matching handlers in the order they were registered.  A break is added between
@@ -1352,12 +1368,24 @@ export var mixinEventHandling = (function () {
 				}
 
 				if (h.handler.info != null) {
-					console.debug('[DataVis // %s // Fire] Executing "%s" handler %O (%d of %d) on %s: %s',
-						getTag(self), evt, h.handler.cb, i+1, handlers.length, getName(self), h.handler.info);
+					if (typeof self.logDebug === 'function') {
+						self.logDebug(self.makeLogTag('Fire') + ' Executing "%s" handler %O (%d of %d) on %s: %s',
+							evt, h.handler.cb, i+1, handlers.length, getName(self), h.handler.info);
+					}
+					else {
+						window.console.debug('[DataVis // %s // Fire] Executing "%s" handler %O (%d of %d) on %s: %s',
+							getTag(self), evt, h.handler.cb, i+1, handlers.length, getName(self), h.handler.info);
+					}
 				}
 				else {
-					console.debug('[DataVis // %s // Fire] Executing "%s" handler %O (%d of %d) on %s',
-						getTag(self), evt, h.handler.cb, i+1, handlers.length, getName(self));
+					if (typeof self.logDebug === 'function') {
+						self.logDebug(self.makeLogTag('Fire') + ' Executing "%s" handler %O (%d of %d) on %s',
+							evt, h.handler.cb, i+1, handlers.length, getName(self));
+					}
+					else {
+						window.console.debug('[DataVis // %s // Fire] Executing "%s" handler %O (%d of %d) on %s',
+							getTag(self), evt, h.handler.cb, i+1, handlers.length, getName(self));
+					}
 				}
 				h.handler.cb.apply(null, args);
 
@@ -1367,8 +1395,14 @@ export var mixinEventHandling = (function () {
 				if (h.handler.limit) {
 					h.handler.limit -= 1;
 					if (h.handler.limit <= 0) {
-						console.debug('[DataVis // %s // Fire] Removing "%s" handler #%d from %s after reaching invocation limit',
-							getTag(self), evt, i+1, getName(self));
+						if (typeof self.logDebug === 'function') {
+							self.logDebug(self.makeLogTag('Fire') + '  Removing "%s" handler #%d from %s after reaching invocation limit',
+								evt, i+1, getName(self));
+						}
+						else {
+							window.console.debug('[DataVis // %s // Fire] Removing "%s" handler #%d from %s after reaching invocation limit',
+								getTag(self), evt, i+1, getName(self));
+						}
 						self.eventHandlers[evt][h.index] = null;
 					}
 				}
@@ -1376,8 +1410,14 @@ export var mixinEventHandling = (function () {
 				return opts.async ? window.setTimeout(next) : next();
 			}, function () {
 				if (!opts.silent) {
-					console.debug('[DataVis // %s // Fire] Done triggering handlers for "%s" event on %s',
-						getTag(self), evt, getName(self));
+					if (typeof self.logDebug === 'function') {
+						self.logDebug(self.makeLogTag('Fire') + '  Done triggering handlers for "%s" event on %s',
+							evt, getName(self));
+					}
+					else {
+						window.console.debug('[DataVis // %s // Fire] Done triggering handlers for "%s" event on %s',
+							getTag(self), evt, getName(self));
+					}
 				}
 
 				// Clean up handlers we removed (because they reached the limit).
