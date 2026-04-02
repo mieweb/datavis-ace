@@ -9,12 +9,12 @@ import {
 	makeSubclass,
 	mixinLogging,
 	setProp,
-} from './util/misc';
+} from './util/misc.js';
 import {AggregateInfo} from './aggregates.js';
 import {View} from './view.js';
 import {Source} from './source.js';
 import {Prefs} from './prefs.js';
-import { OrdMap } from './util/ordmap';
+import { OrdMap } from './util/ordmap.js';
 
 // MirageSource {{{1
 

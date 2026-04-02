@@ -1,4 +1,4 @@
-import 'core-js/es/string/replace-all';
+import 'core-js/es/string/replace-all.js';
 
 import _ from 'underscore';
 import sprintf from 'sprintf-js';
