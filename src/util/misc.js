@@ -1472,16 +1472,46 @@ export function mixinLogging(obj, tagPrefix) {
 		return '[' + tag.join(' // ') + ']';
 	};
 
-	obj.prototype.disableDebugLog = function () {
-		obj.prototype.logDebug = function () {};
+	obj.prototype.disableLogging = function (lvl) {
+		if (lvl == null) {
+			lvl = 'error';
+		}
+		switch (lvl) {
+		case 'error':
+			this.logError = function () {};
+			// eslint-disable-next-line no-fallthrough
+		case 'warning':
+			this.logWarning = function () {};
+			// eslint-disable-next-line no-fallthrough
+		case 'info':
+			this.logInfo = function () {};
+			// eslint-disable-next-line no-fallthrough
+		case 'debug':
+			this.logDebug = function () {};
+		}
 	};
 
-	obj.prototype.enableDebugLog = function () {
-		obj.prototype.logDebug = window.console.debug.bind(window.console);
+	obj.prototype.enableLogging = function (lvl) {
+		if (lvl == null) {
+			lvl = 'debug';
+		}
+		switch (lvl) {
+		case 'debug':
+			this.logDebug = window.console.debug.bind(window.console);
+			// eslint-disable-next-line no-fallthrough
+		case 'info':
+			this.logInfo = window.console.info.bind(window.console);
+			// eslint-disable-next-line no-fallthrough
+		case 'warning':
+			this.logWarning = window.console.warn.bind(window.console);
+			// eslint-disable-next-line no-fallthrough
+		case 'error':
+			this.logError = window.console.error.bind(window.console);
+		}
 	};
 
 	obj.prototype.logDebug = window.console.debug.bind(window.console);
-	obj.prototype.logInfo = window.console.log.bind(window.console);
+	obj.prototype.logInfo = window.console.info.bind(window.console);
 	obj.prototype.logWarning = window.console.warn.bind(window.console);
 	obj.prototype.logError = window.console.error.bind(window.console);
 }
