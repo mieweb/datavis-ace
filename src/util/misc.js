@@ -1227,7 +1227,7 @@ export var mixinEventHandling = (function () {
 					self.logDebug(self.makeLogTag('On') + ' ' + msg);
 				}
 				else {
-					console.debug('[DataVis // %s // On] %s', getTag(self), msg);
+					window.console.debug('[DataVis // %s // On] %s', getTag(self), msg);
 				}
 			});
 
@@ -1279,7 +1279,7 @@ export var mixinEventHandling = (function () {
 						self.eventHandlers[evt].length - newHandlers.length, who, evt);
 				}
 				else {
-					console.debug('[DataVis // %s // Off] Removed %s handlers from %s on "%s" event',
+					window.console.debug('[DataVis // %s // Off] Removed %s handlers from %s on "%s" event',
 						getTag(self), self.eventHandlers[evt].length - newHandlers.length, who, evt);
 				}
 			}
@@ -1687,7 +1687,7 @@ export var format = (function () {
 		});
 
 		if (opts.debug) {
-			console.debug('[DataVis // Format] typeInfo = %O ; colConfig = %O ; cell = %O ; opts = %O', fti, fcc, cell, opts);
+			window.console.debug('[DataVis // Format] typeInfo = %O ; colConfig = %O ; cell = %O ; opts = %O', fti, fcc, cell, opts);
 		}
 
 		// When we just receive a value instead of a proper data cell, convert it so that code below can
@@ -2120,7 +2120,7 @@ export function determineColumns(colConfig, data, typeInfo) {
 		}
 	}
 
-	console.debug('[DataVis // Determine Columns] Columns = %O', columns);
+	window.console.debug('[DataVis // Determine Columns] Columns = %O', columns);
 
 	return columns;
 }

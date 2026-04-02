@@ -977,7 +977,7 @@ Source.decodeAll = function (data, field, typeInfo) {
 		return;
 	}
 
-	console.debug('[DataVis // Source // Decoding] Decoding all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
+	window.console.debug('[DataVis // Source // Decoding] Decoding all values: field = "%s" ; type = %s ; internalType = %s ; valueTypeOf = %s', field, fti.type, fti.internalType, typeof(getProp(data, 0, field, 'value')));
 
 	_.each(data, function (row) {
 		Source.decode(row[field], typeInfo.get(field));
