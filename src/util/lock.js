@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import { mixinLogging } from './mixin/logging.js';
 
 // Lock {{{1
 // Constructor {{{2
@@ -22,6 +23,8 @@ Object.defineProperty(Lock, 'name', {value: 'Lock'});
 Lock.prototype = Object.create(Object.prototype);
 Lock.prototype.constructor = Lock;
 
+mixinLogging(Lock);
+
 Lock._id = 1;
 
 // #lock {{{2
@@ -44,7 +47,7 @@ Lock.prototype.lock = function (why) {
 		msg += ' - ' + why;
 	}
 
-	console.debug('[DataVis // Lock(%s)] %s', self._name, msg);
+	self.logDebug(self.makeLogTag() + ' ' + msg);
 };
 
 // #unlock {{{2
@@ -61,10 +64,10 @@ Lock.prototype.unlock = function (msg) {
 
 	self._lockCount -= 1;
 	if (msg != null) {
-		console.debug('[DataVis // Lock(%s)] Unlocking to level %s: %s', self._name, self._lockCount, msg);
+		self.logDebug(self.makeLogTag() + ' Unlocking to level %s: %s', self._lockCount, msg);
 	}
 	else {
-		console.debug('[DataVis // Lock(%s)] Unlocking to level %s', self._name, self._lockCount);
+		self.logDebug(self.makeLogTag() + ' Unlocking to level %s', self._lockCount);
 	}
 
 	// If we're completely unlocked, start going through the functions that were registered to be run.
@@ -78,8 +81,8 @@ Lock.prototype.unlock = function (msg) {
 	while (self._onUnlock.length > 0 && !self.isLocked()) {
 		i += 1;
 		var onUnlock = self._onUnlock.shift();
-		console.debug('[DataVis // Lock(%s)] Running onUnlock function (%d of %d) - %s',
-			self._name, i, onUnlockLen, onUnlock.info || '[NO INFO]');
+		self.logDebug(self.makeLogTag() + ' Running onUnlock function (%d of %d) - %s',
+			i, onUnlockLen, onUnlock.info || '[NO INFO]');
 		onUnlock.f();
 	}
 };
@@ -136,8 +139,8 @@ Lock.prototype.onUnlock = function (f, info) {
 		info: info
 	});
 
-	console.debug('[DataVis // Lock(%s)] Saved onUnlock function (#%d) - %s',
-		self._name, self._onUnlock.length, info || '[NO INFO]');
+	self.logDebug(self.makeLogTag() + ' Saved onUnlock function (#%d) - %s',
+		self._onUnlock.length, info || '[NO INFO]');
 };
 
 // #flushUnlockQueue
@@ -149,8 +152,8 @@ Lock.prototype.flushUnlockQueue = function () {
 		var info = _.map(_.pluck(self._onUnlock, 'info'), function (i) {
 			return i || '[NO INFO]';
 		});
-		console.debug('[DataVis // Lock(%s)] Flushing %d onUnlock functions: %O',
-			self._name, count, info);
+		self.logDebug(self.makeLogTag() + ' Flushing %d onUnlock functions: %O',
+			count, info);
 		self._onUnlock = [];
 	}
 };
@@ -161,6 +164,12 @@ Lock.prototype.clear = function () {
 	var self = this;
 	self.flushUnlockQueue();
 	self.completelyUnlock();
+};
+
+// #toString {{{2
+
+Lock.prototype.toString = function () {
+	return this._name;
 };
 
 export {
