@@ -1921,7 +1921,7 @@ export var format = (function () {
 				// No need to make an element if nothing was formatted.
 				if (foundFmtStr) {
 					var div = document.createElement('div');
-					div.innerHtml = fmtResult;
+					div.innerHTML = fmtResult;
 					return div;
 				}
 			}
