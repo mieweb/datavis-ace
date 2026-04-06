@@ -1,5 +1,5 @@
 {
-  "name": "@mieweb/datavis-ace",
+  "name": "datavis-ace",
   "version": "4.0.0-PRE.2",
   "description": "DataVis ACE (Acquisition + Computation Engine)",
   "keywords": [
