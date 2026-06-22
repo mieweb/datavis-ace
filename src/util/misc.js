@@ -882,6 +882,47 @@ export function pigeonHoleSort(data, values, cont) {
 }
 
 /**
+ * Build a comparison function that orders values by their position in the given list, mirroring the
+ * ordering that {@link pigeonHoleSort} produces.  Values that aren't in the list sort after all of
+ * the listed values.  This lets a value-based ("pigeon hole") sort key be chained together with
+ * other keys through a regular comparison-based sort.
+ *
+ * @param {Array} values
+ * The values, in the order they should sort.
+ *
+ * @returns {function} A comparison function returning -1 when A < B, 0 when A = B, and +1 when A > B.
+ */
+
+export function makeValuesCmp(values) {
+	var pos = {}
+		, i;
+
+	for (i = 0; i < values.length; i += 1) {
+		pos[values[i]] = i;
+	}
+
+	return function (x, y) {
+		var px = pos[x]
+			, py = pos[y];
+
+		if (px == null) {
+			px = values.length;
+		}
+		if (py == null) {
+			py = values.length;
+		}
+
+		if (px < py) {
+			return -1;
+		}
+		if (px > py) {
+			return 1;
+		}
+		return 0;
+	};
+}
+
+/**
  * Constructs an object from a simplified array representation.
  *
  * ```

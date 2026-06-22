@@ -13,6 +13,7 @@ import { OrdMap } from './util/ordmap.js';
 import { ComputedView } from './computed_view.js';
 import { MirageView } from './mirage_view.js';
 import { Perspective } from './perspective.js';
+import { normalizeSortSpec } from './view.js';
 
 /**
  * @file
@@ -161,7 +162,7 @@ PrefsModuleComputedView.prototype.load = function (config) {
 	}
 
 	if (config.sort != null) {
-		self.target.setSort(config.sort, {
+		self.target.setSort(normalizeSortSpec(config.sort), {
 			updateData: false,
 			savePrefs: false
 		});
@@ -317,7 +318,7 @@ PrefsModuleMirageView.prototype.load = function (config) {
 		});
 	}
 	else {
-		self.target.setSort(config.sort, {
+		self.target.setSort(normalizeSortSpec(config.sort), {
 			updateData: false,
 			savePrefs: false
 		});

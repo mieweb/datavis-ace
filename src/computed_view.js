@@ -21,6 +21,7 @@ import {
 	interleaveWith,
 	logAsync,
 	makeSubclass,
+	makeValuesCmp,
 	mergeSort4,
 	mixinEventHandling,
 	mixinLogging,
@@ -35,7 +36,7 @@ import { Lock } from './util/lock.js';
 import {Source} from './source.js';
 import {Prefs} from './prefs.js';
 import {AGGREGATE_REGISTRY, AggregateInfo} from './aggregates.js';
-import {View} from './view.js';
+import {View, normalizeSortSpec} from './view.js';
 import {GROUP_FUNCTION_REGISTRY} from './group_fun.js';
 import {types} from './types.js';
 
@@ -444,6 +445,8 @@ ComputedView.prototype.setSort = function (spec, opts) {
 
 	self.logDebug(self.makeLogTag('setSort') + ' spec = %O', spec);
 
+	spec = normalizeSortSpec(spec);
+
 	isDifferent = !_.isEqual(self.sortSpec, spec);
 
 	self.super['View'].setSort(spec, opts);
@@ -796,18 +799,34 @@ ComputedView.prototype.sort = function (cont) {
 		//   "right thing" whether we're sorting by a cell value, a group aggregate function result, or
 		//   something else altogether).
 
-		var fti
-			, sortSourceFn
-			, spec = getProp(self, 'sortSpec', orientation)
-			, sortAlgorithm = 'mergeSort';
+		var specs = getProp(self, 'sortSpec', orientation);
 
-		var rvi, cvi, gfi;
-
-		if (spec == null) {
+		if (specs == null) {
 			return next(true);
 		}
 
-		spec = deepCopy(spec);
+		// A single sort spec is normalized to a one-element array so that the rest of the engine only
+		// ever deals with arrays of specs, in priority order: the first is the primary sort key, the
+		// second breaks ties within equal primary values, and so on.
+
+		if (!_.isArray(specs)) {
+			specs = [specs];
+		}
+
+		// Resolve each spec into a sort "key": its comparison function and a bundle of the values to
+		// sort by.  Each key's values are materialized immediately (via packBundle), while the spec
+		// that `sortSourceFn` closes over is still the current loop iteration's spec.
+
+		var keys = [], ki;
+
+		for (ki = 0; ki < specs.length; ki += 1) {
+
+		var fti
+			, sortSourceFn
+			, spec = deepCopy(specs[ki])
+			, sortAlgorithm = 'mergeSort';
+
+		var rvi, cvi, gfi;
 
 		if (self.data.isPlain) {
 			if (orientation === 'horizontal') {
@@ -1137,74 +1156,95 @@ ComputedView.prototype.sort = function (cont) {
 		//console.log(self.typeInfo.asMap());
 		//console.log(self.data.agg);
 
-		var cmp, comparison;
+		// For a mergeSort key, derive its comparison function now (this also decodes the data) before
+		// we read the values into the bundle below.
+
+		var keyCmp = null;
 
 		if (sortAlgorithm === 'mergeSort') {
-			cmp = determineCmp(spec, fti);
-			if (cmp == null) {
+			keyCmp = determineCmp(spec, fti);
+			if (keyCmp == null) {
 				return next(false);
 			}
-
-			// NOTE We're intentionally making the sort stable only when sorting ascending.
-			//
-			// When sorting rowvals/colvals:
-			//
-			// Since we're always starting from the same set of data (which is sorted asc by each element
-			// of the rowval/colval in turn), no matter which direction we sort, this has the effect of
-			// making the following work:
-			//
-			//   X,Y             X,Y            X,Y
-			//  -----           -----          -----
-			//   A,A             C,C            A,A
-			//   A,B             C,B            A,B
-			//   A,C             C,A            A,C
-			//   B,A  ========>  B,C  =======>  B,A
-			//   B,B   X, DESC   B,B   X, ASC   B,B
-			//   B,C  ========>  B,A  =======>  B,C
-			//   C,A             A,C            C,A
-			//   C,B             A,B            C,B
-			//   C,C             A,A            C,C
-			//
-			// This magickally does the expected thing, in every scenario.  Fields other than the one
-			// sorted by (in the example above, Y) end up sorted in the same direction, left to right.
-			//
-			// FIXME This will need to be adjusted when we support multiple sorts.  Both directions should
-			// be stable when we do that, or else it won't work as expected.
-
-			comparison = function (a, b) {
-				if (spec.dir.toUpperCase() === 'ASC') {
-					return cmp(a.sortSource, b.sortSource) <= 0;
-				}
-				else if (spec.dir.toUpperCase() === 'DESC') {
-					return cmp(a.sortSource, b.sortSource) > 0;
-				}
-				else {
-					throw new Error('Invalid sort spec: `dir` must be either "ASC" or "DESC"');
-				}
-			};
 		}
 
-		var bundle = packBundle(spec, orientation, sortSourceFn);
-		if (bundle == null) {
+		var keyBundle = packBundle(spec, orientation, sortSourceFn);
+		if (keyBundle == null) {
 			return next(false);
 		}
 
-		//console.log(fti);
-		//console.log(cmp);
-		//console.log(bundle);
+		// A value-based ("pigeon hole") key orders by a fixed list of values and is not a general
+		// comparator, so it may only ever be the last (lowest-priority) sort key.
+
+		if (sortAlgorithm === 'pigeonHole' && ki !== specs.length - 1) {
+			self.logError(self.makeLogTag() + ' Unable to sort: a value-based sort key may only be the last sort key {spec = %O}', spec);
+			return next(false);
+		}
+
+		keys.push({
+			spec: spec,
+			sortAlgorithm: sortAlgorithm,
+			cmp: keyCmp,
+			bundle: keyBundle
+		});
+		}
 
 		var finish = makeFinishCb(unpackBundle(orientation), next);
 
-		self.logDebug(self.makeLogTag('sort') + ' Performing sort using %s algorithm', sortAlgorithm);
+		// Fast path: a single value-based key can use the pigeonHole algorithm directly.
 
-		switch (sortAlgorithm) {
-		case 'mergeSort':
-			return mergeSort4(bundle, comparison, finish, self.sortProgress && self.sortProgress.update);
-		case 'pigeonHole':
-			return pigeonHoleSort(bundle, spec.values, finish);
-		default:
-			throw new Error('Internal Error: Invalid sort algorithm: ' + sortAlgorithm);
+		if (keys.length === 1 && keys[0].sortAlgorithm === 'pigeonHole') {
+			self.logDebug(self.makeLogTag('sort') + ' Performing sort using pigeonHole algorithm');
+			return pigeonHoleSort(keys[0].bundle, keys[0].spec.values, finish);
 		}
+
+		// General path: chain the keys into a single stable comparator and merge sort.  A value-based
+		// key (only ever the last one) compares by position in its list of values.
+
+		var k;
+		for (k = 0; k < keys.length; k += 1) {
+			if (keys[k].sortAlgorithm === 'pigeonHole') {
+				keys[k].cmp = makeValuesCmp(keys[k].spec.values);
+			}
+		}
+
+		// Pack each index's per-key values into a single bundle item, reusing the bundle built for the
+		// primary key (its `oldIndex` values already run 0..len-1).
+
+		var bundle = keys[0].bundle, bi, bk, sources;
+		for (bi = 0; bi < bundle.length; bi += 1) {
+			sources = new Array(keys.length);
+			for (bk = 0; bk < keys.length; bk += 1) {
+				sources[bk] = keys[bk].bundle[bi].sortSource;
+			}
+			bundle[bi].sortSource = sources;
+		}
+
+		// Chained comparator: the first key whose comparison is non-zero decides the order; if every
+		// key compares equal, the original order is kept, which keeps the sort stable in both
+		// directions (the tie-breaking that multi-column sort relies on).
+
+		var comparison = function (a, b) {
+			var j, c, dir;
+			for (j = 0; j < keys.length; j += 1) {
+				c = keys[j].cmp(a.sortSource[j], b.sortSource[j]);
+				if (c !== 0) {
+					dir = keys[j].spec.dir.toUpperCase();
+					if (dir === 'ASC') {
+						return c < 0;
+					}
+					if (dir === 'DESC') {
+						return c > 0;
+					}
+					throw new Error('Invalid sort spec: `dir` must be either "ASC" or "DESC"');
+				}
+			}
+			return true;
+		};
+
+		self.logDebug(self.makeLogTag('sort') + ' Performing sort using mergeSort algorithm');
+
+		return mergeSort4(bundle, comparison, finish, self.sortProgress && self.sortProgress.update);
 	};
 
 
