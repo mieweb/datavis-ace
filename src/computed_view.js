@@ -821,8 +821,8 @@ ComputedView.prototype.sort = function (cont) {
 
 		for (ki = 0; ki < specs.length; ki += 1) {
 
-		var fti
-			, sortSourceFn
+		var fti = null
+			, sortSourceFn = null
 			, spec = deepCopy(specs[ki])
 			, sortAlgorithm = 'mergeSort';
 
@@ -1156,6 +1156,15 @@ ComputedView.prototype.sort = function (cont) {
 		//console.log(self.typeInfo.asMap());
 		//console.log(self.data.agg);
 
+		// A spec that doesn't resolve to a sort source function doesn't apply to the current output
+		// mode (e.g. a leftover group-field sort after the grouping was removed).  Skip it so that the
+		// remaining, applicable sort keys are still honored instead of aborting the whole sort.
+
+		if (sortSourceFn == null) {
+			self.logError(self.makeLogTag() + ' Unable to sort: spec does not apply to current output mode {spec = %O}', spec);
+			continue;
+		}
+
 		// For a mergeSort key, derive its comparison function now (this also decodes the data) before
 		// we read the values into the bundle below.
 
@@ -1187,6 +1196,13 @@ ComputedView.prototype.sort = function (cont) {
 			cmp: keyCmp,
 			bundle: keyBundle
 		});
+		}
+
+		// Every sort key may have been skipped as inapplicable to the current output mode, in which
+		// case there's nothing to sort and the data keeps its current order.
+
+		if (keys.length === 0) {
+			return next(true);
 		}
 
 		var finish = makeFinishCb(unpackBundle(orientation), next);
