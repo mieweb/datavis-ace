@@ -164,21 +164,26 @@ In `ComputedView.prototype.sort` ([src/computed_view.js#L491](../src/computed_vi
 
 ## Tests
 
-ACE uses its own test harness under `tests/`. Add engine-level coverage for the chained comparator
-and normalization:
+ACE's unit tests live under `tests/unit/` and run headlessly with **Mocha + Chai** (no browser, no Selenium) — each test drives a `ComputedView` directly and inspects the structured result of `getData()` rather than rendered table cells. Shared fixtures and navigation helpers live in `tests/unit/lib/`:
 
-- **Normalization**: a single-object `vertical`/`horizontal` spec passed to `setSort` is stored as a
-  one-element array; `getSort` returns the array form.
-- **Backward compatibility**: a legacy single-object perspective loads and sorts identically to
-  before.
-- **Chained order**: an array of two specs sorts by the primary key, then the secondary within equal
-  primary values, for plain, group, and pivot orientations.
-- **Stability**: both ASC and DESC preserve input order among fully-equal rows (assert by tagging
-  rows with an original index and checking it is monotonic within equal-key runs).
-- **Value-based guard**: a value-based (`pigeonHole`) spec is rejected/relegated when not the
-  terminal key.
+- `lib/setup.js` — builds a `Source` + `ComputedView` around fixture data and exposes the operation helpers used throughout: `loadRandom100()` (the shared 100-row, all-types fixture), `sortBy(view, field, dir)`, `groupBy`, `filterBy`, `getDataAsync(view)`, `resetAndGetData(view)`, `fieldTypes(file)`, and the `CONFIG_OPTS` constant (`{ updateData: false, sendEvent: false, savePrefs: false }`) that configures a view without triggering recomputation, events, or pref saves.
+- `lib/nav.js` — pure data-structure navigation into a `getData()` result: `cell`/`cellValue`/`cellOrig` (with negative-index support), `groupCount`, `groupIndex`, `aggResult`, etc.
+- `lib/env.js` — the headless environment mock (`window`, `document`, `Intl`, ...).
 
-Run the ACE test suite (`make test`) and `npm run lint` before opening the PR.
+Run the whole suite with `npm run test:unit` (which regenerates the data fixtures first via the `pretest:unit` hook), or a single file with `npx mocha ./tests/unit/<file>.js`. The single source of truth for sort correctness is the view's own comparator, `types.registry.get(type).compare`, so the tests exercise every internal representation (primitive / numeral / BigNumber / moment) the way GLIDE's per-type pages did.
+
+Multi-column coverage was added as a `describe('multi-column sort — chained, stable comparison', ...)` block at the end of [tests/unit/sort.js](../tests/unit/sort.js), reusing the existing `loadRandom100` fixture and `comparatorFor` oracle:
+
+- **Normalization**: a single-object `vertical` spec passed to `setSort` is stored as a one-element array (`getSort().vertical` is the array form), and that one-element array sorts identically (same row order, including stable tie-break) to the legacy single object.
+- **Chained order (plain)**: an array of two specs (`fruit` then `int1`) sorts by the primary key, then the secondary within equal primary values; a second case mixes directions (primary `ASC`, secondary `DESC`) to confirm each key's `dir` is independent.
+- **Chained order (group)**: grouping by `country` and sorting by `[group count ASC, country ASC]` orders groups by the count aggregate, breaking ties by the group-field value.
+- **Stability (both directions)**: rows are tagged with their original (unsorted) position via `rowId`; after sorting on a low-cardinality field (`boolean1`) both `ASC` and `DESC` preserve input order within every equal-key run (the assertion that resolves the two FIXMEs).
+- **Value-based guard**: a value-based (`values`) key is refused when it is not the terminal key (`getData` still resolves, but `view.lastOps.sort` is `false`) and allowed when it is the last key.
+
+Pivot-orientation chaining is exercised indirectly through the shared per-spec resolution cascade; a dedicated pivot multi-column case can be added once a pivot fixture with reliable ties is in place.
+
+Run `npm run test:unit` and `npm run lint` before opening the PR.
+
 
 ## Delivery / Coordination
 
