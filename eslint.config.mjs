@@ -33,28 +33,13 @@ export default [
   },
   {
     plugins: {
-      '@stylistic': stylistic
+      '@stylistic': stylistic,
+      'unused-imports': unusedImports
     },
-    files: ["tests/lib/*.js"],
+    files: ["tests/unit/**/*.js"],
     languageOptions: {
-      sourceType: "commonjs",
-      globals: {
-        ...globals.browser,
-        ...globals.node
-      }
-    },
-    rules: {
-      'no-unused-vars': 'off',
-      '@stylistic/semi': ['error', 'always']
-    }
-  },
-  {
-    plugins: {
-      '@stylistic': stylistic
-    },
-    files: ["tests/selenium/*.js"],
-    languageOptions: {
-      sourceType: "commonjs",
+      ecmaVersion: "latest",
+      sourceType: "module",
       globals: {
         ...globals.node,
         ...globals.mocha
@@ -62,6 +47,7 @@ export default [
     },
     rules: {
       'no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
       '@stylistic/semi': ['error', 'always']
     }
   }

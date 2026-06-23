@@ -6,7 +6,7 @@ Recreate DataVis GLIDE's data-centric Selenium/Grid tests as headless Mocha + Ch
 
 ## Key facts
 
-- ACE unit tests use **Mocha + Chai**, located in `tests/unit/{aggregate,filter,group,pivot}.js`, with helpers in `tests/unit/helpers/{setup.js,env.js}`. They run via `npm run test:unit` (`mocha --timeout 10000 --recursive 'tests/unit/**/*.js'`); a single file runs with `mocha tests/unit/<file>.js`.
+- ACE unit tests use **Mocha + Chai**, located in `tests/unit/{aggregate,filter,group,pivot}.js`, with helpers in `tests/unit/lib/{setup.js,env.js}`. They run via `npm run test:unit` (`mocha --timeout 10000 --recursive 'tests/unit/**/*.js'`); a single file runs with `mocha tests/unit/<file>.js`.
 - The existing helper `loadFruitData()` parses `tests/data/third-party/fruit.csv` into a `LocalSource` + `ComputedView`. `getDataAsync(view)` promisifies `view.getData(cont)`. `resetAndGetData(view)` clears config and returns fresh data. `env.js` mocks `globalThis.window` for the headless environment.
 - `getData()` return shape:
   - `isPlain` / `isGroup` / `isPivot` flags.
@@ -49,11 +49,11 @@ Phase 0 must complete first; Phases 1–7 can then proceed in parallel.
 ### Phase 0 — Infrastructure (blocks all)
 
 - Add a data-generation prerequisite so `make -C tests/data` runs before the unit tests (e.g. an npm `pretest:unit` step or documented entry point). This generates `random100.json` and the null/blank fixtures.
-- Extend `tests/unit/helpers/setup.js` (DRY off `loadFruitData`):
+- Extend `tests/unit/lib/setup.js` (DRY off `loadFruitData`):
   - `loadJsonData(fileName)` — read `tests/data/<file>.json` (data + embedded `typeInfo`) into a `LocalSource` + `ComputedView`.
   - `loadRandom100()` — convenience wrapper.
   - `setCurrentDate(str)` / `clearCurrentDate()` — set/reset `window.MIE.WC_DataVis.CURRENT_DATE`.
-- Add navigation helpers in a new `tests/unit/helpers/nav.js`:
+- Add navigation helpers in a new `tests/unit/lib/nav.js`:
   - `cellValue(data, field, idx)` — supports negative `idx` (mirrors GLIDE's `getCell(field, -1)`).
   - `cellOrig` / `cellFormatted` variants for `orig` / `formatted` comparisons.
   - `groupRows(data, rowVal)` — find `data.data[i]` where `rowVals[i]` deep-equals `rowVal`.
@@ -90,13 +90,13 @@ Load `nulls.json` / `blanks.json` / `empty-string.json`. Assert null/blank sort 
 
 ### Phase 8 — Source format decoding (optional)
 
-Build a `LocalSource` from JSON / CSV / XML strings and assert decoded rows are equal across formats. No drilldown port (see resolved question 2).
+Serve the same `random100` dataset as JSON and CSV through an HTTP source (with `globalThis.fetch` stubbed to return the file contents) and assert the decoded rows match each other and the local source. XML is not exercised: the XML branch of the source parser requires a DOM (`DOMParser` / `Document`), which is unavailable in the headless Node environment. No drilldown port (see resolved question 2).
 
 ## Relevant files
 
-- `tests/unit/helpers/setup.js` — add `loadJsonData` / `loadRandom100` / `setCurrentDate` / `clearCurrentDate`.
-- `tests/unit/helpers/env.js` — browser mock (reuse; verify moment / numeral / bignumber are available headless).
-- `tests/unit/helpers/nav.js` — new navigation/assertion helpers.
+- `tests/unit/lib/setup.js` — add `loadJsonData` / `loadRandom100` / `setCurrentDate` / `clearCurrentDate`.
+- `tests/unit/lib/env.js` — browser mock (reuse; verify moment / numeral / bignumber are available headless).
+- `tests/unit/lib/nav.js` — new navigation/assertion helpers.
 - `tests/unit/{sort,filter,aggregate,group_funs,types,date_filter,nulls}.js` — test files.
 - `tests/data/Makefile` and `tests/data/templates/json-gen-input.json5` — data generation (already present).
 - `src/view.js` / `src/computed_view.js` — `getData` / `setSort` / `setFilter` / `setGroup` / `setAggregate` and the `CURRENT_DATE` hook (oracle for shapes/behavior).
@@ -116,5 +116,11 @@ Build a `LocalSource` from JSON / CSV / XML strings and assert decoded rows are 
 - **Include**: sorting, filtering, aggregates, temporal grouping, type support, date filtering, null/blank handling.
 - **Exclude**: `sourceParams`, `auto-limit`, `pagination`, `multi-grid`, and all UI-only tests.
 - Ported tests use `random100.json` (with embedded `typeInfo`) as the shared input rather than `fruit.csv`, because `fruit.csv` lacks the type-representation breadth GLIDE exercises. The existing fruit-based tests stay as-is.
-- Generated data files are build products; a generation step runs before the unit tests.
-- No source changes are required; the existing `CURRENT_DATE` global is the date-override mechanism.
+- Generated data files are build products; an npm `pretest:unit` step runs `make -C tests/data` before the unit tests.
+- The existing `CURRENT_DATE` global is the date-override mechanism. The only source change was a one-line correctness fix in `src/types.js` (`universalCmp` now returns `0` for equal durations instead of falling through to `undefined`, which had broken duration sorting); no other source changes were required.
+
+## Suspected bugs (found while porting)
+
+- **`time` type decodes inconsistently across formats.** In `random100.json`, `time1` (format `HH:mm:ss`) decodes to a bare clock string (`"14:01:34"`), while `time2`/`time3` (12-hour formats) decode to full ISO moment strings (`"2000-01-01T19:01:34.000Z"`). Because the representations are not normalized to a common internal form, comparing them mixes a moment with a non-moment and throws `Cannot compare Moment w/ non-Moment` during sort/filter, and `$eq` filtering misbehaves (e.g. filtering `time3` by its own orig value `"2:01:34 PM"` matched all 100 rows instead of the expected subset). The other temporal types (`date`, `datetime`) and `duration` decode consistently and sort/filter correctly. The unit tests in `tests/unit/types.js` therefore cover full decode/order/equality invariance for the numeric internalTypes (int/float primitive/numeral/bignumber and currency) and ordering self-consistency for `date`/`datetime`/`duration`, but deliberately do not assert cross-representation `time` behavior. Fixing the `time` decoder to normalize all formats to one internal representation is the follow-up task.
+
+- **Grouping by a field that contains `null` values crashes.** Grouping `nulls.json` by `fruit` (which has 11 `null` entries) throws `Cannot read properties of undefined (reading 'rows')` in `ComputedView.group` (`src/computed_view.js` ~line 2202): the metadata-tree path built from a `null` cell's `natRep.group` does not match any pre-built leaf, so `metadataLeaf` is `undefined`. Notably, grouping by a field whose empties are empty strings (`blanks.json`) works fine and produces a `""` group, so the bug is specific to JSON `null`. The unit tests in `tests/unit/nulls.js` therefore assert grouping-into-a-blank-group against `blanks.json` and skip grouping against `nulls.json`. The fix is to give `null` group keys a stable `natRep.group` path (treat `null` like the empty-string blank group).

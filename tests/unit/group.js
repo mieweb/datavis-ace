@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { loadFruitData, getDataAsync, resetAndGetData } from './helpers/setup.js';
+import { loadFruitData, getDataAsync, resetAndGetData } from './lib/setup.js';
 
 describe('ComputedView — Grouping', function () {
 	var view;

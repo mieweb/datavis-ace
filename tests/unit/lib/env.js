@@ -28,6 +28,20 @@ globalThis.window.setInterval = globalThis.setInterval;
 globalThis.window.clearInterval = globalThis.clearInterval;
 globalThis.window.console = globalThis.console;
 
+// Expose Intl so locale-aware comparisons (e.g. case-insensitive string
+// sorting via Intl.Collator in src/types.js) behave the same as in a browser.
+if (globalThis.window.Intl == null && globalThis.Intl != null) {
+	globalThis.window.Intl = globalThis.Intl;
+}
+
+// Provide a Document stub so source-layer parsers that branch on
+// `data instanceof Document` (XML detection) can run headlessly.  Plain
+// objects and strings are not instances of this stub, so JSON/CSV decoding
+// takes the correct non-XML path.
+if (globalThis.Document == null) {
+	globalThis.Document = function () {};
+}
+
 if (globalThis.Element == null) {
 	globalThis.Element = function () {};
 	globalThis.Element.prototype.matches = function () { return false; };

@@ -24,9 +24,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "lint": "eslint src tests/lib tests/selenium",
-    "test": "node scripts/run-tests.js",
-    "test:unit": "mocha --timeout 10000 --recursive 'tests/unit/**/*.js'",
+    "lint": "eslint src tests/unit",
+    "pretest": "make -C tests/data",
+    "test": "mocha --timeout 10000 --recursive 'tests/unit/**/*.js'",
     "rollup": "rollup --bundleConfigAsCjs -c rollup.config.js",
     "uglify": "uglifyjs -c -o dist/wcdatavis.min.js dist/wcdatavis.js"
   },
