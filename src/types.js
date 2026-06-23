@@ -1239,6 +1239,8 @@ types.universalCmp = function (a, b) {
 		if (a.s !== b.s) return a.s < b.s ? -1 : 1;
 		if (a.t !== b.t) return a.t < b.t ? -1 : 1;
 		if (a.u !== b.u) return a.u < b.u ? -1 : 1;
+
+		return 0;
 	}
 
 	// add {{{2
