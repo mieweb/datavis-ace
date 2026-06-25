@@ -35,10 +35,8 @@ commit_tag_push() {
     else
         git commit -m "Release: $pkg_name v$version" package.json package-lock.json
         git push origin
-        git push github
         git tag -m "$pkg_name v$version" "v$version"
         git push origin tag "v$version"
-        git push github tag "v$version"
     fi
 }
 
@@ -46,6 +44,7 @@ npm_publish() {
     if [[ $dry_run -eq 1 ]]; then
         echo "DRY RUN: Publishing NPM package $pkg_name v$version"
     else
+        npm login
         npm publish
     fi
 }
