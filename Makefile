@@ -18,7 +18,6 @@ npm-setup:
 		printf '\033[34;1mPlease run `nvm use` to ensure the right version of Node is used.\033[0m\n' ; \
 	fi
 	npm install
-	./bin/update-deps.sh
 
 .PHONY:	npm-teardown
 npm-teardown:
@@ -64,12 +63,10 @@ jsdoc-teardown:
 
 .PHONY:	setup
 setup:	npm-setup python-setup
-	echo "You should have run git submodule update --init outside the containter"
 	git submodule update --init
-	$(MAKE) jsdoc-setup
 
 .PHONY:	teardown
-teardown:	npm-teardown python-teardown jsdoc-teardown
+teardown:	npm-teardown python-teardown
 
 # Building DataVis {{{1
 
@@ -161,6 +158,9 @@ clean:	doc-clean dist-clean
 	$(MAKE) -C tests $@
 
 # Translations {{{1
+
+.PHONY: lang_packs
+lang_packs:	$(LANG_PACKS)
 
 $(LANG_PACKS):src/lang/%.js:	trans/%.tsv bin/make-lang-packs.awk en-US.tsv
 	mkdir -p trans-missing
